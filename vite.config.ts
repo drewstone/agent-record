@@ -8,6 +8,7 @@ export default defineConfig({
       entry: {
         index: 'src/index.ts',
         record: 'src/record.ts',
+        report: 'src/report.ts',
         'research-publication': 'src/adapters/research-publication.ts',
       },
       formats: ['es'],

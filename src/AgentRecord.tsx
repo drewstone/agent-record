@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { RecordEvent, RecordSelection, RunRecord } from './record.js'
+import { advancePlayback } from './viewer/playback.js'
+import type { PlaybackMode } from './viewer/playback.js'
+import { useDownload } from './viewer/useDownload.js'
 import { AgentTree } from './viewer/AgentTree.js'
 import { Conversation } from './viewer/Conversation.js'
 import {
@@ -144,10 +147,15 @@ function RecordView({
   const [metric, setMetric] = useState<Metric>('cumulative')
   const [axis, setAxis] = useState<Axis>('time')
   const [playing, setPlaying] = useState(false)
+  const [speed, setSpeed] = useState('1')
+  const [mode, setMode] = useState<PlaybackMode>('time')
+  const [systemReducedMotion, setSystemReducedMotion] = useState(false)
+  const [motion, setMotion] = useState('system')
+  const reducedMotion = systemReducedMotion || motion === 'reduced'
   const [treeOpen, setTreeOpen] = useState(true)
   const [tooltip, setTooltip] = useState<PlotTooltip | null>(null)
   const container = useRef<HTMLDivElement>(null)
-  const downloads = useRef(new Map<string, number>())
+  const download = useDownload()
   const tabs = useRef(new Map<string, HTMLButtonElement>())
   const latest = useRef({ selection, cutoff, index, onChange })
   latest.current = { selection, cutoff, index, onChange }
@@ -242,31 +250,45 @@ function RecordView({
     return () => observer.disconnect()
   }, [])
   useEffect(() => {
-    const pending = downloads.current
-    return () => {
-      for (const [url, timer] of pending) {
-        window.clearTimeout(timer)
-        URL.revokeObjectURL(url)
-      }
-      pending.clear()
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const change = () => {
+      setSystemReducedMotion(preference.matches)
+      setPlaying(false)
     }
+    change()
+    preference.addEventListener('change', change)
+    return () => preference.removeEventListener('change', change)
   }, [])
+  const effectiveMode = reducedMotion ? 'events' : mode
   useEffect(() => {
     if (!playing) return
-    const timer = window.setInterval(() => {
-      const current = latest.current
-      const end = current.index.end
-      const next = Math.min(
-        end,
-        current.cutoff + Math.max(1, (end - current.index.start) / 100),
-      )
-      current.onChange({
-        ...current.selection,
-        runId: record.runId,
-        at: next >= end ? undefined : new Date(next).toISOString(),
-      })
-      if (next >= end) setPlaying(false)
-    }, 120)
+    let previous = performance.now()
+    const timer = window.setInterval(
+      () => {
+        const current = latest.current
+        const now = performance.now()
+        const next = advancePlayback({
+          cutoff: current.cutoff,
+          start: current.index.start,
+          end: current.index.end,
+          elapsedMs: now - previous,
+          speed: Number(speed),
+          mode: effectiveMode,
+          eventTimes: current.index.events.map((event) => ms(event.at)),
+        })
+        previous = now
+        current.onChange({
+          ...current.selection,
+          runId: record.runId,
+          at:
+            next >= current.index.end
+              ? undefined
+              : new Date(next).toISOString(),
+        })
+        if (next >= current.index.end) setPlaying(false)
+      },
+      effectiveMode === 'events' ? 1000 / Number(speed) : 120,
+    )
     const visibility = () => {
       if (document.hidden) setPlaying(false)
     }
@@ -275,26 +297,10 @@ function RecordView({
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange', visibility)
     }
-  }, [playing, record.runId])
+  }, [playing, record.runId, speed, effectiveMode])
   useEffect(() => {
     setTooltip(null)
   }, [cutoff, category, query, actor, view, metric, axis, record])
-  const download = () => {
-    const blob = new Blob([JSON.stringify(record, null, 2)], {
-      type: 'application/json',
-    })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `${record.runId.replace(/[^a-zA-Z0-9._-]/g, '_')}.json`
-    anchor.click()
-    // The browser consumes the URL asynchronously; release it after dispatch.
-    const timer = window.setTimeout(() => {
-      URL.revokeObjectURL(url)
-      downloads.current.delete(url)
-    }, 1000)
-    downloads.current.set(url, timer)
-  }
   const agents = record.nodes.filter((item) => item.kind === 'agent').length
   const sessions = record.nodes.filter((item) => item.kind === 'session').length
   const joins = record.nodes.filter(
@@ -305,6 +311,7 @@ function RecordView({
     <div
       ref={container}
       className="ar-view"
+      data-reduced-motion={reducedMotion || undefined}
       onKeyDown={(event) => {
         if (event.key === 'Escape') hideTooltip()
       }}
@@ -388,6 +395,7 @@ function RecordView({
             min={0}
             max={1000}
             value={cursor}
+            aria-valuetext={utcTime(new Date(cutoff).toISOString(), true)}
             disabled={!record.events.length}
             onChange={(event) => {
               setPlaying(false)
@@ -413,6 +421,49 @@ function RecordView({
         >
           Full run
         </button>
+      </div>
+      <div className="replay-settings">
+        <Select
+          label="Replay speed"
+          field="speed"
+          value={speed}
+          onChange={setSpeed}
+        >
+          <option value="0.5">0.5×</option>
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </Select>
+        <Select
+          label="Replay progression"
+          field="progression"
+          value={effectiveMode}
+          onChange={(value) => {
+            setPlaying(false)
+            setMode(value as PlaybackMode)
+          }}
+        >
+          {!reducedMotion && <option value="time">Recorded time</option>}
+          <option value="events">Event steps</option>
+        </Select>
+        <Select
+          label="Motion"
+          field="motion"
+          value={motion}
+          onChange={(value) => {
+            setPlaying(false)
+            setMotion(value)
+          }}
+        >
+          <option value="system">System</option>
+          <option value="reduced">Reduced</option>
+        </Select>
+        <p className="small">
+          {reducedMotion ? 'Reduced motion: timestamp steps. ' : ''}
+          {effectiveMode === 'time'
+            ? '1× compresses the full recorded span into 30 seconds.'
+            : '1× advances to the next recorded timestamp each second; gaps are skipped.'}
+        </p>
       </div>
       <div className="timeline-heading">
         <span>Activity over time</span>
@@ -682,7 +733,13 @@ function RecordView({
           type="button"
           className="download-record"
           data-download
-          onClick={download}
+          onClick={() =>
+            download(
+              JSON.stringify(record, null, 2),
+              record.runId + '.json',
+              'application/json',
+            )
+          }
         >
           Download record
         </button>
