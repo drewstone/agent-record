@@ -512,8 +512,9 @@ function RecordView({
             </span>
           </summary>
           <p className="small" data-graph-caption>
-            {joins} of {sessions} sessions attributed to agents by the supplied
-            records.
+            {sessions === 0
+              ? 'No session traces supplied.'
+              : `${joins} of ${sessions} sessions attributed to agents by the supplied records.`}
           </p>
           <AgentTree
             index={index}
