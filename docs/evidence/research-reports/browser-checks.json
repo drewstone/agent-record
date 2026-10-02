@@ -1,0 +1,47 @@
+{
+  "sourceHead": "dfe2d000cd32eafe9c5da7019497b61845a4316a",
+  "checkedAt": "2026-10-02T21:02:09.809Z",
+  "checks": [
+    {
+      "check": "Empty search state",
+      "passed": true
+    },
+    {
+      "check": "Assessment filter",
+      "passed": true
+    },
+    {
+      "check": "Source provenance visible",
+      "passed": true
+    },
+    {
+      "check": "Scrub starts at zero retained conversation entries",
+      "passed": true
+    },
+    {
+      "check": "Replay advances actual events and pauses",
+      "passed": true
+    },
+    {
+      "check": "Reduced motion switches to timestamp steps",
+      "passed": true
+    },
+    {
+      "check": "Keyboard arrow selects Source tab",
+      "passed": true
+    },
+    {
+      "check": "Phone layout fits 390px",
+      "passed": true
+    },
+    {
+      "check": "Mobile selector switches to BCWW repair and dark theme stays legible at 390px",
+      "passed": true
+    },
+    {
+      "check": "Export play LaTeX creates q-conj-entropy-bcww-repair.tex (3709 bytes) in Downloads",
+      "passed": true,
+      "note": "Browser download event wait timed out; actual file independently found and inspected."
+    }
+  ]
+}
