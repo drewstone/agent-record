@@ -124,7 +124,11 @@ Review content and source metadata before public distribution.
 `reportToLatex(report, playId?)` exports the whole report or one selected play.
 The UI also downloads these documents.
 All supplied text is escaped as text, including mathematical TeX; arbitrary author macros are not executed.
-Compile with LuaLaTeX for Unicode text.
+Compile with LuaLaTeX and the DejaVu Sans TrueType fonts from TeX Live's `dejavu` package.
+The exporter names the regular, bold, italic and bold-italic font files explicitly.
+These fonts cover Latin, Greek, Cyrillic and common mathematical symbols; arbitrary scripts may need a different font family.
+Missing glyphs stop compilation instead of silently dropping claim content.
+Long identifiers, paths and hashes receive line-break opportunities without truncation or inserted hyphens.
 The export contains claim assessments, limitations, sources, checks, and question coverage, not the entire conversation.
 Printing includes every play regardless of current filters.
 Original event records remain in the JSON download.

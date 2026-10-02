@@ -141,7 +141,8 @@ export const researchReportSchema = z
         message: 'The report window must end after it starts',
       })
     if (
-      new Set(report.plays.map((play) => play.id)).size !== report.plays.length
+      new Set(report.plays.map((play) => play.id)).size !==
+      report.plays.length
     )
       ctx.addIssue({
         code: 'custom',
@@ -239,7 +240,7 @@ export function claimMatches(
   )
 }
 
-/** Escape all supplied content. Reports do not execute author-supplied TeX. Compile with LuaLaTeX for Unicode. */
+/** Escape supplied text; reports never execute author-supplied TeX. */
 export function escapeLatex(value: string): string {
   const replacements: Record<string, string> = {
     '\\': '\\textbackslash{}',
@@ -266,7 +267,17 @@ export function reportToLatex(
       : report.plays.filter((play) => play.id === playId)
   if (playId !== undefined && !plays.length)
     throw new Error('Unknown play: ' + playId)
-  const text = escapeLatex
+  // Long identifiers, source paths and hashes must wrap without losing bytes or
+  // inserting hyphens. Escape each character before adding trusted layout TeX.
+  const text = (value: string) =>
+    value
+      .split(/(\S{32,})/u)
+      .map((part) =>
+        /^\S{32,}$/u.test(part)
+          ? Array.from(part).map(escapeLatex).join('\\allowbreak{}')
+          : escapeLatex(part),
+      )
+      .join('')
   const paragraph = (value: string) => text(value) + '\n\n'
   const list = (values: string[]) =>
     values.length
@@ -299,15 +310,23 @@ export function reportToLatex(
       : ''
   return [
     '\\documentclass[11pt]{article}',
+    '% Compile with LuaLaTeX and the DejaVu fonts (TeX Live dejavu package).',
     '\\usepackage{fontspec}',
+    '\\setmainfont{DejaVuSans.ttf}[BoldFont=DejaVuSans-Bold.ttf,ItalicFont=DejaVuSans-Oblique.ttf,BoldItalicFont=DejaVuSans-BoldOblique.ttf]',
+    '\\tracinglostchars=3',
     '\\usepackage[margin=25mm]{geometry}',
     '\\usepackage{enumitem}',
     '\\setlist{nosep}',
     '\\setlength{\\emergencystretch}{3em}',
+    '\\setlength{\\parindent}{0pt}',
+    '\\setlength{\\parskip}{0.4em}',
+    '\\raggedright',
     '\\title{' +
       text(playId === undefined ? report.title : plays[0]!.title) +
       '}',
-    '\\author{' + text(report.assessmentBy ?? 'Research report') + '}',
+    '\\author{\\parbox{0.9\\textwidth}{\\centering ' +
+      text(report.assessmentBy ?? 'Research report') +
+      '}}',
     '\\date{' + text(report.generatedAt) + '}',
     '\\begin{document}',
     '\\maketitle',
