@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
+import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { parseResearchReport, reportToLatex } from '../dist/report.js'
 import { fromResearchPublication } from '../dist/research-publication.js'
@@ -38,7 +42,10 @@ test('unknown state and absent trace remain unknown through rendering and export
   assert.match(html, /No event record was supplied/)
   assert.match(html, /State unknown/)
   assert.match(reportToLatex(data), /State: Unknown · Updated: Unknown/)
-  assert.match(reportToLatex(data), /Topology, activity, and cost are unknown/)
+  assert.match(
+    reportToLatex(data),
+    /Topology, activity, and cost are unknown/,
+  )
 })
 
 test('assessed claims and observed answers require evidence', () => {
@@ -47,7 +54,12 @@ test('assessed claims and observed answers require evidence', () => {
   assert.throws(() => parseResearchReport(claim), /needs evidence/)
   const question = raw()
   question.questionCoverage = [
-    { id: 'C01', question: 'What happened?', status: 'observed', evidence: [] },
+    {
+      id: 'C01',
+      question: 'What happened?',
+      status: 'observed',
+      evidence: [],
+    },
   ]
   assert.throws(() => parseResearchReport(question), /needs evidence/)
 })
@@ -145,7 +157,10 @@ test('standalone HTML contains escaped data and a hash-scoped script policy', ()
   data.title = '</script><img src=x onerror=alert(1)>'
   data.summary = '<style>body{display:none}</style>'
   const script = '/* standalone test */'
-  const html = renderReportHtml(parseResearchReport(data), { css: '', script })
+  const html = renderReportHtml(parseResearchReport(data), {
+    css: '',
+    script,
+  })
   const hash = createHash('sha256').update(script).digest('base64')
   assert.ok(html.includes("script-src 'sha256-" + hash + "'"))
   assert.ok(html.includes("connect-src 'none'"))
@@ -155,6 +170,34 @@ test('standalone HTML contains escaped data and a hash-scoped script policy', ()
   )[1]
   assert.equal(JSON.parse(embedded).title, data.title)
   assert.ok(!embedded.includes('<'))
+})
+
+test('the installed executable follows package symlinks and writes both exports', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'agent-record-cli-'))
+  try {
+    const executable = join(directory, 'agent-record-report.mjs')
+    const input = join(directory, 'report.json')
+    const output = join(directory, 'report.html')
+    await symlink(
+      fileURLToPath(new URL('../tools/render-report.mjs', import.meta.url)),
+      executable,
+    )
+    await writeFile(input, JSON.stringify(raw()))
+    const receipt = JSON.parse(
+      execFileSync(process.execPath, [executable, input, output], {
+        encoding: 'utf8',
+      }),
+    )
+    assert.equal(receipt.plays, 1)
+    assert.equal(receipt.html, output)
+    assert.match(await readFile(output, 'utf8'), /Unobserved play/)
+    assert.match(
+      await readFile(join(directory, 'report.tex'), 'utf8'),
+      /Unanswered question/,
+    )
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
 })
 
 test('playback uses recorded timestamps, explicit speed, and clamps at the endpoint', () => {

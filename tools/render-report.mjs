@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, realpath, writeFile } from 'node:fs/promises'
 import { resolve, dirname, basename, extname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createElement, StrictMode } from 'react'
@@ -31,7 +31,11 @@ export function renderReportHtml(report, { css, script }) {
   const executable = script.replace(/<\/script/gi, '<\\/script')
   const scriptHash = createHash('sha256').update(executable).digest('base64')
   const body = renderToString(
-    createElement(StrictMode, null, createElement(ResearchReport, { report })),
+    createElement(
+      StrictMode,
+      null,
+      createElement(ResearchReport, { report }),
+    ),
   )
   return (
     '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
@@ -53,7 +57,9 @@ export function renderReportHtml(report, { css, script }) {
 }
 
 export async function renderReportFile(input, output) {
-  const report = parseResearchReport(JSON.parse(await readFile(input, 'utf8')))
+  const report = parseResearchReport(
+    JSON.parse(await readFile(input, 'utf8')),
+  )
   const [css, script] = await Promise.all([
     readFile(join(packageRoot, 'dist/styles.css'), 'utf8'),
     readFile(join(packageRoot, 'dist/report-viewer.js'), 'utf8'),
@@ -78,7 +84,8 @@ export async function renderReportFile(input, output) {
 
 if (
   process.argv[1] &&
-  pathToFileURL(resolve(process.argv[1])).href === import.meta.url
+  pathToFileURL(await realpath(resolve(process.argv[1]))).href ===
+    import.meta.url
 ) {
   const [input, output, extra] = process.argv.slice(2)
   if (!input || !output || extra) {
