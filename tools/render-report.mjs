@@ -82,11 +82,10 @@ export async function renderReportFile(input, output) {
   }
 }
 
-if (
-  process.argv[1] &&
-  pathToFileURL(await realpath(resolve(process.argv[1]))).href ===
-    import.meta.url
-) {
+const entryPath = process.argv[1]
+  ? await realpath(resolve(process.argv[1])).catch(() => null)
+  : null
+if (entryPath && pathToFileURL(entryPath).href === import.meta.url) {
   const [input, output, extra] = process.argv.slice(2)
   if (!input || !output || extra) {
     console.error('Usage: agent-record-report REPORT.json OUTPUT.html')

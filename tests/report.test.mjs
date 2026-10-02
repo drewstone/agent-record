@@ -200,6 +200,19 @@ test('the installed executable follows package symlinks and writes both exports'
   }
 })
 
+test('the renderer can be imported by a stdin module without an entry file', () => {
+  const renderer = new URL('../tools/render-report.mjs', import.meta.url).href
+  const result = execFileSync(
+    process.execPath,
+    ['--input-type=module', '-'],
+    {
+      input: `const { renderReportHtml } = await import(${JSON.stringify(renderer)}); process.stdout.write(typeof renderReportHtml)`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(result, 'function')
+})
+
 test('playback uses recorded timestamps, explicit speed, and clamps at the endpoint', () => {
   const base = {
     cutoff: 1000,
