@@ -9,7 +9,7 @@ A React component for reading what an agent team did: conversations, tool inputs
 ## Install
 
 ```sh
-pnpm add https://github.com/drewstone/agent-record/releases/download/v0.1.0/drewstone-agent-record-0.1.0.tgz react react-dom
+pnpm add https://github.com/drewstone/agent-record/releases/download/v0.2.0/drewstone-agent-record-0.2.0.tgz react react-dom
 ```
 
 The release is an ESM package with TypeScript declarations and CSS.
@@ -31,6 +31,14 @@ Your application loads the data and decides which content may be displayed.
 The component makes no network requests, stores no data, starts no agents, and does not change your URL.
 It can render on the server; hydration enables the interactive controls.
 Use a client component when embedding it in a React Server Components application.
+
+## Research reports
+
+Use `ResearchReport` to read authored claims, limitations, checks, and source references alongside each play’s recorded events.
+Search and assessment filters narrow the evidence; a source event opens its exact trace position.
+The offline `agent-record-report REPORT.json OUTPUT.html` command creates a self-contained interactive report and LaTeX document.
+Reports remain separate from immutable execution records.
+See [the report contract and exports](docs/research-reports.md).
 
 ## Input
 
@@ -72,6 +80,7 @@ Tool inputs and results are paired by the original node ID and call ID, within o
 Repeated call identities are marked ambiguous; a missing result is not treated as success.
 A result returned before its call's recorded timestamp stays visible, with its timing discrepancy labeled.
 
+Replay supports adjustable speed, recorded time, event steps, and reduced motion.
 The time cursor hides future content in conversation, source details, and tooltips.
 Usage plots distinguish input, output, cache read, and cache write counters.
 Tool return time is the observed call/result interval, including queue and tool time; it is not model latency.
@@ -127,8 +136,9 @@ Open a record file to inspect your own data entirely in the browser.
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm typecheck
 pnpm build
+pnpm typecheck
+pnpm test
 pnpm build:example
 pnpm pack
 ```

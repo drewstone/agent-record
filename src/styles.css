@@ -1213,3 +1213,358 @@
 .agent-record {
   container: agent-record / inline-size;
 }
+
+/* Reports share the viewer's type, color, and evidence conventions. */
+.agent-record.research-report {
+  background: var(--ar-bg);
+  padding: 1.5rem;
+}
+.agent-record .rr-header {
+  border-bottom: 1px solid var(--ar-border-strong);
+  padding-bottom: 1.5rem;
+}
+.agent-record .rr-date,
+.agent-record .rr-meta {
+  color: var(--ar-fg-muted);
+  font: 0.75rem/1.6 var(--ar-font-mono);
+  overflow-wrap: anywhere;
+}
+.agent-record .rr-date {
+  margin: 0 0 0.75rem;
+}
+.agent-record .rr-header h1 {
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  margin: 0 0 1rem;
+  font-weight: 500;
+}
+.agent-record .rr-lead {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  max-width: 75ch;
+}
+.agent-record .rr-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+.agent-record .rr-controls {
+  display: grid;
+  grid-template-columns: minmax(12rem, 2fr) minmax(10rem, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+  padding: 1.25rem 0;
+}
+.agent-record .rr-controls output {
+  padding-bottom: 0.45rem;
+}
+.agent-record .rr-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 2rem;
+}
+.agent-record .rr-plays {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: sticky;
+  top: 1rem;
+  max-height: 80vh;
+  overflow: auto;
+}
+.agent-record .rr-plays button {
+  text-align: left;
+  border: 0;
+  border-left: 2px solid var(--ar-border);
+  border-radius: 0;
+  padding: 0.8rem 0.85rem;
+  line-height: 1.5;
+  font-family: var(--ar-font-body);
+  font-size: 0.95rem;
+}
+.agent-record .rr-plays button[aria-current] {
+  background: var(--ar-bg-alt);
+  border-left-color: var(--ar-c-action);
+}
+.agent-record .rr-plays small {
+  display: block;
+  font: 0.66rem/1.5 var(--ar-font-mono);
+  color: var(--ar-fg-muted);
+  margin-top: 0.3rem;
+}
+.agent-record .rr-mobile-play {
+  display: none;
+}
+.agent-record .rr-play {
+  min-width: 0;
+}
+.agent-record .rr-play-heading {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+  justify-content: space-between;
+}
+.agent-record .rr-play h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+.agent-record .rr-play-heading button {
+  flex-shrink: 0;
+}
+.agent-record .rr-play-summary {
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+.agent-record .rr-limitations {
+  padding-left: 1.2rem;
+  color: var(--ar-fg-muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.agent-record .rr-claim {
+  border-top: 1px solid var(--ar-border);
+  padding: 1rem 0 1.1rem 1rem;
+  border-left: 2px solid var(--ar-border-strong);
+  margin: 1.1rem 0;
+}
+.agent-record .rr-claim[data-assessment='supported'] {
+  border-left-color: var(--ar-c-ok);
+}
+.agent-record .rr-claim[data-assessment='refuted'] {
+  border-left-color: var(--ar-c-fail);
+}
+.agent-record .rr-claim[data-assessment='hypothesis'] {
+  border-left-color: var(--ar-c-info);
+}
+.agent-record .rr-claim[data-assessment='unresolved'] {
+  border-left-color: var(--ar-c-run);
+}
+.agent-record .rr-assessment {
+  font: 0.7rem var(--ar-font-mono);
+  margin: 0 0 0.5rem;
+  color: var(--ar-fg-muted);
+}
+.agent-record .rr-claim h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.agent-record .rr-claim > p:not(.rr-assessment) {
+  line-height: 1.6;
+}
+.agent-record .rr-sources summary {
+  font-family: var(--ar-font-mono);
+  font-size: 0.72rem;
+}
+.agent-record .rr-sources ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.agent-record .rr-sources li {
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--ar-border);
+}
+.agent-record .rr-sources :is(code, a, small, strong) {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.agent-record .rr-sources :is(code, a) {
+  font: 0.75rem/1.65 var(--ar-font-mono);
+}
+.agent-record .rr-sources a {
+  color: var(--ar-c-info);
+}
+.agent-record .rr-sources small {
+  margin-top: 0.5rem;
+  color: var(--ar-fg-muted);
+}
+.agent-record .rr-sources blockquote {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.85rem;
+  border-left: 2px solid var(--ar-border-strong);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.agent-record .rr-sources button {
+  margin-top: 0.75rem;
+}
+.agent-record .rr-trace {
+  border-top: 1px solid var(--ar-border-strong);
+  padding-top: 1.25rem;
+  margin-top: 1.5rem;
+  scroll-margin-top: 1rem;
+}
+.agent-record .rr-trace > h3 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0;
+}
+.agent-record .rr-trace-missing {
+  padding: 1rem;
+  background: var(--ar-bg-alt);
+  color: var(--ar-fg-muted);
+  line-height: 1.6;
+}
+.agent-record .rr-print {
+  display: none;
+}
+.agent-record .replay-settings {
+  padding: 0 14px 0.75rem;
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 0.75rem;
+}
+.agent-record .replay-settings p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-bottom: 0.25rem;
+}
+.agent-record .rr-observations {
+  border-top: 1px solid var(--ar-border);
+  margin-top: 1rem;
+}
+.agent-record .rr-observation {
+  margin: 1rem 0;
+}
+.agent-record .rr-observation h4 {
+  font-size: 1rem;
+  margin: 0.3rem 0;
+}
+.agent-record .rr-observation p {
+  line-height: 1.6;
+}
+.agent-record .rr-questions {
+  border-top: 1px solid var(--ar-border);
+  padding-top: 0.5rem;
+}
+.agent-record .rr-questions dl {
+  margin: 0;
+}
+.agent-record .rr-question {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--ar-border);
+}
+.agent-record .rr-question dt {
+  font-weight: 600;
+}
+.agent-record .rr-question dd {
+  margin: 0.5rem 0;
+}
+.agent-record .rr-freshness {
+  border-left: 3px solid var(--ar-c-ok);
+  background: var(--ar-bg-alt);
+  padding: 0.7rem 1rem;
+  margin: 0 0 1.5rem;
+}
+.agent-record .rr-freshness[data-state='stale'] {
+  border-left-color: var(--ar-c-run);
+}
+.agent-record .rr-freshness[data-state='error'] {
+  border-left-color: var(--ar-c-fail);
+}
+.agent-record .rr-freshness p {
+  margin: 0.25rem 0;
+}
+@container agent-record (max-width: 950px) {
+  .agent-record .rr-layout {
+    grid-template-columns: 175px minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .agent-record .rr-play-heading {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .agent-record .replay-settings {
+    grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .agent-record .replay-settings p {
+    grid-column: 1 / -1;
+  }
+}
+@container agent-record (max-width: 760px) {
+  .agent-record .rr-layout {
+    display: block;
+  }
+  .agent-record .rr-plays {
+    display: none;
+  }
+  .agent-record .rr-mobile-play {
+    display: grid;
+    margin-bottom: 1.2rem;
+  }
+  .agent-record .rr-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+  .agent-record .rr-controls output {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .agent-record.research-report {
+    padding: 0.5rem;
+  }
+  .agent-record .rr-actions {
+    flex-direction: column;
+    align-items: start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-record *,
+  .agent-record *::before,
+  .agent-record *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media print {
+  .agent-record.research-report {
+    background: white;
+    color: black;
+    padding: 0;
+  }
+  .agent-record.research-report
+    > :is(.rr-layout, .rr-controls, .rr-mobile-play),
+  .agent-record .rr-actions {
+    display: none !important;
+  }
+  .agent-record .rr-print {
+    display: block;
+  }
+  .agent-record .rr-print .rr-play {
+    break-before: page;
+  }
+  .agent-record .rr-print .rr-claim {
+    break-inside: avoid;
+  }
+  .agent-record .rr-print .rr-sources {
+    display: block;
+  }
+  .agent-record .rr-header {
+    border-color: #777;
+  }
+  .agent-record .rr-print h2 {
+    color: black;
+  }
+}
+
+.agent-record [data-reduced-motion] *,
+.agent-record [data-reduced-motion] *::before,
+.agent-record [data-reduced-motion] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+@container agent-record (max-width: 500px) {
+  .agent-record .replay-settings { grid-template-columns: 1fr 1fr; }
+  .agent-record .replay-settings .ar-select:last-of-type { grid-column: 1 / -1; }
+}
