@@ -431,48 +431,99 @@
   line-height: 1.45;
 }
 .agent-record .graph-scroll {
+  display: block;
   overflow: auto;
   max-height: 31rem;
-  padding: 0.3rem 0.3rem 0.75rem;
+  padding: 0.45rem 0.5rem 0.75rem;
 }
-.agent-record svg .graph-link {
-  stroke: var(--ar-border-strong);
-  fill: none;
+.agent-record .graph-list,
+.agent-record .graph-branch {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
-.agent-record svg .graph-node rect {
-  fill: var(--ar-surface);
-  stroke: transparent;
+.agent-record .graph-item {
+  position: relative;
+  min-width: 0;
 }
-.agent-record svg .graph-node {
-  cursor: pointer;
+.agent-record .graph-branch {
+  position: relative;
+  margin: 0.1rem 0 0 0.45rem;
+  padding-left: 0.55rem;
+  border-left: 1px solid var(--ar-border-strong);
 }
-.agent-record svg .graph-node:hover rect {
-  stroke: var(--ar-border-strong);
+.agent-record .graph-branch::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -1.2rem;
+  height: 1.2rem;
+  border-left: 1px solid var(--ar-border-strong);
 }
-.agent-record svg .graph-node.selected rect {
-  stroke: var(--ar-border-strong);
-  fill: var(--ar-bg);
+.agent-record .graph-branch > .graph-item::before {
+  content: '';
+  position: absolute;
+  left: -0.55rem;
+  top: 1rem;
+  width: 0.55rem;
+  border-top: 1px solid var(--ar-border-strong);
 }
-.agent-record svg .graph-node.future {
-  opacity: 0.45;
+.agent-record .graph-node {
+  display: grid;
+  grid-template-columns: 0.45rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border-color: transparent;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
-.agent-record svg .graph-label {
-  fill: var(--ar-fg);
-  font: 600 13px var(--ar-font-mono);
+.agent-record .graph-node:hover {
+  border-color: var(--ar-border-strong);
 }
-.agent-record svg .graph-meta {
-  fill: var(--ar-fg-muted);
-  font: 9px var(--ar-font-mono);
+.agent-record .graph-node.selected {
+  border-color: var(--ar-border-strong);
+  background: var(--ar-bg);
 }
-.agent-record svg .state-done {
-  fill: var(--ar-c-ok);
+.agent-record .graph-node:focus-visible {
+  position: relative;
+  z-index: 1;
 }
-.agent-record svg .state-down {
-  fill: var(--ar-c-fail);
+.agent-record .graph-node.future {
+  opacity: 0.55;
 }
-.agent-record svg .state-unknown {
-  fill: var(--ar-fg-faint);
+.agent-record .graph-state {
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-top: 0.27rem;
+  border-radius: 50%;
+  background: var(--ar-fg-faint);
 }
+.agent-record .graph-state.state-done {
+  background: var(--ar-c-ok);
+}
+.agent-record .graph-state.state-down {
+  background: var(--ar-c-fail);
+}
+.agent-record .graph-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+.agent-record .graph-label {
+  font: 600 11px/1.35 var(--ar-font-mono);
+  color: var(--ar-fg);
+  overflow-wrap: anywhere;
+}
+.agent-record .graph-meta {
+  font: 9px/1.35 var(--ar-font-mono);
+  color: var(--ar-fg-muted);
+  overflow-wrap: anywhere;
+}
+
 .agent-record .conversation-panel {
   min-width: 0;
 }
@@ -731,8 +782,6 @@
   }
   .agent-record .graph-scroll {
     max-height: 18rem;
-    width: 100%;
-    max-width: 340px;
   }
   .agent-record .conversation-head {
     flex-direction: row;
@@ -1119,9 +1168,6 @@
 .agent-record .conversation-head .ar-select {
   width: 170px;
   flex-shrink: 0;
-}
-.agent-record .graph-scroll svg {
-  width: 100%;
 }
 .agent-record .topology {
   margin: 0;
