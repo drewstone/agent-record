@@ -1,0 +1,33 @@
+{
+  "origin": "http://127.0.0.1:14371",
+  "at": "2026-10-02T20:09:16.561Z",
+  "checks": [
+    "Real topology renders six attributed actors",
+    "Real command and exact matching output render",
+    "Reusable component does not change host URL",
+    "Source retains original session and proven agent identity",
+    "Source hides future body",
+    "All six conversations preserve 400 calls and 399 results",
+    "Missing result remains unknown",
+    "Expand tools opens actual calls",
+    "Collapse tools closes all",
+    "Empty search state",
+    "Token curves render",
+    "Exact call/result intervals render",
+    "Chart supports keyboard hover detail",
+    "Two instances mount under StrictMode",
+    "Changing first viewer does not change second",
+    "Instance DOM IDs are unique",
+    "Second instance unmounts cleanly",
+    "Package download works without a blog endpoint",
+    "Phone has no page overflow",
+    "Embedded narrow viewer folds navigation",
+    "Phone tree selects worker",
+    "Invalid imported file reports error",
+    "Invalid file preserves displayed run",
+    "No browser exceptions"
+  ],
+  "errors": [],
+  "complete": true,
+  "video": "walkthrough.webm"
+}

@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["vite/client"] },
+  "include": ["src.tsx", "vite.config.ts"]
+}

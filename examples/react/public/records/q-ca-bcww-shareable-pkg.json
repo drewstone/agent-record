@@ -1,0 +1,59 @@
+{
+  "schema": "research-publication.events.v1",
+  "runId": "q-ca-bcww-shareable-pkg",
+  "title": "Corrected witness finding, September 3",
+  "assignment": {
+    "objective": "The complete original input was not recovered. The retained finding resolves a mismatch between the charter atom set and the prior verified witness.",
+    "suppliedKnowledge": "Only retained post-run finding pages are available in this publication record.",
+    "deliverables": "No complete original acceptance contract is available.",
+    "constraints": "Do not infer an original prompt, topology, served model, or complete transcript from this finding.",
+    "source": null
+  },
+  "nodes": [
+    {
+      "id": "finding:q-ca-bcww-shareable-pkg",
+      "label": "Recorded findings",
+      "parent": null,
+      "kind": "finding",
+      "model": null,
+      "start": "2026-09-03T08:39:18.708Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "finding-8bf651428604",
+      "node": "finding:q-ca-bcww-shareable-pkg",
+      "at": "2026-09-03T08:39:18.708Z",
+      "kind": "finding-record",
+      "category": "verification",
+      "label": "Charter's cited witness atoms {0000,0010,0100,1000,1101} are a REAL INCONSISTENCY with prior KB pages' {0001,0010,0011,0111,1000}, not a benign relabeling",
+      "source": {
+        "path": "kb/pages/ca/pursuit-q-ca-bcww-shareable-pkg--finding--charter-s-cited-witness-atoms-0000-0010-0100-1000-1101-are-a-real-inconsistency-.md",
+        "sha256": "8bf6514286041fa54611892a31052108b39ca0261ab2c588a8b6e911cb5e7317",
+        "line": 31
+      },
+      "detail": {
+        "recordedClaim": "Charter Amendment 2026-09-03 cites witness atoms {0000,0010,0100,1000,1101} for the BCWW eq(4.6) falsification; every prior KB page (pursuit-fc-audit-smoke-a, pursuit-smoke-insight-contradiction[-b], pursuit-ftqc-r3x-crossexam) cites {0001,0010,0011,0111,1000} for the same claimed LHS=0.052932501298080935. Resolved exactly: the two sets have different Hamming-weight multisets ([1,1,1,2,3] vs [0,1,1,1,3]), which no party-relabeling (bit-position permutation) or global bit-complement can reconcile (both operations preserve or uniformly mirror per-atom weight), so they are NOT the same 5-atom support under any labeling convention -- this is a genuine inconsistency in the charter text, not endianness/party-order noise. Reading each set under the paper's own undisturbed party ordering K={A,B,C,D} (source line \"Let K={A,B,C,D}\", section 4.2, no permutation): the KB/prior-run set reproduces the settled target L=0.052932501298080935 exactly; the charter's set does not (gives L=-0.151, wrong sign). An exhaustive scan over all 24 relabelings x {identity,complement} shows the charter's set CAN hit the same L value only under a twisted (non-A,B,C,D) reading, and even then is not literally equal to the KB set when relabeled back -- an algebraic coincidence of this asymmetric inequality's coefficients, not evidence of equivalence. Verdict: the correct witness set matching the paper's own convention is {0001,0010,0011,0111,1000}; the charter's atom list is a transcription error and this package continues to use and cite the KB set.",
+        "assessment": "The corrected atom set independently reproduces the positive sign. The original fixed-order set has negative LHS. Its source run archive is missing.",
+        "authorAttribution": "Run-level only; individual native session unresolved"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "kb/pages/ca/pursuit-q-ca-bcww-shareable-pkg--finding--charter-s-cited-witness-atoms-0000-0010-0100-1000-1101-are-a-real-inconsistency-.md",
+      "sha256": "8bf6514286041fa54611892a31052108b39ca0261ab2c588a8b6e911cb5e7317",
+      "bytes": 3375
+    }
+  ],
+  "terminal": null,
+  "coverage": {
+    "runtimeNodes": 0,
+    "nativeFiles": 0,
+    "nativeRuntimeJoins": 0,
+    "completeOriginalCapture": false,
+    "publicContent": "Reviewed assignments and recorded findings are published where available. Native message bodies outside the August 5 review remain unpublished. Original source hashes and physical line numbers are retained.",
+    "categoryMethod": "Tool-name and command keyword rules; these are annotations, not measured research value or evidence of independence.",
+    "cost": "Unavailable: zero-valued legacy counters are not treated as a bill."
+  }
+}

@@ -1,0 +1,3570 @@
+{
+  "schema": "research-publication.events.v1",
+  "runId": "q-conj-entropy-bcww-repair",
+  "title": "BCWW repair pursuit, August 30",
+  "assignment": {
+    "objective": "Find or exclude repairs to the already-refuted BCWW candidate within a bounded grammar.",
+    "suppliedKnowledge": "The corrected classical witness, GHZ witness, and earlier no-go findings were supplied.",
+    "deliverables": "Check prior art first; then exact witness screening, a copy-lemma proof attempt, or a bounded conjecture with a falsifier battery.",
+    "constraints": "The task forbade re-verifying the settled BCWW refutation. It named an OpenCode director, four roles, a $25 budget, and small storage. These are intended conditions, not measured expenditure.",
+    "source": {
+      "path": "run-input.json",
+      "sha256": "f26ce94cf8498b91feb06e2214a75ef9176f626e954917f78615d42f4e995973",
+      "bytes": 30309
+    }
+  },
+  "nodes": [
+    {
+      "id": "q-conj-entropy-bcww-repair",
+      "label": "root",
+      "parent": null,
+      "kind": "runtime",
+      "model": "opencode/zai-coding-plan/glm-5.3",
+      "modelSource": "materialization declaration",
+      "servedModel": null,
+      "start": "2026-08-30T23:29:28.297Z"
+    },
+    {
+      "id": "q-conj-entropy-bcww-repair:s0",
+      "label": "gate: prior-art sweep for published BCWW 4.6 repairs",
+      "parent": "q-conj-entropy-bcww-repair",
+      "kind": "runtime",
+      "model": "glm-5.2",
+      "modelSource": "materialization declaration",
+      "servedModel": null,
+      "start": "2026-08-30T23:38:47.612Z",
+      "end": "2026-08-30T23:52:06.198Z",
+      "status": "down"
+    },
+    {
+      "id": "q-conj-entropy-bcww-repair:s1",
+      "label": "gate retry: prior-art sweep (crash-safe, out/ only)",
+      "parent": "q-conj-entropy-bcww-repair",
+      "kind": "runtime",
+      "model": "glm-5.2",
+      "modelSource": "materialization declaration",
+      "servedModel": null,
+      "start": "2026-08-30T23:54:45.839Z",
+      "end": "2026-08-31T00:02:17.627Z",
+      "status": "down"
+    },
+    {
+      "id": "finding:q-conj-entropy-bcww-repair",
+      "label": "Recorded findings",
+      "parent": null,
+      "kind": "finding",
+      "model": null,
+      "start": "2026-08-30T23:52:40.969Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "j-1",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-30T23:29:28.297Z",
+      "kind": "begin",
+      "category": "other",
+      "label": "begin",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 1
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-2",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-30T23:29:28.297Z",
+      "kind": "spawned",
+      "category": "coordination",
+      "label": "spawned",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 2
+      },
+      "detail": {
+        "identity": {
+          "profileDigest": "sha256:29d7dfe107365a52a29fa73e3693ff529fc85afdccd9b9a1316ec83374fb8cff",
+          "taskDigest": "sha256:3e0d5076c70baf6eeacbbd92496862287abd9fd94ab88bf4e830858bf6e57dd1"
+        }
+      }
+    },
+    {
+      "id": "j-3",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:38:47.612Z",
+      "kind": "spawned",
+      "category": "coordination",
+      "label": "spawned",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 3
+      },
+      "detail": {
+        "assignmentId": "ordinal:1",
+        "identity": {
+          "profileDigest": "sha256:0f89c9b3a10a601f41f06175bf3c50afb3b596525150bcc51cbf2692bb29be4b",
+          "taskDigest": "sha256:e299a53cd6e8f8a04250d176a679c8179a435c483bc0273d33513b6753d03e4d"
+        }
+      }
+    },
+    {
+      "id": "j-4",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:38:47.631Z",
+      "kind": "materialized",
+      "category": "infrastructure",
+      "label": "materialized",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 4
+      },
+      "detail": {
+        "receipt": {
+          "authoredProfileDigest": "sha256:0f89c9b3a10a601f41f06175bf3c50afb3b596525150bcc51cbf2692bb29be4b",
+          "effectiveProfileDigest": "sha256:0f89c9b3a10a601f41f06175bf3c50afb3b596525150bcc51cbf2692bb29be4b",
+          "materializationPlanDigest": "sha256:fa0912736ef94d0936d530ca6be33abf57451d74e1b42a5430aa35dccb778d54",
+          "runtime": "sandbox",
+          "backend": "opencode",
+          "model": {
+            "status": "known",
+            "id": "glm-5.2"
+          },
+          "execution": {
+            "kind": "run",
+            "id": "q-conj-entropy-bcww-repair:s0"
+          }
+        }
+      }
+    },
+    {
+      "id": "j-5",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:38:47.631Z",
+      "kind": "execution-bound",
+      "category": "infrastructure",
+      "label": "execution bound",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 5
+      },
+      "detail": {
+        "attemptId": "q-conj-entropy-bcww-repair:s0:attempt:8fe91e87-1de0-47f0-a860-81f0e67234cf",
+        "bindingDigests": {
+          "materializationReceiptDigest": "sha256:c345e74a69c48e8d5c82af72f275cf2f6346284b13234ca344c1cd6aff4e1204",
+          "bindingDigest": "sha256:a50e896c448e75d08c03ed77ae9aa512a887330a8fba25790aceaadbc7d1ee53"
+        }
+      }
+    },
+    {
+      "id": "j-6",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:06.563Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 6
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-7",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:06.935Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 7
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-8",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:06.950Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 8
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-9",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:07.059Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 9
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-10",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:07.070Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 10
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-11",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:08.803Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 11
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-12",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:08.812Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 12
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-13",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:08.953Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 13
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-14",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:08.963Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 14
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-15",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:18.888Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 15
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-16",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:20.090Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 16
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-17",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:20.098Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 17
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-18",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:21.512Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 18
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-19",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:21.521Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 19
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-20",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:22.176Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 20
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-21",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:22.209Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 21
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-22",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:22.220Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 22
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-23",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:27.988Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 23
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-24",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:27.994Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 24
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-25",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:29.523Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 25
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-26",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:29.530Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 26
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-27",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:34.727Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 27
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-28",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:34.842Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 28
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-29",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:34.852Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 29
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-30",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:38.329Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 30
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-31",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:40.822Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 31
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-32",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:40.833Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 32
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-33",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:41.131Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 33
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-34",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:41.625Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 34
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-35",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:41.636Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 35
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-36",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:41.988Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 36
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-37",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:41.995Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 37
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-38",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:45.128Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 38
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-39",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:45.140Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 39
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-40",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:53.621Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 40
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-41",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:56.565Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 41
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-42",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:56.763Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 42
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-43",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:56.770Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 43
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-44",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:39:58.641Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 44
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-45",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:00.848Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 45
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-46",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:00.975Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 46
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-47",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:00.980Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 47
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-48",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:03.569Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 48
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-49",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:04.071Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 49
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-50",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:04.080Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 50
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-51",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:09.314Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 51
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-52",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:11.484Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 52
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-53",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:11.493Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 53
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-54",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:12.826Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 54
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-55",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:13.168Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 55
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-56",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:13.173Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 56
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-57",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:18.741Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 57
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-58",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:19.002Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 58
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-59",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:19.008Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 59
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-60",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:20.562Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 60
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-61",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:20.566Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 61
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-62",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:26.650Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 62
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-63",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:27.367Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 63
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-64",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:27.372Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 64
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-65",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:37.126Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 65
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-66",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:38.127Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 66
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-67",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:38.138Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 67
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-68",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:38.144Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 68
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-69",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:38.153Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 69
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-70",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:40:38.163Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 70
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-71",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:03.954Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 71
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-72",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:05.643Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 72
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-73",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:05.648Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 73
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-74",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:05.890Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 74
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-75",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:05.987Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 75
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-76",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:05.999Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 76
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-77",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:09.247Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 77
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-78",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:09.253Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 78
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-79",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:13.260Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 79
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-80",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:13.274Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 80
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-81",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:13.279Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 81
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-82",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:16.979Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 82
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-83",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:16.985Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 83
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-84",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:44.346Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 84
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-85",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:47.747Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 85
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-86",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:47.858Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 86
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-87",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:47.866Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 87
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-88",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:51.124Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 88
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-89",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:51.142Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 89
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-90",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:56.649Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 90
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-91",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:58.836Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 91
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-92",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:58.980Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 92
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-93",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:41:58.987Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 93
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-94",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:01.478Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 94
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-95",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:01.504Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 95
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-96",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:08.843Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 96
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-97",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:12.122Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 97
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-98",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:42.280Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 98
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-99",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:42.289Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 99
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-100",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:45.964Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 100
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-101",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:42:45.972Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 101
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-102",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:15.286Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 102
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-103",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:15.956Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 103
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-104",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:15.970Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 104
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-105",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:18.059Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 105
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-106",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:18.402Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 106
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-107",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:18.408Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 107
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-108",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:19.687Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 108
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-109",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:19.694Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 109
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-110",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:24.767Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 110
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-111",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:26.972Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 111
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-112",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:27.173Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 112
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-113",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:27.180Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 113
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-114",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:43.760Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 114
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-115",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:45.566Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 115
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-116",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:45.750Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 116
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-117",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:45.755Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 117
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-118",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:48.611Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 118
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-119",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:43:48.627Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 119
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-120",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:06.286Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 120
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-121",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:11.958Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 121
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-122",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:12.196Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 122
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-123",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:12.206Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 123
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-124",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:15.447Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 124
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-125",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:15.454Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 125
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-126",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:15.459Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 126
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-127",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:28.170Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 127
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-128",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:28.176Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 128
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-129",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:28.182Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 129
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-130",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:33.823Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 130
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-131",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:36.704Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 131
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-132",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:36.939Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 132
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-133",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:36.946Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 133
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-134",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:42.986Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 134
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-135",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:42.995Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 135
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-136",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:43.001Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 136
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-137",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:48.358Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 137
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-138",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:48.369Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 138
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-139",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:48.376Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 139
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-140",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:50.171Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 140
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-141",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:50.187Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 141
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-142",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:57.293Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 142
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-143",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:57.311Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 143
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-144",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:44:57.329Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 144
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-145",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:03.915Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 145
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-146",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:03.929Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 146
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-147",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:03.943Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 147
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-148",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:22.853Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 148
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-149",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:26.131Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 149
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-150",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:26.136Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 150
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-151",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:26.214Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 151
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-152",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:26.580Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 152
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-153",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:26.585Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 153
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-154",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:37.417Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 154
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-155",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:37.424Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 155
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-156",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:50.035Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 156
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-157",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:52.240Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 157
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-158",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:56.817Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 158
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-159",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:45:56.823Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 159
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-160",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:05.581Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 160
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-161",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:07.093Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 161
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-162",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:07.465Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 162
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-163",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:07.474Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 163
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-164",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:21.828Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 164
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-165",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:25.741Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 165
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-166",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:25.875Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 166
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-167",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:25.885Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 167
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-168",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:37.659Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 168
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-169",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:39.056Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 169
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-170",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:39.543Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 170
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-171",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:39.550Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 171
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-172",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:42.178Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 172
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-173",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:42.186Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 173
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-174",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:45.386Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 174
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-175",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:45.393Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 175
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-176",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:49.028Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 176
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-177",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:49.037Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 177
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-178",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:46:49.045Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 178
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-179",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:04.826Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 179
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-180",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:06.913Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 180
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-181",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:07.082Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 181
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-182",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:07.087Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 182
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-183",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:16.280Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 183
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-184",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:16.286Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 184
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-185",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:16.295Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 185
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-186",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:47.044Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 186
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-187",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:48.124Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 187
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-188",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:49.338Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 188
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-189",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:47:49.352Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 189
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-190",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:48:35.822Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 190
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-191",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:34.482Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 191
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-192",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:35.166Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 192
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-193",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:35.177Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 193
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-194",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:50.070Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 194
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-195",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:53.422Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 195
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-196",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:54.083Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 196
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-197",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:49:54.104Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 197
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-198",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:50:00.974Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 198
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-199",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:50:02.287Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 199
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-200",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:50:03.022Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 200
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-201",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:50:03.027Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 201
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-202",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-30T23:50:13.472Z",
+      "kind": "materialized",
+      "category": "infrastructure",
+      "label": "materialized",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 202
+      },
+      "detail": {
+        "receipt": {
+          "authoredProfileDigest": "sha256:29d7dfe107365a52a29fa73e3693ff529fc85afdccd9b9a1316ec83374fb8cff",
+          "effectiveProfileDigest": "sha256:29d7dfe107365a52a29fa73e3693ff529fc85afdccd9b9a1316ec83374fb8cff",
+          "materializationPlanDigest": "sha256:81b730e1ef6461def86cf6d3450d734ead4e58b376cd5f762d928265e1be2179",
+          "platformAttachmentsDigest": "sha256:c4aba52e1b23c868179cc132ad6c43072c52343179a16fbdab9f8a03b0e4d218",
+          "runtime": "cli",
+          "backend": "bridge",
+          "model": {
+            "status": "known",
+            "id": "opencode/zai-coding-plan/glm-5.3"
+          },
+          "execution": {
+            "kind": "session",
+            "id": "supervised-manager-df986364c7309f7ecbe9c7f0055dd511974c47a4191119afaea3bf1f802bcb64"
+          }
+        }
+      }
+    },
+    {
+      "id": "j-203",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-30T23:50:13.480Z",
+      "kind": "execution-bound",
+      "category": "infrastructure",
+      "label": "execution bound",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 203
+      },
+      "detail": {
+        "attemptId": "q-conj-entropy-bcww-repair:attempt:da439d79-2b65-46e6-a3f2-f8aa4773c553",
+        "bindingDigests": {
+          "materializationReceiptDigest": "sha256:ca45aae4fc96a5c0d4ee51d9af6a3b553a56ab75b5a0fd3f06afb22e5330a969",
+          "bindingDigest": "sha256:341993332a8eca1f9efcbb48338d68152517862afff9d1b1e6a24418a3c215fa"
+        }
+      }
+    },
+    {
+      "id": "j-204",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-30T23:50:13.491Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 204
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-205",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:50:48.100Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 205
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-206",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:50:48.108Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 206
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-207",
+      "node": "q-conj-entropy-bcww-repair:s0",
+      "at": "2026-08-30T23:52:06.198Z",
+      "kind": "settled",
+      "category": "infrastructure",
+      "label": "settled",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 207
+      },
+      "detail": {
+        "status": "down",
+        "tokens": null,
+        "usd": null,
+        "failureClass": "rate limit"
+      }
+    },
+    {
+      "id": "finding-fc0e64b7a388",
+      "node": "finding:q-conj-entropy-bcww-repair",
+      "at": "2026-08-30T23:52:40.969Z",
+      "kind": "finding-record",
+      "category": "verification",
+      "label": "R1's GHZ4-mixture second witness pinned exactly: rho = 3/4 GHZ4 + 1/8|(A,C)> + 1/8|(A,D)>, c46 = -0.113302009 bits, classical-reducible",
+      "source": {
+        "path": "kb/pages/pursuit-q-conj-entropy-bcww-repair--finding--r1-s-ghz4-mixture-second-witness-pinned-exactly-rho-3-4-ghz4-1-8-a-c-1-8-a-d-c46.md",
+        "sha256": "fc0e64b7a3888d9f0fbc136fcbe047f30465f5ed6e06abb5a6ef951cfdd2a6f3",
+        "line": 20
+      },
+      "detail": {
+        "recordedClaim": "The R1 register's second (\"GHZ4 mixture, +0.113302 bits\") BCWW-(4.6)-violating witness is pinned exactly: rho = (3/4)|GHZ4><GHZ4| + (1/8)|s1><s1| + (1/8)|s2><s2| with {s1,s2} = the atoms (A,C) and (A,D) (masks 5,9; strings \"1010\",\"1001\" under the locked convention: 4-char string = binary of the subset mask MSB-first, RIGHTMOST char = A). The state is classical-reducible: every marginal is the diagonal classical mixture {3/8 on 0000, 3/8 on 1111, 1/8 on (A,C), 1/8 on (A,D)} restricted. Exact rational prime-exponent arithmetic gives c46 = Ingleton(A:B;C,D)+I(C:D|B) = -0.113302008775 bits (exact sign -1 by integer comparison), matching the register's 6-decimal \"+0.113302 bits\" (the (A<->B) mirror pair masks {6,10} gives the identical value; c46 is A<->B symmetric). Identification method: exact-evaluation screen over the classical-reducible family {g*GHZ4 + b*|s> + c*|t>} (120 mask pairs x 480x480 weight grid) found the unique 6-decimal match at g=3/4, b=c=1/8, masks {5,9}; the white-noise family (1-k/12)GHZ4+(k/12)I/16 has c46 >= 0 for ALL k (pure GHZ4 sits at exact equality c46=0) and the classic Linden mixture (1/2 GHZ4 + 1/4|0101> + 1/4|1001>) evaluates POSITIVE (c46=+0.5 at masks {10,9}, +0.066..+1.19 over all 12 relabeled pairs) \u2014 neither is the R1 witness. Engine calibration anchors also locked this run: c46 on the uniform 5-atom witness = (14-9*log2(3))/5 = -0.052932501298 bits exactly, and the string convention pinned by brute force (24 relabelings x 2 readings; only rightmost=A reproduces the KB value with identity relabeling). Full entropy vectors of both witnesses: work/lock/witnesses.json; reference engine work/lock/lock_check.py (stdlib-only Fractions).",
+        "assessment": "This is a preserved agent claim, not an independent verification receipt.",
+        "authorAttribution": "Run-level only; individual native session unresolved"
+      }
+    },
+    {
+      "id": "j-208",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-30T23:54:45.839Z",
+      "kind": "spawned",
+      "category": "coordination",
+      "label": "spawned",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 208
+      },
+      "detail": {
+        "assignmentId": "key:prior-art-gate-v2",
+        "key": "prior-art-gate-v2",
+        "identity": {
+          "profileDigest": "sha256:3150a1116c3bc95d86bc8c7ebb658b839659cdd9617e997ff97ce6fff3fa0e2d",
+          "taskDigest": "sha256:98736a9aab7ec2e5b6c2d8b73ce55e7681682ad4c7fc91b8915c057faed39d7a"
+        }
+      }
+    },
+    {
+      "id": "j-209",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-30T23:54:45.846Z",
+      "kind": "materialized",
+      "category": "infrastructure",
+      "label": "materialized",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 209
+      },
+      "detail": {
+        "receipt": {
+          "authoredProfileDigest": "sha256:3150a1116c3bc95d86bc8c7ebb658b839659cdd9617e997ff97ce6fff3fa0e2d",
+          "effectiveProfileDigest": "sha256:3150a1116c3bc95d86bc8c7ebb658b839659cdd9617e997ff97ce6fff3fa0e2d",
+          "materializationPlanDigest": "sha256:fa0912736ef94d0936d530ca6be33abf57451d74e1b42a5430aa35dccb778d54",
+          "runtime": "sandbox",
+          "backend": "opencode",
+          "model": {
+            "status": "known",
+            "id": "glm-5.2"
+          },
+          "execution": {
+            "kind": "run",
+            "id": "q-conj-entropy-bcww-repair:s1"
+          }
+        }
+      }
+    },
+    {
+      "id": "j-210",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-30T23:54:45.846Z",
+      "kind": "execution-bound",
+      "category": "infrastructure",
+      "label": "execution bound",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 210
+      },
+      "detail": {
+        "attemptId": "q-conj-entropy-bcww-repair:s1:attempt:ebc621d8-36a4-499b-b55c-fceadf92da26",
+        "bindingDigests": {
+          "materializationReceiptDigest": "sha256:138581cff186ca6dd0b56d2985f72d8db15ee6cf367247babcf94400c2f0803c",
+          "bindingDigest": "sha256:dd85cdf1d83b44925a0edfddbf46caa59b78ca6aabe5af0f8d0b7839af469c37"
+        }
+      }
+    },
+    {
+      "id": "j-211",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:14.332Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 211
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-212",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:14.677Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 212
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-213",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:14.690Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 213
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-214",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:14.705Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 214
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-215",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:16.462Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 215
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-216",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:17.782Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 216
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-217",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:18.259Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 217
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-218",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:18.269Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 218
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-219",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:18.275Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 219
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-220",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:18.281Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 220
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-221",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:21.184Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 221
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-222",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:21.314Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 222
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-223",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:21.321Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 223
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-224",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:21.546Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 224
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-225",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:21.838Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 225
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-226",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:00:21.844Z",
+      "kind": "progress",
+      "category": "other",
+      "label": "progress",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 226
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-227",
+      "node": "q-conj-entropy-bcww-repair:s1",
+      "at": "2026-08-31T00:02:17.627Z",
+      "kind": "settled",
+      "category": "infrastructure",
+      "label": "settled",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 227
+      },
+      "detail": {
+        "status": "down",
+        "tokens": null,
+        "usd": null,
+        "failureClass": null
+      }
+    },
+    {
+      "id": "j-228",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:06:19.062Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 228
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-229",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:07:44.198Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 229
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-230",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:09:19.513Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 230
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-231",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:10:54.318Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 231
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-232",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:12:45.522Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 232
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-233",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:14:47.196Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 233
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-234",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:17:28.979Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 234
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-235",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:21:32.930Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 235
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-236",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:27:56.804Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 236
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-237",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:34:20.979Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 237
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-238",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:40:43.141Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 238
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-239",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:46:55.092Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 239
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-240",
+      "node": "q-conj-entropy-bcww-repair",
+      "at": "2026-08-31T00:53:16.492Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+        "line": 240
+      },
+      "detail": {}
+    }
+  ],
+  "sources": [
+    {
+      "path": "spawn-journal.jsonl",
+      "sha256": "dec54b5084238b03cc251f1db008b9b0894dcebb154189ac60a117f7b2f8a059",
+      "bytes": 62183
+    },
+    {
+      "path": "kb/pages/pursuit-q-conj-entropy-bcww-repair--finding--r1-s-ghz4-mixture-second-witness-pinned-exactly-rho-3-4-ghz4-1-8-a-c-1-8-a-d-c46.md",
+      "sha256": "fc0e64b7a3888d9f0fbc136fcbe047f30465f5ed6e06abb5a6ef951cfdd2a6f3",
+      "bytes": 2592
+    },
+    {
+      "path": "run-input.json",
+      "sha256": "f26ce94cf8498b91feb06e2214a75ef9176f626e954917f78615d42f4e995973",
+      "bytes": 30309
+    },
+    {
+      "path": "result.json",
+      "sha256": "b64ce842499e7bd31472889129a145cab10f55ceef6092ac0203ff513dfc6619",
+      "bytes": 7718
+    }
+  ],
+  "terminal": {
+    "kind": "no-winner",
+    "reason": "all-children-down"
+  },
+  "coverage": {
+    "runtimeNodes": 3,
+    "nativeFiles": 0,
+    "nativeRuntimeJoins": 0,
+    "completeOriginalCapture": false,
+    "publicContent": "Reviewed assignments and recorded findings are published where available. Native message bodies outside the August 5 review remain unpublished. Original source hashes and physical line numbers are retained.",
+    "categoryMethod": "Tool-name and command keyword rules; these are annotations, not measured research value or evidence of independence.",
+    "cost": "Unavailable: zero-valued legacy counters are not treated as a bill."
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "schema": "research-publication.events.v1",
+  "runId": "fc-audit-smoke-a",
+  "title": "Invalid original witness, August 13",
+  "assignment": {
+    "objective": "Build and validate an entropy-inequality certification instrument on known-answer controls before a larger campaign.",
+    "suppliedKnowledge": "The paper and equation number were supplied. The task explicitly prohibited reading the prior BCWW answer.",
+    "deliverables": "Refute BCWW and a second known-false candidate; retain proven N=5 holographic facets; state scope; produce a machine-readable transcription schema.",
+    "constraints": "Exact rational certificates and cold checks were required. All four stated gates were meant to pass; the later correction invalidated the named BCWW atom set.",
+    "source": {
+      "path": "run-input.json",
+      "sha256": "94265d771bf8987ce56b3acc07e6bc8217acffdcece5583f8c060c3b75bdf487",
+      "bytes": 13577
+    }
+  },
+  "nodes": [
+    {
+      "id": "fc-audit-smoke-a",
+      "label": "root",
+      "parent": null,
+      "kind": "runtime",
+      "model": "claude-code/anthropic/sonnet",
+      "modelSource": "materialization declaration",
+      "servedModel": null,
+      "start": "2026-08-13T09:16:58.119Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "j-1",
+      "node": "fc-audit-smoke-a",
+      "at": "2026-08-13T09:16:58.119Z",
+      "kind": "begin",
+      "category": "other",
+      "label": "begin",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+        "line": 1
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-2",
+      "node": "fc-audit-smoke-a",
+      "at": "2026-08-13T09:16:58.119Z",
+      "kind": "spawned",
+      "category": "coordination",
+      "label": "spawned",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+        "line": 2
+      },
+      "detail": {
+        "identity": {
+          "profileDigest": "sha256:fc3a3fd7730de8bccf097e9db1cc1877b27d9c884fd3d9f17e0c354cf80e5218",
+          "taskDigest": "sha256:0934e7c56a5de13ccae099985d8477656c0e97bc2fa5d293641d537db980d72e"
+        }
+      }
+    },
+    {
+      "id": "j-3",
+      "node": "fc-audit-smoke-a",
+      "at": "2026-08-13T09:37:06.549Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+        "line": 3
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-4",
+      "node": "fc-audit-smoke-a",
+      "at": "2026-08-13T09:37:06.558Z",
+      "kind": "metered",
+      "category": "other",
+      "label": "metered",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+        "line": 4
+      },
+      "detail": {}
+    },
+    {
+      "id": "j-5",
+      "node": "fc-audit-smoke-a",
+      "at": "2026-08-13T09:37:06.569Z",
+      "kind": "materialized",
+      "category": "infrastructure",
+      "label": "materialized",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+        "line": 5
+      },
+      "detail": {
+        "receipt": {
+          "authoredProfileDigest": "sha256:fc3a3fd7730de8bccf097e9db1cc1877b27d9c884fd3d9f17e0c354cf80e5218",
+          "effectiveProfileDigest": "sha256:fc3a3fd7730de8bccf097e9db1cc1877b27d9c884fd3d9f17e0c354cf80e5218",
+          "materializationPlanDigest": "sha256:7b63ef8640771a3fa137045461c7c17815eef7c956d6d376ed8199d9106720cf",
+          "platformAttachmentsDigest": "sha256:337878dbce02121a642596f12816d8ac566142961538560a625b1d4086ec235f",
+          "runtime": "cli",
+          "backend": "bridge",
+          "model": {
+            "status": "known",
+            "id": "claude-code/anthropic/sonnet"
+          },
+          "execution": {
+            "kind": "session",
+            "id": "supervised-manager-15aaf1fff876a55c21cbcfd0b5105d680158c23da64cb97470672a23143a74dd"
+          }
+        }
+      }
+    },
+    {
+      "id": "j-6",
+      "node": "fc-audit-smoke-a",
+      "at": "2026-08-13T09:37:06.575Z",
+      "kind": "execution-bound",
+      "category": "infrastructure",
+      "label": "execution bound",
+      "source": {
+        "path": "spawn-journal.jsonl",
+        "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+        "line": 6
+      },
+      "detail": {
+        "attemptId": "fc-audit-smoke-a:attempt:88963de3-8214-4f5e-8bfe-b1a581b356a0",
+        "bindingDigests": {
+          "materializationReceiptDigest": "sha256:ed7f614821d24a7590c1e065cc212f38827c371ae9224d71f3c494bfc251b54a",
+          "bindingDigest": "sha256:f40d08cc565d6a7d94cf4ded1f7c6f5184dc82e99b7ac63b1e6e61f258df4296"
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "spawn-journal.jsonl",
+      "sha256": "630b5179bba0015d654b2063a8e25e44176d09b53fb2393e227b75da19f6aee0",
+      "bytes": 2610
+    },
+    {
+      "path": "run-input.json",
+      "sha256": "94265d771bf8987ce56b3acc07e6bc8217acffdcece5583f8c060c3b75bdf487",
+      "bytes": 13577
+    },
+    {
+      "path": "result.json",
+      "sha256": "79a0adfeddd2e77920ada60ca08df65f3039897b45d36e3401259e2dfd72fa5f",
+      "bytes": 8222
+    }
+  ],
+  "terminal": {
+    "kind": "winner",
+    "reason": null
+  },
+  "coverage": {
+    "runtimeNodes": 1,
+    "nativeFiles": 0,
+    "nativeRuntimeJoins": 0,
+    "completeOriginalCapture": false,
+    "publicContent": "Reviewed assignments and recorded findings are published where available. Native message bodies outside the August 5 review remain unpublished. Original source hashes and physical line numbers are retained.",
+    "categoryMethod": "Tool-name and command keyword rules; these are annotations, not measured research value or evidence of independence.",
+    "cost": "Unavailable: zero-valued legacy counters are not treated as a bill."
+  }
+}

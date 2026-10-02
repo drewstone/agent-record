@@ -1,0 +1,20 @@
+{
+  "origin": "http://127.0.0.1:14372",
+  "checks": [
+    "/research/bcww/ shared package hydrates",
+    "/research/bcww/ mathematics preserved",
+    "/research/bcww/ director tools visible",
+    "/research/ghz/ shared package hydrates",
+    "/research/ghz/ mathematics preserved",
+    "/research/linden-winter/ shared package hydrates",
+    "/research/linden-winter/ mathematics preserved",
+    "Astro consumer shows real paired output",
+    "Blog source links reopen exact event",
+    "Old unresolved-session link preserves unknown attribution",
+    "Blog phone has no overflow",
+    "Essay navigation preserved",
+    "No Astro hydration/browser errors"
+  ],
+  "errors": [],
+  "complete": true
+}
