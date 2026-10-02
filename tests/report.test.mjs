@@ -143,13 +143,39 @@ test('LaTeX treats supplied markup as text and exports every observation and sou
       String.raw`\textbackslash{}input\{secret\} 50\% \& a\_b \$x\$`,
     ),
   )
-  assert.match(tex, /SHA-256 a{64}/)
+  assert.match(tex.replaceAll('\\allowbreak{}', ''), /SHA-256 a{64}/)
   assert.match(tex, /C01 · unavailable/)
   assert.match(tex, /Unknown wait/)
   assert.throws(
     () => reportToLatex(parseResearchReport(data), 'absent'),
     /Unknown play/,
   )
+})
+
+test('LaTeX retains Unicode math and complete long references with safe wrapping', () => {
+  const data = raw()
+  const math = 'x² + α ≥ 0; β ∈ ℝ, y ≈ 1/3; Δ ≤ 2 × 10−3 → ∞'
+  const path =
+    '/research/' + 'long_source_name-'.repeat(12) + 'proof{final}_50%.md'
+  const sha256 = '0123456789abcdef'.repeat(4)
+  data.plays[0].claims[0].statement = math
+  data.plays[0].claims[0].evidence = [{ path, sha256 }]
+  const tex = reportToLatex(parseResearchReport(data))
+  assert.ok(tex.includes(math))
+  assert.ok(tex.includes('\\setmainfont{DejaVuSans.ttf}'))
+  assert.ok(tex.includes('\\tracinglostchars=3'))
+  assert.ok(tex.includes('\\allowbreak{}'))
+  const unwrapped = tex.replaceAll('\\allowbreak{}', '')
+  assert.ok(
+    unwrapped.includes(
+      path
+        .replaceAll('_', '\\_')
+        .replaceAll('{', '\\{')
+        .replaceAll('}', '\\}')
+        .replaceAll('%', '\\%'),
+    ),
+  )
+  assert.ok(unwrapped.includes(sha256))
 })
 
 test('standalone HTML contains escaped data and a hash-scoped script policy', () => {

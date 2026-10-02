@@ -1326,6 +1326,13 @@
   font-size: 0.88rem;
   line-height: 1.65;
 }
+.agent-record .rr-coverage {
+  margin: 1rem 0;
+}
+.agent-record .rr-coverage > summary {
+  cursor: pointer;
+  font: 0.75rem/1.5 var(--ar-font-mono);
+}
 .agent-record .rr-claim {
   border-top: 1px solid var(--ar-border);
   padding: 1rem 0 1.1rem 1rem;
@@ -1534,6 +1541,9 @@
   .agent-record.research-report
     > :is(.rr-layout, .rr-controls, .rr-mobile-play),
   .agent-record .rr-actions {
+    display: none !important;
+  }
+  .agent-record .rr-coverage {
     display: none !important;
   }
   .agent-record .rr-print {

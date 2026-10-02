@@ -26,7 +26,9 @@ export function ResearchReport({
   onPlayChange,
   className = '',
 }: ResearchReportProps) {
-  const [selected, setSelected] = useState(defaultPlayId ?? report.plays[0]?.id)
+  const [selected, setSelected] = useState(
+    defaultPlayId ?? report.plays[0]?.id,
+  )
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')
   const download = useDownload()
@@ -94,11 +96,23 @@ export function ResearchReport({
           independently verify claims.
         </p>
         {report.limitations.length > 0 && (
-          <ul className="rr-limitations">
-            {report.limitations.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
+          <>
+            <details className="rr-coverage">
+              <summary>
+                Coverage and limitations ({report.limitations.length})
+              </summary>
+              <ul className="rr-limitations">
+                {report.limitations.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </details>
+            <ul className="rr-limitations rr-print">
+              {report.limitations.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </>
         )}
         {report.questionCoverage.length > 0 && (
           <Questions
@@ -494,8 +508,8 @@ function Sources({
   return (
     <details className="rr-sources" open={printOnly || undefined}>
       <summary>
-        {sources.length} {sources.length === 1 ? 'source' : 'sources'} · inspect
-        evidence
+        {sources.length} {sources.length === 1 ? 'source' : 'sources'} ·
+        inspect evidence
       </summary>
       <ol>
         {sources.map((source, i) => (
