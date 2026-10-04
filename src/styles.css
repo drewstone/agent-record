@@ -1495,7 +1495,7 @@
 .ar-ws .not-known { font: 600 10px var(--ar-font-mono); color: var(--ar-c-run); font-style: normal; text-transform: uppercase; letter-spacing: .04em; }
 .ar-ws .spend-split { font: 12px var(--ar-font-mono); }
 .ar-ws .spend-bars { display: grid; gap: 4px; }
-.ar-ws .spend-row { display: grid; grid-template-columns: minmax(120px, 260px) minmax(80px, 1fr) minmax(200px, 300px); gap: 12px; align-items: center; padding: 4px 8px; border-radius: 6px; font-size: 12.5px; }
+.ar-ws .spend-row { display: grid; grid-template-columns: minmax(120px, 260px) minmax(80px, 1fr) minmax(200px, max-content); gap: 12px; align-items: center; padding: 4px 8px; border-radius: 6px; font-size: 12.5px; }
 .ar-ws .spend-row.clickable { cursor: pointer; }
 .ar-ws .spend-row.clickable:hover, .ar-ws .spend-row.clickable:focus-visible { background: var(--ws-raised); }
 .ar-ws .spend-label { font-family: var(--ar-font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

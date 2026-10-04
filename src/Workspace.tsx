@@ -583,17 +583,33 @@ function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
     <>
       {doc.run.keys.length > 0 && (
         <table className="data-table">
-          <thead><tr><th>Key</th><th>Spent</th><th>Cap</th></tr></thead>
+          <thead><tr><th>Run key</th><th className="num">Spent</th><th className="num">Cap</th></tr></thead>
           <tbody>
             {doc.run.keys.map((key) => (
-              <tr key={key.id}><td className="mono">{key.name}</td><td>{money(key.spentUsd)}</td><td>{money(key.capUsd)}</td></tr>
+              <tr key={key.id}>
+                <td className="mono">{key.id} <small className="faint">{key.name}</small></td>
+                <td className="num">{money(key.spentUsd)}</td>
+                <td className="num">{money(key.capUsd)}</td>
+              </tr>
             ))}
           </tbody>
         </table>
       )}
-      {Object.entries(doc.spend.nodes).flatMap(([node, spend]) => spend.sandboxes.map((box) => (
-        <p key={`${node}:${box.id}`} className="mono faint">{box.id} · {money(box.usd)}</p>
-      )))}
+      {Object.values(doc.spend.nodes).some((spend) => spend.sandboxes.length > 0) && (
+        <table className="data-table">
+          <thead><tr><th>Sandbox</th><th className="num">Paid</th><th className="num">Cost basis</th><th className="num">Hours</th></tr></thead>
+          <tbody>
+            {Object.entries(doc.spend.nodes).flatMap(([node, spend]) => spend.sandboxes.map((box) => (
+              <tr key={`${node}:${box.id}`}>
+                <td className="mono">{box.id}</td>
+                <td className="num">{money(box.usd)}</td>
+                <td className="num">{money(box.costBasisUsd)}</td>
+                <td className="num">{box.hours === null ? 'unknown' : box.hours.toFixed(2)}</td>
+              </tr>
+            )))}
+          </tbody>
+        </table>
+      )}
       {doc.spend.gaps.length > 0 && (
         <ul className="gap-list">{doc.spend.gaps.map((gap, i) => <li key={i}><code>{gap.code}</code> {gap.detail}</li>)}</ul>
       )}
