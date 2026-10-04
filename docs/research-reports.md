@@ -162,3 +162,9 @@ formulas. Use double-dollar math for mathematical rendering. Optional retained
 `sourcePath` and `aliases` metadata can resolve original absolute or store-relative
 references to an included document; ambiguous aliases are not opened. Relative
 references resolve against their originating document before alias lookup.
+
+## Link to a retained source
+
+Standalone reports accept `?play=PLAY_ID&document=EXACT_PATH&line=POSITIVE_LINE`. The play is required for a document citation, and the exact path must belong to that play. An unknown or ambiguous citation displays an explicit error instead of opening a different source. Source lines outside the document remain visibly out of range. Selecting a play or retained document updates the standalone report URL, so its current source can be shared. The original report data stays unchanged.
+
+The React component remains network-free and does not modify URLs. Embedders can pass `defaultDocumentSelection: { playId, path, line? }` and handle `onDocumentChange` alongside `defaultPlayId` / `onPlayChange`. The standalone command owns browser URL handling.

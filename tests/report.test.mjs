@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { parseResearchReport, reportToLatex } from '../dist/report.js'
 import { fromResearchPublication } from '../dist/research-publication.js'
+import { readReportLocation, reportLocationSearch } from '../src/report-selection.ts'
 import { advancePlayback } from '../src/viewer/playback.ts'
 import { renderReportHtml } from '../tools/render-report.mjs'
 
@@ -285,4 +286,25 @@ test('untrusted retained Markdown renders offline without executable HTML or rem
   assert.match(rendered, /<math /)
   assert.match(rendered, /\$600\/kg against \$800\/kW/)
   assert.match(rendered, /Source fingerprint|Untrusted document/)
+})
+
+
+test('standalone source citations remain in their named play and exact document', () => {
+  const value = raw()
+  value.plays[0].documents = [{ id: 'doc', path: 'retained/result.md', title: 'Result', content: 'one\ntwo', kind: 'knowledge' }]
+  value.plays.push({ id: 'other', title: 'Other play', summary: '', updatedAt: null, status: null, claims: [], documents: [
+    { id: 'private-doc', path: 'other/result.md', title: 'Other result', content: 'other', kind: 'knowledge' },
+  ] })
+  const report = parseResearchReport(value)
+  assert.deepEqual(readReportLocation(report, '?play=play&document=retained%2Fresult.md&line=2'), {
+    playId: 'play', document: { playId: 'play', path: 'retained/result.md', line: 2 },
+  })
+  for (const query of ['?document=retained/result.md', '?play=missing', '?play=play&document=other/result.md',
+    '?play=play&document=../other/result.md', '?play=play&document=https://example.com/source',
+    '?play=play&line=1', '?play=play&play=other', '?play=play&document=retained/result.md&line=-1']) {
+    assert.ok(readReportLocation(report, query).error, query)
+  }
+  assert.equal(reportLocationSearch('?old=kept&document=old&line=5', 'other'), '?old=kept&play=other')
+  const query = reportLocationSearch('', 'play', { playId: 'play', path: 'retained/result.md', line: 2 })
+  assert.equal(readReportLocation(report, query).document.line, 2)
 })
