@@ -2,11 +2,14 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { z } from 'zod'
 import { recordSchema } from '../dist/record.js'
+import { bundleSchema, snapshotSchema } from '../dist/publication.js'
 import { playsDocumentSchema, playDocumentSchema, runDocumentSchema } from '../dist/workspace.js'
 import { assessmentsDocumentSchema, assessmentRowSchema, dimensionsDocumentSchema } from '../dist/assessment.js'
 
 const schemas = {
   'agent-record.v1': recordSchema,
+  'agent-record.bundle.v1': bundleSchema,
+  'evidence.snapshot.v1': snapshotSchema,
   'agent-workspace.plays.v1': playsDocumentSchema,
   'agent-workspace.play.v1': playDocumentSchema,
   'agent-workspace.run.v1': runDocumentSchema,

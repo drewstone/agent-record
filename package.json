@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -41,6 +41,10 @@
     "./adapters/agent-runtime": {
       "types": "./dist/adapters/agent-runtime.d.ts",
       "import": "./dist/agent-runtime.js"
+    },
+    "./publication": {
+      "types": "./dist/publication.d.ts",
+      "import": "./dist/publication.js"
     },
     "./workspace": {
       "types": "./dist/workspace.d.ts",

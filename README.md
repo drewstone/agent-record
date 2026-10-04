@@ -72,7 +72,7 @@ It does not review, redact, or sanitize private logs.
 
 ### Agent-runtime run directories
 
-`node tools/ingest.mjs <runDir> --out record.json [--native <dir>]` converts an agent-runtime run directory, including Claude Code, OpenCode, pi, Codex and Kimi conversations where the run retained them.
+`node tools/ingest.mjs <dir> --out record.json [--run-id <id>] [--manifest <snapshot.json>] [--native <dir>]` converts an agent-runtime run directory, including Claude Code, OpenCode, pi, Codex and Kimi conversations where the run retained them, or a bundle of native sessions (`bundle.json`). Event IDs are anchored to the stored bytes they came from (`anchor.v1`, see [the record format](docs/record-format.md#event-ids-idscheme-anchorv1)).
 Each node's capture channel and every missing transcript are recorded in the output.
 See [the record format](docs/record-format.md#agent-runtime-run-directories).
 

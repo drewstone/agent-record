@@ -13,6 +13,7 @@ export default defineConfig({
         assessment: 'src/assessment.ts',
         'research-publication': 'src/adapters/research-publication.ts',
         'agent-runtime': 'src/adapters/agent-runtime.ts',
+        publication: 'src/publication.ts',
       },
       formats: ['es'],
       fileName: (_format, name) => `${name}.js`,
