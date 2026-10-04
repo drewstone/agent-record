@@ -32,7 +32,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 
-export const ADAPTER_VERSION = '1.0.0'
+export const ADAPTER_VERSION = '1.0.1'
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
 export type Category =
@@ -118,10 +118,14 @@ interface NodeDraft {
 const sha = (data: string | Buffer) => createHash('sha256').update(data).digest('hex')
 const hexOf = (digest: unknown) =>
   typeof digest === 'string' && /^(sha256[:-])?[0-9a-f]{64}$/.test(digest) ? digest.slice(-64) : null
+// Placeholder times such as the Unix epoch are not observations.
+const EARLIEST = Date.UTC(2001, 0, 1)
+const LATEST = Date.UTC(2100, 0, 1)
 const isoAt = (value: unknown): string | null => {
   if (typeof value !== 'string' && typeof value !== 'number') return null
   const date = new Date(typeof value === 'number' && value < 1e11 ? value * 1000 : value)
-  return Number.isFinite(date.valueOf()) ? date.toISOString() : null
+  const time = date.valueOf()
+  return Number.isFinite(time) && time >= EARLIEST && time < LATEST ? date.toISOString() : null
 }
 const str = (value: unknown) => (typeof value === 'string' ? value : value === undefined || value === null ? '' : JSON.stringify(value))
 const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined)
@@ -446,10 +450,13 @@ class Ingest {
     for (const node of this.nodes.values()) if (node.parent && !this.nodes.has(node.parent)) node.parent = null
     if ([...runtimeOf.values()].includes('tangle-sandbox')) this.format = 'cloud'
     else this.format = 'runtime'
+    let clock: string | null = null
     for (const row of rows) {
       const event = row.value?.event ?? row.value
       if (!event || typeof event !== 'object') continue
-      const node = this.nodes.get(this.nodeFor(event.id))
+      // A `begin` row names its node only through the journal root path.
+      const subjectId = typeof event.id === 'string' ? event.id : str(row.value?.root).split('/').at(-1)
+      const node = this.nodes.get(this.nodeFor(subjectId))
       const exact = typeof event.id === 'string' ? this.nodes.get(event.id) : undefined
       const kind = str(event.kind) || 'unknown'
       if (kind === 'materialized' && exact) {
@@ -479,7 +486,9 @@ class Ingest {
           if (typeof transcript.harness === 'string') exact.harness ??= transcript.harness
         } else if (typeof transcript.reason === 'string') exact.transcriptReason = transcript.reason
       }
-      const at = isoAt(event.at ?? row.value?.at)
+      const observed = isoAt(event.at ?? row.value?.at)
+      if (observed) clock = observed
+      const at = observed ?? clock
       if (!at || !node) continue
       const { kind: _k, id: _i, seq: _s, at: _a, ...rest } = event
       const label = [
@@ -501,7 +510,8 @@ class Ingest {
         source: { path: rel, sha256: entry.sha256, line: row.line },
         detail: {
           lifecycle: kind,
-          ...(typeof event.id === 'string' && event.id !== node.id ? { subject: event.id } : {}),
+          ...(subjectId && subjectId !== node.id ? { subject: subjectId } : {}),
+          ...(observed ? {} : { atBasis: 'carried' }),
           ...(shown ? { publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) } : {}),
           ...(kind === 'settled' || kind === 'execution-result' ? { isError: event.status === 'down' || event.outcome?.success === false } : {}),
           ...(spent && (kind === 'settled' || kind === 'metered' || kind === 'reconciled') ? { spent: this.compactValue(spent) } : {}),
@@ -1465,6 +1475,11 @@ class Ingest {
       const bounds = span.get(node.id)
       if (!node.start && bounds) node.start = bounds[0]
       if (!node.end && bounds && node.kind === 'session') node.end = bounds[1]
+    }
+    // A root never settles in its own journal; the run's result is its terminal state.
+    if (result && !root.status && typeof result.kind === 'string') {
+      root.status = result.kind
+      root.end ??= span.get(root.id)?.[1]
     }
 
     this.events.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : (nodeOrder.get(a.node)! - nodeOrder.get(b.node)!) || a.order - b.order))
