@@ -67,9 +67,12 @@ export const assessmentRowSchema = z
     measure: z
       .object({
         count: z.number().optional(),
-        ms: z.number().optional(),
+        /** Null when the time was not measured (calls recorded without their results). */
+        ms: z.number().nullable().optional(),
         tokens: z.number().optional(),
         listUsd: z.number().optional(),
+        /** The wall-clock spans [start, end] in epoch ms the finding covers, so overlapping findings count once. */
+        intervals: z.array(z.tuple([z.number(), z.number()])).optional(),
       })
       .catchall(z.unknown())
       .nullable(),

@@ -19,8 +19,9 @@ export const gapSchema = z
   })
   .catchall(z.unknown())
 
+/** `ms` is null when no duration was measured (a reasoning turn has tokens but no recorded time). */
 const measureRow = z.object({
-  ms: z.number().nonnegative(),
+  ms: z.number().nonnegative().nullable(),
   tokens: z.number().nonnegative().nullable(),
   listUsd: usd,
 })
@@ -43,10 +44,27 @@ export const spendSchema = z
       .nullable(),
     sandboxHours: z.number().nonnegative().nullable(),
     paidKnown: z.boolean(),
+    /** False when some agent's usage is unknown: `listUsd` then covers only the agents whose usage is known. */
+    listKnown: z.boolean().optional(),
     /** "ledger:<keyId>", "keeper:sandbox-cost", "record:usage" */
     sources: z.array(z.string()),
     byCategory: z.array(measureRow.extend({ category: z.string() })).optional(),
+    /** Time each waste dimension took, each moment counted once: overlapping findings go to the first in priority order. */
     waste: z.array(measureRow.extend({ dimension: z.string() })).optional(),
+    /** Spend per served model: paid from the agents' sandboxes, list price from their usage. */
+    byModel: z
+      .array(
+        z
+          .object({
+            model: z.string(),
+            paidUsd: usd,
+            listUsd: usd,
+            tokens: z.number().nonnegative().nullable(),
+            agents: z.number().int().nonnegative(),
+          })
+          .catchall(z.unknown()),
+      )
+      .optional(),
     gaps: z.array(gapSchema),
   })
   .catchall(z.unknown())

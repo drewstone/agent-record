@@ -1,4 +1,4 @@
-import type { NodeSpend, RunSummary, Spend } from '../workspace.js'
+import type { NodeSpend, Spend } from '../workspace.js'
 import { duration, money, tokens } from './data.js'
 
 /** Paid dollars, list price and unknown, never merged. */
@@ -18,6 +18,11 @@ export function SpendSummary({ spend, compact = false }: { spend: Spend | null |
       )}
       <span className={`spend-chip list ${spend.listUsd === null ? 'unknown' : ''}`}>
         <b>{money(spend.listUsd)}</b> list price, not billed
+        {spend.listKnown === false && spend.listUsd !== null && (
+          <em className="not-known" title={spend.gaps.filter((gap) => gap.code === 'list-partial').map((gap) => gap.detail).join('\n') || undefined}>
+            not fully known
+          </em>
+        )}
       </span>
       {!compact && spend.tokens && (
         <span className="spend-split">
@@ -28,7 +33,18 @@ export function SpendSummary({ spend, compact = false }: { spend: Spend | null |
   )
 }
 
-type Row = { label: string; paid: number | null; list: number | null; note?: string; href?: string }
+type Row = { label: string; paid: number | null; list: number | null; paidKnown?: boolean; listKnown?: boolean; note?: string; href?: string }
+
+/** A dollar figure with its certainty: unknown stays a word, a partial figure says so. */
+function Amount({ value, known, what }: { value: number | null; known: boolean | undefined; what: string }) {
+  if (value === null) return <span className="unknown">unknown <small>{what}</small></span>
+  return (
+    <span>
+      {money(value)} <small>{what}</small>
+      {known === false && <small className="spend-note"> not fully known</small>}
+    </span>
+  )
+}
 
 /** One bar per row: paid solid, list price outlined, unknown hatched. */
 export function SpendBars({ rows, onOpen }: { rows: Row[]; onOpen?: (row: Row) => void }) {
@@ -66,7 +82,7 @@ export function SpendBars({ rows, onOpen }: { rows: Row[]; onOpen?: (row: Row) =
               )}
             </span>
             <span className="spend-value" role="cell">
-              {money(row.paid)} <small>paid</small> · {money(row.list)} <small>list</small>
+              <Amount value={row.paid} known={row.paidKnown} what="paid" /> · <Amount value={row.list} known={row.listKnown} what="list" />
               {row.note && <small className="spend-note"> {row.note}</small>}
             </span>
           </div>
@@ -81,10 +97,10 @@ export function BreakdownTable({
   rows,
 }: {
   title: string
-  rows: { label: string; ms: number; tokens: number | null; listUsd: number | null }[]
+  rows: { label: string; ms: number | null; tokens: number | null; listUsd: number | null }[]
 }) {
   if (!rows.length) return null
-  const max = Math.max(1, ...rows.map((row) => row.ms))
+  const max = Math.max(1, ...rows.map((row) => row.ms ?? 0))
   return (
     <section className="breakdown">
       <h4>{title}</h4>
@@ -95,9 +111,9 @@ export function BreakdownTable({
               <i className={`category-${row.label}`} />
               {row.label.replaceAll('_', ' ')}
             </span>
-            <span className="breakdown-track"><i style={{ width: `${(row.ms / max) * 100}%` }} /></span>
+            <span className="breakdown-track">{row.ms === null ? <i className="unknown" style={{ width: '100%' }} /> : <i style={{ width: `${(row.ms / max) * 100}%` }} />}</span>
             <span className="breakdown-value">
-              {duration(row.ms)} · {tokens(row.tokens)} tokens · {money(row.listUsd)} list
+              {row.ms === null ? 'time unknown' : duration(row.ms)} · {tokens(row.tokens)} tokens · {money(row.listUsd)} list
             </span>
           </div>
         ))}
@@ -106,19 +122,10 @@ export function BreakdownTable({
   )
 }
 
-/** Spend per model across runs; a run with several models stays together. */
-export function byModel(runs: RunSummary[]) {
-  const groups = new Map<string, { paid: number | null; list: number | null; runs: number }>()
-  for (const run of runs) {
-    const key = run.models.length === 1 ? run.models[0]! : run.models.length ? 'several models' : 'model unknown'
-    const group = groups.get(key) ?? { paid: null, list: null, runs: 0 }
-    if (run.spend.paidUsd !== null) group.paid = (group.paid ?? 0) + run.spend.paidUsd
-    if (run.spend.listUsd !== null) group.list = (group.list ?? 0) + run.spend.listUsd
-    group.runs++
-    groups.set(key, group)
-  }
-  return [...groups.entries()]
-    .map(([label, group]) => ({ label, paid: group.paid, list: group.list }))
+/** Spend per served model, from the agents that ran it. */
+export function byModel(spend: Spend | null | undefined) {
+  return (spend?.byModel ?? [])
+    .map((row) => ({ label: row.model, paid: row.paidUsd, list: row.listUsd }))
     .sort((a, b) => (b.paid ?? 0) + (b.list ?? 0) - ((a.paid ?? 0) + (a.list ?? 0)))
 }
 

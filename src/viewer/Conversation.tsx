@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageText, StructuredContent } from './StructuredContent.js'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { MessageText, VerbatimContent } from './StructuredContent.js'
 import { VirtualList } from './VirtualList.js'
 import type { RecordEvent } from '../record.js'
 import {
@@ -135,10 +135,22 @@ export function Conversation({
       ? (index.results.get(key) ?? [])
       : []
   }
+  // The row that holds the selected event: a paired result renders inside its call.
+  const target = useMemo(() => {
+    if (!selected) return undefined
+    const event = index.byEvent.get(selected)
+    if (event?.detail.toolCallId !== undefined) {
+      const calls = index.calls.get(toolKey(event.node, event.detail.toolCallId))
+      if (calls?.length === 1) return calls[0]!.event.id
+    }
+    return selected
+  }, [selected, index])
   const items = useMemo(
     () =>
       (index.byActor.get(actor) ?? []).filter((event) => {
         if (ms(event.at) > cutoff) return false
+        // A cited or linked event shows whatever the filters say: the reader asked for it.
+        if (event.id === target) return true
         if (isLifecycle(event)) return lifecycle && eventMatches(event, index, query, category)
         if (event.detail.toolCallId !== undefined) {
           const matching = index.calls.get(
@@ -172,7 +184,7 @@ export function Conversation({
           )
         })
       }),
-    [index, actor, cutoff, query, category, lifecycle],
+    [index, actor, cutoff, query, category, lifecycle, target],
   )
   const tools = useMemo(
     () => items.flatMap((event) => callsOf(event).map((call) => `tool:${event.id}:${call.id}`)),
@@ -182,19 +194,11 @@ export function Conversation({
   const retained = (index.byActor.get(actor) ?? []).some(
     (item) => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length),
   )
-  // The row that holds the selected event: a paired result renders inside its call.
-  const target = useMemo(() => {
-    if (!selected) return undefined
-    const event = index.byEvent.get(selected)
-    if (event?.detail.toolCallId !== undefined) {
-      const calls = index.calls.get(toolKey(event.node, event.detail.toolCallId))
-      if (calls?.length === 1) return calls[0]!.event.id
-    }
-    return selected
-  }, [selected, index])
-
-  useEffect(() => {
-    if (scroll.current) scroll.current.scrollTop = 0
+  // Another agent starts at its first message, unless the change came with an event to show.
+  const targetRef = useRef(target)
+  targetRef.current = target
+  useLayoutEffect(() => {
+    if (scroll.current && !targetRef.current) scroll.current.scrollTop = 0
   }, [actor])
   useEffect(() => {
     if (!selected) return
@@ -352,7 +356,7 @@ export function Conversation({
         ) : standalone ? (
           <div className="standalone-output">
             <FullOutput clip={clip} open={opener(event)}>
-              <StructuredContent text={message || event.detail.contentOmitted || event.detail.publicationNote || 'No result text was retained for this event.'} />
+              <VerbatimContent text={message || event.detail.contentOmitted || event.detail.publicationNote || 'No result text was retained for this event.'} />
             </FullOutput>
             {event.detail.toolCallId !== undefined &&
               (index.calls.get(toolKey(event.node, event.detail.toolCallId))?.length ?? 0) > 1 && (
@@ -449,7 +453,7 @@ export function Conversation({
                           {sourceButton(event)}
                         </header>
                         <FullOutput clip={callClip} open={opener(event)}>
-                          <StructuredContent text={call.input ?? 'Tool arguments are absent from this record.'} rawLabel="Raw input" />
+                          <VerbatimContent text={call.input ?? 'Tool arguments are absent from this record.'} rawLabel="Raw input" />
                         </FullOutput>
                         {call.publicationNote && <p className="publication-note">{call.publicationNote}</p>}
                       </section>
@@ -468,7 +472,7 @@ export function Conversation({
                             {sourceButton(result)}
                           </header>
                           <FullOutput clip={clipOf(result.detail.clip)} open={opener(result)}>
-                            <StructuredContent text={textOf(result) || result.detail.contentOmitted || 'No output text is present in this record.'} rawLabel="Raw result" />
+                            <VerbatimContent text={textOf(result) || result.detail.contentOmitted || 'No output text is present in this record.'} rawLabel="Raw result" />
                           </FullOutput>
                           {result.detail.publicationNote && <p className="publication-note">{result.detail.publicationNote}</p>}
                           {ms(result.at) < ms(event.at) && (
