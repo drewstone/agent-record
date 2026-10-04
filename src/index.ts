@@ -14,3 +14,4 @@ export type {
 export { parseReportOptions, type ReportOptions } from './report-options.js'
 export * from './workspace.js'
 export * from './assessment.js'
+export { Workspace, type WorkspaceProps } from './Workspace.js'

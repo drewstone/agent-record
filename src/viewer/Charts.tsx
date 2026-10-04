@@ -47,8 +47,16 @@ export function Timeline({
   navigate,
   events,
   zoom,
-}: PlotProps & { events: RecordEvent[]; zoom: number }) {
-  const width = 940 * zoom,
+  marks,
+  baseWidth = 940,
+}: PlotProps & {
+  events: RecordEvent[]
+  zoom: number
+  /** Assessment flags drawn above the events they cite. */
+  marks?: ReadonlyMap<string, readonly { polarity: string; title: string }[]>
+  baseWidth?: number
+}) {
+  const width = baseWidth * zoom,
     left = 160,
     step = 23,
     height = Math.max(85, 48 + index.actors.length * step)
@@ -176,6 +184,24 @@ export function Timeline({
             </rect>
           )
         })}
+        {marks &&
+          index.events.map((event) => {
+            const flags = marks.get(event.id)
+            const lane = lanes.get(index.canonical(event.node))
+            if (!flags?.length || lane === undefined || ms(event.at) > cutoff) return null
+            const xx = x(ms(event.at))
+            const yy = 31 + lane * step
+            return (
+              <path
+                key={`mark:${event.id}`}
+                d={`M${xx - 3},${yy - 4} L${xx + 3},${yy - 4} L${xx},${yy}z`}
+                className={`timeline-flag polarity-${flags[0]!.polarity}`}
+                onClick={() => inspect(event)}
+              >
+                <title>{flags.map((flag) => flag.title).join('\n')}</title>
+              </path>
+            )
+          })}
         <line
           x1={x(cutoff)}
           x2={x(cutoff)}
@@ -196,10 +222,16 @@ export function Timeline({
 
 export const categories = [
   'coordination',
+  'compute',
   'computation',
   'verification',
   'literature',
+  'writing',
+  'setup',
   'infrastructure',
+  'waiting',
+  'reasoning',
+  'lifecycle',
   'other',
 ] as const
 export const categoryClass = (category: string) =>

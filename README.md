@@ -9,7 +9,7 @@ A React component for reading what an agent team did: conversations, tool inputs
 ## Install
 
 ```sh
-pnpm add https://github.com/drewstone/agent-record/releases/download/v0.4.1/drewstone-agent-record-0.4.1.tgz react react-dom
+pnpm add https://github.com/drewstone/agent-record/releases/download/v0.5.0/drewstone-agent-record-0.5.0.tgz react react-dom
 ```
 
 The release is an ESM package with TypeScript declarations and CSS.
@@ -75,6 +75,24 @@ It does not review, redact, or sanitize private logs.
 `node tools/ingest.mjs <runDir> --out record.json [--native <dir>]` converts an agent-runtime run directory, including Claude Code, OpenCode, pi, Codex and Kimi conversations where the run retained them.
 Each node's capture channel and every missing transcript are recorded in the output.
 See [the record format](docs/record-format.md#agent-runtime-run-directories).
+
+## Run workspace
+
+`dist/workspace-viewer.js` renders a play page and a run page from a same-origin run workspace API, for example the Tangle Discovery wall:
+
+```html
+<link rel="stylesheet" href="/assets/agent-record/styles.css">
+<div id="agent-workspace" data-api="/api/discovery" data-mode="run" data-id="research-math-20261004system3"></div>
+<script src="/assets/agent-record/workspace-viewer.js" defer></script>
+```
+
+The play page shows the play's input and files, its runs as a lineage graph and table, paid and list-price spend, and a runs by headline-dimension assessment matrix.
+The run page shows the agent topology at the replay time, each agent's conversation with tool calls paired to their results, the activity timeline, token usage, spend per agent and sandbox, the trace assessment scorecard with links to the cited events, the run input and capture coverage.
+It reads `plays/<id>`, `runs/<id>`, `runs/<id>/record`, `runs/<id>/assessments`, `runs/<id>/source/<sha256>` and `dimensions` under `data-api`; the shapes are the schemas in `@drewstone/agent-record/workspace` and `/assessment`.
+Page state lives in the URL (`?tab=&run=` on a play, `?node=&event=&tab=&t=&dim=` on a run), and a running run polls every 10 seconds.
+Theme tokens come from the host: `--ar-background`, `--ar-surface`, `--ar-raised`, `--ar-line`, `--ar-foreground`, `--ar-muted`, `--ar-faint`, `--ar-accent`, `--ar-frame`, `--ar-ok`, `--ar-warn`, `--ar-crit`, `--ar-font` and `--ar-mono`.
+
+The conversation list renders only the rows near its viewport, so records with tens of thousands of events stay responsive.
 
 ## Interaction and embedding
 
@@ -147,8 +165,7 @@ pnpm pack
 ```
 
 [Consumer evidence](docs/evidence/README.md) covers the built package, browser interactions, source preservation, server rendering, and the blog integration.
-The viewer currently renders the selected conversation in the DOM without virtualization.
-The example demonstrates 1,054 events across five runs; larger-scale performance has not been established.
+The conversation renders only the rows near its viewport.
 
 Extracted from [Drew Stone's research site](https://github.com/drewstone/drewstone.github.io) at `95e0aaf`.
 Code is MIT licensed.
