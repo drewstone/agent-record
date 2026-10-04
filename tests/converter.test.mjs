@@ -100,4 +100,8 @@ test('a directory that differs from its snapshot manifest, or a repeated anchor,
     schema: 'agent-record.bundle.v1', recordId: 'b', sessions: [{ path: 'pi/a.jsonl', harness: 'pi', sessionId: 's' }, { path: 'pi/a.jsonl', harness: 'pi', sessionId: 's' }],
   }))
   assert.throws(() => ingestBundle(bundle), /duplicate anchor/)
+  // --run-id may repeat a bundle's recordId but never contradict it.
+  writeFileSync(join(bundle, 'bundle.json'), JSON.stringify({ schema: 'agent-record.bundle.v1', recordId: 'b', sessions: [{ path: 'pi/a.jsonl', harness: 'pi' }] }))
+  assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'b', '--out', join(root, 'b.json')]).status, 0)
+  assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'other', '--out', join(root, 'c.json')]).status, 64)
 })
