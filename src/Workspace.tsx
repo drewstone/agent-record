@@ -484,8 +484,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
   useEffect(() => setPoll(run.data?.live.polling ? 10_000 : undefined), [run.data?.live.polling])
   const digest = run.data?.run.record.digest ?? null
   const recordReady = run.data?.run.record.status === 'ready' || !!digest
-  const recordDoc = useDocument<unknown>(recordReady ? `${runUrl}/record${digest ? `?digest=${digest}` : ''}` : null)
-  const assessments = useDocument<AssessmentsDocument>(`${runUrl}/assessments${digest ? `?digest=${digest}` : ''}`)
+  // A run being written gets a new record digest every few seconds: the page keeps the last record until the next one lands.
+  const recordDoc = useDocument<unknown>(recordReady ? `${runUrl}/record${digest ? `?digest=${digest}` : ''}` : null, undefined, true)
+  const assessments = useDocument<AssessmentsDocument>(`${runUrl}/assessments${digest ? `?digest=${digest}` : ''}`, undefined, true)
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const parsed = useMemo(() => {
     if (!recordDoc.data) return { record: null, error: undefined as string | undefined }

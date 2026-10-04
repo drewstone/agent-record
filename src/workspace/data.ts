@@ -2,13 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import type { RunRecord } from '../record.js'
 import type { Spend } from '../workspace.js'
 
-/** Same-origin JSON with ETag revalidation. `poll` refetches every `poll` ms while set. */
-export function useDocument<T>(url: string | null, poll?: number) {
+/**
+ * Same-origin JSON with ETag revalidation. `poll` refetches every `poll` ms while set; turning polling on or off keeps
+ * the document. With `keepPrevious`, a new URL (a record's next digest) keeps showing the previous document until the
+ * new one arrives, so a run being written never blanks between versions.
+ */
+export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false) {
   const [state, setState] = useState<{ data?: T; error?: string; status?: number; loading: boolean }>({ loading: !!url })
   const etag = useRef<string | null>(null)
+  const shown = useRef<string | null | undefined>(undefined)
   useEffect(() => {
-    etag.current = null
-    setState({ loading: !!url })
+    if (shown.current !== url) {
+      shown.current = url
+      etag.current = null
+      setState((current) => (keepPrevious && url && current.data !== undefined ? { ...current, loading: true, error: undefined } : { loading: !!url }))
+    }
     if (!url) return
     let alive = true
     let timer = 0
@@ -49,7 +57,7 @@ export function useDocument<T>(url: string | null, poll?: number) {
       controller.abort()
       window.clearTimeout(timer)
     }
-  }, [url, poll])
+  }, [url, poll]) // eslint-disable-line react-hooks/exhaustive-deps
   return state
 }
 
