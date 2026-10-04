@@ -199,7 +199,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
 function adverse(rows: PlayDocument['assessments'], headline: Set<string> | null) {
   const seen = new Set<string>()
   return rows.filter((row) => {
-    if (row.status !== 'decided' || row.polarity !== 'bad' || seen.has(row.dimension) || (headline && !headline.has(row.dimension))) return false
+    const uncalibrated = row.method === 'systemone' && row.calibrated !== true
+    if (row.status !== 'decided' || uncalibrated || row.polarity !== 'bad' || seen.has(row.dimension) || (headline && !headline.has(row.dimension))) return false
     seen.add(row.dimension)
     return true
   })

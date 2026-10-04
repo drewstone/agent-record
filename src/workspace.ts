@@ -197,6 +197,8 @@ export const playDocumentSchema = z
           label: z.string(),
           polarity: z.enum(['good', 'bad', 'neutral', 'unknown']),
           status: z.string(),
+          method: z.string().optional(),
+          calibrated: z.boolean().nullable().optional(),
         })
         .catchall(z.unknown()),
     ),
