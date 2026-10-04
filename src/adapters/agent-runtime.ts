@@ -32,7 +32,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 
-export const ADAPTER_VERSION = '1.0.1'
+export const ADAPTER_VERSION = '1.0.2'
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
 export type Category =
@@ -1167,7 +1167,12 @@ class Ingest {
         const usage = done.usage ?? done.data?.tokenUsage
         const cost = num(usage?.cost) ?? num(done.data?.totalCostUsd)
         const target = lastText ?? [...this.events].reverse().find((event) => event.node === node.id && event.source?.path === blob.rel)
-        if (target && usage) {
+        // A zero report from an execution Runtime did not meter (tokensKnown false) is no evidence of zero use: a rate-limited
+        // or lost attempt reports nothing for the attempts before it. Its usage stays unknown.
+        const unmeteredZero =
+          (done.data?.tokensKnown === false || done.tokensKnown === false) &&
+          !num(usage?.inputTokens) && !num(usage?.outputTokens) && !num(usage?.cacheReadInputTokens) && !num(usage?.cacheCreationInputTokens) && !cost
+        if (target && usage && !unmeteredZero) {
           target.detail.usage = {
             input: num(usage.inputTokens),
             output: num(usage.outputTokens),

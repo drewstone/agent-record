@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { RecordNode } from '../record.js'
 import type { RecordIndex } from '../viewer/model.js'
 import { ms, roleOf } from '../viewer/model.js'
 import type { PlayDocument, RunSummary, Spend } from '../workspace.js'
 import { duration, money, stateClass, stateLabel, when } from './data.js'
+
+/** A lineage label's longest form; the full id is in the node's title. */
+const LABEL_CHARS = 24
 
 /** Edges run from the older run to the newer one. */
 const EDGE_LABEL: Record<string, string> = { supersedes: 'superseded by', continues: 'continued by', retry: 'retried by', version: 'next version' }
@@ -24,6 +27,23 @@ interface Placed {
   parent: string | null
 }
 
+/** Width of the element, followed as it resizes. */
+function useWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [width, setWidth] = useState(0)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    setWidth(element.clientWidth)
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, width] as const
+}
+
+const fit = (label: string, chars: number) => (label.length > chars ? `${label.slice(0, Math.max(1, chars - 1))}…` : label)
+
 export function TopologyGraph({
   index,
   cutoff,
@@ -38,7 +58,11 @@ export function TopologyGraph({
   nodeSpend?: Record<string, Spend>
 }) {
   const ROW = 28
-  const COLUMN = 176
+  // Geist Mono at 12px; a label is measured by its characters.
+  const CHAR = 7.3
+  const RADIUS = 14
+  const GAP = 26
+  const [canvas, available] = useWidth<HTMLDivElement>()
   const layout = useMemo(() => {
     const nodes = index.actors.filter((node) => node.kind !== 'finding')
     const ids = new Set(nodes.map((node) => node.id))
@@ -52,13 +76,33 @@ export function TopologyGraph({
         children.set(parent, list)
       } else roots.push(node)
     }
+    const depthOf = new Map<string, number>()
+    const walk = (node: RecordNode, depth: number) => {
+      if (depthOf.has(node.id)) return
+      depthOf.set(node.id, depth)
+      for (const child of children.get(node.id) ?? []) walk(child, depth + 1)
+    }
+    for (const root of roots) walk(root, 0)
+    const maxDepth = Math.max(0, ...depthOf.values())
+    // A coordinator's label sits between it and its children, and its edges leave from the label's end; each column is
+    // as wide as its longest coordinator label, shortened so the leaves keep room in the panel.
+    const width = available || 560
+    const internalChars = Math.max(6, Math.min(22, Math.floor((width - 40 - maxDepth * (RADIUS + 6 + GAP) - 14 * CHAR) / Math.max(1, maxDepth) / CHAR)))
+    const labelChars = new Map<number, number>()
+    for (const [id, depth] of depthOf)
+      if (children.has(id)) {
+        const node = index.nodes.get(id)
+        labelChars.set(depth, Math.max(labelChars.get(depth) ?? 0, Math.min(internalChars, (node?.label ?? id).length)))
+      }
+    const columnX = [16 + RADIUS]
+    for (let depth = 1; depth <= maxDepth; depth++)
+      columnX[depth] = columnX[depth - 1]! + RADIUS + 6 + (labelChars.get(depth - 1) ?? 0) * CHAR + GAP
+    const leafChars = Math.max(10, Math.min(40, Math.floor((width - (columnX[maxDepth] ?? 0) - RADIUS - 14) / CHAR)))
     const placed = new Map<string, Placed>()
     let row = 0
-    let maxDepth = 0
     const visit = (node: RecordNode, depth: number, parent: string | null): number => {
       if (placed.has(node.id)) return placed.get(node.id)!.y
-      maxDepth = Math.max(maxDepth, depth)
-      const entry: Placed = { node, x: 40 + depth * COLUMN, y: 0, depth, parent }
+      const entry: Placed = { node, x: columnX[depth]!, y: 0, depth, parent }
       placed.set(node.id, entry)
       const kids = children.get(node.id) ?? []
       if (!kids.length) entry.y = 30 + row++ * ROW
@@ -69,13 +113,17 @@ export function TopologyGraph({
       return entry.y
     }
     for (const root of roots) visit(root, 0, null)
+    const parents = new Set([...children.keys()].filter((id) => placed.has(id)))
+    const shown = new Map([...placed.values()].map((entry) => [entry.node.id, fit(entry.node.label, parents.has(entry.node.id) ? internalChars : leafChars)]))
+    const right = Math.max(...[...placed.values()].map((entry) => entry.x + RADIUS + 8 + (shown.get(entry.node.id)?.length ?? 0) * CHAR))
     return {
       placed: [...placed.values()],
-      parents: new Set([...children.keys()].filter((id) => placed.has(id))),
+      parents,
+      shown,
       height: Math.max(80, 30 + row * ROW),
-      width: 40 + maxDepth * COLUMN + 240,
+      width: Math.max(width, Math.ceil(right)),
     }
-  }, [index])
+  }, [index, available])
 
   const values = useMemo(() => {
     const result = new Map<string, { value: number | null; basis: 'spend' | 'time' }>()
@@ -113,13 +161,13 @@ export function TopologyGraph({
   const byId = new Map(layout.placed.map((entry) => [entry.node.id, entry]))
   return (
     <div className="topology-graph" data-topology>
-      <div className="graph-canvas">
+      <div className="graph-canvas" ref={canvas}>
         <svg width={layout.width} height={layout.height} role="group" aria-label="Agent topology. Select an agent to read its conversation.">
           {layout.placed.map((entry) => {
             if (!entry.parent) return null
             const parent = byId.get(entry.parent)
             if (!parent || stateAt(entry.node) === 'future') return null
-            const x1 = parent.x + radius(parent.node.id)
+            const x1 = parent.x + radius(parent.node.id) + 8 + (layout.shown.get(parent.node.id)?.length ?? 0) * CHAR + 4
             const x2 = entry.x - radius(entry.node.id)
             const mid = (x1 + x2) / 2
             return <path key={`edge:${entry.node.id}`} className="topology-edge" d={`M${x1},${parent.y} C${mid},${parent.y} ${mid},${entry.y} ${x2},${entry.y}`} />
@@ -162,9 +210,7 @@ export function TopologyGraph({
                 <circle className="node-dot" r={r} />
                 {/* Labels carry a panel-coloured halo so edges passing beneath stay readable. */}
                 <text x={r + 6} y={4} className="node-label">
-                  {layout.parents.has(node.id)
-                    ? node.label.length > 20 ? `${node.label.slice(0, 19)}…` : node.label
-                    : node.label.length > 30 ? `${node.label.slice(0, 29)}…` : node.label}
+                  {layout.shown.get(node.id)}
                 </text>
               </g>
             )
@@ -196,6 +242,7 @@ export function LineageGraph({
 }) {
   const [hover, setHover] = useState<string | null>(null)
   const runs = useMemo(() => new Map<string, RunSummary>(play.runs.map((run) => [run.id, run])), [play])
+  const short = (id: string) => (id.startsWith(play.id + '-') ? id.slice(play.id.length + 1) : id)
   const layout = useMemo(() => {
     const ids = [...new Set([...play.lineage.nodes.map((node) => node.runId), ...play.runs.map((run) => run.id)])]
     const start = (id: string) => {
@@ -242,12 +289,14 @@ export function LineageGraph({
       lanes[index] = last
       for (const id of members) lane.set(id, index)
     }
-    const COLUMN = 132
+    // Labels sit centred under their run: a column is as wide as the longest label (Geist Mono 11.5px).
+    const longest = Math.max(8, ...order.map((id) => Math.min(LABEL_CHARS, short(id).length)))
+    const COLUMN = Math.max(112, Math.ceil(longest * 7 + 20))
     const ROW = 120
     const TOP = 112
     const positions = new Map(order.map((id) => [id, { x: 70 + rank.get(id)! * COLUMN, y: TOP + lane.get(id)! * ROW }]))
     return { order, positions, column: COLUMN, width: 140 + Math.max(0, order.length - 1) * COLUMN, height: TOP - 30 + Math.max(1, lanes.length) * ROW }
-  }, [play, runs])
+  }, [play, runs]) // eslint-disable-line react-hooks/exhaustive-deps
   // One path per pair of runs; several relations share it.
   const edges = useMemo(() => {
     const pairs = new Map<string, { a: string; b: string; kinds: string[] }>()
@@ -266,7 +315,6 @@ export function LineageGraph({
     return value === null ? 9 : 9 + 15 * Math.sqrt(value / max)
   }
   const nodeState = new Map(play.lineage.nodes.map((node) => [node.runId, node]))
-  const short = (id: string) => (id.startsWith(play.id + '-') ? id.slice(play.id.length + 1) : id)
   return (
     <div className="lineage-graph" data-lineage>
       <div className="graph-canvas">
@@ -312,7 +360,11 @@ export function LineageGraph({
             const run = runs.get(id)
             const lineage = nodeState.get(id)
             const state = run?.state ?? lineage?.state ?? 'unknown'
-            const missing = !run || lineage?.record.status === 'missing' || state === 'no-record'
+            // The same words as the runs table's conversation column: a run is drawn as a gap only when nothing of it is
+            // on this host.
+            const record = run?.record ?? lineage?.record
+            const missing = state === 'no-record' || run?.location.kind === 'none' || (!run && (!record || record.status === 'missing'))
+            const sub = missing ? 'no record' : record && record.status !== 'ready' ? record.status : stateLabel(state)
             const r = radius(id)
             return (
               <g
@@ -343,8 +395,8 @@ export function LineageGraph({
                 </title>
                 <circle className="run-dot" r={r} />
                 {run?.versions && run.versions.count > 1 && <text className="run-versions" y={4} textAnchor="middle">{run.versions.count}</text>}
-                <text className="run-label" y={r + 14} textAnchor="middle">{short(id).length > 20 ? `${short(id).slice(0, 19)}…` : short(id)}</text>
-                <text className="run-sub" y={r + 26} textAnchor="middle">{missing ? 'no record' : stateLabel(state)}</text>
+                <text className="run-label" y={r + 14} textAnchor="middle">{fit(short(id), LABEL_CHARS)}</text>
+                <text className="run-sub" y={r + 26} textAnchor="middle">{sub}</text>
               </g>
             )
           })}

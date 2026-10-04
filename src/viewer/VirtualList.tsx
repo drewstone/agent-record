@@ -21,7 +21,7 @@ export function VirtualList<T>({
   /** Height before a row is measured. */
   estimate?: number | ((item: T) => number)
   overscan?: number
-  /** Scroll this row into view whenever it changes. */
+  /** Bring this row to the top of the scroller (and into the page's view) whenever it changes. */
   target?: string
 }) {
   const heights = useRef(new Map<string, number>())
@@ -112,32 +112,69 @@ export function VirtualList<T>({
   const end = Math.min(items.length, find(viewport.top + viewport.height + overscan) + 1)
 
   const scrollTo = useCallback(
-    (key: string) => {
+    (key: string, align: boolean) => {
       const element = scroller.current
       const index = items.findIndex((item) => keyOf(item) === key)
-      if (!element || index < 0) return
+      if (!element || index < 0) return false
       const top = offsets[index]!
       const bottom = offsets[index + 1]!
-      if (top < element.scrollTop || bottom > element.scrollTop + element.clientHeight)
+      if (align || top < element.scrollTop || bottom > element.scrollTop + element.clientHeight)
         element.scrollTop = Math.max(0, top - 8)
+      return true
     },
     [items, keyOf, offsets, scroller],
   )
-  const pending = useRef<string | undefined>(undefined)
-  useLayoutEffect(() => {
-    pending.current = target
-    if (target) scrollTo(target)
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
-  // Measured heights can move the target after the first jump; settle it once more.
-  useLayoutEffect(() => {
-    if (pending.current) {
-      scrollTo(pending.current)
-      pending.current = undefined
+  // A target is settled, not jumped to once: rows above it are measured only after the first jump renders them, which
+  // moves it. Each measurement re-aligns it until the reader scrolls, or after two seconds.
+  const pending = useRef<{ key: string; until: number } | null>(null)
+  const rows = useRef(new Map<string, HTMLDivElement>())
+  const settle = () => {
+    const goal = pending.current
+    if (!goal) return
+    if (performance.now() > goal.until) {
+      pending.current = null
+      return
     }
-  }, [version]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!scrollTo(goal.key, true)) return
+    // The row is in the document once the viewport state caught up: bring it into the page's view as well, so a
+    // conversation panel below the fold scrolls up with it.
+    const row = rows.current.get(goal.key)
+    if (row?.isConnected) {
+      const box = row.getBoundingClientRect()
+      if (box.top < 72 || box.top > window.innerHeight - 96) window.scrollBy({ top: box.top - 120 })
+    }
+  }
+  useLayoutEffect(() => {
+    pending.current = target ? { key: target, until: performance.now() + 2000 } : null
+    settle()
+  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  // While settling: after each measurement, each viewport move and each change of the rows (a record that arrived late).
+  useLayoutEffect(settle, [version, viewport, items]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const element = scroller.current
+    if (!element) return
+    // The reader's own scroll ends the settling.
+    const release = () => {
+      pending.current = null
+    }
+    element.addEventListener('wheel', release, { passive: true })
+    element.addEventListener('touchstart', release, { passive: true })
+    element.addEventListener('pointerdown', release)
+    element.addEventListener('keydown', release)
+    return () => {
+      element.removeEventListener('wheel', release)
+      element.removeEventListener('touchstart', release)
+      element.removeEventListener('pointerdown', release)
+      element.removeEventListener('keydown', release)
+    }
+  }, [scroller])
 
   const bind = (key: string) => (element: HTMLDivElement | null) => {
-    if (!element) return
+    if (!element) {
+      rows.current.delete(key)
+      return
+    }
+    rows.current.set(key, element)
     for (const [node, value] of nodes.current) if (value === key && node !== element) {
       observer.current?.unobserve(node)
       nodes.current.delete(node)

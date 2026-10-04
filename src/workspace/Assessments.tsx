@@ -4,7 +4,7 @@ import type { EventFlag } from '../viewer/Conversation.js'
 import type { RecordIndex } from '../viewer/model.js'
 import { utcTime } from '../viewer/model.js'
 import type { PlayDocument } from '../workspace.js'
-import { money, when } from './data.js'
+import { duration, money, when } from './data.js'
 
 /** A System One distribution without calibration never colours a cell. */
 export const shownPolarity = (row: Pick<AssessmentRow, 'method' | 'decider' | 'status'>, polarity: string) =>
@@ -241,7 +241,7 @@ export function RunAssessments({
                   <p className="assessment-measure">
                     {[
                       row.measure.count !== undefined ? `${row.measure.count} events` : null,
-                      row.measure.ms !== undefined ? `${(row.measure.ms / 60000).toFixed(1)} min` : null,
+                      row.measure.ms === null ? 'time not measured' : row.measure.ms !== undefined ? duration(row.measure.ms) : null,
                       row.measure.tokens !== undefined ? `${row.measure.tokens} tokens` : null,
                       row.measure.listUsd !== undefined ? `${money(row.measure.listUsd)} list` : null,
                     ].filter(Boolean).join(' · ')}

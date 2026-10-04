@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
-import type { PlayDocument, PlayInput, RunDocument, RunSummary } from './workspace.js'
+import type { PlayDocument, PlayInput, PlaysDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
@@ -10,7 +10,7 @@ import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
 import { indexRecord, interval, ms, roleOf, textOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
-import { StructuredContent } from './viewer/StructuredContent.js'
+import { StructuredContent, VerbatimContent } from './viewer/StructuredContent.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
 import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
 import { InputView } from './workspace/InputView.js'
@@ -20,7 +20,7 @@ import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
-  mode: 'play' | 'run'
+  mode: 'plays' | 'play' | 'run'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -29,7 +29,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
+      {mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
@@ -87,6 +87,137 @@ function Status({ loading, error, children }: { loading: boolean; error?: string
 }
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
+
+// ---------------------------------------------------------------------------------------------------------
+// /plays: every play this host has a run of
+// ---------------------------------------------------------------------------------------------------------
+type PlaySort = 'latest' | 'spend' | 'runs' | 'name'
+
+function PlaysPage({ api }: { api: string }) {
+  const [params, update] = useSearch()
+  const plays = useDocument<PlaysDocument>(`${api}/plays`)
+  const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
+  const query = params.get('q') ?? ''
+  const program = params.get('program') ?? ''
+  const sort = (['latest', 'spend', 'runs', 'name'] as const).find((value) => value === params.get('sort')) ?? 'latest'
+  const [draft, setDraft] = useState(query)
+  useEffect(() => setDraft(query), [query])
+  const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
+  const keys = useMemo(() => new Map((dimensions.data?.dimensions ?? []).map((dimension) => [dimension.id, dimension.key])), [dimensions.data])
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.paidUsd ?? 0) + (spend.listUsd ?? 0)
+    return (plays.data?.plays ?? [])
+      .filter((play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)))
+      .sort((a, b) =>
+        sort === 'name'
+          ? a.title.localeCompare(b.title)
+          : sort === 'spend'
+            ? spent(b.spend) - spent(a.spend)
+            : sort === 'runs'
+              ? b.runCount - a.runCount
+              : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
+      )
+  }, [plays.data, query, program, sort])
+  return (
+    <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
+      <div className="ws-page ws-plays" data-plays>
+        <header className="ws-head">
+          <div className="ws-title-row">
+            <h1>Plays</h1>
+          </div>
+          <div className="message-filters plays-filters">
+            <input
+              type="search"
+              aria-label="Find a play"
+              placeholder="Find a play"
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value)
+                update({ q: event.target.value || undefined }, true)
+              }}
+            />
+            <select aria-label="Program" value={program} onChange={(event) => update({ program: event.target.value || undefined })}>
+              <option value="">All programs</option>
+              {programs.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
+              <option value="latest">Latest run first</option>
+              <option value="spend">Most spend first</option>
+              <option value="runs">Most runs first</option>
+              <option value="name">By name</option>
+            </select>
+          </div>
+        </header>
+        <section className="ws-section">
+          <div className="table-scroll">
+            <table className="data-table runs-table plays-table" data-play-list>
+              <thead>
+                <tr>
+                  <th>Play</th>
+                  <th>Program</th>
+                  <th>State</th>
+                  <th>Latest run</th>
+                  <th className="num">Runs</th>
+                  <th className="num">Paid</th>
+                  <th className="num">List price</th>
+                  <th>Flags</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((play) => {
+                  const open = () => go(`/play/${encodeURIComponent(play.id)}`)
+                  const flags = Object.entries(play.headline).filter(([, value]) => value.polarity === 'bad')
+                  return (
+                    <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
+                      <td>
+                        <a href={`/play/${encodeURIComponent(play.id)}`} onClick={(event) => event.preventDefault()}>{play.title}</a>
+                        {play.title !== play.id && <small className="faint mono"> {play.id}</small>}
+                      </td>
+                      <td className="mono">{play.program ?? <span className="faint">{play.playBasis}</span>}</td>
+                      <td><span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span></td>
+                      <td>
+                        {play.latestRun ? (
+                          <a
+                            className="mono"
+                            href={`/run/${encodeURIComponent(play.latestRun.id)}`}
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              go(`/run/${encodeURIComponent(play.latestRun!.id)}`)
+                            }}
+                          >
+                            {shortRun(play.id, play.latestRun.id)}
+                          </a>
+                        ) : '—'}
+                        <small className="faint"> {when(play.latestRun?.startedAt)}</small>
+                      </td>
+                      <td className="num">{play.runCount}</td>
+                      <td className={`num ${play.spend.paidUsd === null ? 'unknown' : ''}`}>
+                        {money(play.spend.paidUsd)}{!play.spend.paidKnown && play.spend.paidUsd !== null ? '+' : ''}
+                      </td>
+                      <td className={`num ${play.spend.listUsd === null ? 'unknown' : ''}`}>
+                        {money(play.spend.listUsd)}{play.spend.listKnown === false && play.spend.listUsd !== null ? '+' : ''}
+                      </td>
+                      <td className="headline-cell">
+                        {flags.map(([dimension, value]) => (
+                          <span key={dimension} className="label-chip polarity-bad" title={`${dimension} ${keys.get(dimension)?.replaceAll('_', ' ') ?? ''}: ${value.label}`}>
+                            {dimension} {value.label.replaceAll('_', ' ')}
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {!rows.length && <p className="chat-empty">No play matches.</p>}
+        </section>
+      </div>
+    </Status>
+  )
+}
 
 // ---------------------------------------------------------------------------------------------------------
 // /play/<id>
@@ -182,7 +313,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 </Status>
               </section>
             )}
-            {tab === 'spend' && <PlaySpend play={doc} onOpen={open} />}
+            {tab === 'spend' && <PlaySpend play={doc} onOpen={open} catalogue={dimensionMap(dimensions.data)} />}
             {tab === 'assessments' && (
               <section className="ws-section">
                 <AssessmentMatrix play={doc} dimensions={dimensions.data} onOpen={open} />
@@ -256,8 +387,12 @@ function RunsTable({
               <td>{when(run.startedAt)}</td>
               <td>{duration(run.durationMs)}</td>
               <td>{run.nodes ?? '—'}{run.depth !== null && run.nodes ? <small className="faint"> depth {run.depth}</small> : null}</td>
-              <td className={`num ${run.spend.paidUsd === null ? 'unknown' : ''}`}>{money(run.spend.paidUsd)}{!run.spend.paidKnown && run.spend.paidUsd !== null ? '+' : ''}</td>
-              <td className={`num ${run.spend.listUsd === null ? 'unknown' : ''}`}>{money(run.spend.listUsd)}</td>
+              <td className={`num ${run.spend.paidUsd === null ? 'unknown' : ''}`} title={!run.spend.paidKnown && run.spend.paidUsd !== null ? 'Paid is not fully known' : undefined}>
+                {money(run.spend.paidUsd)}{!run.spend.paidKnown && run.spend.paidUsd !== null ? '+' : ''}
+              </td>
+              <td className={`num ${run.spend.listUsd === null ? 'unknown' : ''}`} title={run.spend.listKnown === false ? 'Usage of some agents is unknown' : undefined}>
+                {money(run.spend.listUsd)}{run.spend.listKnown === false && run.spend.listUsd !== null ? '+' : ''}
+              </td>
               <td>
                 {run.record.capture ? (
                   <CaptureBar capture={run.record.capture} />
@@ -291,20 +426,28 @@ function CaptureBar({ capture }: { capture: { complete: number; lossy: number; a
   )
 }
 
-function PlaySpend({ play, onOpen }: { play: PlayDocument; onOpen: (runId: string) => void }) {
+/** A waste dimension by its id and name: E3 polling. */
+const wasteLabel = (dimension: string, catalogue: ReturnType<typeof dimensionMap>) =>
+  `${dimension} ${catalogue.get(dimension)?.key.replaceAll('_', ' ') ?? ''}`.trim()
+
+function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (runId: string) => void; catalogue: ReturnType<typeof dimensionMap> }) {
   return (
     <div className="ws-section spend-view">
       <SpendSummary spend={play.spend} />
       <h3>By run</h3>
       <SpendBars
-        rows={play.runs.map((run) => ({ label: shortRun(play.id, run.id), paid: run.spend.paidUsd, list: run.spend.listUsd, note: run.spend.paidKnown || run.spend.paidUsd === null ? undefined : 'paid not fully known', href: run.id }))}
+        rows={play.runs.map((run) => ({ label: shortRun(play.id, run.id), paid: run.spend.paidUsd, list: run.spend.listUsd, paidKnown: run.spend.paidKnown, listKnown: run.spend.listKnown, href: run.id }))}
         onOpen={(row) => row.href && onOpen(row.href)}
       />
-      <h3>By model</h3>
-      <SpendBars rows={byModel(play.runs)} />
+      {byModel(play.spend).length > 0 && (
+        <>
+          <h3>By model</h3>
+          <SpendBars rows={byModel(play.spend)} />
+        </>
+      )}
       <div className="breakdown-grid">
         <BreakdownTable title="By activity" rows={(play.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-        <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: row.dimension }))} />
+        <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
       </div>
       {play.spend.gaps.length > 0 && (
         <>
@@ -321,6 +464,7 @@ function PlaySpend({ play, onOpen }: { play: PlayDocument; onOpen: (runId: strin
 // ---------------------------------------------------------------------------------------------------------
 // /run/<id>
 // ---------------------------------------------------------------------------------------------------------
+const SPEEDS = [1, 4, 16, 64, 256, 1024, 4096]
 type RunTab = 'messages' | 'timeline' | 'usage' | 'spend' | 'assessments' | 'input' | 'coverage'
 const RUN_TABS = [
   ['messages', 'Messages'],
@@ -491,7 +635,8 @@ function RunBody({
   const [category, setCategory] = useState('all')
   const [query, setQuery] = useState('')
   const [playing, setPlaying] = useState(false)
-  const [speed, setSpeed] = useState('4')
+  // Real multiples of recorded time; the default plays the whole run in about two minutes.
+  const [speed, setSpeed] = useState(() => String(SPEEDS.find((value) => (index.end - index.start) / value <= 120_000) ?? SPEEDS.at(-1)))
   const [zoom, setZoom] = useState(1)
   const [metric, setMetric] = useState<Metric>('cumulative')
   const [axis, setAxis] = useState<Axis>('time')
@@ -562,7 +707,7 @@ function RunBody({
         end: current.index.end,
         elapsedMs: now - previous,
         speed: Number(speed),
-        mode: 'time',
+        mode: 'rate',
         eventTimes: [],
       })
       previous = now
@@ -606,8 +751,8 @@ function RunBody({
           >
             {playing ? 'Pause' : 'Play'}
           </button>
-          <select aria-label="Replay speed" value={speed} onChange={(event) => setSpeed(event.target.value)} data-speed>
-            {['1', '2', '4', '8'].map((value) => <option key={value} value={value}>{value}×</option>)}
+          <select aria-label="Replay speed, as a multiple of recorded time" title="Multiple of recorded time" value={speed} onChange={(event) => setSpeed(event.target.value)} data-speed>
+            {SPEEDS.map((value) => <option key={value} value={String(value)}>{value}×</option>)}
           </select>
           <input
             type="range"
@@ -740,12 +885,21 @@ function RunBody({
               <SpendBars
                 rows={index.actors
                   .filter((item) => item.kind !== 'finding')
-                  .map((item) => ({ label: item.label, paid: doc.spend.nodes[item.id]?.paidUsd ?? null, list: doc.spend.nodes[item.id]?.listUsd ?? null, href: item.id }))}
+                  .map((item) => {
+                    const spend = doc.spend.nodes[item.id]
+                    return { label: item.label, paid: spend?.paidUsd ?? null, list: spend?.listUsd ?? null, paidKnown: spend?.paidKnown, listKnown: spend?.listKnown, href: item.id }
+                  })}
                 onOpen={(row) => row.href && selectNode(row.href)}
               />
+              {byModel(doc.spend).length > 0 && (
+                <>
+                  <h3>By model</h3>
+                  <SpendBars rows={byModel(doc.spend)} />
+                </>
+              )}
               <div className="breakdown-grid">
                 <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-                <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: row.dimension }))} />
+                <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
               </div>
             </div>
           )}
@@ -864,10 +1018,10 @@ function EventDetail({
           <p className="mono faint">sha256 {full}</p>
           {whole.error && <p role="alert">{whole.error}</p>}
           {whole.text === undefined && !whole.error && <p className="faint">Loading…</p>}
-          {whole.text !== undefined && <StructuredContent text={whole.text} rawLabel="Original bytes" />}
+          {whole.text !== undefined && <VerbatimContent text={whole.text} rawLabel="Original bytes" />}
         </section>
       ) : (
-        textOf(event) && <StructuredContent text={textOf(event)} />
+        textOf(event) && (event.detail.toolCallId !== undefined || event.category === 'lifecycle' ? <VerbatimContent text={textOf(event)} /> : <StructuredContent text={textOf(event)} />)
       )}
       <details className="raw-data" open={!full}>
         <summary>Recorded detail</summary>
@@ -896,7 +1050,7 @@ function EventDetail({
             </button>
           )}
           {raw.error && <p role="alert">{raw.error}</p>}
-          {raw.text !== undefined && <StructuredContent text={raw.text} rawLabel="Original bytes" />}
+          {raw.text !== undefined && <VerbatimContent text={raw.text} rawLabel="Original bytes" />}
         </section>
       )}
     </aside>

@@ -1775,3 +1775,13 @@
 .ar-ws h1 .crumb:hover, .ar-ws h1 .crumb:focus-visible { color: var(--ws-title); }
 .ar-ws h1 .crumb-sep { color: var(--ar-fg-faint); font-weight: 400; }
 .ar-ws .graph-legend .dot.ended { background: var(--ar-fg-muted); }
+
+/* Tool input and output as recorded. */
+.ar-ws .verbatim-block { display: grid; gap: 4px; margin: 0 0 8px; }
+.ar-ws .verbatim-path { font-size: 11px; color: var(--ar-fg-muted); }
+.ar-ws .activity-code.verbatim, .ar-ws .verbatim .activity-code { max-height: 60vh; overflow: auto; }
+.ar-ws .event-detail .verbatim .activity-code { max-height: none; }
+.ar-ws .breakdown-track i.unknown { background: repeating-linear-gradient(135deg, var(--ar-border-strong) 0 4px, transparent 4px 8px); }
+.ar-ws .spend-value .unknown { color: var(--ar-fg-muted); }
+.ar-ws .plays-filters { padding: 0; }
+.ar-ws .plays-filters input[type="search"] { min-width: 260px; }

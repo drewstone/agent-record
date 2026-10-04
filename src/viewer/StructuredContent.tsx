@@ -46,3 +46,41 @@ export function StructuredContent({ text, rawLabel = 'Raw data' }: { text: strin
     {typeof value !== 'string' && <details className="raw-data"><summary>{rawLabel}</summary><pre>{text}</pre></details>}
   </div>
 }
+
+/** Fields whose value is code or text to read whole, however short: a shell command, a file's content, a patch. */
+const BODY_FIELDS = /^(command|cmd|code|script|content|new_string|old_string|patch|text|stdout|stderr|output|query|prompt)$/i
+
+/** Every string in a JSON value that reads as a body (a newline, long, or a code field), with the path that holds it. */
+function bodies(value: unknown, path: string[] = [], out: { path: string; text: string }[] = []) {
+  if (out.length >= 24 || path.length > 8) return out
+  if (typeof value === 'string') {
+    if (value.includes('\n') || value.length > 120 || BODY_FIELDS.test(path.at(-1) ?? '')) out.push({ path: path.join(' › ') || 'text', text: value })
+  } else if (Array.isArray(value)) value.forEach((item, i) => bodies(item, [...path, String(i)], out))
+  else if (value && typeof value === 'object') for (const [key, item] of Object.entries(value)) bodies(item, [...path, key], out)
+  return out
+}
+
+/**
+ * Tool input and output exactly as recorded: plain text in a monospace block with its line breaks. A JSON body shows
+ * its text-bearing fields as blocks too, and the JSON itself one disclosure away; nothing is read as Markdown.
+ */
+export function VerbatimContent({ text, rawLabel = 'Raw data' }: { text: string; rawLabel?: string }) {
+  const value = displayValue(text)
+  if (typeof value !== 'object' || value === null)
+    return <pre className="activity-code verbatim" data-verbatim><code>{text}</code></pre>
+  const blocks = bodies(value)
+  return (
+    <div className="structured-content verbatim" data-verbatim>
+      {blocks.map((block, i) => (
+        <section key={i} className="verbatim-block">
+          <span className="verbatim-path mono">{block.path}</span>
+          <pre className="activity-code"><code>{block.text}</code></pre>
+        </section>
+      ))}
+      <details className="raw-data" open={!blocks.length}>
+        <summary>{rawLabel}</summary>
+        <pre className="activity-code"><code>{JSON.stringify(value, null, 2)}</code></pre>
+      </details>
+    </div>
+  )
+}
