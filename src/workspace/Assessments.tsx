@@ -36,6 +36,8 @@ export function flagsFrom(rows: readonly AssessmentRow[], dimensions: Map<string
   return flags
 }
 
+const RANK: Record<string, number> = { bad: 4, uncalibrated: 3, unknown: 2, neutral: 1, good: 0 }
+
 export function AssessmentMatrix({
   play,
   dimensions,
@@ -46,7 +48,16 @@ export function AssessmentMatrix({
   onOpen: (runId: string, dimension?: string) => void
 }) {
   const headline = (dimensions?.dimensions ?? []).filter((dimension) => dimension.headline)
-  const cells = new Map(play.assessments.map((row) => [`${row.runId}\0${row.dimension}`, row]))
+  // One cell per run and dimension: the most adverse decided label; uncalibrated distributions do not colour.
+  const cells = new Map<string, PlayDocument['assessments'][number] & { shown: string; subjects: number }>()
+  for (const row of play.assessments) {
+    const uncalibrated = row.method === 'systemone' && row.calibrated !== true
+    const shown = row.status !== 'decided' ? 'unknown' : uncalibrated ? 'uncalibrated' : row.polarity
+    const key = `${row.runId}\0${row.dimension}`
+    const current = cells.get(key)
+    if (!current || (RANK[shown] ?? 0) > (RANK[current.shown] ?? 0)) cells.set(key, { ...row, shown, subjects: (current?.subjects ?? 0) + 1 })
+    else current.subjects++
+  }
   const runs = play.runs.filter((run) => run.kind !== 'search')
   if (!headline.length) return <p className="chat-empty">The dimension catalogue is unavailable.</p>
   return (
@@ -73,7 +84,7 @@ export function AssessmentMatrix({
               </th>
               {headline.map((dimension) => {
                 const cell = cells.get(`${run.id}\0${dimension.id}`)
-                const polarity = cell ? (cell.status === 'decided' ? cell.polarity : 'unknown') : 'none'
+                const polarity = cell ? cell.shown : 'none'
                 return (
                   <td key={dimension.id}>
                     {cell ? (
@@ -117,8 +128,6 @@ function Decider({ row }: { row: AssessmentRow }) {
     </span>
   )
 }
-
-const RANK: Record<string, number> = { bad: 4, uncalibrated: 3, unknown: 2, neutral: 1, good: 0 }
 
 /** Every dimension of the catalogue as one scorecard, then the selected dimension's rows and citations. */
 export function RunAssessments({

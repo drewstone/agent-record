@@ -243,10 +243,22 @@ export function LineageGraph({
       for (const id of members) lane.set(id, index)
     }
     const COLUMN = 132
-    const ROW = 92
-    const positions = new Map(order.map((id) => [id, { x: 70 + rank.get(id)! * COLUMN, y: 44 + lane.get(id)! * ROW }]))
-    return { order, positions, width: 140 + Math.max(0, order.length - 1) * COLUMN, height: 44 + Math.max(1, lanes.length) * ROW }
+    const ROW = 120
+    const TOP = 112
+    const positions = new Map(order.map((id) => [id, { x: 70 + rank.get(id)! * COLUMN, y: TOP + lane.get(id)! * ROW }]))
+    return { order, positions, column: COLUMN, width: 140 + Math.max(0, order.length - 1) * COLUMN, height: TOP - 30 + Math.max(1, lanes.length) * ROW }
   }, [play, runs])
+  // One path per pair of runs; several relations share it.
+  const edges = useMemo(() => {
+    const pairs = new Map<string, { a: string; b: string; kinds: string[] }>()
+    for (const edge of play.lineage.edges) {
+      const key = [edge.from, edge.to].sort().join('\0')
+      const pair = pairs.get(key) ?? { a: edge.from, b: edge.to, kinds: [] }
+      if (!pair.kinds.includes(edge.kind)) pair.kinds.push(edge.kind)
+      pairs.set(key, pair)
+    }
+    return [...pairs.values()]
+  }, [play])
   const values = play.runs.map((run) => spendValue(run.spend)).filter((value): value is number => value !== null)
   const max = Math.max(1e-9, ...values)
   const radius = (id: string) => {
@@ -264,18 +276,34 @@ export function LineageGraph({
               <path d="M0,0 L8,4 L0,8 z" className="lineage-arrow" />
             </marker>
           </defs>
-          {play.lineage.edges.map((edge) => {
-            const a = layout.positions.get(edge.from)
-            const b = layout.positions.get(edge.to)
-            if (!a || !b) return null
-            const [older, newer, olderId, newerId] = a.x <= b.x ? [a, b, edge.from, edge.to] : [b, a, edge.to, edge.from]
+          {edges.map(({ a, b, kinds }, i) => {
+            const pa = layout.positions.get(a)
+            const pb = layout.positions.get(b)
+            if (!pa || !pb) return null
+            const [older, newer, olderId, newerId] = pa.x <= pb.x ? [pa, pb, a, b] : [pb, pa, b, a]
+            const span = Math.round((newer.x - older.x) / layout.column)
+            const label = kinds.map((kind) => EDGE_LABEL[kind] ?? kind).join(' · ')
+            const kind = kinds[0]!
+            if (older.y === newer.y && span > 1) {
+              // Arcs over the lane keep a long edge clear of the runs between its ends.
+              const lift = 22 + 16 * Math.min(span - 1, 5) + (i % 2) * 6
+              const x1 = older.x
+              const x2 = newer.x
+              const top = older.y - radius(olderId) - lift
+              return (
+                <g key={`${a}>${b}`} className={`lineage-edge edge-${kind}`}>
+                  <path d={`M${x1},${older.y - radius(olderId)} C${x1},${top} ${x2},${top} ${x2},${newer.y - radius(newerId) - 4}`} markerEnd="url(#lineage-arrow)" />
+                  <text x={(x1 + x2) / 2} y={top + 8} textAnchor="middle" className="edge-label">{label}</text>
+                </g>
+              )
+            }
             const x1 = older.x + radius(olderId)
             const x2 = newer.x - radius(newerId) - 4
             const mid = (x1 + x2) / 2
             return (
-              <g key={`${edge.from}>${edge.to}:${edge.kind}`} className={`lineage-edge edge-${edge.kind}`}>
+              <g key={`${a}>${b}`} className={`lineage-edge edge-${kind}`}>
                 <path d={`M${x1},${older.y} C${mid},${older.y} ${mid},${newer.y} ${x2},${newer.y}`} markerEnd="url(#lineage-arrow)" />
-                <text x={mid} y={(older.y + newer.y) / 2 - 6} textAnchor="middle" className="edge-label">{EDGE_LABEL[edge.kind] ?? edge.kind}</text>
+                {x2 - x1 > label.length * 6.2 + 12 && <text x={mid} y={(older.y + newer.y) / 2 - 6} textAnchor="middle" className="edge-label">{label}</text>}
               </g>
             )
           })}
