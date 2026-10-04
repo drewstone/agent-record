@@ -12,3 +12,5 @@ export type {
 } from './record.js'
 
 export { parseReportOptions, type ReportOptions } from './report-options.js'
+export * from './workspace.js'
+export * from './assessment.js'

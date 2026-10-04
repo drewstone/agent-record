@@ -9,13 +9,16 @@ export default defineConfig({
         index: 'src/index.ts',
         record: 'src/record.ts',
         report: 'src/report.ts',
+        workspace: 'src/workspace.ts',
+        assessment: 'src/assessment.ts',
         'research-publication': 'src/adapters/research-publication.ts',
+        'agent-runtime': 'src/adapters/agent-runtime.ts',
       },
       formats: ['es'],
       fileName: (_format, name) => `${name}.js`,
     },
     rolldownOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
+      external: [/^node:/, 'react', 'react-dom', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
     },
   },
 })

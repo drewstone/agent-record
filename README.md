@@ -9,7 +9,7 @@ A React component for reading what an agent team did: conversations, tool inputs
 ## Install
 
 ```sh
-pnpm add https://github.com/drewstone/agent-record/releases/download/v0.3.2/drewstone-agent-record-0.3.2.tgz react react-dom
+pnpm add https://github.com/drewstone/agent-record/releases/download/v0.4.0/drewstone-agent-record-0.4.0.tgz react react-dom
 ```
 
 The release is an ESM package with TypeScript declarations and CSS.
@@ -70,8 +70,11 @@ This adapter accepts the blog's `research-publication.events.v1` files.
 It preserves their events and source references while translating node identities into the reusable format.
 It does not review, redact, or sanitize private logs.
 
-Raw Claude, Codex, Pi, OpenCode, or other harness logs require an importer into this format.
-This release does not ship native harness importers or claim complete capture.
+### Agent-runtime run directories
+
+`node tools/ingest.mjs <runDir> --out record.json [--native <dir>]` converts an agent-runtime run directory, including Claude Code, OpenCode, pi, Codex and Kimi conversations where the run retained them.
+Each node's capture channel and every missing transcript are recorded in the output.
+See [the record format](docs/record-format.md#agent-runtime-run-directories).
 
 ## Interaction and embedding
 

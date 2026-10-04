@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "dist",
     "README.md",
     "LICENSE",
-    "tools/render-report.mjs"
+    "tools/render-report.mjs",
+    "tools/ingest.mjs"
   ],
   "sideEffects": [
     "**/*.css"
@@ -36,16 +37,30 @@
     "./report": {
       "types": "./dist/report.d.ts",
       "import": "./dist/report.js"
-    }
+    },
+    "./adapters/agent-runtime": {
+      "types": "./dist/adapters/agent-runtime.d.ts",
+      "import": "./dist/agent-runtime.js"
+    },
+    "./workspace": {
+      "types": "./dist/workspace.d.ts",
+      "import": "./dist/workspace.js"
+    },
+    "./assessment": {
+      "types": "./dist/assessment.d.ts",
+      "import": "./dist/assessment.js"
+    },
+    "./schemas/*": "./dist/schemas/*"
   },
   "scripts": {
     "dev": "vite --config examples/react/vite.config.ts",
     "typecheck": "tsc --noEmit && tsc -p examples/react/tsconfig.json --noEmit",
-    "build": "vite build && tsc --emitDeclarationOnly && node tools/copy-styles.mjs && node tools/build-standalone.mjs",
+    "build": "vite build && tsc --emitDeclarationOnly && node tools/copy-styles.mjs && node tools/build-standalone.mjs && node tools/export-schemas.mjs",
     "build:example": "vite build --config examples/react/vite.config.ts",
     "prepack": "pnpm build",
     "test": "node --test tests/*.test.mjs",
-    "report": "node tools/render-report.mjs"
+    "report": "node tools/render-report.mjs",
+    "ingest": "node tools/ingest.mjs"
   },
   "peerDependencies": {
     "react": ">=18.3.0 <20",
@@ -71,6 +86,7 @@
   },
   "packageManager": "pnpm@10.23.0",
   "bin": {
-    "agent-record-report": "tools/render-report.mjs"
+    "agent-record-report": "tools/render-report.mjs",
+    "agent-record-ingest": "tools/ingest.mjs"
   }
 }
