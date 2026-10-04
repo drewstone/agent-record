@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { MessageText, StructuredContent } from './StructuredContent.js'
 import type { RecordEvent } from '../record.js'
 import {
   callsOf,
@@ -153,14 +154,14 @@ export function Conversation({
       aria-label={`Inspect source of ${event.label}`}
       onClick={() => inspect(event, true)}
     >
-      Source ↗
+      Details
     </button>
   )
   return (
     <>
       <div className="conversation-toolbar">
         <p className="small" data-chat-caption>
-          {items.length} entries · {tools.length} tool calls at this time
+          {items.length > 0 ? `${items.length} messages · ${tools.length} tool calls` : (index.byActor.get(actor) ?? []).some(item => item.detail.role || textOf(item) || callsOf(item).length) ? (query || category !== 'all' ? 'No messages match these filters' : 'No messages at the selected time') : 'Conversation not retained in this snapshot'}
         </p>
         <button
           type="button"
@@ -192,7 +193,7 @@ export function Conversation({
           <p className="chat-empty">
             {query || category !== 'all'
               ? 'No retained conversation entries match this filter.'
-              : 'No retained conversation content at the selected time. Source events remain inspectable.'}
+              : (index.byActor.get(actor)?.length ? 'This selection has recorded events, but no visible messages at the selected time. Inspect the event details or choose Full run.' : 'This agent is recorded in the topology, but its conversation was not included in this snapshot. This does not mean it did no work.')}
           </p>
         )}
         {items.map((event) => {
@@ -270,16 +271,11 @@ export function Conversation({
                         : 'Full prompt'}
                     </span>
                   </summary>
-                  <div className="message-text">{message}</div>
+                  <MessageText text={message} />
                 </details>
               ) : standalone ? (
                 <div className="standalone-output">
-                  <pre>
-                    {message ||
-                      event.detail.contentOmitted ||
-                      event.detail.publicationNote ||
-                      'No result text was retained for this event.'}
-                  </pre>
+                  <StructuredContent text={message || event.detail.contentOmitted || event.detail.publicationNote || 'No result text was retained for this event.'} />
                   {event.detail.toolCallId !== undefined &&
                     (index.calls.get(
                       toolKey(event.node, event.detail.toolCallId),
@@ -291,7 +287,7 @@ export function Conversation({
                     )}
                 </div>
               ) : message ? (
-                <div className="message-text">{message}</div>
+                <MessageText text={message} />
               ) : failed ? (
                 <p className="recorded-error">
                   The request failed. No assistant response is present in this
@@ -386,10 +382,7 @@ export function Conversation({
                               <span>Input</span>
                               {sourceButton(event)}
                             </header>
-                            <pre>
-                              {call.input ??
-                                'Tool arguments are absent from this record.'}
-                            </pre>
+                            <StructuredContent text={call.input ?? 'Tool arguments are absent from this record.'} rawLabel="Raw input" />
                             {call.publicationNote && (
                               <p className="publication-note">
                                 {call.publicationNote}
@@ -416,11 +409,7 @@ export function Conversation({
                                 </time>
                                 {sourceButton(result)}
                               </header>
-                              <pre>
-                                {textOf(result) ||
-                                  result.detail.contentOmitted ||
-                                  'No output text is present in this record.'}
-                              </pre>
+                              <StructuredContent text={textOf(result) || result.detail.contentOmitted || 'No output text is present in this record.'} rawLabel="Raw result" />
                               {result.detail.publicationNote && (
                                 <p className="publication-note">
                                   {result.detail.publicationNote}

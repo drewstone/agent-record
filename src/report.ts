@@ -39,6 +39,7 @@ const claimSchema = z
   .object({
     id: z.string().min(1),
     statement: z.string().min(1),
+    title: z.string().min(1).optional(),
     status: z.enum(claimStatuses),
     method: z.string().optional(),
     evidence: z.array(evidenceReferenceSchema),

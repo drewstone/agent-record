@@ -5,7 +5,7 @@ import { resolve, dirname, basename, extname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createElement, StrictMode } from 'react'
 import { renderToString } from 'react-dom/server'
-import { ResearchReport } from '../dist/index.js'
+import { ResearchReport, parseReportOptions } from '../dist/index.js'
 import { parseResearchReport, reportToLatex } from '../dist/report.js'
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -23,7 +23,8 @@ const htmlText = (value) =>
   )
 
 /** Pure rendering: the caller owns source collection, permissions, retention, and publication. */
-export function renderReportHtml(report, { css, script }) {
+export function renderReportHtml(report, { css, script, sourceSearchEndpoint }) {
+  const options = parseReportOptions({ sourceSearchEndpoint })
   const data = JSON.stringify(report)
     .replace(/</g, '\\u003c')
     .replace(/\u2028/g, '\\u2028')
@@ -34,29 +35,29 @@ export function renderReportHtml(report, { css, script }) {
     createElement(
       StrictMode,
       null,
-      createElement(ResearchReport, { report }),
+      createElement(ResearchReport, { report, ...options }),
     ),
   )
   return (
     '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'sha256-' +
     scriptHash +
-    "'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'\">" +
+    "'; style-src 'unsafe-inline'; img-src data:; connect-src " + (options.sourceSearchEndpoint ? "'self'" : "'none'") + "; base-uri 'none'; form-action 'none'\">" +
     '<title>' +
     htmlText(report.title) +
-    '</title><style>html{background:#fffefa;color:#252522}body{margin:0 auto;max-width:1440px;padding:24px} @media(max-width:600px){body{padding:12px}} @media(prefers-color-scheme:dark){html{background:#12101f;color:#e8e5ef}}' +
+    '</title><style>html{background:#fffefa;color:#252522}body{margin:0 auto;max-width:1800px;padding:0} @media(max-width:600px){body{padding:0}} @media(prefers-color-scheme:dark){html{background:#12101f;color:#e8e5ef}}' +
     css +
     '</style></head><body><main id="research-report">' +
     body +
     '</main><script id="research-report-data" type="application/json">' +
     data +
-    '</script><script>' +
+    '</script>' + (options.sourceSearchEndpoint ? '<script id="research-report-options" type="application/json">' + JSON.stringify(options).replace(/</g, '\\u003c') + '</script>' : '') + '<script>' +
     executable +
     '</script></body></html>\n'
   )
 }
 
-export async function renderReportFile(input, output) {
+export async function renderReportFile(input, output, options = {}) {
   const report = parseResearchReport(
     JSON.parse(await readFile(input, 'utf8')),
   )
@@ -70,7 +71,7 @@ export async function renderReportFile(input, output) {
   )
   if (resolve(input) === resolve(output) || resolve(input) === tex)
     throw new Error('Output must not overwrite the input report')
-  await writeFile(output, renderReportHtml(report, { css, script }), {
+  await writeFile(output, renderReportHtml(report, { css, script, ...parseReportOptions(options) }), {
     mode: 0o600,
   })
   await writeFile(tex, reportToLatex(report), { mode: 0o600 })
@@ -86,13 +87,13 @@ const entryPath = process.argv[1]
   ? await realpath(resolve(process.argv[1])).catch(() => null)
   : null
 if (entryPath && pathToFileURL(entryPath).href === import.meta.url) {
-  const [input, output, extra] = process.argv.slice(2)
-  if (!input || !output || extra) {
-    console.error('Usage: agent-record-report REPORT.json OUTPUT.html')
+  const [input, output, flag, endpoint, extra] = process.argv.slice(2)
+  if (!input || !output || extra || (flag !== undefined && (flag !== '--source-search-endpoint' || !endpoint))) {
+    console.error('Usage: agent-record-report REPORT.json OUTPUT.html [--source-search-endpoint PATH]')
     process.exitCode = 2
   } else {
     try {
-      console.log(JSON.stringify(await renderReportFile(input, output)))
+      console.log(JSON.stringify(await renderReportFile(input, output, { sourceSearchEndpoint: endpoint })))
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error))
       process.exitCode = 1

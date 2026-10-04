@@ -6,6 +6,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { ResearchReport } from '../dist/index.js'
+import { readSourceSearch } from '../src/viewer/source-search.ts'
 import { parseResearchReport, reportToLatex } from '../dist/report.js'
 import { fromResearchPublication } from '../dist/research-publication.js'
 import { readReportLocation, reportLocationSearch } from '../src/report-selection.ts'
@@ -280,8 +284,7 @@ test('retained documents and unknown measurements survive JSON and summary expor
 test('untrusted retained Markdown renders offline without executable HTML or remote images', () => {
   const input = raw()
   input.plays[0].documents = [{id:'doc',path:'test.md',title:'Untrusted document',content:'# Report\n<script>window.compromised=true</script>\n\n![remote](https://example.test/pixel)\n\n[execute](javascript:alert(1))\n\n$600/kg against $800/kW\n\n$$\nE=mc^2\n$$'}]
-  const html = renderReportHtml(parseResearchReport(input), {css:'',script:''})
-  const rendered = html.split('<script id="research-report-data"')[0]
+  const rendered = renderToStaticMarkup(createElement(ResearchReport, { report: parseResearchReport(input), defaultDocumentSelection: { playId: 'play', path: 'test.md' } }))
   assert.doesNotMatch(rendered, /<script>|<img[^>]+example|href="javascript:/)
   assert.match(rendered, /<math /)
   assert.match(rendered, /\$600\/kg against \$800\/kW/)
@@ -307,4 +310,80 @@ test('standalone source citations remain in their named play and exact document'
   assert.equal(reportLocationSearch('?old=kept&document=old&line=5', 'other'), '?old=kept&play=other')
   const query = reportLocationSearch('', 'play', { playId: 'play', path: 'retained/result.md', line: 2 })
   assert.equal(readReportLocation(report, query).document.line, 2)
+})
+
+
+test('source search is opt-in, same-origin and bound to exact retained bytes', () => {
+  const data = parseResearchReport(raw())
+  const endpoint = '/research/revisions/20261004T054028.227587Z/knowledge.json'
+  const html = renderReportHtml(data, { css: '', script: '', sourceSearchEndpoint: endpoint })
+  assert.match(html, /connect-src 'self'/)
+  assert.ok(html.includes('id="research-report-options"'))
+  assert.throws(() => renderToStaticMarkup(createElement(ResearchReport, { report: data, sourceSearchEndpoint: 'https://example.com/search' })), /same-origin/)
+  for (const bad of ['https://example.com/search', '//example.com/search', '/a/../search', '/search?q=1', '/search#q', '/a/%2e%2e/search']) {
+    assert.throws(() => renderReportHtml(data, { css: '', script: '', sourceSearchEndpoint: bad }), /same-origin/)
+  }
+  const doc = { id:'a',path:'a.md',title:'A',content:'retained source',sha256:'a'.repeat(64),kind:'knowledge' }
+  const reply = { scopeId:'play',revision:'revision',indexedAt:'now',hits:[{source:{id:doc.id,contentHash:doc.sha256,text:doc.content}}] }
+  assert.deepEqual(readSourceSearch(reply, 'play', [doc]).documents, [doc])
+  assert.throws(() => readSourceSearch(reply, 'other', [doc]), /match this play/)
+  assert.throws(() => readSourceSearch(reply, 'play', [doc], 'other-revision'), /match this play/)
+  assert.throws(() => readSourceSearch({...reply,hits:[{source:{...reply.hits[0].source,text:'changed'}}]}, 'play', [doc]), /Source bytes/)
+  assert.throws(() => readSourceSearch(reply, 'play', []), /Source bytes/)
+})
+
+test('workspace view links preserve scoped source selection and reject unknown modes', () => {
+  const report = parseResearchReport(raw())
+  assert.deepEqual(readReportLocation(report, '?play=play&view=activity'), {playId:'play',view:'activity'})
+  assert.ok(readReportLocation(report, '?play=play&view=unknown').error)
+  assert.ok(readReportLocation(report, '?play=play&view=activity&view=sources').error)
+  assert.equal(reportLocationSearch('?document=stale&line=3', 'play', undefined, 'activity'), '?play=play&view=activity')
+})
+
+
+test('activity citations cannot name a foreign agent, event, or source document', () => {
+  const value = raw()
+  value.plays[0].record = {schema:'agent-record.v1',runId:'r',title:'Run',nodes:[
+    {id:'a',kind:'agent',label:'A'},{id:'b',kind:'agent',label:'B'},
+    {id:'s',kind:'session',label:'Session',parent:'a',agentId:'a'},
+  ],events:[{id:'e',node:'s',at:'2026-10-04T00:00:00Z',kind:'message',label:'Message',detail:{role:'assistant',publicText:'Retained'}}]}
+  const report = parseResearchReport(value)
+  const parsed = readReportLocation(report, '?play=play&view=activity&agent=a&event=e')
+  assert.deepEqual(parsed.activity, {runId:'r',nodeId:'a',eventId:'e'})
+  for (const query of ['?play=play&agent=b&event=e','?play=play&event=missing','?play=play&agent=missing','?agent=a','?play=play&event=e&document=a.md']) assert.ok(readReportLocation(report,query).error)
+  assert.equal(reportLocationSearch('', 'play', undefined, 'activity', parsed.activity), '?play=play&agent=a&event=e&view=activity')
+})
+
+
+test('short result titles do not replace the supplied result statement', () => {
+  const value = raw(); value.plays[0].claims[0].title = 'Hydrogen buffer'
+  const report = parseResearchReport(value)
+  const html = renderReportHtml(report, {css:'',script:''})
+  assert.match(html, /<h3>Hydrogen buffer<\/h3>/)
+  assert.match(html, /<p>Unanswered question<\/p>/)
+  assert.equal(report.plays[0].claims[0].statement, 'Unanswered question')
+})
+
+test('activity retains command whitespace and distinguishes a time filter from missing capture', () => {
+  const value = raw()
+  value.plays[0].record = {schema:'agent-record.v1',runId:'r',title:'Run',nodes:[
+    {id:'a',kind:'agent',label:'A'},{id:'b',kind:'agent',label:'B'},
+  ],events:[
+    {id:'e1',node:'a',at:'2026-10-04T00:00:00Z',kind:'message',label:'Command',detail:{role:'assistant',publicToolCalls:[{id:'c',name:'exec',input:JSON.stringify({cmd:'python - <<EOF\n  indented\nEOF'})}]}},
+    {id:'e2',node:'b',at:'2026-10-04T00:01:00Z',kind:'message',label:'Later',detail:{role:'assistant',publicText:'Retained response'}},
+  ]}
+  const report = parseResearchReport(value)
+  const command = renderToStaticMarkup(createElement(ResearchReport, {report,defaultView:'activity'}))
+  assert.match(command, /<pre class="activity-code"><code>python - &lt;&lt;EOF\n  indented\nEOF<\/code><\/pre>/)
+  const earlier = renderToStaticMarkup(createElement(ResearchReport, {report,defaultView:'activity',defaultActivitySelection:{runId:'r',nodeId:'b',at:'2026-10-04T00:00:00Z'}}))
+  assert.match(earlier, /No messages at the selected time/)
+  assert.doesNotMatch(earlier, /Message capture unavailable/)
+})
+
+test('line citations open readable Markdown with an explicit source-line control', () => {
+  const value = raw();value.plays[0].documents=[{id:'d',path:'result.md',title:'Result',content:'# Finding\n\nReadable paragraph',kind:'knowledge'}]
+  const html = renderToStaticMarkup(createElement(ResearchReport, {report:parseResearchReport(value),defaultDocumentSelection:{playId:'play',path:'result.md',line:3}}))
+  assert.match(html, /View cited line/)
+  assert.match(html, /<p>Readable paragraph<\/p>/)
+  assert.doesNotMatch(html, /class="rr-document-source"/)
 })

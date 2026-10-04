@@ -3,7 +3,7 @@
 `ResearchReport` adds authored claim assessments to recorded evidence.
 It accepts a validated `agent-research-report.v1` snapshot.
 The host collects data, chooses the observation window, authors assessments, and decides who may see the snapshot.
-The component makes no requests, starts no work, stores no data, and changes no URLs.
+By default the component makes no requests. It starts no agent work, stores no data, and changes no URLs. An optional commissioned source-search endpoint provides scoped retrieval; the standalone reader owns browser navigation.
 
 ```tsx
 import { ResearchReport, parseResearchReport } from '@drewstone/agent-record'
@@ -48,7 +48,7 @@ These arrays default to empty.
 Run verdicts such as `winner` are recorded execution state, not scientific verification.
 
 A claim requires `id`, `statement`, `status`, and `evidence`.
-Optional `method` explains the assessment basis; `limitations` lists its scope and unresolved issues.
+Optional `title` gives a short heading while `statement` remains the result body. Optional `method` explains the assessment basis; `limitations` lists its scope and unresolved issues.
 Statuses are `supported`, `hypothesis`, `unresolved`, and `refuted`.
 Supported and refuted assessments require at least one source.
 The validator checks provenance structure, not scientific correctness or source availability.
@@ -85,9 +85,11 @@ This supports a caller's C01–C12 contract without defining the questions or sc
 
 ## Inspect and replay
 
-Search filters plays by title, summary, claim text, method, limitation, or source.
-Assessment filters change the visible plays and claims.
-Selecting a source event moves the existing trace viewer to that exact event and timestamp.
+The play rail selects a single workspace with Results, Activity, and Sources sections.
+Results show claims before operational measurements; coverage and original metadata remain available in disclosures.
+Activity searches retained event text and tool payloads across agents, reports matching counts, and opens the owning agent/event.
+The agent selector and optional topology show recorded identities; absence of retained conversation does not mean no work occurred.
+Tool inputs and results have readable text/field previews; original payloads and provenance remain secondary disclosures.
 The trace cursor does not change the later report assessment.
 
 Replay is paused initially.
@@ -167,4 +169,21 @@ references resolve against their originating document before alias lookup.
 
 Standalone reports accept `?play=PLAY_ID&document=EXACT_PATH&line=POSITIVE_LINE`. The play is required for a document citation, and the exact path must belong to that play. An unknown or ambiguous citation displays an explicit error instead of opening a different source. Source lines outside the document remain visibly out of range. Selecting a play or retained document updates the standalone report URL, so its current source can be shared. The original report data stays unchanged.
 
-The React component remains network-free and does not modify URLs. Embedders can pass `defaultDocumentSelection: { playId, path, line? }` and handle `onDocumentChange` alongside `defaultPlayId` / `onPlayChange`. The standalone command owns browser URL handling.
+The React component does not modify URLs; it remains network-free unless `sourceSearchEndpoint` is supplied. Embedders can pass `defaultDocumentSelection: { playId, path, line? }` and handle `onDocumentChange` alongside `defaultPlayId` / `onPlayChange`. The standalone command owns browser URL handling.
+
+
+## Commissioned source search and activity links
+
+A host can opt into its existing same-origin source API:
+
+```sh
+agent-record-report authored-report.json report.html --source-search-endpoint /research/revisions/REVISION/knowledge.json
+```
+
+The equivalent React prop is `sourceSearchEndpoint`; the programmatic renderer accepts it in `renderReportFile(input, output, options)` and `renderReportHtml(report, options)`. It must be an absolute same-origin path with no query, fragment, or dot segments. The standalone renderer embeds `research-report-options` JSON and changes `connect-src` to `self` only for this explicit option. A server must authorize the same endpoint from its own verified publication metadata; arbitrary report text does not commission network access.
+
+The Sources form calls the endpoint with `play`, `q`, and a bounded `limit`. It expects the shared Knowledge response `{scopeId, revision, indexedAt, hits:[{source:{id, contentHash, text}}]}`. Every hit must exactly match a document ID, digest, and body already retained in the selected play; revision routes must return the commissioned revision. Failure is explicit and never falls back to a broader corpus. The UI shows source excerpts, not generated answers. Offline Sources filtering remains available without this option.
+
+Standalone section links use `?play=PLAY&view=results|activity|sources`. Activity links add `agent=NODE_ID` and/or `event=EVENT_ID`; each ID must belong to that play, and an event/agent pair must match its retained session join. Browser Back restores prior selections. The React callbacks `onViewChange` and `onActivityChange(playId, selection)` let embedders own equivalent navigation; `defaultView` and `defaultActivitySelection` select the initial view.
+
+Activity and offline document search scan the supplied snapshot, so their runtime depends on retained data size. The viewer does not index raw archives, ingest missing captures, infer agent joins, or expose hidden reasoning.

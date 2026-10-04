@@ -10,3 +10,5 @@ export type {
   RecordEvent,
   RecordSelection,
 } from './record.js'
+
+export { parseReportOptions, type ReportOptions } from './report-options.js'
