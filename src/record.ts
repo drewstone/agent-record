@@ -10,6 +10,23 @@ const sourceSchema = z
       .regex(/^[0-9a-f]{64}$/)
       .optional(),
     line: z.number().int().positive().optional(),
+    /** JSON Pointer into a JSON file; the hash covers the resolved value. */
+    pointer: z.string().startsWith('/').optional(),
+  })
+  .catchall(z.unknown())
+const capture = z
+  .object({
+    channel: z.string(),
+    status: z.enum(['complete', 'lossy', 'absent']),
+    reason: z.string().nullable(),
+  })
+  .catchall(z.unknown())
+const gap = z
+  .object({
+    runId: z.string().optional(),
+    nodeId: z.string().nullable().optional(),
+    code: z.string(),
+    detail: z.string(),
   })
   .catchall(z.unknown())
 
@@ -37,6 +54,10 @@ export const recordSchema = z
           joinProof: metadata.optional(),
           modelSource: z.string().optional(),
           servedModel: z.string().nullable().optional(),
+          harness: z.string().nullable().optional(),
+          /** Execution environments, in first-seen order. */
+          sandboxes: z.array(z.string()).optional(),
+          capture: capture.optional(),
         })
         .catchall(z.unknown()),
     ),
@@ -84,6 +105,27 @@ export const recordSchema = z
                 })
                 .catchall(z.unknown())
                 .nullish(),
+              reasoning: z.string().optional(),
+              durationMs: z.number().nonnegative().optional(),
+              /** List-price estimate from recorded usage. Not a bill. */
+              costListUsd: z.number().nonnegative().optional(),
+              usdKnown: z.boolean().optional(),
+              rateLimit: z
+                .object({
+                  window: z.string().nullable(),
+                  utilization: z.number().nullable(),
+                  status: z.string().nullable(),
+                })
+                .catchall(z.unknown())
+                .optional(),
+              /** The body was shortened; the full text is the source entry with this hash. */
+              clip: z
+                .object({
+                  bytes: z.number().int().nonnegative(),
+                  sha256: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+                })
+                .catchall(z.unknown())
+                .optional(),
             })
             .catchall(z.unknown()),
         })
@@ -121,6 +163,10 @@ export const recordSchema = z
         publicContent: z.string(),
         categoryMethod: z.string(),
         cost: z.string(),
+        nodes: z
+          .array(capture.extend({ nodeId: z.string() }))
+          .optional(),
+        gaps: z.array(gap).optional(),
       })
       .catchall(z.unknown())
       .default({
@@ -192,6 +238,8 @@ export const recordSchema = z
   })
 
 export type RunRecord = z.infer<typeof recordSchema>
+export type RecordCapture = z.infer<typeof capture>
+export type RecordGap = z.infer<typeof gap>
 export type RecordNode = RunRecord['nodes'][number]
 export type RecordEvent = RunRecord['events'][number]
 export interface RecordSelection {
