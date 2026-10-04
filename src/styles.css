@@ -262,12 +262,6 @@
   font-size: 11px;
   padding: 0.4rem 0.55rem;
 }
-.agent-record .record-summary {
-  margin: 0;
-  padding: 0.2rem 0.85rem 0.45rem;
-  font: 10px var(--ar-font-mono);
-  color: var(--ar-fg-faint);
-}
 .agent-record .playback {
   display: flex;
   align-items: center;
@@ -302,7 +296,7 @@
 .agent-record .timeline-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   font: 11px var(--ar-font-mono);
   margin: 0.25rem 0.85rem 0.1rem;
 }
@@ -589,11 +583,6 @@
   padding: 0.45rem 0.85rem;
   border-bottom: 1px solid var(--ar-border);
 }
-.agent-record .conversation-toolbar .small {
-  margin: 0;
-  font: 10px/1.4 var(--ar-font-mono);
-  color: var(--ar-fg-faint);
-}
 .agent-record .tool-expansion {
   margin-left: auto;
   padding: 0.2rem 0.4rem;
@@ -835,9 +824,6 @@
   }
   .agent-record .conversation-toolbar {
     padding: 0.4rem 0.6rem;
-  }
-  .agent-record .record-summary {
-    line-height: 1.5;
   }
 }
 .agent-record .chat-message {
@@ -1352,9 +1338,8 @@
 .agent-record .rr-document-content { max-height:none;overflow:visible; }
 .agent-record .rr-markdown { max-width:100ch; }
 .agent-record .rr-document-source { max-height:none; }
-.agent-record .ar-view { border:0;border-radius:0;overflow:visible; }
-.agent-record .controls { padding:0;border:0;background:none;grid-template-columns:180px minmax(0,1fr); }
-.agent-record .record-summary { padding:12px 0;margin:0;font-size:12px; }
+.agent-record:not(.research-report),.agent-record .ar-view { border:0;border-radius:0;overflow:visible; }
+.agent-record .controls { padding:0;border:0;background:none;grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
 .agent-record .activity-replay { border-block:1px solid var(--ar-border);margin-bottom:16px; }
 .agent-record .workspace.flat-activity { display:flex;flex-direction:column;border:0; }
 .agent-record .flat-activity .topology { border:0;border-bottom:1px solid var(--ar-border);background:none;width:100%; }
@@ -1439,6 +1424,5 @@
 .agent-record .chat-message::before { display:none; }
 .agent-record .message-mark { position:static;width:16px;height:auto;background:none; }
 .agent-record .message-heading strong,.agent-record .message-source { font-family:var(--ar-font-body); }
-.agent-record .conversation-toolbar .small { font:12px/1.5 var(--ar-font-body); }
 
 .agent-record .activity-code { white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;margin:0;padding:12px;background:var(--ar-bg-sink);font:12px/1.6 var(--ar-font-mono); }

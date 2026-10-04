@@ -374,7 +374,7 @@ export function reportToLatex(
         )
       : '',
     paragraph(
-      'Assessment labels are supplied by the report author. This export does not independently verify research claims.',
+      "Assessment labels are the report author's judgments, not independent verification.",
     ),
     list(report.limitations),
     report.freshness
@@ -406,7 +406,7 @@ export function reportToLatex(
         metric.source ? list([source(metric.source)]) : '',
       ])] : []),
       ...(play.documents.length ? ['\\subsection*{Retained documents}',
-        paragraph('Full document contents are retained in the HTML reader and JSON download. This summary lists their source identities.'),
+        paragraph('Full document contents are retained in the HTML reader and JSON download.'),
         list(play.documents.map(document => document.title + ' · ' + document.path + (document.sha256 ? ' · SHA-256 ' + document.sha256 : ' · hash unknown'))),
       ] : []),
       ...play.claims.flatMap((claim) => [
@@ -430,9 +430,7 @@ export function reportToLatex(
         play.record
           ? 'Trace: ' +
               play.record.runId +
-              '; ' +
-              play.record.events.length +
-              ' retained events. Capture ' +
+              '. Capture ' +
               (play.record.coverage.completeOriginalCapture
                 ? 'marked complete by producer.'
                 : 'incomplete or unknown.') +

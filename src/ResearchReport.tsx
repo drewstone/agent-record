@@ -36,16 +36,16 @@ export function ResearchReport({ report, theme = 'auto', defaultPlayId, onPlayCh
   function choose(id: string) { setSelected(id); onPlayChange?.(id) }
   return <article className={'agent-record research-report research-workspace ' + className} data-theme={theme}>
     <aside className="research-rail">
-      <h1>Research</h1>
+      <h1>{report.title}</h1>
       <label className="ui-field"><span className="ui-label">Find a play</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Name…" /></label>
       <nav className="research-play-list" aria-label="Research plays">{plays.map(item => <button key={item.id} aria-current={item.id === play?.id ? 'page' : undefined} onClick={() => choose(item.id)}>
         <span>{item.title}</span><small>{item.claims.length} results · {item.documents.length} sources</small>
       </button>)}{!plays.length && <p className="small">No matching play.</p>}</nav>
-      <details className="research-info"><summary>About this snapshot</summary>
-        <p>{report.title}</p><p className="small">{report.summary}</p>
+      <details className="research-info"><summary>Report summary and exports</summary>
+        <p className="small">{report.summary}</p>
         <p className="small">Authored {utcTime(report.generatedAt, true)}</p>
         {report.freshness && <p className="small">{report.freshness.message}</p>}
-        <p className="small">Assessments: {report.assessmentBy ?? 'Report author'}. Source labels are supplied judgments.</p>
+        <p className="small">Assessed by {report.assessmentBy ?? 'the report author'}; assessment labels are judgments, not independent verification.</p>
         {report.limitations.length > 0 && <ul>{report.limitations.map((item, i) => <li key={i}>{item}</li>)}</ul>}
         {report.questionCoverage.length > 0 && <Questions questions={report.questionCoverage} inspect={() => {}} printOnly={false} />}
         <div className="research-exports"><button className="ui-button" onClick={() => download(reportToLatex(report), report.id + '.tex', 'application/x-tex')}>Export LaTeX</button>
@@ -172,8 +172,7 @@ function Sources({
   return (
     <details className="rr-sources" open={printOnly || undefined}>
       <summary>
-        {sources.length} {sources.length === 1 ? 'source' : 'sources'} ·
-        inspect evidence
+        {sources.length} {sources.length === 1 ? 'source' : 'sources'}
       </summary>
       <ol>
         {sources.map((source, i) => (
