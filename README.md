@@ -9,7 +9,7 @@ A React component for reading what an agent team did: conversations, tool inputs
 ## Install
 
 ```sh
-pnpm add https://github.com/drewstone/agent-record/releases/download/v0.3.0/drewstone-agent-record-0.3.0.tgz react react-dom
+pnpm add https://github.com/drewstone/agent-record/releases/download/v0.3.1/drewstone-agent-record-0.3.1.tgz react react-dom
 ```
 
 The release is an ESM package with TypeScript declarations and CSS.

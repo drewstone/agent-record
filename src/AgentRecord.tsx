@@ -133,6 +133,12 @@ function RecordView({
       : (index.actors[0]?.id ?? '')
   const event = explicitEvent ?? index.byActor.get(actor)?.[0]
   const node = index.nodes.get(actor)
+  const capture = node && typeof node.metadata === 'object' && node.metadata !== null
+    ? node.metadata as Record<string, unknown> : undefined
+  const retainedEvents = index.byActor.get(actor)?.length ?? 0
+  const captureLabel = capture?.captureStatus === 'retained-partial' ? 'Partial capture'
+    : capture?.captureStatus === 'missing-source' || retainedEvents === 0 ? 'Conversation unavailable'
+      : capture?.captureStatus === 'retained' ? 'Retained capture' : null
   const view = selection.view ?? 'chat'
   const selectedAt = selection.at ? ms(selection.at) : index.end
   const cutoff = Number.isFinite(selectedAt)
@@ -550,9 +556,9 @@ function RecordView({
             </Select>
           </div>
           <div className="agent-capture-summary" role="status">
-            {(index.byActor.get(actor)?.length ?? 0) > 0 ? `${index.byActor.get(actor)!.length} retained events` : 'Conversation not retained in this snapshot'}
-            {node && typeof node.metadata === 'object' && node.metadata !== null && typeof (node.metadata as Record<string, unknown>).captureReason === 'string'
-              ? <p>{String((node.metadata as Record<string, unknown>).captureReason)}</p> : null}
+            {retainedEvents} retained events{captureLabel ? ` · ${captureLabel}` : ''}
+            {typeof capture?.captureReason === 'string'
+              ? <details><summary>Capture details</summary><p>{capture.captureReason}</p></details> : null}
             {node?.assignment && <details><summary>Assignment</summary><p>{node.assignment}</p></details>}
           </div>
           <div className="ui-tabs" role="tablist" aria-label="Agent evidence">
