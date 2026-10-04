@@ -38,7 +38,9 @@ try {
   }
   const options = { native, maxText: maxText ? Number(maxText) : undefined, manifest, manifestSha256 }
   const bundle = existsSync(join(dir, 'bundle.json'))
-  if (bundle && runId) throw Object.assign(new Error('a bundle names its own recordId; --run-id applies to a run directory'), { exitCode: 64 })
+  // A bundle names its own recordId; --run-id may repeat it (a publisher passes the record id either way), never differ.
+  const recordId = bundle ? JSON.parse(readFileSync(join(dir, 'bundle.json'), 'utf8')).recordId : null
+  if (bundle && runId && runId !== recordId) throw Object.assign(new Error(`--run-id ${runId} differs from the bundle's recordId ${recordId}`), { exitCode: 64 })
   const { json, summary } = bundle ? ingestBundle(dir, options) : ingestRun(dir, { ...options, runId })
   mkdirSync(dirname(out), { recursive: true })
   // Write beside the target and rename so readers never see a partial record.
