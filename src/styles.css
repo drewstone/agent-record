@@ -1626,12 +1626,12 @@
 .ar-ws .chat-message.flagged { box-shadow: inset 3px 0 0 var(--ar-c-fail); }
 .ar-ws .event-flags { display: inline-flex; gap: 3px; margin-left: 6px; }
 .ar-ws .event-flag { padding: 0 5px; min-height: 0; border: 0; border-radius: 3px; font: 700 10px/1.6 var(--ar-font-mono); cursor: pointer; }
-.ar-ws .lifecycle-note { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 5px 16px; font: 11.5px/1.5 var(--ar-font-mono); color: var(--ar-fg-muted); border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 50%, transparent); }
-.ar-ws .lifecycle-note strong { color: var(--ar-fg); font-weight: 600; }
-.ar-ws .lifecycle-note .lifecycle-text { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
-.ar-ws .lifecycle-note.lifecycle-error strong { color: var(--ar-c-fail); }
-.ar-ws .lifecycle-note.selected { background: var(--ws-raised); }
-.ar-ws .lifecycle-note .message-source { margin-left: auto; }
+.agent-record .lifecycle-note { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 5px 16px; font: 11.5px/1.5 var(--ar-font-mono); color: var(--ar-fg-muted); border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 50%, transparent); }
+.agent-record .lifecycle-note strong { color: var(--ar-fg); font-weight: 600; }
+.agent-record .lifecycle-note .lifecycle-text { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
+.agent-record .lifecycle-note.lifecycle-error strong { color: var(--ar-c-fail); }
+.agent-record .lifecycle-note.selected { background: var(--ws-raised, var(--ar-bg-alt)); }
+.agent-record .lifecycle-note .message-source { margin-left: auto; }
 .ar-ws .reasoning-body { margin: 4px 0 6px; font-size: 13px; color: var(--ar-fg-muted); }
 .ar-ws .reasoning-body > summary { padding: 2px 0; gap: 8px; font-size: 12px; }
 .ar-ws .reasoning-preview { font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }

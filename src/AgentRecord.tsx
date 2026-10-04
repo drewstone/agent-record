@@ -616,7 +616,9 @@ function RecordView({
               cutoff={cutoff}
               query={query}
               category={category}
-              selected={event?.id}
+              // Only an event the reader asked for (a link, a click) is brought into view; the default first event
+              // of an agent is not, so opening a page never scrolls it to the record.
+              selected={explicitEvent?.id}
               inspect={inspect}
             />
           </div>
