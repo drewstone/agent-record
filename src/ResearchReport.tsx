@@ -87,7 +87,7 @@ function PlayReport({ play, report, theme, printOnly = false, initialDocument, i
   return <DocumentContext.Provider value={{ documents: play.documents, open: openDocument }}>
     <section className="research-main" aria-labelledby={uid}>
       <header className="research-heading"><div><h2 id={uid}>{play.title}</h2>
-        <p className="small">{play.updatedAt ? utcTime(play.updatedAt, true) : 'Update time unknown'} · {play.status ?? 'State unknown'}</p></div>
+        <p className="small">{play.updatedAt ? `Updated ${utcTime(play.updatedAt, true)}` : 'Update time unknown'} · {play.status ?? 'State unknown'}</p></div>
         {!printOnly && <button className="ui-button" onClick={() => download(reportToLatex(report, play.id), play.id + '.tex', 'application/x-tex')}>Export</button>}
       </header>
       {!printOnly && <nav className="research-sections" aria-label="Play sections">{(['results', 'activity', 'sources'] as const).map(section => <button key={section} aria-current={view === section ? 'page' : undefined} onClick={() => show(section)}>
