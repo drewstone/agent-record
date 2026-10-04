@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { KnowledgeBrowser, resolveDocument, type DocumentSelection } from './viewer/KnowledgeBrowser.js'
 import { AgentRecord } from './AgentRecord.js'
 import type { RecordSelection } from './record.js'
@@ -12,12 +12,15 @@ import type {
 } from './report.js'
 import { utcTime } from './viewer/model.js'
 import { useDownload } from './viewer/useDownload.js'
+import type { ResearchDocumentSelection } from './report-selection.js'
 
 export interface ResearchReportProps {
   report: ResearchReportData
   theme?: 'light' | 'dark' | 'auto'
   defaultPlayId?: string
   onPlayChange?: (playId: string) => void
+  defaultDocumentSelection?: ResearchDocumentSelection
+  onDocumentChange?: (selection: ResearchDocumentSelection) => void
   className?: string
 }
 
@@ -28,10 +31,12 @@ export function ResearchReport({
   theme = 'auto',
   defaultPlayId,
   onPlayChange,
+  defaultDocumentSelection,
+  onDocumentChange,
   className = '',
 }: ResearchReportProps) {
   const [selected, setSelected] = useState(
-    defaultPlayId ?? report.plays[0]?.id,
+    defaultDocumentSelection?.playId ?? defaultPlayId ?? report.plays[0]?.id,
   )
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')
@@ -239,6 +244,8 @@ export function ResearchReport({
                 : q
             }
             status={status}
+            initialDocument={defaultDocumentSelection?.playId === play.id ? defaultDocumentSelection : undefined}
+            onDocumentChange={onDocumentChange}
           />
         </div>
       ) : (
@@ -272,6 +279,8 @@ function PlayReport({
   query,
   status,
   printOnly = false,
+  initialDocument,
+  onDocumentChange,
 }: {
   play: ResearchPlay
   report: ResearchReportData
@@ -279,9 +288,11 @@ function PlayReport({
   query: string
   status: string
   printOnly?: boolean
+  initialDocument?: ResearchDocumentSelection
+  onDocumentChange?: (selection: ResearchDocumentSelection) => void
 }) {
   const [selection, setSelection] = useState<RecordSelection>()
-  const [documentSelection, setDocumentSelection] = useState<DocumentSelection>()
+  const [documentSelection, setDocumentSelection] = useState<DocumentSelection | undefined>(initialDocument)
   const documents = useRef<HTMLDivElement>(null)
   const trace = useRef<HTMLDivElement>(null)
   const uid = useId()
@@ -301,8 +312,15 @@ function PlayReport({
     trace.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
     trace.current?.focus({ preventScroll: true })
   }
-  function openDocument(next: DocumentSelection) {
+  useEffect(() => {
+    if (initialDocument && !initialDocument.line && !printOnly) documents.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }, [])
+  function selectDocument(next: DocumentSelection) {
     setDocumentSelection(next)
+    onDocumentChange?.({ playId: play.id, ...next })
+  }
+  function openDocument(next: DocumentSelection) {
+    selectDocument(next)
     documents.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
     documents.current?.focus({ preventScroll: true })
   }
@@ -429,7 +447,7 @@ function PlayReport({
         />
         </div>
       )}
-      {!printOnly && play.documents.length > 0 && <div id={`${uid}-knowledge`} ref={documents} tabIndex={-1} className="rr-knowledge-section"><h3>Knowledge base</h3><p className="rr-meta">Read retained reports, research notes, and code. Search uses the text included in this snapshot; it does not generate new answers.</p><KnowledgeBrowser documents={play.documents} selection={documentSelection} onSelect={setDocumentSelection} /></div>}
+      {!printOnly && play.documents.length > 0 && <div id={`${uid}-knowledge`} ref={documents} tabIndex={-1} className="rr-knowledge-section"><h3>Knowledge base</h3><p className="rr-meta">Read retained reports, research notes, and code. Search uses the text included in this snapshot; it does not generate new answers.</p><KnowledgeBrowser documents={play.documents} selection={documentSelection} onSelect={selectDocument} /></div>}
       {!printOnly && (
         <div
           id={`${uid}-trace`}
