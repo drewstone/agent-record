@@ -5,6 +5,7 @@ import { advancePlayback } from './viewer/playback.js'
 import type { PlaybackMode } from './viewer/playback.js'
 import { useDownload } from './viewer/useDownload.js'
 import { AgentTree } from './viewer/AgentTree.js'
+import { StructuredContent } from './viewer/StructuredContent.js'
 import { Conversation } from './viewer/Conversation.js'
 import {
   categories,
@@ -14,13 +15,13 @@ import {
 } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
 import {
-  actorDescription,
   eventMatches,
   eventSource,
   indexRecord,
   interval,
   ms,
   roleOf,
+  textOf,
   utcTime,
 } from './viewer/model.js'
 
@@ -152,7 +153,7 @@ function RecordView({
   const [systemReducedMotion, setSystemReducedMotion] = useState(false)
   const [motion, setMotion] = useState('system')
   const reducedMotion = systemReducedMotion || motion === 'reduced'
-  const [treeOpen, setTreeOpen] = useState(true)
+  const [treeOpen, setTreeOpen] = useState(false)
   const [tooltip, setTooltip] = useState<PlotTooltip | null>(null)
   const container = useRef<HTMLDivElement>(null)
   const download = useDownload()
@@ -234,22 +235,6 @@ function RecordView({
   const hideTooltip = () => setTooltip(null)
 
   useEffect(() => {
-    const element = container.current
-    if (!element) return
-    let narrow: boolean | undefined
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width
-      if (width === undefined || width === 0) return
-      const next = width <= 760
-      if (narrow !== next) {
-        narrow = next
-        setTreeOpen(!next)
-      }
-    })
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-  useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
     const change = () => {
       setSystemReducedMotion(preference.matches)
@@ -317,12 +302,9 @@ function RecordView({
       }}
       onScrollCapture={hideTooltip}
     >
-      <div className="run-context">
-        <p data-objective>{record.assignment.objective || record.title}</p>
-        <span className="archive-state">Recorded run</span>
-      </div>
+
       <div className="controls">
-        <Select
+        {records.length > 1 && <Select
           label="Run"
           field="run"
           value={record.runId}
@@ -336,9 +318,9 @@ function RecordView({
               {item.title}
             </option>
           ))}
-        </Select>
+        </Select>}
         <Select
-          label="Timeline activity"
+          label="Activity type"
           field="category"
           value={category}
           onChange={setCategory}
@@ -353,11 +335,11 @@ function RecordView({
           ))}
         </Select>
         <label className="ui-field">
-          <span className="ui-label">Search the record</span>
+          <span className="ui-label">Search all agents</span>
           <input
             data-search
             type="search"
-            placeholder="Text, agent, event…"
+            placeholder="Message, tool, agent…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -370,6 +352,7 @@ function RecordView({
           ? 'original capture marked complete'
           : 'capture incomplete'}
       </p>
+      <details className="activity-replay"><summary>Timeline and replay</summary>
       <div className="playback">
         <button
           className="ui-button"
@@ -499,7 +482,17 @@ function RecordView({
           </span>
         ))}
       </div>
-      <div className="workspace">
+      </details>
+      {query && <section className="activity-search-results" aria-label="Matching activity">
+        <p role="status">{visible.length} matching events across {new Set(visible.map(item => index.canonical(item.node))).size} agents</p>
+        {visible.slice(0, 100).map(item => <button key={item.id} onClick={() => { setSearch(''); setPlaying(false); onChange({ runId: record.runId, nodeId: index.canonical(item.node), eventId: item.id, view: 'chat' }) }}>
+          <span>{index.nodes.get(index.canonical(item.node))?.label ?? item.node}</span><time>{utcTime(item.at)}</time><strong>{item.label}</strong>
+          <small>{(textOf(item) || item.detail.publicToolCalls?.map(call => `${call.name} ${call.input}`).join(' ') || 'Recorded event').replace(/\s+/g, ' ').slice(0, 240)}</small>
+        </button>)}
+        {visible.length > 100 && <p className="small">Showing the first 100 matches. Narrow the search to find a particular event.</p>}
+        {!visible.length && <p className="chat-empty">No retained activity matches. Missing captures are not searched.</p>}
+      </section>}
+      <div className="workspace flat-activity" hidden={!!query}>
         <details
           className="topology"
           open={treeOpen}
@@ -537,8 +530,8 @@ function RecordView({
                 {roleOf(node).slice(0, 1).toUpperCase()}
               </span>
               <div>
-                <h3 data-agent-title>{node?.label ?? 'Conversation'}</h3>
-                <p data-agent-role>{actorDescription(node, record)}</p>
+                <h3 data-agent-title>{node?.label ?? 'Messages'}</h3>
+                <p data-agent-role>{roleOf(node)} · {node?.status ?? 'State unknown'}</p>
               </div>
             </div>
             <Select
@@ -555,6 +548,12 @@ function RecordView({
                 </option>
               ))}
             </Select>
+          </div>
+          <div className="agent-capture-summary" role="status">
+            {(index.byActor.get(actor)?.length ?? 0) > 0 ? `${index.byActor.get(actor)!.length} retained events` : 'Conversation not retained in this snapshot'}
+            {node && typeof node.metadata === 'object' && node.metadata !== null && typeof (node.metadata as Record<string, unknown>).captureReason === 'string'
+              ? <p>{String((node.metadata as Record<string, unknown>).captureReason)}</p> : null}
+            {node?.assignment && <details><summary>Assignment</summary><p>{node.assignment}</p></details>}
           </div>
           <div className="ui-tabs" role="tablist" aria-label="Agent evidence">
             {(['chat', 'source', 'usage'] as const).map((tab, i, all) => (
@@ -591,10 +590,10 @@ function RecordView({
                 }}
               >
                 {tab === 'chat'
-                  ? 'Conversation'
+                  ? 'Messages'
                   : tab === 'source'
-                    ? 'Source'
-                    : 'Tokens'}
+                    ? 'Event details'
+                    : 'Usage'}
               </button>
             ))}
           </div>
@@ -630,14 +629,12 @@ function RecordView({
                   {index.nodes.get(index.canonical(event.node))?.label ??
                     event.node}
                 </p>
-                <pre data-event-detail>
-                  {ms(event.at) > cutoff
-                    ? 'This event occurs after the selected time. Advance the timeline to read its content.'
-                    : JSON.stringify(event.detail, null, 2)}
-                </pre>
-                <pre data-event-source>
-                  {JSON.stringify(eventSource(event, record, index), null, 2)}
-                </pre>
+                {ms(event.at) > cutoff ? <p>This event occurs after the selected time. Advance the timeline to read it.</p> : <>
+                  {textOf(event) && <StructuredContent text={textOf(event)} />}
+                  {event.detail.publicToolCalls?.map(call => <section className="event-tool" key={call.id}><h4>{call.name}</h4><StructuredContent text={call.input} rawLabel="Raw input" /></section>)}
+                  {!textOf(event) && !event.detail.publicToolCalls?.length && <p>{event.detail.contentOmitted ?? event.detail.publicationNote ?? 'No visible message or tool payload was retained for this event.'}</p>}
+                  <details className="raw-data"><summary>Raw event and source</summary><pre data-event-detail>{JSON.stringify(event.detail, null, 2)}</pre><pre data-event-source>{JSON.stringify(eventSource(event, record, index), null, 2)}</pre></details>
+                </>}
               </>
             ) : (
               <p className="chat-empty">No source event selected.</p>

@@ -1,4 +1,5 @@
-import { memo, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { readSourceSearch, type SourceSearchResult } from './source-search.js'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -38,77 +39,72 @@ function snippet(content: string, words: string[]) {
   return (start ? '…' : '') + content.slice(start, start + 160).replace(/\s+/g, ' ') + (content.length > start + 160 ? '…' : '')
 }
 
-export function KnowledgeBrowser({ documents, selection, onSelect, reportsOnly = false }: {
+export function KnowledgeBrowser({ documents, selection, onSelect, onClear, reportsOnly = false, playId, sourceSearchEndpoint }: {
   documents: ResearchDocument[]
   selection?: DocumentSelection
   onSelect: (selection: DocumentSelection) => void
+  onClear?: () => void
   reportsOnly?: boolean
+  playId?: string
+  sourceSearchEndpoint?: string
 }) {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState('all')
-  const index = useMemo(() => documents.map((document) => ({
-    document, text: [document.title, document.path, document.content].join('\n').toLowerCase(),
-  })), [documents])
-  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
-  const candidates = index.filter(({ document }) => !reportsOnly || document.kind === 'report')
-  const visible = candidates.filter(({ document, text }) =>
-    (kind === 'all' || document.kind === kind) && words.every((word) => text.includes(word)),
-  )
+  const [submittedQuery, setSubmittedQuery] = useState('')
+  const [result, setResult] = useState<SourceSearchResult>()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const request = useRef<AbortController | undefined>(undefined)
   useEffect(() => {
-    // A source jump may reveal a hidden target; selecting an existing result
-    // keeps the query so the reader can work through the matching documents.
-    if (selection && !visible.some(({ document }) => document.path === selection.path)) {
-      setQuery('')
-      setKind('all')
-    }
-  }, [selection])
-  const selected = visible.find(({ document }) => document.path === selection?.path)?.document ?? visible[0]?.document
-  const uid = useId()
-  return (
-    <section className="rr-knowledge" aria-label={reportsOnly ? 'Research papers and reports' : 'Knowledge base'}>
-      <div className="rr-knowledge-controls">
-        <label className="ui-field">
-          <span className="ui-label">{reportsOnly ? 'Search reports' : 'Search all retained documents'}</span>
-          <input type="search" value={query} placeholder="Search titles, paths, and full text…" onChange={(event) => setQuery(event.target.value)} />
-        </label>
-        {!reportsOnly && <label className="ui-field">
-          <span className="ui-label">File kind</span>
-          <select value={kind} onChange={(event) => setKind(event.target.value)}>
-            <option value="all">All files</option>
-            <option value="report">Reports</option>
-            <option value="knowledge">Research notes</option>
-            <option value="code">Code</option>
-            <option value="data">Data</option>
-          </select>
-        </label>}
-        <output className="rr-meta" aria-live="polite">{visible.length} of {candidates.length} documents</output>
-      </div>
-      <div className="rr-knowledge-layout">
-        <nav className="rr-document-list" aria-label="Retained documents">
-          {visible.map(({ document }) => <button
-            type="button" key={document.id} aria-current={selected?.id === document.id ? 'true' : undefined}
-            aria-controls={uid} onClick={() => onSelect({ path: document.path })}
-          >
-            <strong>{document.title}</strong>
-            <small>{document.path}</small>
-            {words.length > 0 && <span className="rr-search-excerpt">{snippet(document.content, words)}</span>}
-          </button>)}
-          {!visible.length && <p className="chat-empty">No documents match this search.</p>}
-        </nav>
-        <div id={uid} className="rr-document-panel">
-          {selected ? <DocumentReader
-            key={selected.id} document={selected} documents={documents}
-            selection={selected.path === selection?.path ? selection : undefined} onSelect={(next) => {
-              // Cross-document references must remain reachable after filtering.
-              setQuery('')
-              setKind('all')
-              onSelect(next)
-            }}
-          /> : <p className="chat-empty">{documents.length ? 'Clear the search or choose another file kind.' : 'No documents were included in this snapshot.'}</p>}
-        </div>
-      </div>
-    </section>
-  )
+    request.current?.abort(); setResult(undefined); setError(''); setBusy(false)
+    return () => request.current?.abort()
+  }, [documents, playId, sourceSearchEndpoint])
+  const index = useMemo(() => documents.map(document => ({ document, text: [document.title, document.path, document.content].join('\n').toLowerCase() })), [documents])
+  const words = (result ? submittedQuery : query).toLowerCase().trim().split(/\s+/).filter(Boolean)
+  const selected = documents.find(document => document.path === selection?.path)
+  const candidates = result ? result.documents.map(document => ({ document, text: document.content.toLowerCase() })) : index
+  const visible = candidates.filter(({ document, text }) => (!reportsOnly || document.kind === 'report') &&
+    (kind === 'all' || document.kind === kind) && (sourceSearchEndpoint || words.every(word => text.includes(word))))
+  async function search() {
+    if (!sourceSearchEndpoint || !playId || !query.trim()) return
+    request.current?.abort()
+    const controller = new AbortController(); request.current = controller
+    setBusy(true); setError(''); setResult(undefined); setSubmittedQuery(query.trim())
+    try {
+      const params = new URLSearchParams({ play: playId, q: query.trim(), limit: '10' })
+      const response = await fetch(sourceSearchEndpoint + '?' + params, { signal: controller.signal, credentials: 'same-origin' })
+      if (!response.ok) throw new Error('Source index unavailable')
+      const next = readSourceSearch(await response.json(), playId, documents, sourceSearchEndpoint.match(/\/revisions\/([^/]+)\//)?.[1])
+      if (!controller.signal.aborted) setResult(next)
+    } catch {
+      if (!controller.signal.aborted) setError('Source search is unavailable or did not match this snapshot. No other play was searched.')
+    } finally { if (!controller.signal.aborted) setBusy(false) }
+  }
+  if (selected) return <section className="research-source-reader" aria-label="Selected source">
+    <button className="ui-button source-back" onClick={onClear}>← All sources</button>
+    <DocumentReader key={selected.id} document={selected} documents={documents} selection={selection} onSelect={onSelect} />
+  </section>
+  return <section className="rr-knowledge flat-sources" aria-label="Sources">
+    <form className="rr-knowledge-controls" onSubmit={event => { event.preventDefault(); void search() }}>
+      <label className="ui-field"><span className="ui-label">{sourceSearchEndpoint ? 'Search this play’s sources' : 'Search retained sources'}</span>
+        <input type="search" value={query} maxLength={500} placeholder="Question keywords, result, or source…" onChange={event => setQuery(event.target.value)} /></label>
+      {sourceSearchEndpoint && <button className="ui-button" disabled={busy || !query.trim()}>{busy ? 'Searching…' : 'Search'}</button>}
+      <label className="ui-field"><span className="ui-label">File kind</span><select value={kind} onChange={event => setKind(event.target.value)}>
+        <option value="all">All files</option><option value="report">Reports</option><option value="knowledge">Research notes</option><option value="code">Code</option><option value="data">Data</option>
+      </select></label>
+      {result && <button type="button" className="ui-button" onClick={() => { setResult(undefined); setQuery(''); setKind('all') }}>Browse all</button>}
+    </form>
+    <p className="small" role="status">{busy ? 'Searching this retained play…' : result ? `${visible.length} sources found · indexed ${result.indexedAt ?? 'time unknown'}` : `${visible.length} of ${documents.length} retained sources`}
+      {sourceSearchEndpoint && ' · Source excerpts, not a generated answer.'}</p>
+    {error && <p role="alert" className="chat-empty">{error}</p>}
+    {!busy && !error && <nav className="source-results" aria-label="Retained documents">{visible.map(({ document }) => <button type="button" key={document.id} onClick={() => {
+      const found = words.map(word => document.content.toLowerCase().indexOf(word)).filter(index => index >= 0)
+      onSelect({ path: document.path, ...(result && found.length ? { line: document.content.slice(0, Math.min(...found)).split('\n').length } : {}) })
+    }}><span className="source-kind">{document.kind}</span><strong>{document.title}</strong><small>{document.path}</small>
+      {words.length > 0 && <span className="rr-search-excerpt">{snippet(document.content, words)}</span>}
+    </button>)}</nav>}
+    {!busy && !error && !visible.length && <p className="chat-empty">No matching sources. Try fewer keywords; no match does not establish that the work is absent.</p>}
+  </section>
 }
 
 function DocumentReader({ document, documents, selection, onSelect }: {
@@ -117,14 +113,11 @@ function DocumentReader({ document, documents, selection, onSelect }: {
   selection?: DocumentSelection
   onSelect: (selection: DocumentSelection) => void
 }) {
-  const [source, setSource] = useState(!!selection?.line || document.kind === 'code' || document.kind === 'data')
+  const [source, setSource] = useState(document.kind === 'code' || document.kind === 'data')
   const reader = useRef<HTMLDivElement>(null)
   const download = useDownload()
   const requestedLine = selection?.line
   const anchor = selection?.anchor
-  useEffect(() => {
-    if (requestedLine) setSource(true)
-  }, [selection])
   useEffect(() => {
     if (requestedLine && source) reader.current?.querySelector(`[data-line="${requestedLine}"]`)?.scrollIntoView({ block: 'center' })
     if (anchor && !source) {
@@ -140,12 +133,12 @@ function DocumentReader({ document, documents, selection, onSelect }: {
     <header className="rr-document-header">
       <div><h3>{document.title}</h3><p className="rr-document-path">{document.path}</p></div>
       <div className="rr-document-actions">
-        <button className="ui-button" type="button" aria-pressed={source} onClick={() => setSource(!source)}>{source ? 'Read document' : 'View source'}</button>
+        <button className="ui-button" type="button" aria-pressed={source} onClick={() => setSource(!source)}>{source ? 'Read document' : requestedLine ? 'View cited line' : 'View source'}</button>
         <button className="ui-button" type="button" onClick={() => download(document.content, document.path.split('/').pop() || 'document.txt', 'text/plain;charset=utf-8')}>Download original</button>
       </div>
     </header>
     {document.sha256 && <details className="rr-document-provenance"><summary>Source fingerprint</summary><code>SHA-256 {document.sha256}</code><p>Supplied by the producer. This viewer does not verify the archive.</p></details>}
-    {requestedLine && source && <p className="rr-meta">{requestedLine > document.content.split('\n').length ? `Referenced line ${requestedLine} is outside this document.` : `Source reference: line ${requestedLine}`}</p>}
+    {requestedLine && <p className="rr-meta">{requestedLine > document.content.split('\n').length ? `Referenced line ${requestedLine} is outside this document.` : `Cited line ${requestedLine}${source ? ' · source view' : ''}`}</p>}
     <div className="rr-document-content" ref={reader}>
       {source ? <pre className="rr-document-source"><code>{document.content.split('\n').map((line, i) =>
         <span key={i} data-line={i + 1} data-highlight={i + 1 === requestedLine || undefined}><span aria-hidden="true">{i + 1}</span>{line || '\n'}</span>,

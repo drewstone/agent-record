@@ -9,7 +9,7 @@ A React component for reading what an agent team did: conversations, tool inputs
 ## Install
 
 ```sh
-pnpm add https://github.com/drewstone/agent-record/releases/download/v0.2.2/drewstone-agent-record-0.2.2.tgz react react-dom
+pnpm add https://github.com/drewstone/agent-record/releases/download/v0.3.0/drewstone-agent-record-0.3.0.tgz react react-dom
 ```
 
 The release is an ESM package with TypeScript declarations and CSS.
@@ -35,9 +35,9 @@ Use a client component when embedding it in a React Server Components applicatio
 ## Research reports
 
 Use `ResearchReport` to read authored claims, limitations, checks, and source references alongside each play’s recorded events.
-Search and assessment filters narrow the evidence; a source event opens its exact trace position.
+A compact play navigation opens Results, Activity, or Sources in one reading area. Search retained activity across agents, inspect readable tool inputs/results, and open exact source citations. Missing conversation capture remains explicit.
 The offline `agent-record-report REPORT.json OUTPUT.html` command creates a self-contained interactive report and LaTeX document.
-Reports remain separate from immutable execution records.
+Reports remain separate from immutable execution records. Source search can optionally use one commissioned same-origin endpoint; offline reports make no network requests.
 See [the report contract and exports](docs/research-reports.md).
 
 ## Input
