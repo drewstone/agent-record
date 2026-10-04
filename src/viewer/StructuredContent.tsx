@@ -47,11 +47,14 @@ export function StructuredContent({ text, rawLabel = 'Raw data' }: { text: strin
   </div>
 }
 
-/** Every string in a JSON value that reads as a body (a newline, or long), with the path that holds it. */
+/** Fields whose value is code or text to read whole, however short: a shell command, a file's content, a patch. */
+const BODY_FIELDS = /^(command|cmd|code|script|content|new_string|old_string|patch|text|stdout|stderr|output|query|prompt)$/i
+
+/** Every string in a JSON value that reads as a body (a newline, long, or a code field), with the path that holds it. */
 function bodies(value: unknown, path: string[] = [], out: { path: string; text: string }[] = []) {
   if (out.length >= 24 || path.length > 8) return out
   if (typeof value === 'string') {
-    if (value.includes('\n') || value.length > 120) out.push({ path: path.join(' › ') || 'text', text: value })
+    if (value.includes('\n') || value.length > 120 || BODY_FIELDS.test(path.at(-1) ?? '')) out.push({ path: path.join(' › ') || 'text', text: value })
   } else if (Array.isArray(value)) value.forEach((item, i) => bodies(item, [...path, String(i)], out))
   else if (value && typeof value === 'object') for (const [key, item] of Object.entries(value)) bodies(item, [...path, key], out)
   return out

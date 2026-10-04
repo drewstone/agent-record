@@ -313,7 +313,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 </Status>
               </section>
             )}
-            {tab === 'spend' && <PlaySpend play={doc} onOpen={open} />}
+            {tab === 'spend' && <PlaySpend play={doc} onOpen={open} catalogue={dimensionMap(dimensions.data)} />}
             {tab === 'assessments' && (
               <section className="ws-section">
                 <AssessmentMatrix play={doc} dimensions={dimensions.data} onOpen={open} />
@@ -426,7 +426,11 @@ function CaptureBar({ capture }: { capture: { complete: number; lossy: number; a
   )
 }
 
-function PlaySpend({ play, onOpen }: { play: PlayDocument; onOpen: (runId: string) => void }) {
+/** A waste dimension by its id and name: E3 polling. */
+const wasteLabel = (dimension: string, catalogue: ReturnType<typeof dimensionMap>) =>
+  `${dimension} ${catalogue.get(dimension)?.key.replaceAll('_', ' ') ?? ''}`.trim()
+
+function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (runId: string) => void; catalogue: ReturnType<typeof dimensionMap> }) {
   return (
     <div className="ws-section spend-view">
       <SpendSummary spend={play.spend} />
@@ -443,7 +447,7 @@ function PlaySpend({ play, onOpen }: { play: PlayDocument; onOpen: (runId: strin
       )}
       <div className="breakdown-grid">
         <BreakdownTable title="By activity" rows={(play.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-        <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: row.dimension }))} />
+        <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
       </div>
       {play.spend.gaps.length > 0 && (
         <>
@@ -895,7 +899,7 @@ function RunBody({
               )}
               <div className="breakdown-grid">
                 <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-                <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: row.dimension }))} />
+                <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
               </div>
             </div>
           )}

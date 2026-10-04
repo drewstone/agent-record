@@ -108,7 +108,7 @@ export function BreakdownTable({
         {rows.map((row) => (
           <div key={row.label} className="breakdown-row">
             <span className={`breakdown-label`}>
-              <i className={`category-${row.label}`} />
+              <i className={`category-${row.label.split(' ')[0]}`} />
               {row.label.replaceAll('_', ' ')}
             </span>
             <span className="breakdown-track">{row.ms === null ? <i className="unknown" style={{ width: '100%' }} /> : <i style={{ width: `${(row.ms / max) * 100}%` }} />}</span>
