@@ -1,8 +1,11 @@
 /**
- * The one converter from an agent-runtime run directory to `agent-record.v1`. Node only.
+ * The one converter from an agent-runtime run directory (or a bundle of sessions, see bundle.ts) to `agent-record.v1`.
+ * Node only.
  *
  * It reads the run directory and an optional native-transcript cache, never writes into either, and never
- * touches the network. The same inputs and ADAPTER_VERSION produce identical bytes.
+ * touches the network. The same inputs and ADAPTER_VERSION produce identical bytes. With a snapshot manifest
+ * (evidence.snapshot.v1, the evidence store's file list) every file is verified against it before conversion and
+ * every source digest comes from it; the run id comes from the caller or the manifest.
  *
  * Nodes are the `spawned` ids in spawn-journal.jsonl. Each node's conversation comes from the first channel
  * that holds it, in this order; the others are listed as sources and never duplicated as events:
@@ -12,14 +15,13 @@
  *   4. part     output blob parts at the node's outRefs, collapsed to the final state of each part id
  *   5. root     root-stream.jsonl (root only; deltas collapse to one block per turn; resumed replays dropped)
  *   6. journal  lifecycle events only
+ * Knowledge pages (kb/pages/**\/*.md) become finding events on node `finding:<runId>`; a run with only pages is
+ * format `finding-only`.
  *
- * Event ids are `<nodeId>#<channel>:<key>`; keys come from the source, never from filtered positions:
- *   journal:<line>            physical line in spawn-journal.jsonl (seq restarts at every `begin`)
- *   root:<seq>                root-stream seq of the first row in a collapsed block
- *   part:<partId>[.result]    output part id; `.result` is a tool part's result; part:@<blob8>.<id> blob events
- *   native:[<session>:]<line>[.<i>] physical line; `.i` numbers tool results when a line holds several
- *   pi:[<session>:]<line>     physical line
- *   oc:<partId>[.result]      OpenCode part id
+ * Event ids are anchor.v1 (anchor.ts): `<first 12 hex of the object's sha256>:<line or JSON Pointer>[.<item>]`, or
+ * the object alone for a whole page. Each event's `source` carries the same sha256, line or pointer and item. Every
+ * timestamped line of a session, journal or stream becomes exactly one event (or one per content item); a line the
+ * converter does not interpret is a `record` event carrying its type. A duplicate anchor is an error, never suffixed.
  *
  * Sources: every input file, native file and clipped body has a `sources[]` entry. Its sha256 covers exactly
  * the bytes a source route serves: the whole file, one physical line (`line`), or the resolved JSON value
@@ -28,11 +30,13 @@
  * `detail.clip.sha256` names the source entry holding the full text.
  */
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
+import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '1.0.2'
+export const ADAPTER_VERSION = '2.0.0'
+export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
 export type Category =
@@ -47,11 +51,30 @@ export type Category =
   | 'lifecycle'
   | 'other'
 
+export interface SnapshotFile {
+  path: string
+  sha256: string
+  bytes: number
+}
+/** The evidence store's snapshot manifest (evidence.snapshot.v1, or the live mirror's disco.controller-mirror.v1). */
+export interface SnapshotManifest {
+  schema: string
+  runId?: string
+  files: SnapshotFile[]
+  links?: { path: string; target: string }[]
+}
+
 export interface IngestOptions {
   /** Directory of extracted native archives, one `<64-hex digest>/` per archive. */
   native?: string
   /** Bodies over this many UTF-8 bytes are clipped. Default 16384. */
   maxText?: number
+  /** The run id. Without it the manifest's runId, then the directory name, is used (input.runIdBasis says which). */
+  runId?: string
+  /** The snapshot this directory was materialized from: every file is verified against it before conversion. */
+  manifest?: SnapshotManifest
+  /** The sha256 hex of the manifest's bytes, recorded as input.snapshot. */
+  manifestSha256?: string
 }
 
 export interface IngestSummary {
@@ -70,9 +93,14 @@ export class RecordTooLargeError extends Error {
   readonly exitCode = 3
   readonly code = 'record-too-large'
 }
+/** The directory does not match its snapshot manifest, or two events claim one anchor. */
+export class SnapshotMismatchError extends Error {
+  readonly exitCode = 4
+}
 
 type Json = any // eslint-disable-line @typescript-eslint/no-explicit-any
 type Source = { path: string; sha256: string; bytes: number; line?: number; pointer?: string; label?: string }
+type EventSource = { path: string; sha256: string; line?: number; pointer?: string; item?: number }
 type Capture = { channel: string; status: 'complete' | 'lossy' | 'absent'; reason: string | null }
 type Gap = { nodeId: string | null; code: string; detail: string }
 
@@ -83,16 +111,17 @@ interface Draft {
   kind: string
   category: Category
   label: string
-  source: { path: string; sha256: string; line?: number; pointer?: string } | null
+  source: EventSource
   detail: Record<string, unknown>
   order: number
 }
+type DraftInput = Omit<Draft, 'order' | 'id'>
 
-interface NodeDraft {
+export interface NodeDraft {
   id: string
   label: string
   parent: string | null
-  kind: 'agent' | 'session'
+  kind: 'agent' | 'session' | 'finding'
   role: string
   assignment?: string
   model: string | null
@@ -105,6 +134,7 @@ interface NodeDraft {
   nativeSessionId?: string
   agentId?: string
   joinBasis?: string
+  joinProof?: Record<string, unknown>
   sandboxes: string[]
   capture: Capture
   taskDigest?: string
@@ -253,8 +283,19 @@ function utf8Slice(buffer: Buffer, start: number, end: number) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-class Ingest {
+export interface SharedIngest {
+  /** Paths are recorded relative to the bundle root: `<prefix><path inside this run>`. */
+  prefix?: string
+}
+
+export class Ingest {
   readonly runId: string
+  readonly runIdBasis: 'option' | 'manifest' | 'directory'
+  readonly manifestFiles = new Map<string, SnapshotFile>()
+  /** Object digest -> the node whose conversation it holds; a second node never re-reads it. */
+  readonly claimed = new Map<string, string>()
+  /** Bridge session id -> the node whose materialized receipt names it, and that journal line. */
+  readonly executionOf = new Map<string, { node: string; line: number }>()
   readonly sources = new Map<string, Source>()
   readonly events: Draft[] = []
   readonly gaps: Gap[] = []
@@ -270,9 +311,18 @@ class Ingest {
     readonly runDir: string,
     readonly nativeRoot: string | undefined,
     readonly maxText: number,
+    readonly options: { runId?: string; manifest?: SnapshotManifest; manifestSha256?: string; prefix?: string } = {},
   ) {
-    this.runId = basename(runDir.replace(/\/+$/, ''))
+    const fromManifest = typeof options.manifest?.runId === 'string' && options.manifest.runId ? options.manifest.runId : undefined
+    this.runId = options.runId ?? fromManifest ?? basename(runDir.replace(/\/+$/, ''))
+    this.runIdBasis = options.runId ? 'option' : fromManifest ? 'manifest' : 'directory'
     this.rootId = this.runId
+    for (const file of options.manifest?.files ?? []) this.manifestFiles.set(file.path, file)
+  }
+
+  /** A path as recorded: relative to the bundle root, or the native cache's own `native:<hex>/` path. */
+  sourcePath(rel: string) {
+    return !this.options.prefix || rel.startsWith('native:') ? rel : `${this.options.prefix}${rel}`
   }
 
   // ----- sources -----
@@ -281,10 +331,36 @@ class Ingest {
     if (cached) return cached
     const bytes = readFileSync(abs)
     const entry = { bytes, text: bytes.toString('utf8'), sha256: sha(bytes) }
+    const listed = this.manifestFiles.get(this.sourcePath(rel))
+    if (listed && hexOf(listed.sha256) !== entry.sha256) throw new SnapshotMismatchError(`${rel} does not match its snapshot manifest`)
     this.fileCache.set(abs, entry)
     return entry
   }
-  addSource(source: Source) {
+  /** A file's digest without holding it: the manifest's, or a streamed hash. */
+  digestOnly(rel: string, abs = join(this.runDir, rel)): { sha256: string; bytes: number } | null {
+    const listed = this.manifestFiles.get(this.sourcePath(rel))
+    if (listed) return { sha256: hexOf(listed.sha256)!, bytes: listed.bytes }
+    let fd: number
+    try {
+      fd = openSync(abs, 'r')
+    } catch {
+      return null
+    }
+    try {
+      const hash = createHash('sha256')
+      const buffer = Buffer.allocUnsafe(1 << 20)
+      let bytes = 0
+      for (let n = readSync(fd, buffer); n > 0; n = readSync(fd, buffer)) {
+        hash.update(buffer.subarray(0, n))
+        bytes += n
+      }
+      return { sha256: hash.digest('hex'), bytes }
+    } finally {
+      closeSync(fd)
+    }
+  }
+  addSource(input: Source) {
+    const source = { ...input, path: this.sourcePath(input.path) }
     const key = `${source.path}\0${source.line ?? ''}\0${source.pointer ?? ''}`
     const existing = this.sources.get(key)
     if (existing?.sha256) return existing
@@ -295,17 +371,10 @@ class Ingest {
     const entry = this.file(rel, abs)
     return this.addSource({ path: rel, sha256: entry.sha256, bytes: entry.bytes.length, ...(label ? { label } : {}) })
   }
-  /** List a file that is not an event channel. Files over 8 MiB are listed by size without a hash. */
+  /** List a file that is not an event channel; large files are hashed without being held. */
   listSource(rel: string) {
-    const abs = join(this.runDir, rel)
-    let size: number
-    try {
-      size = statSync(abs).size
-    } catch {
-      return
-    }
-    if (size <= 8 * 1024 * 1024) this.fileSource(rel)
-    else this.addSource({ path: rel, sha256: '', bytes: size })
+    const digest = this.digestOnly(rel)
+    if (digest) this.addSource({ path: rel, ...digest })
   }
   lineSource(rel: string, line: number, raw: string) {
     const bytes = Buffer.from(raw, 'utf8')
@@ -345,8 +414,20 @@ class Ingest {
     return value
   }
 
-  emit(event: Omit<Draft, 'order'>) {
-    this.events.push({ ...event, order: this.order++ })
+  /** Record one event; its id is the anchor of its source. Uniqueness is checked once the record is assembled. */
+  emit(event: DraftInput) {
+    const source = { ...event.source, path: this.sourcePath(event.source.path) }
+    this.events.push({ ...event, source, id: anchorId(source), order: this.order++ })
+  }
+  /** Claim an object's events for one node; false when another node already holds them. */
+  claim(objectSha256: string, nodeId: string, rel: string) {
+    const holder = this.claimed.get(objectSha256)
+    if (holder && holder !== nodeId) {
+      this.gaps.push({ nodeId, code: 'source-shared', detail: `${this.sourcePath(rel)} is already the conversation of ${holder}` })
+      return false
+    }
+    this.claimed.set(objectSha256, nodeId)
+    return true
   }
 
   // ----- nodes -----
@@ -451,6 +532,7 @@ class Ingest {
     if ([...runtimeOf.values()].includes('tangle-sandbox')) this.format = 'cloud'
     else this.format = 'runtime'
     let clock: string | null = null
+    let untimed = 0
     for (const row of rows) {
       const event = row.value?.event ?? row.value
       if (!event || typeof event !== 'object') continue
@@ -465,6 +547,9 @@ class Ingest {
           exact.servedModel ??= model.id
         }
         if (event.receipt?.execution?.kind === 'environment') this.addSandbox(exact, event.receipt.execution.id)
+        // A bridge session id here is what joins a retained bridge stream to this node (trace/bridge-sessions).
+        if (event.receipt?.execution?.kind === 'session' && typeof event.receipt.execution.id === 'string')
+          this.executionOf.set(event.receipt.execution.id, { node: exact.id, line: row.line })
       }
       if (exact) {
         this.addSandbox(exact, event.environmentId)
@@ -489,7 +574,10 @@ class Ingest {
       const observed = isoAt(event.at ?? row.value?.at)
       if (observed) clock = observed
       const at = observed ?? clock
-      if (!at || !node) continue
+      if (!at || !node) {
+        untimed++
+        continue
+      }
       const { kind: _k, id: _i, seq: _s, at: _a, ...rest } = event
       const label = [
         kind.replaceAll('-', ' '),
@@ -501,7 +589,6 @@ class Ingest {
       const shown = reason ? this.clip(reason, () => this.lineSource(rel, row.line, row.raw)) : null
       const spent = event.spent ?? event.spend
       this.emit({
-        id: `${node.id}#journal:${row.line}`,
         node: node.id,
         at,
         kind,
@@ -519,6 +606,7 @@ class Ingest {
         },
       })
     }
+    if (untimed) this.gaps.push({ nodeId: null, code: 'journal-untimed-lines', detail: `${untimed} spawn-journal lines carry no time and precede every timed line` })
     return rows
   }
 
@@ -591,97 +679,126 @@ class Ingest {
 
   readNative(node: NodeDraft, files: { rel: string; abs: string; sessionId: string | null }[]) {
     let lossy = false
-    const seenMessages = new Set<string>()
     for (const file of files) {
-      const entry = this.file(file.rel, file.abs)
-      const prefix = files.length > 1 ? `native:${(file.sessionId ?? entry.sha256).slice(0, 8)}:` : 'native:'
-      let lastAssistant: Draft | undefined
-      let last = node.start ?? null
-      for (const row of splitLines(entry.text)) {
-        const value = row.value
-        if (!value) {
-          lossy = true
-          continue
+      const read = this.readClaudeSession(node, file.rel, file.abs)
+      if (read === null) continue
+      lossy ||= read.unparsable > 0
+    }
+    node.capture = { channel: 'native', status: lossy ? 'lossy' : 'complete', reason: lossy ? 'unparsable-lines' : null }
+    if (node.harness === null) node.harness = 'claude-code'
+  }
+
+  /**
+   * One Claude Code session file. Every timestamped line inside `window` (every line when absent) becomes one event,
+   * or one per item when a line carries several tool results. Returns null when another node already holds the file.
+   */
+  readClaudeSession(node: NodeDraft, rel: string, abs?: string, window?: [number, number][]) {
+    const entry = this.file(rel, abs)
+    if (!this.claim(entry.sha256, node.id, rel)) return null
+    this.fileSource(rel, abs)
+    const counts = { events: 0, unparsable: 0, untimed: 0, outside: 0 }
+    const seenMessages = new Set<string>()
+    let lastAssistant: Draft | undefined
+    let last = node.start ?? null
+    for (const row of splitLines(entry.text)) {
+      if (window && !window.some(([from, to]) => row.line >= from && row.line <= to)) {
+        counts.outside++
+        continue
+      }
+      const value = row.value
+      if (!value) {
+        counts.unparsable++
+        continue
+      }
+      const at: string | null = isoAt(value.timestamp) ?? last
+      if (!at) {
+        counts.untimed++
+        continue
+      }
+      last = at
+      const source = { path: rel, sha256: entry.sha256, line: row.line }
+      const full = () => this.lineSource(rel, row.line, row.raw)
+      const native = typeof value.uuid === 'string' ? { nativeRecordId: value.uuid } : {}
+      const sidechain = value.isSidechain ? { sidechain: true } : {}
+      const message = value.message
+      const before = this.events.length
+      if (value.type === 'assistant' && message) {
+        const blocks: Json[] = Array.isArray(message.content) ? message.content : [{ type: 'text', text: str(message.content) }]
+        const text = blocks.filter((b) => b?.type === 'text').map((b) => str(b.text)).join('\n\n')
+        const reasoning = blocks.filter((b) => b?.type === 'thinking').map((b) => str(b.thinking)).filter(Boolean).join('\n\n')
+        const calls = blocks.filter((b) => b?.type === 'tool_use' || b?.type === 'server_tool_use')
+        const usage = message.usage
+        const first = typeof message.id === 'string' ? !seenMessages.has(message.id) : true
+        if (typeof message.id === 'string') seenMessages.add(message.id)
+        if (typeof message.model === 'string' && message.model !== '<synthetic>') {
+          node.servedModel = message.model
+          node.modelSource = 'native response'
         }
-        const at = isoAt(value.timestamp) ?? last
-        if (!at) continue
-        last = at
-        const source = { path: file.rel, sha256: entry.sha256, line: row.line }
-        const full = () => this.lineSource(file.rel, row.line, row.raw)
-        const message = value.message
-        if (value.type === 'assistant' && message) {
-          const blocks: Json[] = Array.isArray(message.content) ? message.content : [{ type: 'text', text: str(message.content) }]
-          const text = blocks.filter((b) => b?.type === 'text').map((b) => str(b.text)).join('\n\n')
-          const reasoning = blocks.filter((b) => b?.type === 'thinking').map((b) => str(b.thinking)).filter(Boolean).join('\n\n')
-          const calls = blocks.filter((b) => b?.type === 'tool_use' || b?.type === 'server_tool_use')
-          const usage = message.usage
-          const first = typeof message.id === 'string' ? !seenMessages.has(message.id) : true
-          if (typeof message.id === 'string') seenMessages.add(message.id)
-          if (typeof message.model === 'string' && message.model !== '<synthetic>') {
-            node.servedModel = message.model
-            node.modelSource = 'native response'
-          }
-          const shownText = text ? this.clip(text, full) : null
-          const shownReasoning = reasoning ? this.clip(reasoning, full) : null
-          const draft: Omit<Draft, 'order'> = {
-            id: `${node.id}#${prefix}${row.line}`,
-            node: node.id,
-            at,
-            kind: 'message',
-            category: calls.length ? categoryOf(str(calls[0].name), calls[0].input) : 'reasoning',
-            label: calls.length ? `assistant · ${calls.map((c) => str(c.name)).join(', ')}` : 'assistant',
-            source,
-            detail: {
-              role: 'assistant',
-              ...(shownText ? { publicText: shownText.text } : {}),
-              ...(shownReasoning ? { reasoning: shownReasoning.text } : {}),
-              ...(shownText?.clip ?? shownReasoning?.clip ? { clip: shownText?.clip ?? shownReasoning?.clip } : {}),
-              ...(calls.length
-                ? {
-                    publicToolCalls: calls.map((call) => {
-                      const input = this.clip(JSON.stringify(call.input ?? {}), full)
-                      return { id: str(call.id), name: str(call.name), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }
-                    }),
-                  }
-                : {}),
-              ...(usage && first
-                ? {
-                    usage: {
-                      input: num(usage.input_tokens),
-                      output: num(usage.output_tokens),
-                      cacheRead: num(usage.cache_read_input_tokens),
-                      cacheWrite: num(usage.cache_creation_input_tokens),
-                    },
-                  }
-                : {}),
-              ...(typeof message.model === 'string' ? { responseReportedModel: message.model } : {}),
-              ...(value.isApiErrorMessage ? { responseStatus: 'error' } : {}),
-              ...(value.isSidechain ? { sidechain: true } : {}),
-            },
-          }
-          this.emit(draft)
-          lastAssistant = this.events.at(-1)
-          continue
-        }
-        if (value.type === 'user' && message) {
-          if (typeof message.content === 'string') {
-            const shown = this.clip(message.content, full)
-            this.emit({
-              id: `${node.id}#${prefix}${row.line}`,
-              node: node.id,
-              at,
-              kind: 'message',
-              category: 'other',
-              label: 'user',
-              source,
-              detail: { role: 'user', publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}), ...(value.isSidechain ? { sidechain: true } : {}) },
-            })
-            continue
-          }
-          const blocks: Json[] = Array.isArray(message.content) ? message.content : []
-          const results = blocks.filter((b) => b?.type === 'tool_result')
-          const texts = blocks.filter((b) => b?.type === 'text').map((b) => str(b.text)).join('\n\n')
-          results.forEach((block, i) => {
+        const shownText = text ? this.clip(text, full) : null
+        const shownReasoning = reasoning ? this.clip(reasoning, full) : null
+        this.emit({
+          node: node.id,
+          at,
+          kind: 'message',
+          category: calls.length ? categoryOf(str(calls[0].name), calls[0].input) : 'reasoning',
+          label: calls.length ? `assistant · ${calls.map((c) => str(c.name)).join(', ')}` : 'assistant',
+          source,
+          detail: {
+            role: 'assistant',
+            ...native,
+            ...(shownText ? { publicText: shownText.text } : {}),
+            ...(shownReasoning ? { reasoning: shownReasoning.text } : {}),
+            ...(shownText?.clip ?? shownReasoning?.clip ? { clip: shownText?.clip ?? shownReasoning?.clip } : {}),
+            ...(calls.length
+              ? {
+                  publicToolCalls: calls.map((call) => {
+                    const input = this.clip(JSON.stringify(call.input ?? {}), full)
+                    return { id: str(call.id), name: str(call.name), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }
+                  }),
+                }
+              : {}),
+            ...(usage && first
+              ? {
+                  usage: {
+                    input: num(usage.input_tokens),
+                    output: num(usage.output_tokens),
+                    cacheRead: num(usage.cache_read_input_tokens),
+                    cacheWrite: num(usage.cache_creation_input_tokens),
+                  },
+                }
+              : {}),
+            ...(typeof message.model === 'string' ? { responseReportedModel: message.model } : {}),
+            ...(value.isApiErrorMessage ? { responseStatus: 'error' } : {}),
+            ...sidechain,
+          },
+        })
+        lastAssistant = this.events.at(-1)
+      } else if (value.type === 'user' && message && typeof message.content === 'string') {
+        const shown = this.clip(message.content, full)
+        this.emit({
+          node: node.id,
+          at,
+          kind: 'message',
+          category: 'other',
+          label: 'user',
+          source,
+          detail: { role: 'user', ...native, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}), ...sidechain },
+        })
+      } else if (value.type === 'user' && message) {
+        const blocks: Json[] = Array.isArray(message.content) ? message.content : []
+        const items: { index: number; block?: Json; text?: string }[] = []
+        blocks.forEach((block, index) => {
+          if (block?.type === 'tool_result') items.push({ index, block })
+        })
+        const textIndex = blocks.findIndex((b) => b?.type === 'text' || b?.type === 'image')
+        const text = blocks.filter((b) => b?.type === 'text' || b?.type === 'image').map((b) => (b.type === 'image' ? '[image]' : str(b.text))).join('\n\n')
+        if (text) items.push({ index: textIndex, text })
+        items.sort((a, b) => a.index - b.index)
+        const several = items.length > 1
+        for (const item of items) {
+          const itemSource = several ? { ...source, item: item.index } : source
+          if (item.block) {
+            const block = item.block
             const body = typeof block.content === 'string'
               ? block.content
               : Array.isArray(block.content)
@@ -689,58 +806,70 @@ class Ingest {
                 : str(block.content)
             const shown = this.clip(body, full)
             this.emit({
-              id: `${node.id}#${prefix}${row.line}${results.length > 1 ? `.${i}` : ''}`,
               node: node.id,
               at,
               kind: 'tool-result',
               category: 'other',
               label: 'tool result',
-              source,
-              detail: {
-                role: 'toolResult',
-                toolCallId: str(block.tool_use_id),
-                isError: block.is_error === true,
-                publicText: shown.text,
-                ...(shown.clip ? { clip: shown.clip } : {}),
-              },
+              source: itemSource,
+              detail: { role: 'toolResult', ...native, toolCallId: str(block.tool_use_id), isError: block.is_error === true, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}), ...sidechain },
             })
-          })
-          if (texts && !results.length) {
-            const shown = this.clip(texts, full)
+          } else {
+            const shown = this.clip(item.text!, full)
             this.emit({
-              id: `${node.id}#${prefix}${row.line}`,
               node: node.id,
               at,
               kind: 'message',
               category: 'other',
               label: 'user',
-              source,
-              detail: { role: 'user', publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) },
+              source: itemSource,
+              detail: { role: 'user', ...native, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}), ...sidechain },
             })
           }
-          continue
-        }
-        if (value.type === 'cost-state' && lastAssistant && num(value.totalCostUSD) !== undefined) {
-          lastAssistant.detail.costListUsd = value.totalCostUSD
-          lastAssistant.detail.usdKnown = false
-          lastAssistant.detail.costScope = 'session-total'
         }
       }
+      if (value.type === 'cost-state' && lastAssistant && num(value.totalCostUSD) !== undefined) {
+        lastAssistant.detail.costListUsd = value.totalCostUSD
+        lastAssistant.detail.usdKnown = false
+        lastAssistant.detail.costScope = 'session-total'
+      }
+      // Every other timestamped line (system, attachment, cost state, an empty user turn) is kept as what it is.
+      if (this.events.length === before) this.emitRecord(node, at, source, value, native)
+      counts.events += this.events.length - before
     }
-    node.capture = { channel: 'native', status: lossy ? 'lossy' : 'complete', reason: lossy ? 'unparsable-lines' : null }
-    if (node.harness === null) node.harness = 'claude-code'
+    if (counts.untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${counts.untimed} lines of ${this.sourcePath(rel)} carry no time` })
+    if (counts.unparsable) this.gaps.push({ nodeId: node.id, code: 'unparsable-lines', detail: `${counts.unparsable} lines of ${this.sourcePath(rel)} are not JSON` })
+    return counts
+  }
+
+  /** A source line the converter does not interpret: its type, and its fields with long strings shortened. */
+  emitRecord(node: NodeDraft, at: string, source: EventSource, value: Json, extra: Record<string, unknown> = {}) {
+    const type = str(value?.type) || 'unknown'
+    const subtype = str(value?.subtype ?? value?.customType ?? value?.payload?.type)
+    const { type: _t, timestamp: _ts, message: _m, ...rest } = value ?? {}
+    this.emit({
+      node: node.id,
+      at,
+      kind: 'record',
+      category: type === 'system' || type === 'session' || type.endsWith('_change') ? 'lifecycle' : 'other',
+      label: [type.replaceAll('_', ' '), subtype.replaceAll('_', ' ')].filter(Boolean).join(' · '),
+      source,
+      detail: { recordType: type, ...(subtype ? { recordSubtype: subtype } : {}), ...extra, data: this.compactValue(value?.message ? { ...rest, message: value.message } : rest) },
+    })
   }
 
   // ----- channel 2: OpenCode native trajectory -----
-  readOpenCode(node: NodeDraft) {
-    const rel = 'native-trajectory.json'
+  readOpenCode(node: NodeDraft, rel = 'native-trajectory.json') {
     let doc: Json
+    let entry
     try {
-      doc = JSON.parse(this.file(rel).text)
+      entry = this.file(rel)
+      doc = JSON.parse(entry.text)
     } catch {
       return false
     }
     if (!Array.isArray(doc?.messages) || !Array.isArray(doc?.parts)) return false
+    if (!this.claim(entry.sha256, node.id, rel)) return false
     this.fileSource(rel)
     const session = Array.isArray(doc.session) ? doc.session[0] : doc.session
     if (session?.model) {
@@ -765,26 +894,31 @@ class Ingest {
       .map((part: Json, index: number) => ({ part, index }))
       .sort((a: Json, b: Json) => (a.part.time_created ?? 0) - (b.part.time_created ?? 0) || a.index - b.index)
     const lastOfMessage = new Map<string, Draft>()
+    let unparsable = 0
+    let untimed = 0
     for (const { part, index } of parts) {
       let data: Json
       try {
         data = typeof part.data === 'string' ? JSON.parse(part.data) : part.data
       } catch {
+        unparsable++
         continue
       }
       const message = roles.get(part.message_id) ?? {}
       const role = message.role === 'user' ? 'user' : 'assistant'
       const pointer = pointerOf('parts', index, 'data')
-      const source = { path: rel, sha256: this.sources.get(`${rel}\0\0`)!.sha256, pointer }
+      const source = { path: rel, sha256: entry.sha256, pointer }
       const full = () => this.pointerSource(rel, pointer, part.data)
       const at = isoAt(data?.time?.start ?? part.time_created) ?? node.start
-      if (!at) continue
+      if (!at) {
+        untimed++
+        continue
+      }
+      const native = typeof part.id === 'string' ? { nativeRecordId: part.id } : {}
       if (role === 'assistant' && typeof message.modelID === 'string') node.servedModel = [message.providerID, message.modelID].filter(Boolean).join('/')
-      if (data?.type === 'text' || data?.type === 'reasoning') {
+      if ((data?.type === 'text' || data?.type === 'reasoning') && (str(data.text) || data.type === 'text')) {
         const shown = this.clip(str(data.text), full)
-        if (!shown.text && data.type !== 'text') continue
         this.emit({
-          id: `${node.id}#oc:${part.id}`,
           node: node.id,
           at,
           kind: 'message',
@@ -793,6 +927,7 @@ class Ingest {
           source,
           detail: {
             role,
+            ...native,
             ...(data.type === 'text' ? { publicText: shown.text } : { reasoning: shown.text }),
             ...(shown.clip ? { clip: shown.clip } : {}),
             ...(data.synthetic ? { synthetic: true } : {}),
@@ -805,33 +940,34 @@ class Ingest {
         const start = isoAt(state.time?.start) ?? at
         const end = isoAt(state.time?.end)
         const category = categoryOf(str(data.tool), state.input)
+        const settled = state.status === 'completed' || state.status === 'error'
         this.emit({
-          id: `${node.id}#oc:${part.id}`,
           node: node.id,
           at: start,
           kind: 'message',
           category,
           label: `assistant · ${str(data.tool)}`,
-          source,
+          source: settled ? { ...source, item: 0 } : source,
           detail: {
             role: 'assistant',
+            ...native,
             publicToolCalls: [{ id: str(data.callID || part.id), name: str(data.tool), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }],
           },
         })
         lastOfMessage.set(part.message_id, this.events.at(-1)!)
-        if (state.status === 'completed' || state.status === 'error') {
+        if (settled) {
           const body = state.status === 'error' ? str(state.error) : str(state.output)
           const shown = this.clip(body, full)
           this.emit({
-            id: `${node.id}#oc:${part.id}.result`,
             node: node.id,
             at: end ?? start,
             kind: 'tool-result',
             category,
             label: `tool result · ${str(data.tool)}`,
-            source,
+            source: { ...source, item: 1 },
             detail: {
               role: 'toolResult',
+              ...native,
               toolCallId: str(data.callID || part.id),
               isError: state.status === 'error',
               publicText: shown.text,
@@ -840,25 +976,30 @@ class Ingest {
             },
           })
         }
-      } else if (data?.type === 'step-finish') {
-        const target = lastOfMessage.get(part.message_id)
-        const tokens = data.tokens
-        if (target && tokens) {
-          target.detail.usage = {
-            input: num(tokens.input),
-            output: num(tokens.output),
-            cacheRead: num(tokens.cache?.read),
-            cacheWrite: num(tokens.cache?.write),
-            ...(num(tokens.reasoning) !== undefined ? { reasoning: tokens.reasoning } : {}),
-          }
-          if (num(data.cost) !== undefined && data.cost > 0) {
-            target.detail.costListUsd = data.cost
-            target.detail.usdKnown = false
+      } else {
+        if (data?.type === 'step-finish') {
+          const target = lastOfMessage.get(part.message_id)
+          const tokens = data.tokens
+          if (target && tokens) {
+            target.detail.usage = {
+              input: num(tokens.input),
+              output: num(tokens.output),
+              cacheRead: num(tokens.cache?.read),
+              cacheWrite: num(tokens.cache?.write),
+              ...(num(tokens.reasoning) !== undefined ? { reasoning: tokens.reasoning } : {}),
+            }
+            if (num(data.cost) !== undefined && data.cost > 0) {
+              target.detail.costListUsd = data.cost
+              target.detail.usdKnown = false
+            }
           }
         }
+        // Step boundaries, patches, files, snapshots and empty reasoning parts stay as what they are.
+        this.emitRecord(node, at, source, { ...data, type: str(data?.type) || 'part' }, native)
       }
     }
-    node.capture = { channel: 'oc', status: 'complete', reason: null }
+    if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} parts of ${this.sourcePath(rel)} carry no time` })
+    node.capture = { channel: 'oc', status: unparsable ? 'lossy' : 'complete', reason: unparsable ? 'unparsable-parts' : null }
     return true
   }
 
@@ -894,35 +1035,42 @@ class Ingest {
   readPi(node: NodeDraft, sessions: { rel: string; sessionId: string; rows: Line[]; sha256: string }[]) {
     node.harness ??= 'pi'
     for (const session of sessions) {
+      if (!this.claim(session.sha256, node.id, session.rel)) continue
       this.fileSource(session.rel)
-      const prefix = sessions.length > 1 ? `pi:${session.sessionId.slice(0, 8)}:` : 'pi:'
       node.nativeSessionId ??= session.sessionId
+      let untimed = 0
+      let last: string | null = null
       for (const row of session.rows) {
         const value = row.value
         if (!value) continue
-        if (value.type === 'model_change' && typeof value.modelId === 'string') {
-          node.model ??= value.modelId
+        const at: string | null = isoAt(value.timestamp) ?? last
+        if (!at) {
+          untimed++
           continue
         }
-        if (value.type !== 'message') continue
-        const message = value.message ?? {}
-        const at = isoAt(value.timestamp)
-        if (!at) continue
+        last = at
         const source = { path: session.rel, sha256: session.sha256, line: row.line }
+        const native = typeof value.id === 'string' ? { nativeRecordId: value.id } : {}
+        if (value.type === 'model_change' && typeof value.modelId === 'string') node.model ??= value.modelId
+        if (value.type !== 'message') {
+          // The session header, model and thinking-level changes and custom entries are events too.
+          this.emitRecord(node, at, source, value, native)
+          continue
+        }
+        const message = value.message ?? {}
         const full = () => this.lineSource(session.rel, row.line, row.raw)
         const blocks: Json[] = Array.isArray(message.content) ? message.content : [{ type: 'text', text: str(message.content) }]
         const text = blocks.filter((b) => b?.type === 'text').map((b) => str(b.text)).join('\n\n')
         if (message.role === 'toolResult') {
           const shown = this.clip(text, full)
           this.emit({
-            id: `${node.id}#${prefix}${row.line}`,
             node: node.id,
             at,
             kind: 'tool-result',
             category: 'other',
             label: `tool result · ${str(message.toolName)}`,
             source,
-            detail: { role: 'toolResult', toolCallId: str(message.toolCallId), isError: message.isError === true, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) },
+            detail: { role: 'toolResult', ...native, toolCallId: str(message.toolCallId), isError: message.isError === true, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) },
           })
           continue
         }
@@ -933,7 +1081,6 @@ class Ingest {
         const shownReasoning = reasoning ? this.clip(reasoning, full) : null
         const usage = message.usage
         this.emit({
-          id: `${node.id}#${prefix}${row.line}`,
           node: node.id,
           at,
           kind: 'message',
@@ -942,6 +1089,7 @@ class Ingest {
           source,
           detail: {
             role: str(message.role),
+            ...native,
             ...(shownText ? { publicText: shownText.text } : {}),
             ...(shownReasoning ? { reasoning: shownReasoning.text } : {}),
             ...(shownText?.clip ?? shownReasoning?.clip ? { clip: shownText?.clip ?? shownReasoning?.clip } : {}),
@@ -961,8 +1109,169 @@ class Ingest {
           },
         })
       }
+      if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} lines of ${this.sourcePath(session.rel)} carry no time` })
     }
     node.capture = { channel: 'pi', status: 'complete', reason: null }
+  }
+
+  // ----- channel 3b: retained bridge streams -----
+  /** Retained cli-bridge exports (trace/bridge-sessions/*.jsonl): rows of {table, row} from the bridge store. */
+  bridgeStreams() {
+    const root = join(this.runDir, 'trace/bridge-sessions')
+    if (!existsSync(root)) return []
+    return walk(root)
+      .filter((path) => path.endsWith('.jsonl'))
+      .map((path) => {
+        const rel = `trace/bridge-sessions/${path}`
+        const entry = this.file(rel)
+        const rows = splitLines(entry.text)
+        const session = rows.find((row) => row.value?.table === 'sessions')
+        return { rel, rows, sha256: entry.sha256, sessionId: str(session?.value?.row?.external_id) || null, sessionLine: session?.line ?? null }
+      })
+  }
+
+  readBridgeStream(node: NodeDraft, stream: { rel: string; rows: Line[]; sha256: string }) {
+    if (!this.claim(stream.sha256, node.id, stream.rel)) return false
+    this.fileSource(stream.rel)
+    let untimed = 0
+    for (const row of stream.rows) {
+      const value = row.value
+      if (!value || typeof value.table !== 'string') continue
+      const fields = value.row ?? {}
+      const at = isoAt(fields.occurred_at) ?? isoAt(fields.received_at) ?? isoAt(Number(fields.created_at)) ?? isoAt(Number(fields.updated_at))
+      if (!at) {
+        untimed++
+        continue
+      }
+      const source = { path: stream.rel, sha256: stream.sha256, line: row.line }
+      const full = () => this.lineSource(stream.rel, row.line, row.raw)
+      if (value.table !== 'retained_events') {
+        this.emitRecord(node, at, source, { type: `bridge ${value.table.replaceAll('_', ' ')}`, ...fields })
+        continue
+      }
+      let event: Json
+      try {
+        event = JSON.parse(str(fields.event_json))
+      } catch {
+        event = null
+      }
+      const inner = event?.event ?? {}
+      const native = typeof fields.event_id === 'string' ? { nativeRecordId: fields.event_id } : {}
+      if (typeof inner.content === 'string' && inner.content) {
+        const shown = this.clip(inner.content, full)
+        this.emit({ node: node.id, at, kind: 'message', category: 'reasoning', label: 'assistant', source, detail: { role: 'assistant', ...native, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) } })
+      } else if (Array.isArray(inner.tool_calls) && inner.tool_calls.length) {
+        const several = inner.tool_calls.length > 1
+        inner.tool_calls.forEach((call: Json, index: number) => {
+          const input = this.clip(typeof call?.arguments === 'string' ? call.arguments : JSON.stringify(call?.arguments ?? {}), full)
+          this.emit({
+            node: node.id,
+            at,
+            kind: 'message',
+            category: categoryOf(str(call?.name), call?.arguments),
+            label: `assistant · ${str(call?.name)}`,
+            source: several ? { ...source, item: index } : source,
+            detail: { role: 'assistant', ...native, publicToolCalls: [{ id: str(call?.id), name: str(call?.name), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
+          })
+        })
+      } else {
+        const kind = Object.keys(inner)[0] ?? str(event?.type) ?? 'event'
+        this.emitRecord(node, at, source, { type: `bridge ${kind.replaceAll('_', ' ')}`, ...inner }, { ...native, ...(inner.error ? { isError: true } : {}) })
+      }
+    }
+    if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} rows of ${this.sourcePath(stream.rel)} carry no time` })
+    node.harness ??= 'opencode'
+    node.capture = { channel: 'bridge', status: 'lossy', reason: 'bridge-stream-without-prompts-or-results' }
+    return true
+  }
+
+  // ----- Codex rollouts (bundles) -----
+  /** One Codex rollout .jsonl: every timestamped line inside `window` becomes one event (one per tool call item). */
+  readCodex(node: NodeDraft, rel: string, window?: [number, number][]) {
+    const entry = this.file(rel)
+    if (!this.claim(entry.sha256, node.id, rel)) return null
+    this.fileSource(rel)
+    node.harness ??= 'codex'
+    const counts = { unparsable: 0, untimed: 0, outside: 0 }
+    for (const row of splitLines(entry.text)) {
+      if (window && !window.some(([from, to]) => row.line >= from && row.line <= to)) {
+        counts.outside++
+        continue
+      }
+      const value = row.value
+      if (!value) {
+        counts.unparsable++
+        continue
+      }
+      const at = isoAt(value.timestamp)
+      if (!at) {
+        counts.untimed++
+        continue
+      }
+      const source = { path: rel, sha256: entry.sha256, line: row.line }
+      const full = () => this.lineSource(rel, row.line, row.raw)
+      const payload = value.payload ?? {}
+      if (value.type === 'session_meta' && typeof payload.id === 'string') node.nativeSessionId ??= payload.id
+      if (value.type === 'turn_context' && typeof payload.model === 'string') {
+        node.model ??= payload.model
+        node.servedModel = payload.model
+        node.modelSource ??= 'codex turn context'
+      }
+      if (value.type === 'response_item' && payload.type === 'message') {
+        const role = str(payload.role) || 'assistant'
+        const parts: Json[] = Array.isArray(payload.content) ? payload.content : []
+        const text = parts.map((part) => (part?.type === 'input_image' ? '[image]' : str(part?.text))).filter(Boolean).join('\n\n')
+        const shown = this.clip(text, full)
+        this.emit({ node: node.id, at, kind: 'message', category: role === 'assistant' ? 'reasoning' : 'other', label: role, source, detail: { role, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) } })
+        continue
+      }
+      if (value.type === 'response_item' && payload.type === 'reasoning') {
+        // Only the readable summary; encrypted reasoning is never decoded or copied.
+        const summary = (Array.isArray(payload.summary) ? payload.summary : []).map((part: Json) => str(part?.text)).filter(Boolean).join('\n\n')
+        const shown = summary ? this.clip(summary, full) : null
+        this.emit({ node: node.id, at, kind: 'message', category: 'reasoning', label: 'reasoning', source, detail: { role: 'assistant', ...(shown ? { reasoning: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) } : { contentOmitted: 'encrypted reasoning' }) } })
+        continue
+      }
+      const call =
+        value.type === 'response_item' && (payload.type === 'function_call' || payload.type === 'custom_tool_call' || payload.type === 'local_shell_call' || payload.type === 'web_search_call')
+          ? {
+              id: str(payload.call_id ?? payload.id),
+              name: payload.type === 'local_shell_call' ? 'shell' : payload.type === 'web_search_call' ? 'web_search' : str(payload.name),
+              input: payload.type === 'function_call' ? str(payload.arguments) : payload.type === 'custom_tool_call' ? str(payload.input) : JSON.stringify(payload.action ?? {}),
+            }
+          : null
+      if (call) {
+        const input = this.clip(call.input, full)
+        this.emit({ node: node.id, at, kind: 'message', category: categoryOf(call.name, call.input), label: `assistant · ${call.name}`, source, detail: { role: 'assistant', publicToolCalls: [{ id: call.id, name: call.name, input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] } })
+        continue
+      }
+      if (value.type === 'response_item' && (payload.type === 'function_call_output' || payload.type === 'custom_tool_call_output')) {
+        const output = payload.output
+        const body = typeof output === 'string' ? output : typeof output?.content === 'string' ? output.content : JSON.stringify(output ?? null)
+        const shown = this.clip(body, full)
+        this.emit({ node: node.id, at, kind: 'tool-result', category: 'other', label: 'tool result', source, detail: { role: 'toolResult', toolCallId: str(payload.call_id), isError: output?.success === false, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) } })
+        continue
+      }
+      if (value.type === 'event_msg' && payload.type === 'token_count' && payload.info?.last_token_usage) {
+        const usage = payload.info.last_token_usage
+        const cached = num(usage.cached_input_tokens) ?? 0
+        this.emit({
+          node: node.id,
+          at,
+          kind: 'usage',
+          category: 'other',
+          label: 'token count',
+          source,
+          detail: { recordType: 'event_msg', recordSubtype: 'token_count', usage: { input: Math.max(0, (num(usage.input_tokens) ?? 0) - cached), output: num(usage.output_tokens), cacheRead: cached, ...(num(usage.reasoning_output_tokens) !== undefined ? { reasoning: usage.reasoning_output_tokens } : {}) } },
+        })
+        continue
+      }
+      this.emitRecord(node, at, source, { ...payload, type: str(value.type) || 'line', ...(payload.type ? { subtype: payload.type } : {}) })
+    }
+    if (counts.untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${counts.untimed} lines of ${this.sourcePath(rel)} carry no time` })
+    if (counts.unparsable) this.gaps.push({ nodeId: node.id, code: 'unparsable-lines', detail: `${counts.unparsable} lines of ${this.sourcePath(rel)} are not JSON` })
+    node.capture = { channel: 'codex', status: counts.unparsable ? 'lossy' : 'complete', reason: counts.unparsable ? 'unparsable-lines' : null }
+    return counts
   }
 
   // ----- channel 4: output blob parts -----
@@ -972,7 +1281,7 @@ class Ingest {
     let produced = 0
     for (const blob of blobs) {
       const entry = this.fileSource(blob.rel)
-      const tag = entry.sha256.slice(0, 8)
+      if (!this.claim(entry.sha256, node.id, blob.rel)) continue
       const events: Json[] = blob.value.events
       // Final state per part id, in first-seen order, with the carried clock at first sight.
       const order: string[] = []
@@ -1022,14 +1331,13 @@ class Ingest {
           const at = atOf(num(part.time?.start) ?? firstMs)
           if (!at) continue
           this.emit({
-            id: `${node.id}#part:${id}`,
             node: node.id,
             at,
             kind: 'message',
             category: 'reasoning',
             label: 'assistant',
-            source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf(...pointerBase) },
-            detail: { role: 'assistant', ...(part.type === 'text' ? { publicText: shown.text } : { reasoning: shown.text }), ...(shown.clip ? { clip: shown.clip } : {}), ...(part.time?.start ? {} : { atBasis: 'carried' }) },
+            source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf('events', index) },
+            detail: { role: 'assistant', nativeRecordId: id, ...(part.type === 'text' ? { publicText: shown.text } : { reasoning: shown.text }), ...(shown.clip ? { clip: shown.clip } : {}), ...(part.time?.start ? {} : { atBasis: 'carried' }) },
           })
           produced++
           lastText = this.events.at(-1)
@@ -1043,33 +1351,33 @@ class Ingest {
           const startMs = num(state.time?.start) ?? firstMs
           const at = atOf(startMs)
           if (!at) continue
+          const settled = state.status === 'completed' || state.status === 'error'
           this.emit({
-            id: `${node.id}#part:${id}`,
             node: node.id,
             at,
             kind: 'message',
             category,
             label: `assistant · ${name}`,
-            source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf(...pointerBase) },
-            detail: { role: 'assistant', publicToolCalls: [{ id: callId, name, input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
+            source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf('events', index), ...(settled ? { item: 0 } : {}) },
+            detail: { role: 'assistant', nativeRecordId: id, publicToolCalls: [{ id: callId, name, input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
           })
           produced++
-          if (state.status === 'completed' || state.status === 'error') {
+          if (settled) {
             const field = state.status === 'error' ? 'error' : 'output'
             const body = str(state[field])
             const outPointer = pointerOf(...pointerBase, 'state', field)
             const shown = this.clip(body, () => this.pointerSource(blob.rel, outPointer, state[field]))
             const endMs = num(state.time?.end)
             this.emit({
-              id: `${node.id}#part:${id}.result`,
               node: node.id,
               at: atOf(endMs ?? startMs)!,
               kind: 'tool-result',
               category,
               label: `tool result · ${name}`,
-              source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf(...pointerBase, 'state') },
+              source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf('events', index), item: 1 },
               detail: {
                 role: 'toolResult',
+                nativeRecordId: id,
                 toolCallId: callId,
                 isError: state.status === 'error',
                 publicText: shown.text,
@@ -1091,27 +1399,26 @@ class Ingest {
         const input = this.clip(JSON.stringify(inputValue), () => this.pointerSource(blob.rel, itemPointer, item))
         const category = categoryOf(name, inputValue)
         this.emit({
-          id: `${node.id}#part:${id}`,
           node: node.id,
           at,
           kind: 'message',
           category,
           label: `assistant · ${name}`,
-          source: { path: blob.rel, sha256: entry.sha256, pointer: itemPointer },
-          detail: { role: 'assistant', publicToolCalls: [{ id: str(id), name, input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
+          source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf('events', index), item: 0 },
+          detail: { role: 'assistant', nativeRecordId: str(id), publicToolCalls: [{ id: str(id), name, input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
         })
         const body = str(item.aggregated_output ?? item.result ?? item.output ?? item.status)
         const shown = this.clip(body, () => this.pointerSource(blob.rel, itemPointer, item))
         this.emit({
-          id: `${node.id}#part:${id}.result`,
           node: node.id,
           at,
           kind: 'tool-result',
           category,
           label: `tool result · ${name}`,
-          source: { path: blob.rel, sha256: entry.sha256, pointer: itemPointer },
+          source: { path: blob.rel, sha256: entry.sha256, pointer: pointerOf('events', index), item: 1 },
           detail: {
             role: 'toolResult',
+            nativeRecordId: str(id),
             toolCallId: str(id),
             isError: (typeof item.exit_code === 'number' && item.exit_code !== 0) || item.status === 'failed',
             publicText: shown.text,
@@ -1130,7 +1437,6 @@ class Ingest {
           const pointer = pointerOf('events', extra.index, 'data', 'event', 'content')
           const shown = this.clip(body, () => this.pointerSource(blob.rel, pointer, content))
           this.emit({
-            id: `${node.id}#part:@${tag}.${events[extra.index]?.id ?? extra.index}`,
             node: node.id,
             at,
             kind: 'tool-result',
@@ -1145,7 +1451,6 @@ class Ingest {
         const window = extra.data.rateLimitType ?? null
         const utilization = window ? num(extra.data.unifiedWindows?.[window]?.utilization) ?? null : null
         this.emit({
-          id: `${node.id}#part:@${tag}.${events[extra.index]?.id ?? extra.index}`,
           node: node.id,
           at,
           kind: extra.kind,
@@ -1198,9 +1503,10 @@ class Ingest {
     const abs = join(this.runDir, rel)
     if (!existsSync(abs)) return false
     const entry = this.file(rel)
-    this.fileSource(rel)
     const rows = splitLines(entry.text).filter((row) => row.value?.event)
     if (!rows.length) return false
+    if (!this.claim(entry.sha256, node.id, rel)) return false
+    this.fileSource(rel)
     // A resumed attempt can replay its predecessor from the start; drop the replayed prefix.
     const fingerprint = (row: Line) => {
       const event = row.value.event
@@ -1225,6 +1531,7 @@ class Ingest {
       previous = list
     }
     let block: { kind: string; rows: Line[] } | null = null
+    let untimed = 0
     const callIds = new Set<string>()
     const resultIds = new Set<string>()
     const flush = () => {
@@ -1236,7 +1543,6 @@ class Ingest {
       if (at && text.trim()) {
         const shown = this.clip(text, block.rows.length === 1 ? () => this.lineSource(rel, first.line, first.raw) : null)
         this.emit({
-          id: `${node.id}#root:${first.value.seq ?? first.line}`,
           node: node.id,
           at,
           kind: 'message',
@@ -1245,9 +1551,10 @@ class Ingest {
           source: { path: rel, sha256: entry.sha256, line: first.line },
           detail: {
             role: 'assistant',
+            ...(first.value.seq !== undefined ? { nativeRecordId: String(first.value.seq) } : {}),
             ...(block.kind === 'text_delta' ? { publicText: shown.text } : { reasoning: shown.text }),
             ...(shown.clip ? { clip: shown.clip } : {}),
-            ...(block.rows.length > 1 ? { lines: [first.line, lastRow.line] } : {}),
+            ...(block.rows.length > 1 ? { anchorRange: [first.line, lastRow.line] } : {}),
           },
         })
       }
@@ -1264,22 +1571,24 @@ class Ingest {
       }
       flush()
       const at = isoAt(row.value.at)
-      if (!at) continue
-      const key = `${node.id}#root:${row.value.seq ?? row.line}`
+      if (!at) {
+        untimed++
+        continue
+      }
       const source = { path: rel, sha256: entry.sha256, line: row.line }
+      const native = row.value.seq !== undefined ? { nativeRecordId: String(row.value.seq) } : {}
       const full = () => this.lineSource(rel, row.line, row.raw)
       if (kind === 'tool_call') {
         const input = this.clip(JSON.stringify(event.args ?? {}), full)
         callIds.add(str(event.toolCallId))
         this.emit({
-          id: key,
           node: node.id,
           at,
           kind: 'message',
           category: categoryOf(str(event.toolName), event.args),
           label: `assistant · ${str(event.toolName)}`,
           source,
-          detail: { role: 'assistant', publicToolCalls: [{ id: str(event.toolCallId), name: str(event.toolName), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
+          detail: { role: 'assistant', ...native, publicToolCalls: [{ id: str(event.toolCallId), name: str(event.toolName), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
         })
       } else if (kind === 'tool_result') {
         const result = event.result
@@ -1287,7 +1596,6 @@ class Ingest {
         const shown = this.clip(body, full)
         resultIds.add(str(event.toolCallId))
         this.emit({
-          id: key,
           node: node.id,
           at,
           kind: 'tool-result',
@@ -1296,15 +1604,21 @@ class Ingest {
           source,
           detail: {
             role: 'toolResult',
+            ...native,
             toolCallId: str(event.toolCallId),
             isError: Boolean(result && typeof result === 'object' && ('error' in result || result.isError === true)),
             publicText: shown.text,
             ...(shown.clip ? { clip: shown.clip } : {}),
           },
         })
+      } else {
+        // Turn boundaries, usage and status rows are events of their own kind.
+        this.emitRecord(node, at, source, { ...event, type: kind || 'event' }, native)
       }
     }
     flush()
+    if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} rows of ${this.sourcePath(rel)} carry no time` })
+    if (replayed) this.gaps.push({ nodeId: node.id, code: 'root-replay-dropped', detail: `${replayed} rows of a resumed attempt repeat its predecessor and are not events` })
     const unanswered = [...callIds].filter((id) => !resultIds.has(id)).length
     node.capture = {
       channel: 'root',
@@ -1314,7 +1628,67 @@ class Ingest {
     return true
   }
 
-  build() {
+  // ----- knowledge pages -----
+  /** Every kb/pages/**\/*.md under `dir` (relative to the run) becomes one whole-object finding event. */
+  readFindings(nodeId: string, dir = 'kb/pages', paths?: string[]) {
+    const files = paths ?? walk(join(this.runDir, dir)).filter((path) => path.endsWith('.md')).map((path) => `${dir}/${path}`)
+    let node = this.nodes.get(nodeId)
+    for (const rel of files.sort()) {
+      const entry = this.file(rel)
+      this.fileSource(rel)
+      const front = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(entry.text)
+      const field = (key: string) => (front ? new RegExp(`^${key}:[ \\t]*(.*)$`, 'm').exec(front[1]!)?.[1]?.trim() : undefined) || undefined
+      const at = isoAt(field('createdAt')) ?? isoAt(field('updatedAt'))
+      if (!at) {
+        this.gaps.push({ nodeId, code: 'finding-untimed', detail: `${this.sourcePath(rel)} has no createdAt` })
+        continue
+      }
+      const bodyStart = front ? front.index + front[0].length : 0
+      const raw = entry.text.slice(bodyStart)
+      const body = raw.trim()
+      const bodyLine = entry.text.slice(0, bodyStart + (raw.length - raw.trimStart().length)).split('\n').length
+      if (!node) {
+        node = {
+          id: nodeId,
+          label: 'Recorded findings',
+          parent: null,
+          kind: 'finding',
+          role: 'Findings',
+          model: null,
+          servedModel: null,
+          harness: null,
+          sandboxes: [],
+          capture: { channel: 'kb', status: 'complete', reason: null },
+          outRefs: [],
+          transcriptRefs: [],
+        }
+        this.nodes.set(nodeId, node)
+      }
+      const shown = this.clip(body, () => this.fileSource(rel))
+      const title = field('title')?.replace(/^(['"])(.*)\1$/, '$2')
+      this.emit({
+        node: nodeId,
+        at,
+        kind: 'finding-record',
+        category: 'verification',
+        label: title ?? basename(rel, '.md'),
+        source: { path: rel, sha256: entry.sha256 },
+        detail: {
+          ...(title ? { title } : {}),
+          createdAt: at,
+          ...(field('kind') ? { pageKind: field('kind') } : {}),
+          bodyLine,
+          contentSha256: sha(body),
+          recordedClaim: shown.text,
+          ...(shown.clip ? { clip: shown.clip } : {}),
+        },
+      })
+    }
+    return files.length
+  }
+
+  /** Read every channel of the run into nodes and events. */
+  convert() {
     const runDir = this.runDir
     let stats
     try {
@@ -1325,42 +1699,47 @@ class Ingest {
     if (!stats.isDirectory()) throw new RunUnreadableError(`Not a directory: ${runDir}`)
     this.readRunInput()
     this.readJournal()
-    const result = this.resultJson()
+    const result = (this.result = this.resultJson())
     const hasJournal = this.nodes.size > 0
+    const pages = walk(join(runDir, 'kb/pages')).filter((path) => path.endsWith('.md'))
     if (!hasJournal) {
-      const runtimeFiles = ['result.json', 'root-stream.jsonl', 'native-trajectory.json', 'trace'].some((name) => existsSync(join(runDir, name)))
+      const runtimeFiles = ['result.json', 'root-stream.jsonl', 'native-trajectory.json', 'trace', 'run-input.json'].some((name) => existsSync(join(runDir, name)))
       this.format = existsSync(join(runDir, 'native-trajectory.json'))
         ? 'bridge-native'
         : existsSync(join(runDir, 'failure.json'))
           ? 'failure-only'
           : existsSync(join(runDir, 'ledger.jsonl'))
             ? 'search'
-            : 'other'
-      this.nodes.set(this.runId, {
-        id: this.runId,
-        label: 'root',
-        parent: null,
-        kind: 'agent',
-        role: 'root',
-        model: null,
-        servedModel: null,
-        harness: null,
-        sandboxes: [],
-        capture: { channel: 'journal', status: 'absent', reason: 'no-spawn-journal' },
-        outRefs: [],
-        transcriptRefs: [],
-      })
-      this.rootId = this.runId
-      if (!runtimeFiles || this.format === 'search')
-        this.gaps.push({ nodeId: null, code: 'unsupported-format', detail: `No spawn journal in ${this.format === 'search' ? 'a search ledger' : 'this layout'}` })
+            : !runtimeFiles && pages.length
+              ? 'finding-only'
+              : 'other'
+      if (this.format !== 'finding-only') {
+        this.nodes.set(this.runId, {
+          id: this.runId,
+          label: 'root',
+          parent: null,
+          kind: 'agent',
+          role: 'root',
+          model: null,
+          servedModel: null,
+          harness: null,
+          sandboxes: [],
+          capture: { channel: 'journal', status: 'absent', reason: 'no-spawn-journal' },
+          outRefs: [],
+          transcriptRefs: [],
+        })
+        this.rootId = this.runId
+        if (!runtimeFiles || this.format === 'search')
+          this.gaps.push({ nodeId: null, code: 'unsupported-format', detail: `No spawn journal in ${this.format === 'search' ? 'a search ledger' : 'this layout'}` })
+      }
     }
-    const root = this.nodes.get(this.rootId)!
-    if (existsSync(join(runDir, 'native-trajectory.json')) && this.format !== 'cloud') this.format = 'bridge-native'
-    if (existsSync(join(runDir, 'trace/pi-sessions'))) this.format = 'pi-local'
+    const root = this.nodes.get(this.rootId)
+    if (root && existsSync(join(runDir, 'native-trajectory.json')) && this.format !== 'cloud') this.format = 'bridge-native'
+    if (root && existsSync(join(runDir, 'trace/pi-sessions'))) this.format = 'pi-local'
 
     // Declared models, harness and assignment from the profile and task.
     const input = this.runInput
-    if (input?.profile) {
+    if (root && input?.profile) {
       const model = input.profile.model
       root.model = typeof model === 'string' ? model : typeof model?.default === 'string' ? model.default : typeof model?.id === 'string' ? model.id : root.model
       root.modelSource = 'run input profile'
@@ -1368,7 +1747,7 @@ class Ingest {
     }
     const task = input?.task
     const assignmentText = typeof task === 'string' ? task : typeof task?.instruction === 'string' ? task.instruction : typeof task?.objective === 'string' ? task.objective : null
-    if (assignmentText) root.assignment = this.clip(assignmentText, null).text
+    if (root && assignmentText) root.assignment = this.clip(assignmentText, null).text
     for (const node of this.nodes.values()) {
       if (node.profileRef) {
         const profile = this.blob(node.profileRef)?.value
@@ -1384,9 +1763,9 @@ class Ingest {
         if (blob && typeof blob.value === 'string') node.assignment = this.clip(blob.value, null).text
       }
     }
-    if (result?.rootHarnessTranscript?.status === 'available' && typeof result.rootHarnessTranscript.transcriptRef === 'string') {
+    if (root && result?.rootHarnessTranscript?.status === 'available' && typeof result.rootHarnessTranscript.transcriptRef === 'string') {
       if (!root.transcriptRefs.includes(result.rootHarnessTranscript.transcriptRef)) root.transcriptRefs.push(result.rootHarnessTranscript.transcriptRef)
-    } else if (typeof result?.rootHarnessTranscript?.reason === 'string') root.transcriptReason ??= result.rootHarnessTranscript.reason
+    } else if (root && typeof result?.rootHarnessTranscript?.reason === 'string') root.transcriptReason ??= result.rootHarnessTranscript.reason
 
     // Conversation channels, first available wins.
     const pi = this.piSessions()
@@ -1402,6 +1781,15 @@ class Ingest {
         piByNode.set(nodeId, list)
       } else unjoined.push(session)
     }
+    const streamsByNode = new Map<string, ReturnType<Ingest['bridgeStreams']>[number]>()
+    for (const stream of this.bridgeStreams()) {
+      const joined = stream.sessionId ? this.executionOf.get(stream.sessionId) : undefined
+      if (joined && !streamsByNode.has(joined.node)) streamsByNode.set(joined.node, stream)
+      else {
+        this.fileSource(stream.rel)
+        this.gaps.push({ nodeId: null, code: 'bridge-stream-unjoined', detail: `${this.sourcePath(stream.rel)} names no materialized session of this run` })
+      }
+    }
     for (const node of [...this.nodes.values()]) {
       const native = this.nativeFiles(node)
       if (Array.isArray(native)) {
@@ -1415,6 +1803,16 @@ class Ingest {
       if (sessions?.length) {
         node.joinBasis = 'task-digest'
         this.readPi(node, sessions)
+        continue
+      }
+      const stream = streamsByNode.get(node.id)
+      if (stream && this.readBridgeStream(node, stream)) {
+        node.joinBasis = 'bridge-session-id'
+        node.joinProof = {
+          journal: { path: this.sourcePath('spawn-journal.jsonl'), line: this.executionOf.get(stream.sessionId!)!.line },
+          stream: { path: this.sourcePath(stream.rel), line: stream.sessionLine },
+          sessionId: stream.sessionId,
+        }
         continue
       }
       if (this.readParts(node)) continue
@@ -1447,8 +1845,16 @@ class Ingest {
       this.nodes.get(id)!.nativeSessionId = session.sessionId
       this.gaps.push({ nodeId: id, code: 'pi-session-unjoined', detail: 'No spawned task digest matches this session' })
     }
-    for (const name of listDir(join(runDir, 'kb/pages')).filter((name) => name.endsWith('.md'))) this.listSource(`kb/pages/${name}`)
+    if (pages.length) this.readFindings(`finding:${this.runId}`)
+  }
 
+  result: Json = null
+
+  /** Assemble the record from what convert() (or a bundle) read. */
+  assemble(extra: { title?: string; assignment?: Json; terminal?: Json; format?: string; input?: Record<string, unknown> } = {}) {
+    const root = this.nodes.get(this.rootId)
+    const result = this.result
+    const task = this.runInput?.task
     // Results inherit their call's category; durations come from the pair when the source lacks them.
     const calls = new Map<string, Draft>()
     for (const event of this.events)
@@ -1482,18 +1888,26 @@ class Ingest {
       if (!node.end && bounds && node.kind === 'session') node.end = bounds[1]
     }
     // A root never settles in its own journal; the run's result is its terminal state.
-    if (result && !root.status && typeof result.kind === 'string') {
+    if (root && result && !root.status && typeof result.kind === 'string') {
       root.status = result.kind
       root.end ??= span.get(root.id)?.[1]
     }
 
     this.events.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : (nodeOrder.get(a.node)! - nodeOrder.get(b.node)!) || a.order - b.order))
+    // anchor.v1 ids are unique by construction; a repeat means two events claim the same bytes.
     const ids = new Set<string>()
     for (const event of this.events) {
-      let id = event.id
-      for (let n = 2; ids.has(id); n++) id = `${event.id}~${n}`
-      event.id = id
-      ids.add(id)
+      if (ids.has(event.id)) throw new SnapshotMismatchError(`duplicate anchor ${event.id} (${event.source.path}${event.source.line ? `:${event.source.line}` : event.source.pointer ?? ''})`)
+      ids.add(event.id)
+    }
+    // A 12-hex object prefix names exactly one object among the record's sources.
+    const objects = new Map<string, string>()
+    for (const source of this.sources.values()) {
+      if (!source.sha256 || source.line !== undefined || source.pointer !== undefined) continue
+      const prefix = source.sha256.slice(0, 12)
+      const known = objects.get(prefix)
+      if (known && known !== source.sha256) throw new SnapshotMismatchError(`object prefix ${prefix} names two objects`)
+      objects.set(prefix, source.sha256)
     }
 
     const captures = [...this.nodes.values()].map((node) => ({ nodeId: node.id, ...node.capture }))
@@ -1504,9 +1918,15 @@ class Ingest {
     const record = {
       schema: 'agent-record.v1',
       runId: this.runId,
-      title: this.runId,
+      title: extra.title ?? this.runId,
       producer: { name: '@drewstone/agent-record/adapters/agent-runtime', version: ADAPTER_VERSION },
-      format: this.format,
+      idScheme: ID_SCHEME,
+      input: {
+        ...(this.options.manifestSha256 ? { snapshot: `sha256:${this.options.manifestSha256}` } : {}),
+        runIdBasis: this.runIdBasis,
+        ...extra.input,
+      },
+      format: extra.format ?? this.format,
       nodes: [...this.nodes.values()].map((node) => ({
         id: node.id,
         label: node.label,
@@ -1524,6 +1944,7 @@ class Ingest {
         ...(node.nativeSessionId ? { nativeSessionId: node.nativeSessionId } : {}),
         ...(node.agentId ? { agentId: node.agentId } : {}),
         ...(node.joinBasis ? { joinBasis: node.joinBasis } : {}),
+        ...(node.joinProof ? { joinProof: node.joinProof } : {}),
         sandboxes: node.sandboxes,
         capture: node.capture,
       })),
@@ -1531,7 +1952,7 @@ class Ingest {
       sources: [...this.sources.values()].map(({ sha256, ...source }) => (sha256 ? { ...source, sha256 } : source)).sort((a, b) =>
         a.path < b.path ? -1 : a.path > b.path ? 1 : (a.line ?? 0) - (b.line ?? 0) || (a.pointer ?? '').localeCompare(b.pointer ?? ''),
       ),
-      assignment: {
+      assignment: extra.assignment ?? {
         objective: str(task?.objective),
         instruction: str(task?.instruction ?? (typeof task === 'string' ? task : '')),
         knowledge: typeof knowledge === 'string' ? knowledge : knowledge ? JSON.stringify(knowledge, null, 2) : '',
@@ -1539,15 +1960,17 @@ class Ingest {
         suppliedKnowledge: typeof knowledge === 'string' ? knowledge : knowledge ? JSON.stringify(knowledge, null, 2) : '',
         deliverables: typeof completion === 'string' ? completion : completion ? JSON.stringify(completion, null, 2) : '',
         constraints: '',
-        source: this.runInputRel ? { path: this.runInputRel, sha256: this.file(this.runInputRel, this.runInputRel.startsWith('../') ? join(dirname(this.runDir), this.runInputRel.slice(3)) : undefined).sha256, pointer: '/task' } : null,
+        source: this.runInputRel ? { path: this.sourcePath(this.runInputRel), sha256: this.file(this.runInputRel, this.runInputRel.startsWith('../') ? join(dirname(this.runDir), this.runInputRel.slice(3)) : undefined).sha256, pointer: '/task' } : null,
       },
-      terminal: result
-        ? {
-            kind: typeof result.kind === 'string' ? result.kind : null,
-            reason: typeof result.reason === 'string' ? result.reason : null,
-            ...(typeof result.error?.message === 'string' ? { error: this.clip(result.error.message, null).text } : {}),
-          }
-        : null,
+      terminal: extra.terminal !== undefined
+        ? extra.terminal
+        : result
+          ? {
+              kind: typeof result.kind === 'string' ? result.kind : null,
+              reason: typeof result.reason === 'string' ? result.reason : null,
+              ...(typeof result.error?.message === 'string' ? { error: this.clip(result.error.message, null).text } : {}),
+            }
+          : null,
       coverage: {
         completeOriginalCapture: counts.lossy === 0 && counts.absent === 0,
         publicContent: '',
@@ -1559,12 +1982,48 @@ class Ingest {
     }
     return { record, counts }
   }
+
+  build() {
+    this.convert()
+    return this.assemble()
+  }
 }
 
-/** Convert one run directory. Throws RunUnreadableError or RecordTooLargeError. */
-export function ingestRun(runDir: string, options: IngestOptions = {}) {
-  const ingest = new Ingest(runDir, options.native, Math.max(1024, options.maxText ?? 16384))
-  const { record, counts } = ingest.build()
+/**
+ * Check a directory against its snapshot manifest before anything is read: the same set of files, each with the
+ * manifest's length and sha256. `prefix` is the directory's place inside the manifest (a run inside a bundle).
+ */
+export function verifySnapshot(dir: string, manifest: SnapshotManifest, prefix = '') {
+  const listed = new Map(manifest.files.filter((file) => file.path.startsWith(prefix)).map((file) => [file.path.slice(prefix.length), file]))
+  const linked = new Set((manifest.links ?? []).filter((link) => link.path.startsWith(prefix)).map((link) => link.path.slice(prefix.length)))
+  const present = walk(dir).filter((path) => !linked.has(path))
+  const problems: string[] = []
+  for (const path of present) if (!listed.has(path)) problems.push(`${prefix}${path} is not in the snapshot`)
+  for (const [path, file] of listed) {
+    const abs = join(dir, path)
+    if (!existsSync(abs)) {
+      problems.push(`${prefix}${path} is missing`)
+      continue
+    }
+    const hash = createHash('sha256')
+    let bytes = 0
+    const fd = openSync(abs, 'r')
+    try {
+      const buffer = Buffer.allocUnsafe(1 << 20)
+      for (let n = readSync(fd, buffer); n > 0; n = readSync(fd, buffer)) {
+        hash.update(buffer.subarray(0, n))
+        bytes += n
+      }
+    } finally {
+      closeSync(fd)
+    }
+    if (hash.digest('hex') !== hexOf(file.sha256) || bytes !== file.bytes) problems.push(`${prefix}${path} does not match its sha256 or length`)
+  }
+  if (problems.length) throw new SnapshotMismatchError(`${problems.length} files differ from the snapshot: ${problems.slice(0, 5).join('; ')}`)
+}
+
+/** Serialize and check a record. Throws RecordTooLargeError. */
+export function finishRecord(record: Json, counts: IngestSummary['coverage']) {
   const checked = recordSchema.safeParse(record)
   if (!checked.success) throw new Error(`Produced record is invalid: ${checked.error.message.slice(0, 2000)}`)
   const json = JSON.stringify(record)
@@ -1579,4 +2038,270 @@ export function ingestRun(runDir: string, options: IngestOptions = {}) {
     coverage: counts,
   }
   return { record, json, summary }
+}
+
+/** Convert one run directory. Throws RunUnreadableError, SnapshotMismatchError or RecordTooLargeError. */
+export function ingestRun(runDir: string, options: IngestOptions = {}) {
+  if (options.manifest) verifySnapshot(runDir, options.manifest)
+  const ingest = new Ingest(runDir, options.native, Math.max(1024, options.maxText ?? 16384), {
+    runId: options.runId,
+    manifest: options.manifest,
+    manifestSha256: options.manifestSha256,
+  })
+  const { record, counts } = ingest.build()
+  return finishRecord(record, counts)
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Bundles: one record from several native sessions, workflow journals, agent-runtime runs and finding pages.
+// bundle.json (agent-record.bundle.v1) sits at the bundle root; every path is relative to it.
+// ---------------------------------------------------------------------------------------------------------
+export const BUNDLE_SCHEMA = 'agent-record.bundle.v1'
+export type BundleHarness = 'claude-code' | 'codex' | 'opencode' | 'opencode-bridge' | 'pi'
+export interface BundleSession {
+  path: string
+  harness: BundleHarness
+  sessionId?: string
+  /** The session that launched this one; the converter records it only when the file layout proves it. */
+  parentPath?: string
+  agentId?: string
+  label?: string
+  /** Physical line windows, inclusive; lines outside them are out of the record's scope. */
+  lines?: [number, number][]
+}
+export interface Bundle {
+  schema: typeof BUNDLE_SCHEMA
+  recordId: string
+  title?: string
+  sessions: BundleSession[]
+  journals?: { path: string; kind: 'claude-workflow'; workflow?: string; parentPath?: string; label?: string }[]
+  runs?: { path: string; kind: 'agent-runtime'; runId?: string }[]
+  findings?: { path: string }[]
+}
+
+const blankNode = (id: string, fields: Partial<NodeDraft>): NodeDraft => ({
+  id,
+  label: id,
+  parent: null,
+  kind: 'session',
+  role: 'Session',
+  model: null,
+  servedModel: null,
+  harness: null,
+  sandboxes: [],
+  capture: { channel: 'none', status: 'absent', reason: 'no-conversation-channel' },
+  outRefs: [],
+  transcriptRefs: [],
+  ...fields,
+})
+
+function parseBundle(value: Json): Bundle {
+  if (value?.schema !== BUNDLE_SCHEMA) throw new RunUnreadableError(`bundle.json is not ${BUNDLE_SCHEMA}`)
+  if (typeof value.recordId !== 'string' || !value.recordId) throw new RunUnreadableError('bundle.json names no recordId')
+  if (!Array.isArray(value.sessions)) throw new RunUnreadableError('bundle.json lists no sessions')
+  const safe = (path: unknown) => typeof path === 'string' && path !== '' && !path.startsWith('/') && !path.split('/').includes('..')
+  for (const item of [...value.sessions, ...(value.journals ?? []), ...(value.runs ?? []), ...(value.findings ?? [])])
+    if (!safe(item?.path)) throw new RunUnreadableError(`bundle.json path ${JSON.stringify(item?.path)} leaves the bundle`)
+  return value as Bundle
+}
+
+/**
+ * Convert a bundle directory. Joins come from evidence only and each records its basis and proof:
+ *   workflow-agent-id    a Claude workflow journal's `started` agentId is the agentId carried by a session file
+ *                        `agent-<id>.jsonl` beside `agent-<id>.meta.json`
+ *   session-directory    a session under `<parent session id>/subagents/` belongs to that parent session
+ * A session whose join does not verify stays its own node.
+ */
+export function ingestBundle(dir: string, options: Omit<IngestOptions, 'runId'> = {}) {
+  if (options.manifest) verifySnapshot(dir, options.manifest)
+  const bundleText = readFileSync(join(dir, 'bundle.json'), 'utf8')
+  const bundle = parseBundle(JSON.parse(bundleText))
+  const maxText = Math.max(1024, options.maxText ?? 16384)
+  const main = new Ingest(dir, options.native, maxText, { runId: bundle.recordId, manifest: options.manifest, manifestSha256: options.manifestSha256 })
+  main.fileSource('bundle.json')
+
+  // Agent-runtime runs first: their nodes and sources keep the run's own ids, under the run's path.
+  for (const run of bundle.runs ?? []) {
+    const sub = new Ingest(join(dir, run.path), options.native, maxText, {
+      runId: run.runId ?? basename(run.path),
+      manifest: options.manifest,
+      prefix: `${run.path.replace(/\/+$/, '')}/`,
+    })
+    sub.convert()
+    for (const [id, node] of sub.nodes) {
+      if (main.nodes.has(id)) throw new SnapshotMismatchError(`node ${id} appears twice in the bundle`)
+      main.nodes.set(id, node)
+    }
+    for (const event of sub.events) main.events.push({ ...event, order: main.order++ })
+    for (const [key, source] of sub.sources) if (!main.sources.has(key)) main.sources.set(key, source)
+    for (const gap of sub.gaps) main.gaps.push(gap)
+    for (const [digest, node] of sub.claimed) main.claimed.set(digest, node)
+  }
+
+  // Workflow journals: one workflow node, one agent node per started agent.
+  const journalRows: { node: string; rel: string; sha256: string; row: Line; type: string; agentId: string }[] = []
+  const agentNodes = new Map<string, { node: string; rel: string; line: number }>()
+  for (const journal of bundle.journals ?? []) {
+    const entry = main.file(journal.path)
+    main.fileSource(journal.path)
+    const wfId = basename(dirname(journal.path))
+    let workflowStart: string | undefined
+    if (journal.workflow) {
+      main.fileSource(journal.workflow)
+      try {
+        workflowStart = isoAt(JSON.parse(main.file(journal.workflow).text)?.timestamp) ?? undefined
+      } catch {
+        /* the workflow file is listed as a source either way */
+      }
+    }
+    if (!main.nodes.has(wfId))
+      main.nodes.set(wfId, blankNode(wfId, { label: journal.label ?? wfId, kind: 'agent', role: 'workflow', harness: 'claude-code-workflow', start: workflowStart, capture: { channel: 'journal', status: 'complete', reason: null } }))
+    for (const row of splitLines(entry.text)) {
+      const agentId = str(row.value?.agentId)
+      if (!agentId) continue
+      const id = `${wfId}:${agentId}`
+      if (!main.nodes.has(id)) {
+        main.nodes.set(id, blankNode(id, { label: `agent ${agentId.slice(0, 8)}`, parent: wfId, kind: 'agent', role: 'workflow agent', agentId: undefined }))
+        agentNodes.set(agentId, { node: id, rel: journal.path, line: row.line })
+      }
+      journalRows.push({ node: id, rel: journal.path, sha256: entry.sha256, row, type: str(row.value?.type) || 'row', agentId })
+    }
+  }
+
+  // Sessions.
+  const byPath = new Map<string, string>()
+  const pending: { session: BundleSession; node: NodeDraft }[] = []
+  for (const session of bundle.sessions) {
+    let node: NodeDraft | undefined
+    if (session.harness === 'claude-code') {
+      const rows = splitLines(main.file(session.path).text)
+      const carried = rows.find((row) => typeof row.value?.agentId === 'string')
+      const agentId = session.agentId ?? (carried ? str(carried.value.agentId) : '')
+      const sessionId = session.sessionId ?? str(rows.find((row) => typeof row.value?.sessionId === 'string')?.value?.sessionId)
+      const meta = session.path.replace(/\.jsonl$/, '.meta.json')
+      const joined = agentId ? agentNodes.get(agentId) : undefined
+      if (joined && carried && basename(session.path) === `agent-${agentId}.jsonl` && existsSync(join(dir, meta))) {
+        node = main.nodes.get(joined.node)!
+        node.joinBasis = 'workflow-agent-id'
+        node.joinProof = { journal: { path: joined.rel, line: joined.line }, session: { path: session.path, line: carried.line }, meta: { path: meta } }
+        node.nativeSessionId = sessionId || undefined
+        main.fileSource(meta)
+      } else {
+        const id = `claude-code:${agentId || sessionId || basename(session.path, '.jsonl')}`
+        node = main.nodes.get(id) ?? blankNode(id, { label: session.label ?? `claude code ${(agentId || sessionId).slice(0, 8)}`, nativeSessionId: sessionId || undefined })
+        main.nodes.set(id, node)
+      }
+      node.harness ??= 'claude-code'
+      if (session.label) node.label = session.label
+      const read = main.readClaudeSession(node, session.path, undefined, session.lines)
+      if (read) node.capture = { channel: 'native', status: read.unparsable ? 'lossy' : 'complete', reason: read.unparsable ? 'unparsable-lines' : session.lines ? 'line-window' : null }
+    } else if (session.harness === 'codex') {
+      const id = `codex:${session.sessionId ?? basename(session.path, '.jsonl')}`
+      node = main.nodes.get(id) ?? blankNode(id, { label: session.label ?? `codex ${(session.sessionId ?? basename(session.path)).slice(-12)}` })
+      main.nodes.set(id, node)
+      const read = main.readCodex(node, session.path, session.lines)
+      if (read && session.lines) node.capture = { ...node.capture, reason: node.capture.reason ?? 'line-window' }
+    } else if (session.harness === 'opencode') {
+      const id = `opencode:${session.sessionId ?? basename(dirname(session.path))}`
+      node = main.nodes.get(id) ?? blankNode(id, { label: session.label ?? id })
+      main.nodes.set(id, node)
+      main.readOpenCode(node, session.path)
+    } else if (session.harness === 'opencode-bridge') {
+      const entry = main.file(session.path)
+      const rows = splitLines(entry.text)
+      const sessionRow = rows.find((row) => row.value?.table === 'sessions')
+      const id = `bridge:${session.sessionId ?? (str(sessionRow?.value?.row?.external_id) || basename(session.path, '.jsonl'))}`
+      node = main.nodes.get(id) ?? blankNode(id, { label: session.label ?? id })
+      main.nodes.set(id, node)
+      main.readBridgeStream(node, { rel: session.path, rows, sha256: entry.sha256 })
+    } else if (session.harness === 'pi') {
+      const entry = main.file(session.path)
+      const rows = splitLines(entry.text)
+      const header = rows.find((row) => row.value?.type === 'session')?.value
+      const sessionId = session.sessionId ?? (str(header?.id) || basename(session.path, '.jsonl'))
+      const id = `pi:${sessionId}`
+      node = main.nodes.get(id) ?? blankNode(id, { label: session.label ?? `pi ${sessionId.slice(0, 8)}` })
+      main.nodes.set(id, node)
+      main.readPi(node, [{ rel: session.path, sessionId, rows, sha256: entry.sha256 }])
+    } else {
+      throw new RunUnreadableError(`bundle.json session ${session.path} has an unknown harness`)
+    }
+    byPath.set(session.path, node.id)
+    pending.push({ session, node })
+  }
+  // Parents: a session stored under `<parent session id>/subagents/` belongs to that parent.
+  const sessionOwner = (path: string) => /(?:^|\/)([0-9a-f-]{36})\/subagents\//.exec(path)?.[1]
+  const proven = (child: string, parent: string) => {
+    const owner = sessionOwner(child)
+    return owner !== undefined && basename(parent, '.jsonl') === owner
+  }
+  for (const { session, node } of pending) {
+    if (!session.parentPath) continue
+    const parent = byPath.get(session.parentPath)
+    if (!parent || !proven(session.path, session.parentPath)) {
+      main.gaps.push({ nodeId: node.id, code: 'parent-unproven', detail: `${session.path} does not sit under ${session.parentPath}` })
+      continue
+    }
+    const target = node.parent && main.nodes.get(node.parent)?.role === 'workflow' ? main.nodes.get(node.parent)! : node
+    if (target.parent && target.parent !== parent) continue
+    target.parent = parent
+    target.joinBasis ??= 'session-directory'
+  }
+  for (const journal of bundle.journals ?? []) {
+    if (!journal.parentPath) continue
+    const parent = byPath.get(journal.parentPath)
+    const workflow = main.nodes.get(basename(dirname(journal.path)))
+    if (parent && workflow && proven(journal.path, journal.parentPath)) workflow.parent = parent
+    else if (workflow) main.gaps.push({ nodeId: workflow.id, code: 'parent-unproven', detail: `${journal.path} does not sit under ${journal.parentPath}` })
+  }
+
+  // Journal rows carry no time: a started row takes its session's first event, a result row its last.
+  const span = new Map<string, [string, string]>()
+  for (const event of main.events) {
+    const current = span.get(event.node)
+    if (!current) span.set(event.node, [event.at, event.at])
+    else {
+      if (event.at < current[0]) current[0] = event.at
+      if (event.at > current[1]) current[1] = event.at
+    }
+  }
+  for (const item of journalRows) {
+    const bounds = span.get(item.node)
+    if (!bounds) {
+      main.gaps.push({ nodeId: item.node, code: 'journal-untimed-lines', detail: `${item.rel}:${item.row.line} has no time and no joined session` })
+      continue
+    }
+    const node = main.nodes.get(item.node)!
+    if (item.type === 'result') node.status ??= 'settled'
+    const { type: _t, agentId: _a, ...rest } = item.row.value
+    main.emit({
+      node: item.node,
+      at: item.type === 'started' ? bounds[0] : bounds[1],
+      kind: item.type,
+      category: 'lifecycle',
+      label: item.type,
+      source: { path: item.rel, sha256: item.sha256, line: item.row.line },
+      detail: { lifecycle: item.type, atBasis: item.type === 'started' ? 'session-first-event' : 'session-last-event', data: main.compactValue(rest) },
+    })
+  }
+  for (const node of main.nodes.values())
+    if (node.role === 'workflow agent' && node.capture.status === 'absent') {
+      node.capture = { channel: 'journal', status: 'absent', reason: 'no-session-joined' }
+      main.gaps.push({ nodeId: node.id, code: 'no-transcript:no-session-joined', detail: 'No session file carries this workflow agent id' })
+    }
+
+  for (const finding of bundle.findings ?? []) {
+    const paths = finding.path.endsWith('.md') ? [finding.path] : walk(join(dir, finding.path)).filter((path) => path.endsWith('.md')).map((path) => `${finding.path.replace(/\/+$/, '')}/${path}`)
+    main.readFindings(`finding:${bundle.recordId}`, undefined, paths)
+  }
+
+  main.rootId = ''
+  const { record, counts } = main.assemble({
+    title: bundle.title ?? bundle.recordId,
+    format: 'bundle',
+    terminal: null,
+    assignment: { objective: '', instruction: '', knowledge: '', completion: '', suppliedKnowledge: '', deliverables: '', constraints: '', source: null },
+    input: { bundle: `sha256:${sha(bundleText)}` },
+  })
+  return finishRecord(record, counts)
 }

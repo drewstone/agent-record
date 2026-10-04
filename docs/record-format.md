@@ -128,19 +128,21 @@ Its `sha256` and `bytes` then cover exactly those bytes: the line without its ne
 Without `line` or `pointer` they cover the whole file.
 `coverage.nodes` lists each node's capture and `coverage.gaps` lists `{nodeId, code, detail}` for evidence that is missing.
 
-## Agent-runtime run directories
+## Agent-runtime run directories and bundles
 
-`@drewstone/agent-record/adapters/agent-runtime` converts one agent-runtime run directory (Node only):
+`@drewstone/agent-record/adapters/agent-runtime` converts one agent-runtime run directory, or one bundle directory (Node only):
 
 ```sh
-node tools/ingest.mjs <runDir> --out record.json [--native <dir>] [--max-text 16384]
+node tools/ingest.mjs <dir> --out record.json [--run-id <id>] [--manifest <snapshot.json>] [--native <dir>] [--max-text 16384]
 # writes record.json and record.json.gz and prints
 # {"runId", "recordDigest", "bytes", "nodes", "events", "coverage": {"complete", "lossy", "absent"}}
 ```
 
-It reads only the run directory and the optional `--native` cache, writes nothing into either and makes no network requests.
+It reads only the directory and the optional `--native` cache, writes nothing into either and makes no network requests.
 The same inputs and adapter version produce identical bytes; `recordDigest` is the SHA-256 of the JSON.
-Exit code 2 means the run directory is unreadable; 3 means the record would exceed 128 MiB.
+With `--manifest` (an `evidence.snapshot.v1` file list from the evidence store) the directory must hold exactly the listed files with their SHA-256 and length, or nothing is converted; the record names the manifest digest in `input.snapshot`.
+The run ID comes from `--run-id`, then the manifest's `runId`, then the directory name; `input.runIdBasis` says which.
+Exit code 2 means the directory is unreadable; 3 means the record would exceed 128 MiB; 4 means the directory differs from its manifest or two events claim one anchor.
 
 Every `spawned` ID in `spawn-journal.jsonl` is an agent node, and its parent is the ID without its last `:sN` segment.
 Each node's conversation comes from the first channel that holds it:
@@ -148,15 +150,51 @@ Each node's conversation comes from the first channel that holds it:
 1. `native`: the Claude Code session file from a retained harness transcript archive, extracted under `--native/<64-hex archive digest>/`, checked against the manifest's SHA-256.
 2. `oc`: OpenCode `native-trajectory.json`.
 3. `pi`: `trace/pi-sessions/**`, joined to the node whose spawned task digest equals the SHA-256 of the session's first user text as a JSON string.
-4. `part`: the node's output blobs, collapsed to the final state of each part ID; Codex command items and Kimi tool results included.
-5. `root`: `root-stream.jsonl` for the root; text and reasoning deltas collapse into one block per turn, and a resumed attempt's replay of its predecessor is dropped.
-6. `journal`: lifecycle events only.
+4. `bridge`: a retained cli-bridge export under `trace/bridge-sessions/`, joined to the node whose `materialized` receipt names the bridge session ID.
+5. `part`: the node's output blobs, collapsed to the final state of each part ID; Codex command items and Kimi tool results included.
+6. `root`: `root-stream.jsonl` for the root; text and reasoning deltas collapse into one block per turn, and a resumed attempt's replay of its predecessor is dropped (reported as a gap).
+7. `journal`: lifecycle events only.
 
 The other channels are listed in `sources` and never repeated as events.
-Event IDs are `<nodeId>#<channel>:<key>`, where the key comes from the source: the journal's physical line (its `seq` restarts at every `begin`), the root stream's `seq`, the part ID (`.result` for a tool part's result), or the native or pi file's physical line.
+Every timestamped line of a session, journal or stream becomes exactly one event, or one per item when a line carries several (tool results, tool calls).
+A line the converter does not interpret (a Pi session header, a model or thinking-level change, a custom entry, a Claude Code attachment or system line, a stream status row) is a `record` event carrying its type.
+Untimed and unparsable lines are counted in `coverage.gaps`.
 
-Activity types come from a fixed map of tool names and shell commands in the adapter: `coordination`, `compute`, `verification`, `literature` (reading sources, including local files), `writing`, `setup`, `waiting`, `reasoning`, `lifecycle` and `other`.
-A tool result takes its call's type.
+Every `kb/pages/**/*.md` page becomes one `finding-record` event on node `finding:<runId>`, with the frontmatter `title` and `createdAt` and the page body as `detail.recordedClaim`.
+A directory with knowledge pages and no run files has format `finding-only`.
+
+### Event IDs (`idScheme: "anchor.v1"`)
+
+An event ID names the stored bytes it came from: `<o>:<loc>[.<k>]`.
+`o` is the first 12 hex digits of the SHA-256 of the whole source file; `loc` is the 1-based physical line (split on LF) of a line file, or the JSON Pointer into a JSON document; `k` is the item's index in the source's own content array when one line or item yields several events (a tool call and its result are items 0 and 1 of one tool part).
+A whole-page event is `<o>` alone, and a collapsed run of stream deltas takes its first line's anchor with `detail.anchorRange`.
+Each event's `source` carries the same `sha256`, `line` or `pointer`, and `item`, so anyone can recompute the ID from the object alone.
+The ID holds no node ID, channel, position or suffix: a new join, a channel choice or a converter release moves events between nodes without changing an ID.
+A repeated anchor is an error, and a 12-digit prefix names exactly one object among the record's sources.
+Native record IDs (Claude Code `uuid`, Pi `id`, part IDs, stream `seq`) stay in `detail.nativeRecordId`.
+
+`@drewstone/agent-record/publication` exports `anchorId`, `parseAnchor`, `checkAnchors` (every ID recomputed from its object, which the caller supplies as bytes), `buildIdMap` (earlier IDs to the event holding the same bytes, ambiguous ones reported), `sourceBytes`, and the `evidence.snapshot.v1` and `agent-record.bundle.v1` schemas.
+
+### Bundles
+
+A directory with a `bundle.json` (`agent-record.bundle.v1`) is one record from several sources; every path is relative to the bundle root:
+
+```json
+{
+  "schema": "agent-record.bundle.v1",
+  "recordId": "wf_3b2a5d92-078",
+  "sessions": [{ "path": "subagents/workflows/wf_3b2a5d92-078/agent-a94104781fd274f5e.jsonl", "harness": "claude-code" }],
+  "journals": [{ "path": "subagents/workflows/wf_3b2a5d92-078/journal.jsonl", "kind": "claude-workflow", "workflow": "workflows/wf_3b2a5d92-078.json" }],
+  "runs": [{ "path": "lab-run/subscription-apn-glm-lab-20260927c", "kind": "agent-runtime" }],
+  "findings": [{ "path": "kb/pages" }]
+}
+```
+
+`harness` is `claude-code`, `codex`, `opencode`, `opencode-bridge` or `pi`; `lines` (`[[from, to], ...]`, inclusive) limits a long session to the window the record is about.
+Joins come from evidence only, and each node records `joinBasis` and `joinProof`:
+`workflow-agent-id` when a workflow journal's agent ID is the one carried by `agent-<id>.jsonl` beside `agent-<id>.meta.json`, and `session-directory` when a session or journal sits under `<parent session id>/subagents/` of its declared `parentPath`.
+A join that does not verify leaves the session as its own node and adds a gap.
+Workflow journal rows carry no time; a `started` row takes its session's first event time and a `result` row its last (`detail.atBasis`).
 
 ## Workspace and assessment documents
 
