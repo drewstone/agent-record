@@ -132,3 +132,33 @@ Long identifiers, paths and hashes receive line-break opportunities without trun
 The export contains claim assessments, limitations, sources, checks, and question coverage, not the entire conversation.
 Printing includes every play regardless of current filters.
 Original event records remain in the JSON download.
+
+## Retained documents and measurements
+
+A play may include `documents`: `{id, path, title, content, sha256?, kind?}`.
+`content` is the complete UTF-8 text selected by the producer; `kind` is `report`,
+`knowledge` (default), `code`, or `data`. IDs and paths must be unique in that play.
+The producer owns source selection, authorization, hash verification and capture
+coverage. Additional metadata survives validation and JSON export.
+
+The reader searches the included text, renders Markdown tables and native MathML,
+opens relative references only when the target is included, and offers the original
+text and line numbers. HTML and remote images do not execute or load. A claim source
+whose path resolves to an included document opens it at the referenced line.
+Unresolved links remain labeled text; they never read host files. Search retrieves
+retained material; it does not generate an answer or establish a shared agent store.
+Search text is prepared once per snapshot; queries still scan the included text and
+are not constant-time. Use a bounded selected report, not an unbounded trace archive.
+
+A play may include `metrics`: `{id, label, value, unit?, coverage?, source?}`.
+`value` is a string or `null`; null displays as Unknown and does not acquire a unit.
+Retain knownness and the measured population in `coverage`. Metrics and their source
+references appear in HTML, JSON and LaTeX. LaTeX includes a document manifest; full
+document bodies remain in the HTML and JSON, so exporting a summary does not pretend
+to reproduce every original file.
+
+Single-dollar text is preserved literally so financial figures are not misread as
+formulas. Use double-dollar math for mathematical rendering. Optional retained
+`sourcePath` and `aliases` metadata can resolve original absolute or store-relative
+references to an included document; ambiguous aliases are not opened. Relative
+references resolve against their originating document before alias lookup.

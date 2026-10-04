@@ -1,4 +1,5 @@
-import { useId, useRef, useState } from 'react'
+import { createContext, useContext, useId, useMemo, useRef, useState } from 'react'
+import { KnowledgeBrowser, resolveDocument, type DocumentSelection } from './viewer/KnowledgeBrowser.js'
 import { AgentRecord } from './AgentRecord.js'
 import type { RecordSelection } from './record.js'
 import { claimMatches, claimStatuses, reportToLatex } from './report.js'
@@ -7,6 +8,7 @@ import type {
   QuestionCoverage,
   ResearchPlay,
   ResearchReportData,
+  ResearchDocument,
 } from './report.js'
 import { utcTime } from './viewer/model.js'
 import { useDownload } from './viewer/useDownload.js'
@@ -18,6 +20,8 @@ export interface ResearchReportProps {
   onPlayChange?: (playId: string) => void
   className?: string
 }
+
+const DocumentContext = createContext<{ documents: ResearchDocument[]; open: (selection: DocumentSelection) => void }>({ documents: [], open: () => {} })
 
 export function ResearchReport({
   report,
@@ -33,11 +37,14 @@ export function ResearchReport({
   const [status, setStatus] = useState('all')
   const download = useDownload()
   const q = query.trim().toLowerCase()
+  const searchText = useMemo(() => new Map(report.plays.map(play => [play.id,
+    [play.title, play.id, play.summary,
+      ...play.observations.flatMap(item => [item.title, item.body]),
+      ...play.questionCoverage.flatMap(item => [item.question, item.answer ?? '']),
+      ...play.documents.flatMap(item => [item.title, item.path, item.content])].join('\n').toLowerCase(),
+  ])), [report])
   const matches = (play: ResearchPlay) => {
-    const titleMatch = [play.title, play.id, play.summary]
-      .join(' ')
-      .toLowerCase()
-      .includes(q)
+    const titleMatch = searchText.get(play.id)!.includes(q)
     return (
       (status === 'all' && titleMatch) ||
       play.claims.some((claim) =>
@@ -153,12 +160,12 @@ export function ResearchReport({
       </header>
       <div className="rr-controls">
         <label className="ui-field">
-          <span className="ui-label">Find a play or claim</span>
+          <span className="ui-label">Search research</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Claim, source, play…"
+            placeholder="Question, result, source, or document…"
           />
         </label>
         <label className="ui-field">
@@ -274,6 +281,8 @@ function PlayReport({
   printOnly?: boolean
 }) {
   const [selection, setSelection] = useState<RecordSelection>()
+  const [documentSelection, setDocumentSelection] = useState<DocumentSelection>()
+  const documents = useRef<HTMLDivElement>(null)
   const trace = useRef<HTMLDivElement>(null)
   const uid = useId()
   const download = useDownload()
@@ -292,7 +301,13 @@ function PlayReport({
     trace.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
     trace.current?.focus({ preventScroll: true })
   }
+  function openDocument(next: DocumentSelection) {
+    setDocumentSelection(next)
+    documents.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    documents.current?.focus({ preventScroll: true })
+  }
   return (
+    <DocumentContext.Provider value={{ documents: play.documents, open: openDocument }}>
     <section className="rr-play" aria-labelledby={uid}>
       <header>
         <div className="rr-play-heading">
@@ -323,6 +338,8 @@ function PlayReport({
           )}
         </p>
         <p className="rr-play-summary">{play.summary}</p>
+        {play.metrics.length > 0 && <dl className="rr-metrics" aria-label="Recorded measurements">{play.metrics.map(metric => <div key={metric.id}><dt>{metric.label}</dt><dd>{metric.value ?? 'Unknown'}{metric.value !== null && metric.unit ? ` ${metric.unit}` : ''}</dd>{metric.coverage && <small>{metric.coverage}</small>}{metric.source && <Sources sources={[metric.source]} inspect={inspect} printOnly={printOnly} />}</div>)}</dl>}
+        {!printOnly && <nav className="rr-section-links" aria-label="Play sections"><a href={`#${uid}-questions`}>Questions and answers</a>{play.documents.length > 0 && <a href={`#${uid}-knowledge`}>Knowledge base · {play.documents.length} files</a>}<a href={`#${uid}-trace`}>Trace and topology</a></nav>}
         {play.limitations.length > 0 && (
           <ul className="rr-limitations">
             {play.limitations.map((item, i) => (
@@ -404,14 +421,18 @@ function PlayReport({
         </section>
       )}
       {play.questionCoverage.length > 0 && (
+        <div id={`${uid}-questions`}>
         <Questions
           questions={play.questionCoverage}
           inspect={inspect}
           printOnly={printOnly}
         />
+        </div>
       )}
+      {!printOnly && play.documents.length > 0 && <div id={`${uid}-knowledge`} ref={documents} tabIndex={-1} className="rr-knowledge-section"><h3>Knowledge base</h3><p className="rr-meta">Read retained reports, research notes, and code. Search uses the text included in this snapshot; it does not generate new answers.</p><KnowledgeBrowser documents={play.documents} selection={documentSelection} onSelect={setDocumentSelection} /></div>}
       {!printOnly && (
         <div
+          id={`${uid}-trace`}
           className="rr-trace"
           ref={trace}
           tabIndex={-1}
@@ -453,6 +474,7 @@ function PlayReport({
         </p>
       )}
     </section>
+    </DocumentContext.Provider>
   )
 }
 
@@ -505,6 +527,7 @@ function Sources({
   inspect: (eventId: string) => void
   printOnly: boolean
 }) {
+  const documents = useContext(DocumentContext)
   return (
     <details className="rr-sources" open={printOnly || undefined}>
       <summary>
@@ -526,6 +549,7 @@ function Sources({
                 {source.line ? ':' + source.line : ''}
               </code>
             )}
+            {!printOnly && source.path && resolveDocument(documents.documents, source.path) && <button className="ui-button" type="button" onClick={() => documents.open({ path: resolveDocument(documents.documents, source.path!)!.path, line: source.line })}>Read retained document</button>}
             {source.sha256 && (
               <small>
                 SHA-256 <code>{source.sha256}</code>
