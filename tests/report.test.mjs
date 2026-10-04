@@ -259,3 +259,30 @@ test('playback uses recorded timestamps, explicit speed, and clamps at the endpo
   assert.equal(advancePlayback({ ...base, elapsedMs: 900000 }), 301000)
   assert.equal(advancePlayback({ ...base, elapsedMs: -100 }), 1000)
 })
+
+test('retained documents and unknown measurements survive JSON and summary export', () => {
+  const input = raw()
+  input.plays[0].documents = [{ id:'doc', path:'notes/a.md', title:'Original notes', content:'# Finding\nBody', sha256:'a'.repeat(64), originalPath:'/private/a.md' }]
+  input.plays[0].metrics = [{ id:'cost',label:'Billed cost',value:null,coverage:'No invoice join',knownness:'unmeasured',source:{path:'notes/a.md'} }]
+  const parsed = parseResearchReport(input)
+  assert.equal(parsed.plays[0].documents[0].originalPath, '/private/a.md')
+  assert.equal(parsed.plays[0].metrics[0].knownness, 'unmeasured')
+  const latex = reportToLatex(parsed)
+  assert.match(latex, /Billed cost: Unknown/)
+  assert.match(latex, /No invoice join/)
+  assert.match(latex, /Original notes/)
+  assert.match(latex, /Full document contents are retained/)
+  input.plays[0].documents.push({...input.plays[0].documents[0],id:'second'})
+  assert.throws(() => parseResearchReport(input), /Document paths must be unique/)
+})
+
+test('untrusted retained Markdown renders offline without executable HTML or remote images', () => {
+  const input = raw()
+  input.plays[0].documents = [{id:'doc',path:'test.md',title:'Untrusted document',content:'# Report\n<script>window.compromised=true</script>\n\n![remote](https://example.test/pixel)\n\n[execute](javascript:alert(1))\n\n$600/kg against $800/kW\n\n$$\nE=mc^2\n$$'}]
+  const html = renderReportHtml(parseResearchReport(input), {css:'',script:''})
+  const rendered = html.split('<script id="research-report-data"')[0]
+  assert.doesNotMatch(rendered, /<script>|<img[^>]+example|href="javascript:/)
+  assert.match(rendered, /<math /)
+  assert.match(rendered, /\$600\/kg against \$800\/kW/)
+  assert.match(rendered, /Source fingerprint|Untrusted document/)
+})

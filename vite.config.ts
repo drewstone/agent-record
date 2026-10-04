@@ -15,7 +15,7 @@ export default defineConfig({
       fileName: (_format, name) => `${name}.js`,
     },
     rolldownOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime', 'zod'],
+      external: ['react', 'react-dom', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
     },
   },
 })

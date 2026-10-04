@@ -89,6 +89,25 @@ const observationSchema = z.object({
   evidence: z.array(evidenceReferenceSchema),
 })
 
+/** Retained UTF-8 documents. Content is data, never executable HTML. */
+export const researchDocumentSchema = z.object({
+  id: z.string().min(1),
+  path: z.string().min(1),
+  title: z.string().min(1),
+  content: z.string(),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+  kind: z.enum(['knowledge', 'report', 'code', 'data']).default('knowledge'),
+}).catchall(z.unknown())
+
+export const researchMetricSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  value: z.string().nullable(),
+  unit: z.string().optional(),
+  coverage: z.string().optional(),
+  source: evidenceReferenceSchema.optional(),
+}).catchall(z.unknown())
+
 /** Versioned editorial annotations sit beside records; they never change recorded events. */
 export const researchReportSchema = z
   .object({
@@ -125,6 +144,8 @@ export const researchReportSchema = z
           observations: z.array(observationSchema).default([]),
           questionCoverage: z.array(questionSchema).default([]),
           record: recordSchema.optional(),
+          documents: z.array(researchDocumentSchema).default([]),
+          metrics: z.array(researchMetricSchema).default([]),
         })
         .catchall(z.unknown()),
     ),
@@ -167,7 +188,15 @@ export const researchReportSchema = z
           path: ['plays', i, 'claims'],
           message: 'Claim IDs must be unique within a play',
         })
+      for (const field of ['documents', 'metrics'] as const)
+        if (new Set(play[field].map((item) => item.id)).size !== play[field].length)
+          ctx.addIssue({ code: 'custom', path: ['plays', i, field], message: 'IDs must be unique within a section' })
+      if (new Set(play.documents.map((item) => item.path)).size !== play.documents.length)
+        ctx.addIssue({ code: 'custom', path: ['plays', i, 'documents'], message: 'Document paths must be unique within a play' })
       const events = new Set(play.record?.events.map((event) => event.id))
+      for (const [j, metric] of play.metrics.entries())
+        if (metric.source?.eventId && !events.has(metric.source.eventId))
+          ctx.addIssue({ code: 'custom', path: ['plays', i, 'metrics', j, 'source', 'eventId'], message: 'Evidence event must exist in this play record' })
       for (const field of ['observations', 'questionCoverage'] as const) {
         if (
           new Set(play[field].map((item) => item.id)).size !==
@@ -207,6 +236,8 @@ export const researchReportSchema = z
 
 export type ResearchReportData = z.infer<typeof researchReportSchema>
 export type ResearchPlay = ResearchReportData['plays'][number]
+export type ResearchDocument = z.infer<typeof researchDocumentSchema>
+export type ResearchMetric = z.infer<typeof researchMetricSchema>
 export type ResearchClaim = ResearchPlay['claims'][number]
 export type EvidenceReference = z.infer<typeof evidenceReferenceSchema>
 export type QuestionCoverage = z.infer<typeof questionSchema>
@@ -368,6 +399,15 @@ export function reportToLatex(
       ),
       paragraph(play.summary),
       list(play.limitations),
+      ...(play.metrics.length ? ['\\subsection*{Recorded measurements}', ...play.metrics.flatMap(metric => [
+        paragraph(metric.label + ': ' + (metric.value ?? 'Unknown') + (metric.value !== null && metric.unit ? ' ' + metric.unit : '')),
+        metric.coverage ? paragraph(metric.coverage) : '',
+        metric.source ? list([source(metric.source)]) : '',
+      ])] : []),
+      ...(play.documents.length ? ['\\subsection*{Retained documents}',
+        paragraph('Full document contents are retained in the HTML reader and JSON download. This summary lists their source identities.'),
+        list(play.documents.map(document => document.title + ' · ' + document.path + (document.sha256 ? ' · SHA-256 ' + document.sha256 : ' · hash unknown'))),
+      ] : []),
       ...play.claims.flatMap((claim) => [
         '\\subsection{' + text(claim.status + ': ' + claim.statement) + '}',
         claim.method ? paragraph('Method: ' + claim.method) : '',
