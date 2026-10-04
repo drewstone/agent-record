@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageText, StructuredContent } from './StructuredContent.js'
+import { VirtualList } from './VirtualList.js'
 import type { RecordEvent } from '../record.js'
 import {
   callsOf,
@@ -20,13 +21,17 @@ function ToolIcon({ name }: { name: string }) {
     ? 'M10.5 2.5l3 3-8 8-3.5.5.5-3.5zM9 4l3 3'
     : /search|grep|find/.test(lower)
       ? 'M10 10l3.5 3.5M11 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0'
-      : /bash|shell|exec|run/.test(lower)
+      : /bash|shell|exec|run|command/.test(lower)
         ? 'M2 3h12v10H2zM4 6l2 2-2 2M8 10h4'
         : /read|get|list/.test(lower)
           ? 'M3.5 2h6l3 3v9h-9zM9.5 2v3h3M5.5 8h5M5.5 10.5h5'
           : /web|fetch|http/.test(lower)
             ? 'M13.5 8a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0M2.5 8h11M8 2.5c2 3 2 8 0 11c-2-3-2-8 0-11'
-            : 'M10 8a2 2 0 1 0-4 0 2 2 0 0 0 4 0'
+            : /await|wait|sleep|poll/.test(lower)
+              ? 'M8 2.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11M8 5v3l2 1.5'
+              : /spawn|agent|task|delegate|message/.test(lower)
+                ? 'M5 5.5a2 2 0 1 0 0-.1M11 5.5a2 2 0 1 0 0-.1M2 13c.5-2 1.7-3 3-3s2.5 1 3 3M8 13c.5-2 1.7-3 3-3s2.5 1 3 3'
+                : 'M10 8a2 2 0 1 0-4 0 2 2 0 0 0 4 0'
   return (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
       <path
@@ -41,6 +46,13 @@ function ToolIcon({ name }: { name: string }) {
   )
 }
 
+export interface EventFlag {
+  dimension: string
+  label: string
+  polarity: string
+  title: string
+}
+
 interface ConversationProps {
   index: RecordIndex
   actor: string
@@ -49,6 +61,47 @@ interface ConversationProps {
   category: string
   selected?: string
   inspect: (event: RecordEvent, source?: boolean) => void
+  /** Open the full text of a clipped body by its source hash. */
+  openSource?: (sha256: string, event: RecordEvent) => void
+  /** Assessment labels that cite an event, drawn in the message gutter. */
+  flags?: ReadonlyMap<string, readonly EventFlag[]>
+  onFlag?: (flag: EventFlag, event: RecordEvent) => void
+  /** Show lifecycle events (spawn, pause, settle) between messages. */
+  lifecycle?: boolean
+}
+
+type Clip = { bytes: number; sha256: string | null }
+/** `mcp__server__tool` reads as `tool`; the full name stays in the title. */
+const toolName = (name: string) => (name.startsWith('mcp__') ? name.slice(name.lastIndexOf('__') + 2) || name : name)
+const clipOf = (value: unknown): Clip | undefined =>
+  value && typeof value === 'object' && 'bytes' in value ? (value as Clip) : undefined
+const isLifecycle = (event: RecordEvent) =>
+  event.category === 'lifecycle' || event.detail.lifecycle !== undefined
+
+/** A clipped body with a control that opens its full source text. */
+function FullOutput({
+  clip,
+  open,
+  children,
+}: {
+  clip?: Clip
+  open?: (sha256: string) => void
+  children: React.ReactNode
+}) {
+  if (!clip) return <>{children}</>
+  return (
+    <>
+      {children}
+      <p className="clip-note">
+        <span>{new Intl.NumberFormat('en-US').format(clip.bytes)} bytes, middle omitted.</span>
+        {clip.sha256 && open ? (
+          <button type="button" className="ui-button" data-load-full={clip.sha256} onClick={() => open(clip.sha256!)}>
+            Full output
+          </button>
+        ) : null}
+      </p>
+    </>
+  )
 }
 
 export function Conversation({
@@ -59,10 +112,15 @@ export function Conversation({
   category,
   selected,
   inspect,
+  openSource,
+  flags,
+  onFlag,
+  lifecycle = false,
 }: ConversationProps) {
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const scroll = useRef<HTMLDivElement>(null)
-  const elements = useRef(new Map<string, HTMLElement>())
+  const opener = (event: RecordEvent) => (openSource ? (sha256: string) => openSource(sha256, event) : undefined)
+
   const setOpen = (key: string, open: boolean) =>
     setOpened((current) => {
       if (current.has(key) === open) return current
@@ -71,10 +129,6 @@ export function Conversation({
       else next.delete(key)
       return next
     })
-  const bind = (id: string) => (element: HTMLElement | null) => {
-    if (element) elements.current.set(id, element)
-    else elements.current.delete(id)
-  }
   const paired = (event: RecordEvent, call: ToolCall) => {
     const key = toolKey(event.node, call.id)
     return index.calls.get(key)?.length === 1
@@ -85,6 +139,7 @@ export function Conversation({
     () =>
       (index.byActor.get(actor) ?? []).filter((event) => {
         if (ms(event.at) > cutoff) return false
+        if (isLifecycle(event)) return lifecycle && eventMatches(event, index, query, category)
         if (event.detail.toolCallId !== undefined) {
           const matching = index.calls.get(
             toolKey(event.node, event.detail.toolCallId),
@@ -96,9 +151,13 @@ export function Conversation({
         if (!(
           event.detail.role ||
           textOf(event) ||
+          event.detail.reasoning ||
           event.detail.responseStatus === 'error' ||
           calls.length
         ))
+          return false
+        // A turn whose only content was redacted thinking has nothing to read; its usage stays in the charts.
+        if (event.detail.role === 'assistant' && !textOf(event) && !event.detail.reasoning && !calls.length && event.detail.responseStatus !== 'error' && !event.detail.contentOmitted)
           return false
         if (eventMatches(event, index, query, category)) return true
         return calls.some((call) => {
@@ -113,15 +172,26 @@ export function Conversation({
           )
         })
       }),
-    [index, actor, cutoff, query, category],
+    [index, actor, cutoff, query, category, lifecycle],
   )
-  const tools = items.flatMap((event) =>
-    callsOf(event).map((call) => `tool:${event.id}:${call.id}`),
+  const tools = useMemo(
+    () => items.flatMap((event) => callsOf(event).map((call) => `tool:${event.id}:${call.id}`)),
+    [items],
   )
   const allExpanded = tools.length > 0 && tools.every((key) => opened.has(key))
   const retained = (index.byActor.get(actor) ?? []).some(
-    (item) => item.detail.role || textOf(item) || callsOf(item).length,
+    (item) => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length),
   )
+  // The row that holds the selected event: a paired result renders inside its call.
+  const target = useMemo(() => {
+    if (!selected) return undefined
+    const event = index.byEvent.get(selected)
+    if (event?.detail.toolCallId !== undefined) {
+      const calls = index.calls.get(toolKey(event.node, event.detail.toolCallId))
+      if (calls?.length === 1) return calls[0]!.event.id
+    }
+    return selected
+  }, [selected, index])
 
   useEffect(() => {
     if (scroll.current) scroll.current.scrollTop = 0
@@ -130,7 +200,7 @@ export function Conversation({
     if (!selected) return
     const event = index.byEvent.get(selected)
     if (!event) return
-    const keys = [`prompt:${selected}`]
+    const keys = [`prompt:${selected}`, `reasoning:${selected}`]
     if (event.detail.toolCallId !== undefined)
       for (const match of index.calls.get(
         toolKey(event.node, event.detail.toolCallId),
@@ -139,15 +209,6 @@ export function Conversation({
     for (const call of callsOf(event)) keys.push(`tool:${event.id}:${call.id}`)
     setOpened((current) => new Set([...current, ...keys]))
   }, [selected, index])
-  useEffect(() => {
-    const element = selected ? elements.current.get(selected) : undefined
-    const container = scroll.current
-    if (!element || !container) return
-    const box = element.getBoundingClientRect(),
-      viewport = container.getBoundingClientRect()
-    if (box.top < viewport.top || box.bottom > viewport.bottom)
-      container.scrollTop += box.top - viewport.top - 8
-  }, [selected, actor, opened])
 
   const sourceButton = (event: RecordEvent) => (
     <button
@@ -160,28 +221,306 @@ export function Conversation({
       Details
     </button>
   )
+  const flagMarks = (event: RecordEvent) => {
+    const marks = flags?.get(event.id)
+    if (!marks?.length) return null
+    return (
+      <span className="event-flags">
+        {marks.map((flag) => (
+          <button
+            key={`${flag.dimension}:${flag.label}`}
+            type="button"
+            className={`event-flag polarity-${flag.polarity}`}
+            title={flag.title}
+            data-flag={flag.dimension}
+            onClick={() => onFlag?.(flag, event)}
+          >
+            {flag.dimension}
+          </button>
+        ))}
+      </span>
+    )
+  }
+  const keyOf = useCallback((event: RecordEvent) => event.id, [])
+  const estimate = useCallback(
+    (event: RecordEvent) => (isLifecycle(event) ? 34 : !textOf(event) && callsOf(event).length ? 8 + 40 * callsOf(event).length : 150),
+    [],
+  )
+  const render = (event: RecordEvent) => {
+    if (isLifecycle(event)) {
+      const text = textOf(event)
+      return (
+        <article
+          className={`lifecycle-note ${selected === event.id ? 'selected' : ''} ${event.detail.isError ? 'lifecycle-error' : ''}`}
+          data-entry={event.id}
+          data-message={event.id}
+        >
+          <time dateTime={event.at}>{utcTime(event.at)}</time>
+          <strong>{event.label}</strong>
+          {text && <span className="lifecycle-text">{compact(text).slice(0, 280)}</span>}
+          {flagMarks(event)}
+          {sourceButton(event)}
+        </article>
+      )
+    }
+    const message = textOf(event),
+      calls = callsOf(event)
+    const reasoning = typeof event.detail.reasoning === 'string' ? event.detail.reasoning : ''
+    const user = event.detail.role === 'user',
+      failed = event.detail.responseStatus === 'error'
+    const finding = event.detail.recordedClaim !== undefined
+    const standalone =
+      event.detail.toolCallId !== undefined ||
+      event.detail.role === 'toolResult'
+    const title = user
+      ? 'Assignment'
+      : finding
+        ? 'Recorded finding'
+        : failed
+          ? 'Request failed'
+          : standalone
+            ? 'Tool result'
+            : event.detail.role === 'assistant'
+              ? 'Agent'
+              : (event.detail.role ?? 'Event')
+    const promptKey = `prompt:${event.id}`
+    const reasoningKey = `reasoning:${event.id}`
+    const clip = clipOf(event.detail.clip)
+    return (
+      <article
+        className={[
+          'chat-message',
+          user && 'assignment-message',
+          !message && !failed && calls.length && 'tool-turn',
+          finding && 'finding-message',
+          failed && 'error-message',
+          selected === event.id && 'selected',
+          flags?.has(event.id) && 'flagged',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        data-entry={event.id}
+        data-message={event.id}
+        data-message-node={event.node}
+      >
+        {(message || failed || standalone || reasoning || !calls.length) && (
+          <header className="message-heading">
+            <span className="message-mark" aria-hidden="true">
+              {user ? '↳' : finding ? '◇' : failed ? '!' : standalone ? '↵' : '·'}
+            </span>
+            <strong>{title}</strong>
+            <time dateTime={event.at}>{utcTime(event.at)}</time>
+            {flagMarks(event)}
+            {sourceButton(event)}
+          </header>
+        )}
+        {reasoning && (
+          <details
+            className="reasoning-body"
+            open={opened.has(reasoningKey)}
+            onToggle={(e) => setOpen(reasoningKey, e.currentTarget.open)}
+          >
+            <summary>
+              <span>Reasoning</span>
+              <span className="reasoning-preview">{compact(reasoning).slice(0, 160)}</span>
+            </summary>
+            {opened.has(reasoningKey) && <MessageText text={reasoning} />}
+          </details>
+        )}
+        {user && message ? (
+          <details
+            className="prompt-body"
+            data-open-key={promptKey}
+            open={opened.has(promptKey)}
+            onToggle={(e) => setOpen(promptKey, e.currentTarget.open)}
+          >
+            <summary>
+              <span>
+                {compact(message).slice(0, 210)}
+                {compact(message).length > 210 ? '…' : ''}
+              </span>
+              <span className="prompt-toggle">
+                {opened.has(promptKey) ? 'Collapse prompt' : 'Full prompt'}
+              </span>
+            </summary>
+            {opened.has(promptKey) && (
+              <FullOutput clip={clip} open={opener(event)}>
+                <MessageText text={message} />
+              </FullOutput>
+            )}
+          </details>
+        ) : standalone ? (
+          <div className="standalone-output">
+            <FullOutput clip={clip} open={opener(event)}>
+              <StructuredContent text={message || event.detail.contentOmitted || event.detail.publicationNote || 'No result text was retained for this event.'} />
+            </FullOutput>
+            {event.detail.toolCallId !== undefined &&
+              (index.calls.get(toolKey(event.node, event.detail.toolCallId))?.length ?? 0) > 1 && (
+                <p className="publication-note">
+                  Several calls share this identifier in this session.
+                  This result cannot be paired unambiguously.
+                </p>
+              )}
+          </div>
+        ) : message ? (
+          <FullOutput clip={calls.length ? undefined : clip} open={opener(event)}>
+            <MessageText text={message} />
+          </FullOutput>
+        ) : failed ? (
+          <p className="recorded-error">
+            The request failed. No assistant response is present in this record.
+          </p>
+        ) : !calls.length && !reasoning ? (
+          <p className="publication-note">
+            {event.detail.contentOmitted ?? 'No text body is present in this record.'}
+          </p>
+        ) : null}
+        {event.detail.publicationNote && (
+          <p className="publication-note">{event.detail.publicationNote}</p>
+        )}
+        {finding && event.detail.assessment && (
+          <p className="publication-note">{event.detail.assessment}</p>
+        )}
+        {calls.length > 0 && (
+          <div className="tool-stack">
+            {calls.map((call) => {
+              const allResults = paired(event, call)
+              const returned = allResults.filter((result) => ms(result.at) <= cutoff)
+              const last = returned.at(-1),
+                later = allResults.some((result) => ms(result.at) > cutoff)
+              const ambiguous = (index.calls.get(toolKey(event.node, call.id))?.length ?? 0) > 1
+              const state = ambiguous
+                ? 'ambiguous'
+                : last
+                  ? last.detail.isError
+                    ? 'error'
+                    : 'returned'
+                  : later
+                    ? 'pending'
+                    : 'missing'
+              const recorded = typeof last?.detail.durationMs === 'number' ? last.detail.durationMs : null
+              const duration = recorded ?? (last && last.detail.atBasis !== 'carried' ? ms(last.at) - ms(event.at) : null)
+              const key = `tool:${event.id}:${call.id}`
+              const open = opened.has(key)
+              const callClip = clipOf((call as { clip?: unknown }).clip)
+              const resultFlags = returned.some((result) => flags?.has(result.id))
+              return (
+                <details
+                  key={call.id}
+                  className={`tool-execution ${resultFlags ? 'flagged' : ''}`}
+                  data-tool-call={call.id}
+                  data-open-key={key}
+                  data-call-at={event.at}
+                  data-return-at={last?.at}
+                  data-status={state}
+                  open={open}
+                  onToggle={(e) => setOpen(key, e.currentTarget.open)}
+                >
+                  <summary>
+                    <span className="execution-icon">
+                      <ToolIcon name={call.name} />
+                    </span>
+                    <span className="execution-name" title={call.name}>{toolName(call.name)}</span>
+                    <span className="execution-preview" title={preview(call)}>
+                      {preview(call)}
+                    </span>
+                    <span className="execution-time" data-tool-duration title="Recorded time from call to result">
+                      {duration !== null && duration >= 0 ? interval(duration) : ''}
+                    </span>
+                    {!message && flagMarks(event)}
+                    <span className="execution-status" data-tool-status>
+                      {state === 'error'
+                        ? 'Error'
+                        : state === 'returned'
+                          ? 'Returned'
+                          : state === 'pending'
+                            ? 'Not returned'
+                            : state === 'ambiguous'
+                              ? 'Ambiguous'
+                              : 'No result'}
+                    </span>
+                  </summary>
+                  {open && (
+                    <div className="execution-detail">
+                      <section className="execution-input">
+                        <header>
+                          <span>Input</span>
+                          {flagMarks(event)}
+                          {sourceButton(event)}
+                        </header>
+                        <FullOutput clip={callClip} open={opener(event)}>
+                          <StructuredContent text={call.input ?? 'Tool arguments are absent from this record.'} rawLabel="Raw input" />
+                        </FullOutput>
+                        {call.publicationNote && <p className="publication-note">{call.publicationNote}</p>}
+                      </section>
+                      {returned.map((result) => (
+                        <section
+                          key={result.id}
+                          className={`execution-output ${selected === result.id ? 'selected' : ''}`}
+                          data-message={result.id}
+                          data-result-at={result.at}
+                          data-result-error={String(result.detail.isError === true)}
+                        >
+                          <header>
+                            <span>{result.detail.isError ? 'Error' : 'Output'}</span>
+                            <time dateTime={result.at}>{utcTime(result.at)}</time>
+                            {flagMarks(result)}
+                            {sourceButton(result)}
+                          </header>
+                          <FullOutput clip={clipOf(result.detail.clip)} open={opener(result)}>
+                            <StructuredContent text={textOf(result) || result.detail.contentOmitted || 'No output text is present in this record.'} rawLabel="Raw result" />
+                          </FullOutput>
+                          {result.detail.publicationNote && <p className="publication-note">{result.detail.publicationNote}</p>}
+                          {ms(result.at) < ms(event.at) && (
+                            <p className="publication-note">
+                              The recorded result precedes its call. Timing is unavailable.
+                            </p>
+                          )}
+                        </section>
+                      ))}
+                      {(later || !returned.length) && (
+                        <p className="result-pending" data-result-pending>
+                          {ambiguous
+                            ? 'Several calls share this identifier in this session. Results remain separate.'
+                            : later
+                              ? 'The result had not returned at the selected time.'
+                              : 'No matching result was retained. Completion is unknown.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </details>
+              )
+            })}
+          </div>
+        )}
+      </article>
+    )
+  }
   return (
     <>
-      {tools.length > 0 && <div className="conversation-toolbar">
-        <button
-          type="button"
-          className="tool-expansion"
-          data-expand-tools
-          aria-pressed={allExpanded}
-          disabled={!tools.length}
-          onClick={() =>
-            setOpened((current) => {
-              const next = new Set(current)
-              for (const key of tools)
-                if (allExpanded) next.delete(key)
-                else next.add(key)
-              return next
-            })
-          }
-        >
-          {allExpanded ? 'Collapse tools' : 'Expand tools'}
-        </button>
-      </div>}
+      {tools.length > 0 && (
+        <div className="conversation-toolbar">
+          <button
+            type="button"
+            className="tool-expansion"
+            data-expand-tools
+            aria-pressed={allExpanded}
+            disabled={!tools.length}
+            onClick={() =>
+              setOpened((current) => {
+                const next = new Set(current)
+                for (const key of tools)
+                  if (allExpanded) next.delete(key)
+                  else next.add(key)
+                return next
+              })
+            }
+          >
+            {allExpanded ? 'Collapse tools' : 'Expand tools'}
+          </button>
+        </div>
+      )}
       <div
         className="conversation-scroll"
         data-chat
@@ -198,251 +537,7 @@ export function Conversation({
                 : 'Conversation not retained. Its absence does not mean the agent did no work.'}
           </p>
         )}
-        {items.map((event) => {
-          const message = textOf(event),
-            calls = callsOf(event)
-          const user = event.detail.role === 'user',
-            failed = event.detail.responseStatus === 'error'
-          const finding = event.detail.recordedClaim !== undefined
-          const standalone =
-            event.detail.toolCallId !== undefined ||
-            event.detail.role === 'toolResult'
-          const title = user
-            ? 'Assignment'
-            : finding
-              ? 'Recorded finding'
-              : failed
-                ? 'Request failed'
-                : standalone
-                  ? 'Tool result'
-                  : event.detail.role === 'assistant'
-                    ? 'Agent'
-                    : (event.detail.role ?? 'Event')
-          const promptKey = `prompt:${event.id}`
-          return (
-            <article
-              key={event.id}
-              ref={bind(event.id)}
-              className={[
-                'chat-message',
-                user && 'assignment-message',
-                !message && !failed && calls.length && 'tool-turn',
-                finding && 'finding-message',
-                failed && 'error-message',
-                selected === event.id && 'selected',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              data-entry={event.id}
-              data-message={event.id}
-              data-message-node={event.node}
-            >
-              {(message || failed || standalone || !calls.length) && (
-                <header className="message-heading">
-                  <span className="message-mark" aria-hidden="true">
-                    {user
-                      ? '↳'
-                      : finding
-                        ? '◇'
-                        : failed
-                          ? '!'
-                          : standalone
-                            ? '↵'
-                            : '·'}
-                  </span>
-                  <strong>{title}</strong>
-                  <time dateTime={event.at}>{utcTime(event.at)}</time>
-                  {sourceButton(event)}
-                </header>
-              )}
-              {user && message ? (
-                <details
-                  className="prompt-body"
-                  data-open-key={promptKey}
-                  open={opened.has(promptKey)}
-                  onToggle={(e) => setOpen(promptKey, e.currentTarget.open)}
-                >
-                  <summary>
-                    <span>
-                      {compact(message).slice(0, 210)}
-                      {compact(message).length > 210 ? '…' : ''}
-                    </span>
-                    <span className="prompt-toggle">
-                      {opened.has(promptKey)
-                        ? 'Collapse prompt'
-                        : 'Full prompt'}
-                    </span>
-                  </summary>
-                  <MessageText text={message} />
-                </details>
-              ) : standalone ? (
-                <div className="standalone-output">
-                  <StructuredContent text={message || event.detail.contentOmitted || event.detail.publicationNote || 'No result text was retained for this event.'} />
-                  {event.detail.toolCallId !== undefined &&
-                    (index.calls.get(
-                      toolKey(event.node, event.detail.toolCallId),
-                    )?.length ?? 0) > 1 && (
-                      <p className="publication-note">
-                        Several calls share this identifier in this session.
-                        This result cannot be paired unambiguously.
-                      </p>
-                    )}
-                </div>
-              ) : message ? (
-                <MessageText text={message} />
-              ) : failed ? (
-                <p className="recorded-error">
-                  The request failed. No assistant response is present in this
-                  record.
-                </p>
-              ) : !calls.length ? (
-                <p className="publication-note">
-                  {event.detail.contentOmitted ??
-                    'No text body is present in this record.'}
-                </p>
-              ) : null}
-              {event.detail.publicationNote && (
-                <p className="publication-note">
-                  {event.detail.publicationNote}
-                </p>
-              )}
-              {finding && event.detail.assessment && (
-                <p className="publication-note">{event.detail.assessment}</p>
-              )}
-              {calls.length > 0 && (
-                <div className="tool-stack">
-                  {calls.map((call) => {
-                    const allResults = paired(event, call)
-                    const returned = allResults.filter(
-                      (result) => ms(result.at) <= cutoff,
-                    )
-                    const last = returned.at(-1),
-                      later = allResults.some(
-                        (result) => ms(result.at) > cutoff,
-                      )
-                    const ambiguous =
-                      (index.calls.get(toolKey(event.node, call.id))?.length ??
-                        0) > 1
-                    const state = ambiguous
-                      ? 'ambiguous'
-                      : last
-                        ? last.detail.isError
-                          ? 'error'
-                          : 'returned'
-                        : later
-                          ? 'pending'
-                          : 'missing'
-                    const duration = last ? ms(last.at) - ms(event.at) : null
-                    const key = `tool:${event.id}:${call.id}`
-                    return (
-                      <details
-                        key={call.id}
-                        className="tool-execution"
-                        data-tool-call={call.id}
-                        data-open-key={key}
-                        data-call-at={event.at}
-                        data-return-at={last?.at}
-                        data-status={state}
-                        open={opened.has(key)}
-                        onToggle={(e) => setOpen(key, e.currentTarget.open)}
-                      >
-                        <summary>
-                          <span className="execution-icon">
-                            <ToolIcon name={call.name} />
-                          </span>
-                          <span className="execution-name">{call.name}</span>
-                          <span
-                            className="execution-preview"
-                            title={preview(call)}
-                          >
-                            {preview(call)}
-                          </span>
-                          <span
-                            className="execution-time"
-                            data-tool-duration
-                            title="Observed interval from tool call to result"
-                          >
-                            {duration !== null && duration >= 0
-                              ? interval(duration)
-                              : ''}
-                          </span>
-                          <span className="execution-status" data-tool-status>
-                            {state === 'error'
-                              ? 'Error'
-                              : state === 'returned'
-                                ? 'Returned'
-                                : state === 'pending'
-                                  ? 'Not returned'
-                                  : state === 'ambiguous'
-                                    ? 'Ambiguous'
-                                    : 'No result'}
-                          </span>
-                        </summary>
-                        <div className="execution-detail">
-                          <section className="execution-input">
-                            <header>
-                              <span>Input</span>
-                              {sourceButton(event)}
-                            </header>
-                            <StructuredContent text={call.input ?? 'Tool arguments are absent from this record.'} rawLabel="Raw input" />
-                            {call.publicationNote && (
-                              <p className="publication-note">
-                                {call.publicationNote}
-                              </p>
-                            )}
-                          </section>
-                          {returned.map((result) => (
-                            <section
-                              key={result.id}
-                              ref={bind(result.id)}
-                              className={`execution-output ${selected === result.id ? 'selected' : ''}`}
-                              data-message={result.id}
-                              data-result-at={result.at}
-                              data-result-error={String(
-                                result.detail.isError === true,
-                              )}
-                            >
-                              <header>
-                                <span>
-                                  {result.detail.isError ? 'Error' : 'Output'}
-                                </span>
-                                <time dateTime={result.at}>
-                                  {utcTime(result.at)}
-                                </time>
-                                {sourceButton(result)}
-                              </header>
-                              <StructuredContent text={textOf(result) || result.detail.contentOmitted || 'No output text is present in this record.'} rawLabel="Raw result" />
-                              {result.detail.publicationNote && (
-                                <p className="publication-note">
-                                  {result.detail.publicationNote}
-                                </p>
-                              )}
-                              {ms(result.at) < ms(event.at) && (
-                                <p className="publication-note">
-                                  The recorded result precedes its call. Timing
-                                  is unavailable.
-                                </p>
-                              )}
-                            </section>
-                          ))}
-                          {(later || !returned.length) && (
-                            <p className="result-pending" data-result-pending>
-                              {ambiguous
-                                ? 'Several calls share this identifier in this session. Results remain separate.'
-                                : later
-                                  ? 'The result had not returned at the selected time.'
-                                  : 'No matching result was retained. Completion is unknown.'}
-                            </p>
-                          )}
-                        </div>
-                      </details>
-                    )
-                  })}
-                </div>
-              )}
-            </article>
-          )
-        })}
+        <VirtualList items={items} keyOf={keyOf} render={render} scroller={scroll} target={target} estimate={estimate} />
       </div>
     </>
   )
