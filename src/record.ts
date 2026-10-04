@@ -125,9 +125,8 @@ export const recordSchema = z
       .catchall(z.unknown())
       .default({
         completeOriginalCapture: false,
-        publicContent:
-          'Content supplied by the host application; publication review is not established by this viewer.',
-        categoryMethod: 'Categories supplied by the producer.',
+        publicContent: '',
+        categoryMethod: '',
         cost: 'Unknown',
       }),
   })

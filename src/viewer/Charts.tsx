@@ -471,8 +471,8 @@ export function UsageChart({
       )}
       <p className="small" data-token-caption>
         {metric === 'tool-time'
-          ? `${points.length} exact call/result intervals through the selected time. ${measured.ambiguous} unmatched or ambiguous results; ${measured.invalidTiming} invalid intervals omitted. This is observed tool return time, not model latency.`
-          : `${points.length} responses with measured usage; ${measured.incomplete} have incomplete counters. ${channels.map((channel) => `${channelLabels[channel]} ${counts[channel] ? fmt(totals[channel]) : 'unknown'} (${counts[channel]} measured)`).join(' · ')}. Missing counters remain unknown. Repeated and cached context can count repeatedly; tokens are not billed cost.`}
+          ? `Observed tool return time, not model latency.${measured.ambiguous || measured.invalidTiming ? ' Unmatched, ambiguous and out-of-order results are omitted.' : ''}`
+          : `${channels.map((channel) => `${channelLabels[channel]} ${counts[channel] ? fmt(totals[channel]) : 'unknown'}`).join(' · ')}.${measured.incomplete ? ' Some responses lack counters, so these totals are lower bounds.' : ''} Context repeated across responses is counted each time; tokens are not billed cost.`}
       </p>
     </>
   )

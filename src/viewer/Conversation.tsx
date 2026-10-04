@@ -119,6 +119,9 @@ export function Conversation({
     callsOf(event).map((call) => `tool:${event.id}:${call.id}`),
   )
   const allExpanded = tools.length > 0 && tools.every((key) => opened.has(key))
+  const retained = (index.byActor.get(actor) ?? []).some(
+    (item) => item.detail.role || textOf(item) || callsOf(item).length,
+  )
 
   useEffect(() => {
     if (scroll.current) scroll.current.scrollTop = 0
@@ -159,10 +162,7 @@ export function Conversation({
   )
   return (
     <>
-      <div className="conversation-toolbar">
-        <p className="small" data-chat-caption>
-          {items.length > 0 ? `${items.length} messages · ${tools.length} tool calls` : (index.byActor.get(actor) ?? []).some(item => item.detail.role || textOf(item) || callsOf(item).length) ? (query || category !== 'all' ? 'No messages match these filters' : 'No messages at the selected time') : 'Conversation not retained in this snapshot'}
-        </p>
+      {tools.length > 0 && <div className="conversation-toolbar">
         <button
           type="button"
           className="tool-expansion"
@@ -181,7 +181,7 @@ export function Conversation({
         >
           {allExpanded ? 'Collapse tools' : 'Expand tools'}
         </button>
-      </div>
+      </div>}
       <div
         className="conversation-scroll"
         data-chat
@@ -192,8 +192,10 @@ export function Conversation({
         {!items.length && (
           <p className="chat-empty">
             {query || category !== 'all'
-              ? 'No retained conversation entries match this filter.'
-              : (index.byActor.get(actor)?.length ? 'This selection has recorded events, but no visible messages at the selected time. Inspect the event details or choose Full run.' : 'This agent is recorded in the topology, but its conversation was not included in this snapshot. This does not mean it did no work.')}
+              ? 'No messages match this filter.'
+              : retained
+                ? 'No messages at the selected time.'
+                : 'Conversation not retained. Its absence does not mean the agent did no work.'}
           </p>
         )}
         {items.map((event) => {

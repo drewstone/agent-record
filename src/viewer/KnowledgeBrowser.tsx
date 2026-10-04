@@ -77,7 +77,7 @@ export function KnowledgeBrowser({ documents, selection, onSelect, onClear, repo
       const next = readSourceSearch(await response.json(), playId, documents, sourceSearchEndpoint.match(/\/revisions\/([^/]+)\//)?.[1])
       if (!controller.signal.aborted) setResult(next)
     } catch {
-      if (!controller.signal.aborted) setError('Source search is unavailable or did not match this snapshot. No other play was searched.')
+      if (!controller.signal.aborted) setError('Source search failed or returned text that does not match these sources.')
     } finally { if (!controller.signal.aborted) setBusy(false) }
   }
   if (selected) return <section className="research-source-reader" aria-label="Selected source">
@@ -94,8 +94,7 @@ export function KnowledgeBrowser({ documents, selection, onSelect, onClear, repo
       </select></label>
       {result && <button type="button" className="ui-button" onClick={() => { setResult(undefined); setQuery(''); setKind('all') }}>Browse all</button>}
     </form>
-    <p className="small" role="status">{busy ? 'Searching this retained play…' : result ? `${visible.length} sources found · indexed ${result.indexedAt ?? 'time unknown'}` : `${visible.length} of ${documents.length} retained sources`}
-      {sourceSearchEndpoint && ' · Source excerpts, not a generated answer.'}</p>
+    {(busy || result) && <p className="small" role="status">{busy ? 'Searching…' : result?.indexedAt ? `Indexed ${result.indexedAt}` : 'Index time unknown'}</p>}
     {error && <p role="alert" className="chat-empty">{error}</p>}
     {!busy && !error && <nav className="source-results" aria-label="Retained documents">{visible.map(({ document }) => <button type="button" key={document.id} onClick={() => {
       const found = words.map(word => document.content.toLowerCase().indexOf(word)).filter(index => index >= 0)
@@ -103,7 +102,7 @@ export function KnowledgeBrowser({ documents, selection, onSelect, onClear, repo
     }}><span className="source-kind">{document.kind}</span><strong>{document.title}</strong><small>{document.path}</small>
       {words.length > 0 && <span className="rr-search-excerpt">{snippet(document.content, words)}</span>}
     </button>)}</nav>}
-    {!busy && !error && !visible.length && <p className="chat-empty">No matching sources. Try fewer keywords; no match does not establish that the work is absent.</p>}
+    {!busy && !error && !visible.length && <p className="chat-empty">No matching sources. Only retained files are searched.</p>}
   </section>
 }
 
@@ -137,7 +136,7 @@ function DocumentReader({ document, documents, selection, onSelect }: {
         <button className="ui-button" type="button" onClick={() => download(document.content, document.path.split('/').pop() || 'document.txt', 'text/plain;charset=utf-8')}>Download original</button>
       </div>
     </header>
-    {document.sha256 && <details className="rr-document-provenance"><summary>Source fingerprint</summary><code>SHA-256 {document.sha256}</code><p>Supplied by the producer. This viewer does not verify the archive.</p></details>}
+    {document.sha256 && <details className="rr-document-provenance"><summary>Source fingerprint</summary><code>SHA-256 {document.sha256}</code><p>Supplied with the report; not checked against the archive.</p></details>}
     {requestedLine && <p className="rr-meta">{requestedLine > document.content.split('\n').length ? `Referenced line ${requestedLine} is outside this document.` : `Cited line ${requestedLine}${source ? ' · source view' : ''}`}</p>}
     <div className="rr-document-content" ref={reader}>
       {source ? <pre className="rr-document-source"><code>{document.content.split('\n').map((line, i) =>

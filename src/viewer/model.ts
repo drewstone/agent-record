@@ -193,34 +193,28 @@ export function hoverLines(
         event.detail.publicationNote ??
         'No text body is present in this record.',
     )
-  lines.push('Select to inspect the event and its source.')
   return lines
 }
 
-export function actorDescription(
+/** A declared model is configuration; only response metadata shows which model served. */
+export function modelIdentity(
   node: RecordNode | undefined,
   record: RunRecord,
 ) {
-  if (!node) return ''
-  const sessions = record.nodes.filter(
-    (session) => session.agentId === node.id || session.id === node.id,
-  )
+  if (!node) return null
   const served = [
     ...new Set(
-      sessions
+      record.nodes
+        .filter(
+          (session) => session.agentId === node.id || session.id === node.id,
+        )
         .map((session) => session.servedModel)
         .filter((model): model is string => Boolean(model)),
     ),
   ]
-  return [
-    roleOf(node),
-    node.assignment,
-    served.length
-      ? `${served.join(', ')} (response metadata)`
-      : node.model
-        ? `${node.model} (configured; served identity unknown)`
-        : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  return served.length
+    ? `${served.join(', ')} (served)`
+    : node.model
+      ? `${node.model} (declared; served model unknown)`
+      : null
 }

@@ -19,6 +19,7 @@ import {
   eventSource,
   indexRecord,
   interval,
+  modelIdentity,
   ms,
   roleOf,
   textOf,
@@ -292,11 +293,9 @@ function RecordView({
   useEffect(() => {
     setTooltip(null)
   }, [cutoff, category, query, actor, view, metric, axis, record])
-  const agents = record.nodes.filter((item) => item.kind === 'agent').length
-  const sessions = record.nodes.filter((item) => item.kind === 'session').length
-  const joins = record.nodes.filter(
-    (item) => item.kind === 'session' && item.agentId,
-  ).length
+  const unlinked = record.nodes.filter(
+    (item) => item.kind === 'session' && !item.agentId,
+  )
   const position = visible.findIndex((item) => item.id === event?.id)
   return (
     <div
@@ -351,13 +350,6 @@ function RecordView({
           />
         </label>
       </div>
-      <p data-summary className="record-summary">
-        {agents} recorded agents · {sessions} native sessions · {visible.length}{' '}
-        / {record.events.length} events ·{' '}
-        {record.coverage.completeOriginalCapture
-          ? 'original capture marked complete'
-          : 'capture incomplete'}
-      </p>
       <details className="activity-replay"><summary>Timeline and replay</summary>
       <div className="playback">
         <button
@@ -455,7 +447,6 @@ function RecordView({
         </p>
       </div>
       <div className="timeline-heading">
-        <span>Activity over time</span>
         <label>
           Zoom{' '}
           <input
@@ -490,7 +481,7 @@ function RecordView({
       </div>
       </details>
       {query && <section className="activity-search-results" aria-label="Matching activity">
-        <p role="status">{visible.length} matching events across {new Set(visible.map(item => index.canonical(item.node))).size} agents</p>
+        <p role="status">{visible.length} matching events</p>
         {visible.slice(0, 100).map(item => <button key={item.id} onClick={() => { setSearch(''); setPlaying(false); onChange({ runId: record.runId, nodeId: index.canonical(item.node), eventId: item.id, view: 'chat' }) }}>
           <span>{index.nodes.get(index.canonical(item.node))?.label ?? item.node}</span><time>{utcTime(item.at)}</time><strong>{item.label}</strong>
           <small>{(textOf(item) || item.detail.publicToolCalls?.map(call => `${call.name} ${call.input}`).join(' ') || 'Recorded event').replace(/\s+/g, ' ').slice(0, 240)}</small>
@@ -510,11 +501,12 @@ function RecordView({
               {index.actors.filter((item) => item.kind !== 'finding').length}
             </span>
           </summary>
-          <p className="small" data-graph-caption>
-            {sessions === 0
-              ? 'No session traces supplied.'
-              : `${joins} of ${sessions} sessions attributed to agents by the supplied records.`}
-          </p>
+          {unlinked.length > 0 && (
+            <p className="small" data-graph-caption>
+              Not linked to an agent:{' '}
+              {unlinked.map((item) => item.label).join(', ')}
+            </p>
+          )}
           <AgentTree
             index={index}
             actor={actor}
@@ -537,7 +529,15 @@ function RecordView({
               </span>
               <div>
                 <h3 data-agent-title>{node?.label ?? 'Messages'}</h3>
-                <p data-agent-role>{roleOf(node)} · {node?.status ?? 'State unknown'}</p>
+                <p data-agent-role>
+                  {[
+                    roleOf(node),
+                    modelIdentity(node, record),
+                    node?.status ?? 'State unknown',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
               </div>
             </div>
             <Select
@@ -555,12 +555,12 @@ function RecordView({
               ))}
             </Select>
           </div>
-          <div className="agent-capture-summary" role="status">
-            {retainedEvents} retained events{captureLabel ? ` · ${captureLabel}` : ''}
+          {(captureLabel || typeof capture?.captureReason === 'string' || node?.assignment) && <div className="agent-capture-summary" role="status">
+            {captureLabel}
             {typeof capture?.captureReason === 'string'
               ? <details><summary>Capture details</summary><p>{capture.captureReason}</p></details> : null}
             {node?.assignment && <details><summary>Assignment</summary><p>{node.assignment}</p></details>}
-          </div>
+          </div>}
           <div className="ui-tabs" role="tablist" aria-label="Agent evidence">
             {(['chat', 'source', 'usage'] as const).map((tab, i, all) => (
               <button
@@ -771,13 +771,9 @@ function RecordView({
       <details className="coverage">
         <summary>Sources, redactions &amp; capture gaps</summary>
         <div data-coverage>
-          <p>{record.coverage.publicContent}</p>
-          <p>{record.coverage.categoryMethod}</p>
-          <p>{record.coverage.cost}</p>
-          <p>
-            {agents} agents · {sessions} native sessions · {joins} attributed
-            sessions · {record.sources.length} source files.
-          </p>
+          {record.coverage.publicContent && <p>{record.coverage.publicContent}</p>}
+          {record.coverage.categoryMethod && <p>{record.coverage.categoryMethod}</p>}
+          <p>Cost: {record.coverage.cost}</p>
           {record.terminal && (
             <p>
               Recorded terminal: {record.terminal.kind ?? 'unknown'}
