@@ -41,6 +41,7 @@ A session ID by itself does not establish a parent relationship.
 `parent` describes the recorded delegation relationship.
 `role` and `assignment` are display descriptions, not permissions or claims of competence.
 `model` records configuration; `servedModel` records response identity where available.
+The converter sets `servedModel` only on a node with at least one successful assistant response; a materialization receipt or profile fills `model`, never `servedModel`.
 `modelSource` can describe that identity's provenance.
 `start`, `end`, and `status` describe observed lifecycle state.
 Unknown lifecycle values remain unknown.
@@ -105,7 +106,8 @@ Omit a source when unavailable; never fabricate an archive location.
 
 `coverage` can describe `completeOriginalCapture`, `publicContent`, `categoryMethod`, and `cost`.
 The completeness flag is an assertion from the producer, not an attestation performed by the viewer.
-Missing cost is unknown.
+The converter asserts it only when the record has agent or session nodes and every one has a complete capture; finding pages alone never make a capture complete.
+Missing cost is unknown: the converter writes `Not recorded` unless an event carries `costListUsd`.
 Historical corrections should remain source-linked, not silently replace original records.
 
 ## Optional fields added in 0.4
@@ -159,8 +161,12 @@ The other channels are listed in `sources` and never repeated as events.
 Every timestamped line of a session, journal or stream becomes exactly one event, or one per item when a line carries several (tool results, tool calls).
 A line the converter does not interpret (a Pi session header, a model or thinking-level change, a custom entry, a Claude Code attachment or system line, a stream status row) is a `record` event carrying its type.
 Untimed and unparsable lines are counted in `coverage.gaps`.
+A Pi session whose tool call has no result line is a `lossy` capture (`tool-results-not-retained`), as a root stream is.
+A Pi message also carries `nativeParentId`, `contentSha256` and `contentCharacters` (the earlier publication converter's digest of its content and the length of its text or thinking), and an assistant message its `responseReportedModel`, `responseStatus` (the stop reason) and `responseId`.
+Line files are split and decoded one line at a time, so a session larger than the longest JavaScript string still converts; lines outside a bundle's `lines` window are not decoded.
 
 Every `kb/pages/**/*.md` page becomes one `finding-record` event on node `finding:<runId>`, with the frontmatter `title` and `createdAt` and the page body as `detail.recordedClaim`.
+A page without `createdAt` (a `RESULT.md`) takes the modification time its snapshot manifest recorded, with `detail.atBasis: "snapshot-mtime"`; without a manifest time it is a `finding-untimed` gap.
 A directory with knowledge pages and no run files has format `finding-only`.
 
 ### Event IDs (`idScheme: "anchor.v1"`)

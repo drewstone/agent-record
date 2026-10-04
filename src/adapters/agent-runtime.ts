@@ -35,7 +35,7 @@ import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.0.0'
+export const ADAPTER_VERSION = '2.1.0'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
@@ -55,6 +55,8 @@ export interface SnapshotFile {
   path: string
   sha256: string
   bytes: number
+  /** The file's modification time when it was captured (ISO text or epoch milliseconds). */
+  mtime?: string | number
 }
 /** The evidence store's snapshot manifest (evidence.snapshot.v1, or the live mirror's disco.controller-mirror.v1). */
 export interface SnapshotManifest {
@@ -157,6 +159,56 @@ const isoAt = (value: unknown): string | null => {
   const time = date.valueOf()
   return Number.isFinite(time) && time >= EARLIEST && time < LATEST ? date.toISOString() : null
 }
+/**
+ * Python's `json.dumps(value, sort_keys=True)` (ASCII escapes, `, ` and `: ` separators). The earlier publication
+ * converter hashed native message content this way, so the same content keeps the same contentSha256.
+ */
+function pythonJson(value: unknown): string {
+  if (value === null || value === undefined) return 'null'
+  if (value === true) return 'true'
+  if (value === false) return 'false'
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return value > 0 ? 'Infinity' : value < 0 ? '-Infinity' : 'NaN'
+    if (Number.isInteger(value) && Math.abs(value) < 1e16) return String(value)
+    // repr(float): the shortest round-trip digits; fixed notation for exponents -4..15, otherwise d.ddde[+-]XX.
+    const [mantissa, exponent] = value.toExponential().split('e') as [string, string]
+    if (Number(exponent) >= -4 && Number(exponent) < 16) return /[.e]/.test(String(value)) ? String(value) : `${value}.0`
+    return `${mantissa}e${exponent[0]}${exponent.slice(1).padStart(2, '0')}`
+  }
+  if (typeof value === 'string') {
+    let out = '"'
+    for (let i = 0; i < value.length; i++) {
+      const code = value.charCodeAt(i)
+      const char = value[i]!
+      if (char === '"') out += '\\"'
+      else if (char === '\\') out += '\\\\'
+      else if (char === '\n') out += '\\n'
+      else if (char === '\r') out += '\\r'
+      else if (char === '\t') out += '\\t'
+      else if (char === '\b') out += '\\b'
+      else if (char === '\f') out += '\\f'
+      else if (code < 0x20 || code > 0x7e) out += `\\u${code.toString(16).padStart(4, '0')}`
+      else out += char
+    }
+    return `${out}"`
+  }
+  if (Array.isArray(value)) return `[${value.map(pythonJson).join(', ')}]`
+  if (typeof value === 'object')
+    return `{${Object.keys(value as object)
+      .sort()
+      .map((key) => `${pythonJson(key)}: ${pythonJson((value as Record<string, unknown>)[key])}`)
+      .join(', ')}}`
+  return 'null'
+}
+/** A native message's content digest and its character count (text, or thinking where a block has no text). */
+function contentDigest(content: Json[]) {
+  let characters = 0
+  for (const block of content) {
+    const body = block && typeof block === 'object' ? ('text' in block ? block.text : 'thinking' in block ? block.thinking : '') : ''
+    characters += [...(typeof body === 'string' ? body : body === null ? 'None' : String(body))].length
+  }
+  return { contentSha256: sha(pythonJson(content)), contentCharacters: characters }
+}
 const str = (value: unknown) => (typeof value === 'string' ? value : value === undefined || value === null ? '' : JSON.stringify(value))
 const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined)
 
@@ -218,29 +270,38 @@ interface Line {
   raw: string
   value: Json
 }
-function splitLines(text: string): Line[] {
+/**
+ * The non-blank physical lines (split on LF) of a file, each decoded on its own: a session larger than the longest
+ * string V8 can hold (about 512 MiB) still converts. Lines `keep` rejects (outside a bundle's line window) are
+ * neither decoded nor parsed.
+ */
+function splitLines(bytes: Buffer, keep?: (line: number) => boolean): Line[] {
   const rows: Line[] = []
   let start = 0
   let line = 1
-  while (start <= text.length) {
-    let end = text.indexOf('\n', start)
-    if (end < 0) end = text.length
-    let raw = text.slice(start, end)
-    if (raw.endsWith('\r')) raw = raw.slice(0, -1)
-    if (raw.trim()) {
-      let value: Json
-      try {
-        value = JSON.parse(raw)
-      } catch {
-        value = undefined
+  while (start <= bytes.length) {
+    let end = bytes.indexOf(0x0a, start)
+    if (end < 0) end = bytes.length
+    if (!keep || keep(line)) {
+      let raw = bytes.toString('utf8', start, end)
+      if (raw.endsWith('\r')) raw = raw.slice(0, -1)
+      if (raw.trim()) {
+        let value: Json
+        try {
+          value = JSON.parse(raw)
+        } catch {
+          value = undefined
+        }
+        rows.push({ line, raw, value })
       }
-      rows.push({ line, raw, value })
     }
     start = end + 1
     line++
   }
   return rows
 }
+const inWindow = (window?: [number, number][]) =>
+  window ? (line: number) => window.some(([from, to]) => line >= from && line <= to) : undefined
 const listDir = (path: string) => {
   try {
     return readdirSync(path).sort()
@@ -282,6 +343,12 @@ function utf8Slice(buffer: Buffer, start: number, end: number) {
   return buffer.subarray(start, end).toString('utf8')
 }
 
+interface FileEntry {
+  bytes: Buffer
+  sha256: string
+  readonly text: string
+}
+
 // ---------------------------------------------------------------------------------------------------------
 export interface SharedIngest {
   /** Paths are recorded relative to the bundle root: `<prefix><path inside this run>`. */
@@ -300,7 +367,7 @@ export class Ingest {
   readonly events: Draft[] = []
   readonly gaps: Gap[] = []
   readonly nodes = new Map<string, NodeDraft>()
-  readonly fileCache = new Map<string, { bytes: Buffer; text: string; sha256: string }>()
+  readonly fileCache = new Map<string, FileEntry>()
   rootId: string
   order = 0
   format = 'other'
@@ -330,7 +397,9 @@ export class Ingest {
     const cached = this.fileCache.get(abs)
     if (cached) return cached
     const bytes = readFileSync(abs)
-    const entry = { bytes, text: bytes.toString('utf8'), sha256: sha(bytes) }
+    let text: string | undefined
+    // Line files are read through splitLines(bytes); only a JSON document or a page is decoded whole.
+    const entry: FileEntry = { bytes, sha256: sha(bytes), get text() { return (text ??= bytes.toString('utf8')) } }
     const listed = this.manifestFiles.get(this.sourcePath(rel))
     if (listed && hexOf(listed.sha256) !== entry.sha256) throw new SnapshotMismatchError(`${rel} does not match its snapshot manifest`)
     this.fileCache.set(abs, entry)
@@ -496,7 +565,7 @@ export class Ingest {
     if (!existsSync(abs)) return []
     const entry = this.file(rel)
     this.fileSource(rel)
-    const rows = splitLines(entry.text)
+    const rows = splitLines(entry.bytes)
     const runtimeOf = new Map<string, string>()
     for (const row of rows) {
       const event = row.value?.event
@@ -542,9 +611,12 @@ export class Ingest {
       const exact = typeof event.id === 'string' ? this.nodes.get(event.id) : undefined
       const kind = str(event.kind) || 'unknown'
       if (kind === 'materialized' && exact) {
+        // A materialization receipt names the model the backend was configured with; what served is only known from
+        // a response, so the receipt fills the declared model when no profile does.
         const model = event.receipt?.model
-        if (model?.status === 'known' && typeof model.id === 'string') {
-          exact.servedModel ??= model.id
+        if (model?.status === 'known' && typeof model.id === 'string' && !exact.model) {
+          exact.model = model.id
+          exact.modelSource = 'materialization receipt'
         }
         if (event.receipt?.execution?.kind === 'environment') this.addSandbox(exact, event.receipt.execution.id)
         // A bridge session id here is what joins a retained bridge stream to this node (trace/bridge-sessions).
@@ -696,15 +768,11 @@ export class Ingest {
     const entry = this.file(rel, abs)
     if (!this.claim(entry.sha256, node.id, rel)) return null
     this.fileSource(rel, abs)
-    const counts = { events: 0, unparsable: 0, untimed: 0, outside: 0 }
+    const counts = { events: 0, unparsable: 0, untimed: 0 }
     const seenMessages = new Set<string>()
     let lastAssistant: Draft | undefined
     let last = node.start ?? null
-    for (const row of splitLines(entry.text)) {
-      if (window && !window.some(([from, to]) => row.line >= from && row.line <= to)) {
-        counts.outside++
-        continue
-      }
+    for (const row of splitLines(entry.bytes, inWindow(window))) {
       const value = row.value
       if (!value) {
         counts.unparsable++
@@ -1012,7 +1080,7 @@ export class Ingest {
       .map((path) => {
         const rel = `trace/pi-sessions/${path}`
         const entry = this.file(rel)
-        const rows = splitLines(entry.text)
+        const rows = splitLines(entry.bytes)
         const session = rows.find((row) => row.value?.type === 'session')?.value
         const firstUser = rows.find((row) => row.value?.type === 'message' && row.value.message?.role === 'user')?.value?.message
         const text = !firstUser
@@ -1034,6 +1102,8 @@ export class Ingest {
 
   readPi(node: NodeDraft, sessions: { rel: string; sessionId: string; rows: Line[]; sha256: string }[]) {
     node.harness ??= 'pi'
+    const callIds = new Set<string>()
+    const resultIds = new Set<string>()
     for (const session of sessions) {
       if (!this.claim(session.sha256, node.id, session.rel)) continue
       this.fileSource(session.rel)
@@ -1061,8 +1131,14 @@ export class Ingest {
         const full = () => this.lineSource(session.rel, row.line, row.raw)
         const blocks: Json[] = Array.isArray(message.content) ? message.content : [{ type: 'text', text: str(message.content) }]
         const text = blocks.filter((b) => b?.type === 'text').map((b) => str(b.text)).join('\n\n')
+        // Identity of the message without its body: parent, digest and size of its content (contentDigest).
+        const meta = {
+          ...(typeof value.parentId === 'string' ? { nativeParentId: value.parentId } : {}),
+          ...contentDigest(Array.isArray(message.content) ? message.content : [{ type: 'text', text: message.content }]),
+        }
         if (message.role === 'toolResult') {
           const shown = this.clip(text, full)
+          if (typeof message.toolCallId === 'string') resultIds.add(message.toolCallId)
           this.emit({
             node: node.id,
             at,
@@ -1070,13 +1146,23 @@ export class Ingest {
             category: 'other',
             label: `tool result · ${str(message.toolName)}`,
             source,
-            detail: { role: 'toolResult', ...native, toolCallId: str(message.toolCallId), isError: message.isError === true, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) },
+            detail: { role: 'toolResult', ...native, ...meta, toolCallId: str(message.toolCallId), isError: message.isError === true, publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) },
           })
           continue
         }
         const reasoning = blocks.filter((b) => b?.type === 'thinking').map((b) => str(b.thinking)).filter(Boolean).join('\n\n')
         const calls = blocks.filter((b) => b?.type === 'toolCall' || b?.type === 'tool_use')
+        for (const call of calls) if (typeof call.id === 'string') callIds.add(call.id)
         if (typeof message.model === 'string' && message.stopReason !== 'error') node.servedModel = message.model
+        // What the response itself reported: its model, stop reason and id.
+        const response =
+          message.role === 'assistant'
+            ? {
+                ...(typeof message.model === 'string' ? { responseReportedModel: message.model } : {}),
+                ...(typeof message.stopReason === 'string' ? { responseStatus: message.stopReason } : {}),
+                ...(typeof message.responseId === 'string' ? { responseId: message.responseId } : {}),
+              }
+            : {}
         const shownText = text ? this.clip(text, full) : null
         const shownReasoning = reasoning ? this.clip(reasoning, full) : null
         const usage = message.usage
@@ -1090,6 +1176,8 @@ export class Ingest {
           detail: {
             role: str(message.role),
             ...native,
+            ...meta,
+            ...response,
             ...(shownText ? { publicText: shownText.text } : {}),
             ...(shownReasoning ? { reasoning: shownReasoning.text } : {}),
             ...(shownText?.clip ?? shownReasoning?.clip ? { clip: shownText?.clip ?? shownReasoning?.clip } : {}),
@@ -1105,13 +1193,15 @@ export class Ingest {
               ? { usage: { input: num(usage.input), output: num(usage.output), cacheRead: num(usage.cacheRead), cacheWrite: num(usage.cacheWrite) } }
               : {}),
             ...(num(usage?.cost?.total) !== undefined && usage.cost.total > 0 ? { costListUsd: usage.cost.total, usdKnown: false } : {}),
-            ...(message.stopReason === 'error' ? { responseStatus: 'error' } : {}),
           },
         })
       }
       if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} lines of ${this.sourcePath(session.rel)} carry no time` })
     }
-    node.capture = { channel: 'pi', status: 'complete', reason: null }
+    // A call whose result no session line holds: the call is recorded, its outcome is not (the root stream's rule).
+    const unanswered = [...callIds].filter((id) => !resultIds.has(id)).length
+    if (unanswered) this.gaps.push({ nodeId: node.id, code: 'tool-results-not-retained', detail: `${unanswered} tool calls have no result in the session` })
+    node.capture = { channel: 'pi', status: unanswered ? 'lossy' : 'complete', reason: unanswered ? 'tool-results-not-retained' : null }
   }
 
   // ----- channel 3b: retained bridge streams -----
@@ -1124,7 +1214,7 @@ export class Ingest {
       .map((path) => {
         const rel = `trace/bridge-sessions/${path}`
         const entry = this.file(rel)
-        const rows = splitLines(entry.text)
+        const rows = splitLines(entry.bytes)
         const session = rows.find((row) => row.value?.table === 'sessions')
         return { rel, rows, sha256: entry.sha256, sessionId: str(session?.value?.row?.external_id) || null, sessionLine: session?.line ?? null }
       })
@@ -1192,12 +1282,8 @@ export class Ingest {
     if (!this.claim(entry.sha256, node.id, rel)) return null
     this.fileSource(rel)
     node.harness ??= 'codex'
-    const counts = { unparsable: 0, untimed: 0, outside: 0 }
-    for (const row of splitLines(entry.text)) {
-      if (window && !window.some(([from, to]) => row.line >= from && row.line <= to)) {
-        counts.outside++
-        continue
-      }
+    const counts = { unparsable: 0, untimed: 0 }
+    for (const row of splitLines(entry.bytes, inWindow(window))) {
       const value = row.value
       if (!value) {
         counts.unparsable++
@@ -1503,7 +1589,7 @@ export class Ingest {
     const abs = join(this.runDir, rel)
     if (!existsSync(abs)) return false
     const entry = this.file(rel)
-    const rows = splitLines(entry.text).filter((row) => row.value?.event)
+    const rows = splitLines(entry.bytes).filter((row) => row.value?.event)
     if (!rows.length) return false
     if (!this.claim(entry.sha256, node.id, rel)) return false
     this.fileSource(rel)
@@ -1638,9 +1724,14 @@ export class Ingest {
       this.fileSource(rel)
       const front = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(entry.text)
       const field = (key: string) => (front ? new RegExp(`^${key}:[ \\t]*(.*)$`, 'm').exec(front[1]!)?.[1]?.trim() : undefined) || undefined
-      const at = isoAt(field('createdAt')) ?? isoAt(field('updatedAt'))
+      // A page without createdAt (a RESULT.md) is timed by the modification time its snapshot captured; nothing else
+      // (the reading host's clock or file system) is used, so the record stays a function of the snapshot.
+      const declared = isoAt(field('createdAt')) ?? isoAt(field('updatedAt'))
+      const listed = this.manifestFiles.get(this.sourcePath(rel))?.mtime
+      const captured = declared ? null : isoAt(typeof listed === 'number' && listed < 1e11 ? listed * 1000 : listed)
+      const at = declared ?? captured
       if (!at) {
-        this.gaps.push({ nodeId, code: 'finding-untimed', detail: `${this.sourcePath(rel)} has no createdAt` })
+        this.gaps.push({ nodeId, code: 'finding-untimed', detail: `${this.sourcePath(rel)} has no createdAt and its snapshot records no mtime` })
         continue
       }
       const bodyStart = front ? front.index + front[0].length : 0
@@ -1676,6 +1767,7 @@ export class Ingest {
         detail: {
           ...(title ? { title } : {}),
           createdAt: at,
+          ...(captured ? { atBasis: 'snapshot-mtime' } : {}),
           ...(field('kind') ? { pageKind: field('kind') } : {}),
           bodyLine,
           contentSha256: sha(body),
@@ -1753,8 +1845,11 @@ export class Ingest {
         const profile = this.blob(node.profileRef)?.value
         if (profile && typeof profile === 'object') {
           const model = profile.model
-          node.model = typeof model === 'string' ? model : typeof model?.default === 'string' ? model.default : node.model
-          node.modelSource = 'spawn profile'
+          const declared = typeof model === 'string' ? model : typeof model?.default === 'string' ? model.default : null
+          if (declared) {
+            node.model = declared
+            node.modelSource = 'spawn profile'
+          }
           if (typeof profile.harness === 'string') node.harness = profile.harness
         }
       }
@@ -1913,6 +2008,14 @@ export class Ingest {
     const captures = [...this.nodes.values()].map((node) => ({ nodeId: node.id, ...node.capture }))
     const counts = { complete: 0, lossy: 0, absent: 0 }
     for (const capture of captures) counts[capture.status]++
+    // The original capture is complete only when there are agents and every one of them is fully captured: finding
+    // pages alone (a finding-only run) are what an agent wrote, not the agent's record.
+    const agents = captures.filter((capture) => this.nodes.get(capture.nodeId)?.kind !== 'finding')
+    // "Served" needs an observed response: a node with no successful assistant message keeps its declared model only.
+    const answered = new Set(
+      this.events.filter((event) => event.kind === 'message' && event.detail.role === 'assistant' && event.detail.responseStatus !== 'error').map((event) => event.node),
+    )
+    const priced = this.events.some((event) => num(event.detail.costListUsd) !== undefined)
     const knowledge = task?.knowledge
     const completion = task?.completion
     const record = {
@@ -1936,7 +2039,7 @@ export class Ingest {
         ...(node.assignment ? { assignment: node.assignment } : {}),
         model: node.model,
         ...(node.modelSource ? { modelSource: node.modelSource } : {}),
-        servedModel: node.servedModel,
+        servedModel: answered.has(node.id) ? node.servedModel : null,
         harness: node.harness,
         ...(node.start ? { start: node.start } : {}),
         ...(node.end ? { end: node.end } : {}),
@@ -1972,10 +2075,10 @@ export class Ingest {
             }
           : null,
       coverage: {
-        completeOriginalCapture: counts.lossy === 0 && counts.absent === 0,
+        completeOriginalCapture: agents.length > 0 && agents.every((capture) => capture.status === 'complete'),
         publicContent: '',
-        categoryMethod: 'Activity types come from a fixed map of tool names and shell commands in the agent-runtime adapter. They describe what a call did, not its value.',
-        cost: 'List price from recorded usage; not billed.',
+        categoryMethod: 'Activity types are keyword matches on tool names and commands. They do not measure research value or show independent verification.',
+        cost: priced ? 'List price from recorded usage; not billed.' : 'Not recorded',
         nodes: captures,
         gaps: this.gaps.map((gap) => ({ runId: this.runId, ...gap })),
       },
@@ -2156,7 +2259,7 @@ export function ingestBundle(dir: string, options: Omit<IngestOptions, 'runId'> 
     }
     if (!main.nodes.has(wfId))
       main.nodes.set(wfId, blankNode(wfId, { label: journal.label ?? wfId, kind: 'agent', role: 'workflow', harness: 'claude-code-workflow', start: workflowStart, capture: { channel: 'journal', status: 'complete', reason: null } }))
-    for (const row of splitLines(entry.text)) {
+    for (const row of splitLines(entry.bytes)) {
       const agentId = str(row.value?.agentId)
       if (!agentId) continue
       const id = `${wfId}:${agentId}`
@@ -2174,7 +2277,7 @@ export function ingestBundle(dir: string, options: Omit<IngestOptions, 'runId'> 
   for (const session of bundle.sessions) {
     let node: NodeDraft | undefined
     if (session.harness === 'claude-code') {
-      const rows = splitLines(main.file(session.path).text)
+      const rows = splitLines(main.file(session.path).bytes)
       const carried = rows.find((row) => typeof row.value?.agentId === 'string')
       const agentId = session.agentId ?? (carried ? str(carried.value.agentId) : '')
       const sessionId = session.sessionId ?? str(rows.find((row) => typeof row.value?.sessionId === 'string')?.value?.sessionId)
@@ -2208,7 +2311,7 @@ export function ingestBundle(dir: string, options: Omit<IngestOptions, 'runId'> 
       main.readOpenCode(node, session.path)
     } else if (session.harness === 'opencode-bridge') {
       const entry = main.file(session.path)
-      const rows = splitLines(entry.text)
+      const rows = splitLines(entry.bytes)
       const sessionRow = rows.find((row) => row.value?.table === 'sessions')
       const id = `bridge:${session.sessionId ?? (str(sessionRow?.value?.row?.external_id) || basename(session.path, '.jsonl'))}`
       node = main.nodes.get(id) ?? blankNode(id, { label: session.label ?? id })
@@ -2216,7 +2319,7 @@ export function ingestBundle(dir: string, options: Omit<IngestOptions, 'runId'> 
       main.readBridgeStream(node, { rel: session.path, rows, sha256: entry.sha256 })
     } else if (session.harness === 'pi') {
       const entry = main.file(session.path)
-      const rows = splitLines(entry.text)
+      const rows = splitLines(entry.bytes)
       const header = rows.find((row) => row.value?.type === 'session')?.value
       const sessionId = session.sessionId ?? (str(header?.id) || basename(session.path, '.jsonl'))
       const id = `pi:${sessionId}`
