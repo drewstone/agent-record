@@ -441,5 +441,20 @@
    "path": "session.jsonl",
    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e"
   }
- ]
+ ],
+ "coverage": {
+  "completeOriginalCapture": false,
+  "publicContent": "Synthetic test fixture; no research content.",
+  "categoryMethod": "fixture",
+  "cost": "unknown",
+  "gaps": []
+ },
+ "terminal": null,
+ "assignment": {
+  "objective": "",
+  "suppliedKnowledge": "",
+  "deliverables": "",
+  "constraints": "",
+  "source": null
+ }
 }
