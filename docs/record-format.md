@@ -120,6 +120,8 @@ Event `detail` can carry:
 | Field | Meaning |
 | --- | --- |
 | `reasoning` | Reasoning text the harness recorded. |
+| `reasoningOmitted` | Thinking blocks the provider returned without text (signature only). The model thought; no text exists to show. |
+| `reasoningRedacted` | Encrypted `redacted_thinking` blocks. |
 | `durationMs` | Tool call to result time from the source's own clock. |
 | `costListUsd`, `usdKnown` | List-price estimate from recorded usage. `usdKnown: false` means no bill confirms it. |
 | `rateLimit` | `{window, utilization, status}` from a provider rate-limit event. |
@@ -150,7 +152,10 @@ Exit code 2 means the directory is unreadable; 3 means the record would exceed 1
 Every `spawned` ID in `spawn-journal.jsonl` is an agent node, and its parent is the ID without its last `:sN` segment.
 Each node's conversation comes from the first channel that holds it:
 
-1. `native`: the Claude Code session file from a retained harness transcript archive, extracted under `--native/<64-hex archive digest>/`, checked against the manifest's SHA-256.
+1. `native`: each Claude Code main session file, read from its longest stored copy. A session file is append-only, so every copy is a prefix of the same bytes. The copies are:
+   - a retained harness transcript archive, extracted under `--native/<64-hex archive digest>/` and checked against the manifest's SHA-256;
+   - the node's latest capture in `evidence/native-index.jsonl` (`disco.native-capture.v1`), whose archive is extracted under the same cache;
+   - the live tail `evidence/native-live/<encodeURIComponent(node id)>/<home>/<path>`, whole lines appended by byte offset while the node runs.
 2. `oc`: OpenCode `native-trajectory.json`.
 3. `pi`: `trace/pi-sessions/**`, joined to the node whose spawned task digest equals the SHA-256 of the session's first user text as a JSON string.
 4. `bridge`: a retained cli-bridge export under `trace/bridge-sessions/`, joined to the node whose `materialized` receipt names the bridge session ID.
