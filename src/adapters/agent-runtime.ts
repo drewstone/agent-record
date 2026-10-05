@@ -35,7 +35,7 @@ import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.1.0'
+export const ADAPTER_VERSION = '2.1.1'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
@@ -1795,7 +1795,9 @@ export class Ingest {
     const hasJournal = this.nodes.size > 0
     const pages = walk(join(runDir, 'kb/pages')).filter((path) => path.endsWith('.md'))
     if (!hasJournal) {
-      const runtimeFiles = ['result.json', 'root-stream.jsonl', 'native-trajectory.json', 'trace', 'run-input.json'].some((name) => existsSync(join(runDir, name)))
+      // Files only: a snapshot holds no empty directory, so the record cannot depend on one (an archive extraction has them).
+      const runtimeFiles = ['result.json', 'root-stream.jsonl', 'native-trajectory.json', 'run-input.json'].some((name) => existsSync(join(runDir, name))) ||
+        walk(join(runDir, 'trace')).length > 0
       this.format = existsSync(join(runDir, 'native-trajectory.json'))
         ? 'bridge-native'
         : existsSync(join(runDir, 'failure.json'))
@@ -1827,7 +1829,7 @@ export class Ingest {
     }
     const root = this.nodes.get(this.rootId)
     if (root && existsSync(join(runDir, 'native-trajectory.json')) && this.format !== 'cloud') this.format = 'bridge-native'
-    if (root && existsSync(join(runDir, 'trace/pi-sessions'))) this.format = 'pi-local'
+    if (root && walk(join(runDir, 'trace/pi-sessions')).some((path) => path.endsWith('.jsonl'))) this.format = 'pi-local'
 
     // Declared models, harness and assignment from the profile and task.
     const input = this.runInput

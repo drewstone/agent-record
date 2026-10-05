@@ -144,6 +144,7 @@ It reads only the directory and the optional `--native` cache, writes nothing in
 The same inputs and adapter version produce identical bytes; `recordDigest` is the SHA-256 of the JSON.
 With `--manifest` (an `evidence.snapshot.v1` file list from the evidence store) the directory must hold exactly the listed files with their SHA-256 and length, or nothing is converted; the record names the manifest digest in `input.snapshot`.
 The run ID comes from `--run-id`, then the manifest's `runId`, then the directory name; `input.runIdBasis` says which.
+The record depends on files only, never on empty directories, which a snapshot does not hold: an archive extraction and the same snapshot materialized from the store convert to the same bytes.
 Exit code 2 means the directory is unreadable; 3 means the record would exceed 128 MiB; 4 means the directory differs from its manifest or two events claim one anchor.
 
 Every `spawned` ID in `spawn-journal.jsonl` is an agent node, and its parent is the ID without its last `:sN` segment.
