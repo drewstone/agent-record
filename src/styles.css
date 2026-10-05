@@ -1913,6 +1913,8 @@
 .ar-ws .profile-diff-meta { margin: 0; font-size: 12px; }
 .ar-ws .diff-field { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 12.5px; min-width: 0; }
 .ar-ws .diff-field.diff-text, .ar-ws .diff-field.diff-files, .ar-ws .diff-field.score-delta { display: grid; gap: 4px; }
+.ar-ws .diff-field > * { min-width: 0; }
+.ar-ws .profile-score { min-width: 18rem; }
 .ar-ws .diff-name { font: 600 11px var(--ar-font-body); text-transform: uppercase; letter-spacing: .04em; color: var(--ar-fg-muted); min-width: 90px; }
 .ar-ws .diff-field del, .ar-ws .diff-field ins { text-decoration: none; overflow-wrap: anywhere; font-family: var(--ar-font-mono); font-size: 12px; }
 .ar-ws .diff-field del { color: var(--ar-c-fail); }
