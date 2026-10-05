@@ -255,6 +255,59 @@ const outputFile = z
   })
   .catchall(z.unknown())
 
+/**
+ * The run's readout, written after it settles (discovery-lab `runner/readout.mjs`, `discovery.run-readout`): a summary,
+ * the declared deliverables, hypothesis verdicts, judge scores, cost and the published report links. `pending` until a
+ * readout finishes; a failed one keeps its error. Unmeasured numbers are null, never 0.
+ */
+export const readoutSchema = z
+  .object({
+    status: z.enum(['pending', 'complete', 'partial', 'failed']),
+    generatedAt: time.nullable(),
+    settle: z.object({ kind: z.string(), reason: z.string().nullable() }).catchall(z.unknown()).nullable(),
+    summary: z.string().nullable(),
+    deliverables: z.array(
+      z
+        .object({
+          id: z.string(),
+          kind: z.string().nullable(),
+          path: z.string().nullable(),
+          bar: z.string().nullable(),
+          present: z.boolean().nullable(),
+          bytes: z.number().int().nonnegative().nullable(),
+          /** An http(s) link to the delivered copy (a secret gist file); null when none was published. */
+          url: z.string().nullable(),
+        })
+        .catchall(z.unknown()),
+    ),
+    verdicts: z.array(
+      z
+        .object({
+          id: z.string(),
+          statement: z.string(),
+          /** met, not-met, inconclusive or not-measured; another value is shown as written. */
+          verdict: z.string(),
+          evidence: z.string(),
+        })
+        .catchall(z.unknown()),
+    ),
+    judges: z.array(
+      z
+        .object({
+          category: z.string(),
+          score: z.number().nullable(),
+          max: z.number().nullable(),
+          calibrated: z.boolean().nullable(),
+          summary: z.string(),
+        })
+        .catchall(z.unknown()),
+    ),
+    links: z.object({ report: z.string().nullable(), dossier: z.string().nullable(), gist: z.string().nullable() }).catchall(z.unknown()),
+    cost: z.object({ readoutUsd: usd, runUsd: usd }).catchall(z.unknown()),
+    error: z.string().nullable(),
+  })
+  .catchall(z.unknown())
+
 /** What the run was asked to deliver and whether it did. Absent on documents built before the field existed. */
 export const finalOutputSchema = z
   .object({
@@ -272,6 +325,8 @@ export const finalOutputSchema = z
     files: z.array(outputFile),
     /** The root agent's last output, shown when nothing was declared. */
     rootOutput: outputFile.nullable(),
+    /** Absent on documents built before the readout existed. */
+    readout: readoutSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -458,6 +513,7 @@ export type PlayDocument = z.infer<typeof playDocumentSchema>
 export type RunDocument = z.infer<typeof runDocumentSchema>
 export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
+export type Readout = z.infer<typeof readoutSchema>
 export type OutputFile = z.infer<typeof outputFile>
 export type ProfileGraphDocument = z.infer<typeof profileGraphDocumentSchema>
 export type ProfileNode = z.infer<typeof profileNodeSchema>

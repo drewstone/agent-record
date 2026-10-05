@@ -1830,6 +1830,24 @@
 .ar-ws .final-path { overflow-wrap: anywhere; min-width: 0; }
 .ar-ws .final-size, .ar-ws .final-label { color: var(--ar-fg-muted); font-size: 11.5px; white-space: nowrap; }
 .ar-ws .final-none { margin: 8px 0 0; font-size: 12.5px; }
+.ar-ws .final-readout { margin: 10px 0 4px; padding-bottom: 12px; border-bottom: 1px solid var(--ar-border); min-width: 0; }
+.ar-ws .final-files-all { margin: 8px 0 0; font-size: 12.5px; }
+.ar-ws .final-files-all > summary { cursor: pointer; color: var(--ar-fg-muted); }
+.ar-ws .final-readout h3 { margin: 0; font-size: 13px; font-weight: 650; }
+.ar-ws .final-readout h4 { margin: 14px 0 4px; font: 600 11px var(--ar-font-body); text-transform: uppercase; letter-spacing: .04em; color: var(--ar-fg-muted); }
+.ar-ws .final-readout-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; }
+.ar-ws .final-summary { margin: 8px 0 0; font-size: 13.5px; line-height: 1.55; max-width: 78ch; overflow-wrap: anywhere; }
+.ar-ws .final-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 8px 0 0; font-size: 12.5px; }
+.ar-ws .final-cost { color: var(--ar-fg-muted); }
+.ar-ws .final-cost b { color: var(--ar-fg); font-family: var(--ar-font-mono); font-weight: 600; }
+.ar-ws .final-bar { flex-basis: 100%; font-size: 11.5px; overflow-wrap: anywhere; }
+.ar-ws .final-error { margin: 8px 0 0; font-size: 12.5px; color: var(--ar-c-fail); overflow-wrap: anywhere; }
+.ar-ws .final-table td { vertical-align: top; overflow-wrap: anywhere; }
+.ar-ws .final-table .final-nowrap { white-space: nowrap; width: 1%; }
+.ar-ws .final-evidence { margin-top: 3px; font-size: 12px; }
+.ar-ws .final-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.ar-ws .final-more { border: 0; background: none; padding: 0; font: inherit; font-size: 11.5px; color: var(--ws-accent); cursor: pointer; }
+.ar-ws .final-more:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 2px; border-radius: 3px; }
 @media (max-width: 640px) { .ar-ws .ws-final { padding: 10px 12px; } }
 /* Profile versions on the play page: one node per exact profile, under the profile it came from. */
 .ar-ws .profile-versions { display: grid; gap: 8px; min-width: 0; }
