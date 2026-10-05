@@ -14,7 +14,7 @@ import {
   utcTime,
 } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
-import { anchorsOf, argsLabel, callStatus, collapsePolls, pollSummary, thinkingMarkers } from './conversation-rows.js'
+import { anchorsOf, answeredBy, argsLabel, callStatus, collapsePolls, pollSummary, thinkingMarkers } from './conversation-rows.js'
 import type { CallState, ConversationRow } from './conversation-rows.js'
 
 function ToolIcon({ name }: { name: string }) {
@@ -198,7 +198,7 @@ export function Conversation({
     () =>
       collapsePolls(items, {
         callsOf,
-        answered: (event, id) => (index.results.get(toolKey(event.node, id))?.length ?? 0) > 0,
+        answered: (event, id) => answeredBy(index.results.get(toolKey(event.node, id))),
         keyOf: anchor,
       }),
     [items, index, anchor],

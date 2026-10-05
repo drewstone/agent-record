@@ -11,7 +11,9 @@ import {
   anchorsOf,
   argsLabel,
   callStatus,
+  answeredBy,
   collapsePolls,
+  pendingReceipt,
   pollSummary,
   thinkingMarkers,
 } from '../src/viewer/conversation-rows.ts'
@@ -129,4 +131,26 @@ test('final output sizes and links never invent a value', () => {
   assert.equal(sameOriginHref('https://example.com/a.md', page), null)
   assert.equal(sameOriginHref('javascript:alert(1)', page), null)
   assert.equal(sameOriginHref(null, page), null)
+})
+
+test('calls answered only by pending receipts collapse as polls; one real answer keeps a call apart', () => {
+  const pending = (ms) => JSON.stringify({ pending: true, tool: 'knowledge_record', elapsedMs: ms })
+  assert.equal(pendingReceipt(pending(1)), true)
+  assert.equal(pendingReceipt('{"events":[]}'), false)
+  assert.equal(pendingReceipt('pending'), false)
+  const result = (text) => ({ detail: { publicText: text } })
+  assert.equal(answeredBy([result(pending(1)), result(pending(2))]), false)
+  assert.equal(answeredBy([result(pending(1)), result('{"recorded":"page-1"}')]), true)
+  assert.equal(answeredBy(undefined), false)
+  const call = (id, at) => ({ id: `e${id}`, node: 'n', at, kind: 'message', category: 'coordination', label: 'assistant', source: { path: 'x', sha256: 'a'.repeat(64), line: id },
+    detail: { role: 'assistant', publicToolCalls: [{ id: `c${id}`, name: 'knowledge_record', input: '{"proposal":"p"}' }] } })
+  const events = [call(1, '2026-10-05T06:00:00Z'), call(2, '2026-10-05T06:01:00Z'), call(3, '2026-10-05T06:02:00Z')]
+  const results = { c1: [result(pending(1))], c2: [result(pending(2))], c3: [result('{"recorded":"page-1"}')] }
+  // knowledge_record is not a waiting tool and its args are not empty, so even pending-only calls stay apart here;
+  // the same calls of a waiting tool collapse.
+  const waiting = events.map((event) => ({ ...event, detail: { ...event.detail, publicToolCalls: [{ ...event.detail.publicToolCalls[0], name: 'await_event' }] } }))
+  const rows = collapsePolls(waiting, { callsOf, answered: (event, id) => answeredBy(results[id]), keyOf: (event) => event.id })
+  assert.deepEqual(rows.map((row) => row.kind), ['polls', 'event'])
+  assert.equal(rows[0].events.length, 2)
+  assert.equal(collapsePolls(events, { callsOf, answered: (event, id) => answeredBy(results[id]), keyOf: (event) => event.id }).every((row) => row.kind === 'event'), true)
 })
