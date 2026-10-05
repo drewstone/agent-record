@@ -14,6 +14,8 @@ import {
   utcTime,
 } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
+import { anchorsOf, argsLabel, callStatus, collapsePolls, pollSummary, thinkingMarkers } from './conversation-rows.js'
+import type { CallState, ConversationRow } from './conversation-rows.js'
 
 function ToolIcon({ name }: { name: string }) {
   const lower = name.toLowerCase()
@@ -68,6 +70,8 @@ interface ConversationProps {
   onFlag?: (flag: EventFlag, event: RecordEvent) => void
   /** Show lifecycle events (spawn, pause, settle) between messages. */
   lifecycle?: boolean
+  /** The agent can still act: a call without a result is pending, not uncaptured. */
+  live?: boolean
 }
 
 type Clip = { bytes: number; sha256: string | null }
@@ -116,9 +120,13 @@ export function Conversation({
   flags,
   onFlag,
   lifecycle = false,
+  live = false,
 }: ConversationProps) {
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const scroll = useRef<HTMLDivElement>(null)
+  // Open rows and measured heights are keyed by source position, which a live rebuild keeps; event ids change.
+  const anchors = useMemo(() => anchorsOf(index.events), [index])
+  const anchor = useCallback((event: RecordEvent) => anchors.get(event.id) ?? event.id, [anchors])
   const opener = (event: RecordEvent) => (openSource ? (sha256: string) => openSource(sha256, event) : undefined)
 
   const setOpen = (key: string, open: boolean) =>
@@ -168,8 +176,8 @@ export function Conversation({
           calls.length
         ))
           return false
-        // A turn whose only content was redacted thinking has nothing to read; its usage stays in the charts.
-        if (event.detail.role === 'assistant' && !textOf(event) && !event.detail.reasoning && !calls.length && event.detail.responseStatus !== 'error' && !event.detail.contentOmitted)
+        // An empty assistant turn stays hidden unless it records thinking the provider withheld; its usage stays in the charts.
+        if (event.detail.role === 'assistant' && !textOf(event) && !event.detail.reasoning && !calls.length && event.detail.responseStatus !== 'error' && !event.detail.contentOmitted && !thinkingMarkers(event.detail).length)
           return false
         if (eventMatches(event, index, query, category)) return true
         return calls.some((call) => {
@@ -186,33 +194,78 @@ export function Conversation({
       }),
     [index, actor, cutoff, query, category, lifecycle, target],
   )
-  const tools = useMemo(
-    () => items.flatMap((event) => callsOf(event).map((call) => `tool:${event.id}:${call.id}`)),
-    [items],
+  const rows = useMemo(
+    () =>
+      collapsePolls(items, {
+        callsOf,
+        answered: (event, id) => (index.results.get(toolKey(event.node, id))?.length ?? 0) > 0,
+        keyOf: anchor,
+      }),
+    [items, index, anchor],
   )
+  // The row that shows each event: a poll is drawn inside its collapsed group.
+  const rowOf = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const row of rows)
+      if (row.kind === 'polls') for (const event of row.events) map.set(event.id, row.key)
+      else map.set(row.event.id, row.key)
+    return map
+  }, [rows])
+  const shown = rows.flatMap((row) => (row.kind === 'event' ? [row.event] : []))
+  const tools = shown.flatMap((event) => callsOf(event).map((call) => `tool:${anchor(event)}:${call.id}`))
+  const thoughts = shown.filter((event) => typeof event.detail.reasoning === 'string' && event.detail.reasoning).map((event) => `reasoning:${anchor(event)}`)
   const allExpanded = tools.length > 0 && tools.every((key) => opened.has(key))
+  const allThinking = thoughts.length > 0 && thoughts.every((key) => opened.has(key))
   const retained = (index.byActor.get(actor) ?? []).some(
     (item) => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length),
   )
   // Another agent starts at its first message, unless the change came with an event to show.
   const targetRef = useRef(target)
   targetRef.current = target
+  // Follow the tail only while the reader is at the bottom: new rows of a live record keep them there; anywhere
+  // else, the rows above keep their measured heights and the reading place does not move.
+  const following = useRef(false)
   useLayoutEffect(() => {
+    following.current = false
     if (scroll.current && !targetRef.current) scroll.current.scrollTop = 0
   }, [actor])
+  useEffect(() => {
+    const element = scroll.current
+    if (!element) return
+    const track = () => {
+      following.current = element.scrollHeight - element.scrollTop - element.clientHeight < 24
+    }
+    element.addEventListener('scroll', track, { passive: true })
+    return () => element.removeEventListener('scroll', track)
+  }, [])
+  useLayoutEffect(() => {
+    const element = scroll.current
+    if (!element || !following.current) return
+    element.scrollTop = element.scrollHeight
+    // New rows are measured after they render; hold the bottom until they settle.
+    let frames = 0
+    let frame = requestAnimationFrame(function pin() {
+      if (!following.current) return
+      element.scrollTop = element.scrollHeight
+      if (++frames < 20) frame = requestAnimationFrame(pin)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [rows])
   useEffect(() => {
     if (!selected) return
     const event = index.byEvent.get(selected)
     if (!event) return
-    const keys = [`prompt:${selected}`, `reasoning:${selected}`]
+    const keys = [`prompt:${anchor(event)}`, `reasoning:${anchor(event)}`]
     if (event.detail.toolCallId !== undefined)
       for (const match of index.calls.get(
         toolKey(event.node, event.detail.toolCallId),
       ) ?? [])
-        keys.push(`tool:${match.event.id}:${match.call.id}`)
-    for (const call of callsOf(event)) keys.push(`tool:${event.id}:${call.id}`)
-    setOpened((current) => new Set([...current, ...keys]))
-  }, [selected, index])
+        keys.push(`tool:${anchor(match.event)}:${match.call.id}`, rowOf.get(match.event.id) ?? '')
+    for (const call of callsOf(event)) keys.push(`tool:${anchor(event)}:${call.id}`)
+    const row = rowOf.get(selected)
+    if (row?.startsWith('polls:')) keys.push(row)
+    setOpened((current) => new Set([...current, ...keys.filter(Boolean)]))
+  }, [selected, index]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sourceButton = (event: RecordEvent) => (
     <button
@@ -245,12 +298,63 @@ export function Conversation({
       </span>
     )
   }
-  const keyOf = useCallback((event: RecordEvent) => event.id, [])
+  const keyOf = useCallback((row: ConversationRow) => row.key, [])
   const estimate = useCallback(
-    (event: RecordEvent) => (isLifecycle(event) ? 34 : !textOf(event) && callsOf(event).length ? 8 + 40 * callsOf(event).length : 150),
+    (row: ConversationRow) =>
+      row.kind === 'polls'
+        ? 48
+        : isLifecycle(row.event)
+          ? 34
+          : !textOf(row.event) && callsOf(row.event).length
+            ? 8 + 40 * callsOf(row.event).length
+            : 150,
     [],
   )
-  const render = (event: RecordEvent) => {
+  const renderPolls = (row: Extract<ConversationRow, { kind: 'polls' }>) => {
+    const summary = pollSummary(row.events)
+    const open = opened.has(row.key)
+    const chosen = row.events.some((event) => event.id === selected)
+    return (
+      <details
+        className={`poll-group ${chosen ? 'selected' : ''}`}
+        data-poll-group={row.events.length}
+        data-open-key={row.key}
+        data-entry={row.events[0]!.id}
+        open={open}
+        onToggle={(e) => setOpen(row.key, e.currentTarget.open)}
+      >
+        <summary>
+          <span className="execution-icon">
+            <ToolIcon name={row.name} />
+          </span>
+          <span className="execution-name" title={row.name}>{toolName(row.name)}</span>
+          <span className="poll-facts">{summary.label}</span>
+          <span className="poll-args">{argsLabel(row.input) ?? compact(row.input ?? '')}</span>
+          <time dateTime={row.events[0]!.at}>{utcTime(row.events[0]!.at)}</time>
+        </summary>
+        {open && (
+          <ol className="poll-calls">
+            {row.events.map((event) => {
+              const call = callsOf(event)[0]!
+              return (
+                <li key={event.id} data-message={event.id} className={selected === event.id ? 'selected' : ''}>
+                  <time dateTime={event.at}>{utcTime(event.at)}</time>
+                  <span className="mono">{call.id}</span>
+                  <span className="poll-args">{argsLabel(call.input) ?? compact(call.input ?? '')}</span>
+                  <span className="execution-status">{callStatus('missing', live)}</span>
+                  {sourceButton(event)}
+                </li>
+              )
+            })}
+          </ol>
+        )}
+      </details>
+    )
+  }
+  const render = (row: ConversationRow) => {
+    if (row.kind === 'polls') return renderPolls(row)
+    const event = row.event
+    const at = anchor(event)
     if (isLifecycle(event)) {
       const text = textOf(event)
       return (
@@ -270,6 +374,7 @@ export function Conversation({
     const message = textOf(event),
       calls = callsOf(event)
     const reasoning = typeof event.detail.reasoning === 'string' ? event.detail.reasoning : ''
+    const withheld = thinkingMarkers(event.detail)
     const user = event.detail.role === 'user',
       failed = event.detail.responseStatus === 'error'
     const finding = event.detail.recordedClaim !== undefined
@@ -287,9 +392,24 @@ export function Conversation({
             : event.detail.role === 'assistant'
               ? 'Agent'
               : (event.detail.role ?? 'Event')
-    const promptKey = `prompt:${event.id}`
-    const reasoningKey = `reasoning:${event.id}`
+    const promptKey = `prompt:${at}`
+    const reasoningKey = `reasoning:${at}`
     const clip = clipOf(event.detail.clip)
+    // A turn that holds only withheld thinking is one quiet line.
+    if (withheld.length && !message && !reasoning && !calls.length && !failed && !event.detail.contentOmitted)
+      return (
+        <article
+          className={`thinking-note ${selected === event.id ? 'selected' : ''}`}
+          data-entry={event.id}
+          data-message={event.id}
+          data-thinking-withheld
+        >
+          <time dateTime={event.at}>{utcTime(event.at)}</time>
+          <span>{withheld.join(' · ')}</span>
+          {flagMarks(event)}
+          {sourceButton(event)}
+        </article>
+      )
     return (
       <article
         className={[
@@ -307,7 +427,7 @@ export function Conversation({
         data-message={event.id}
         data-message-node={event.node}
       >
-        {(message || failed || standalone || reasoning || !calls.length) && (
+        {(message || failed || standalone || reasoning || withheld.length > 0 || !calls.length) && (
           <header className="message-heading">
             <span className="message-mark" aria-hidden="true">
               {user ? '↳' : finding ? '◇' : failed ? '!' : standalone ? '↵' : '·'}
@@ -330,6 +450,11 @@ export function Conversation({
             </summary>
             {opened.has(reasoningKey) && <MessageText text={reasoning} />}
           </details>
+        )}
+        {withheld.length > 0 && (
+          <p className="thinking-withheld" data-thinking-withheld>
+            {withheld.join(' · ')}
+          </p>
         )}
         {user && message ? (
           <details
@@ -374,7 +499,7 @@ export function Conversation({
           <p className="recorded-error">
             The request failed. No assistant response is present in this record.
           </p>
-        ) : !calls.length && !reasoning ? (
+        ) : !calls.length && !reasoning && !withheld.length ? (
           <p className="publication-note">
             {event.detail.contentOmitted ?? 'No text body is present in this record.'}
           </p>
@@ -393,7 +518,7 @@ export function Conversation({
               const last = returned.at(-1),
                 later = allResults.some((result) => ms(result.at) > cutoff)
               const ambiguous = (index.calls.get(toolKey(event.node, call.id))?.length ?? 0) > 1
-              const state = ambiguous
+              const state: CallState = ambiguous
                 ? 'ambiguous'
                 : last
                   ? last.detail.isError
@@ -404,7 +529,7 @@ export function Conversation({
                     : 'missing'
               const recorded = typeof last?.detail.durationMs === 'number' ? last.detail.durationMs : null
               const duration = recorded ?? (last && last.detail.atBasis !== 'carried' ? ms(last.at) - ms(event.at) : null)
-              const key = `tool:${event.id}:${call.id}`
+              const key = `tool:${at}:${call.id}`
               const open = opened.has(key)
               const callClip = clipOf((call as { clip?: unknown }).clip)
               const resultFlags = returned.some((result) => flags?.has(result.id))
@@ -425,23 +550,15 @@ export function Conversation({
                       <ToolIcon name={call.name} />
                     </span>
                     <span className="execution-name" title={call.name}>{toolName(call.name)}</span>
-                    <span className="execution-preview" title={preview(call)}>
-                      {preview(call)}
+                    <span className={`execution-preview ${argsLabel(call.input) ? 'not-captured' : ''}`} title={preview(call)}>
+                      {argsLabel(call.input) ?? preview(call)}
                     </span>
                     <span className="execution-time" data-tool-duration title="Recorded time from call to result">
                       {duration !== null && duration >= 0 ? interval(duration) : ''}
                     </span>
                     {!message && flagMarks(event)}
                     <span className="execution-status" data-tool-status>
-                      {state === 'error'
-                        ? 'Error'
-                        : state === 'returned'
-                          ? 'Returned'
-                          : state === 'pending'
-                            ? 'Not returned'
-                            : state === 'ambiguous'
-                              ? 'Ambiguous'
-                              : 'No result'}
+                      {callStatus(state, live)}
                     </span>
                   </summary>
                   {open && (
@@ -453,7 +570,11 @@ export function Conversation({
                           {sourceButton(event)}
                         </header>
                         <FullOutput clip={callClip} open={opener(event)}>
-                          <VerbatimContent text={call.input ?? 'Tool arguments are absent from this record.'} rawLabel="Raw input" />
+                          {call.input === undefined ? (
+                            <p className="publication-note">Args not captured.</p>
+                          ) : (
+                            <VerbatimContent text={call.input} rawLabel="Raw input" />
+                          )}
                         </FullOutput>
                         {call.publicationNote && <p className="publication-note">{call.publicationNote}</p>}
                       </section>
@@ -488,7 +609,9 @@ export function Conversation({
                             ? 'Several calls share this identifier in this session. Results remain separate.'
                             : later
                               ? 'The result had not returned at the selected time.'
-                              : 'No matching result was retained. Completion is unknown.'}
+                              : live
+                                ? 'Pending. The result has not been recorded yet.'
+                                : 'Result not captured. Completion is unknown.'}
                         </p>
                       )}
                     </div>
@@ -503,14 +626,32 @@ export function Conversation({
   }
   return (
     <>
-      {tools.length > 0 && (
+      {(tools.length > 0 || thoughts.length > 0) && (
         <div className="conversation-toolbar">
-          <button
+          {thoughts.length > 0 && (
+            <button
+              type="button"
+              className="tool-expansion"
+              data-expand-thinking
+              aria-pressed={allThinking}
+              onClick={() =>
+                setOpened((current) => {
+                  const next = new Set(current)
+                  for (const key of thoughts)
+                    if (allThinking) next.delete(key)
+                    else next.add(key)
+                  return next
+                })
+              }
+            >
+              {allThinking ? 'Collapse all thinking' : 'Expand all thinking'}
+            </button>
+          )}
+          {tools.length > 0 && <button
             type="button"
             className="tool-expansion"
             data-expand-tools
             aria-pressed={allExpanded}
-            disabled={!tools.length}
             onClick={() =>
               setOpened((current) => {
                 const next = new Set(current)
@@ -522,7 +663,7 @@ export function Conversation({
             }
           >
             {allExpanded ? 'Collapse tools' : 'Expand tools'}
-          </button>
+          </button>}
         </div>
       )}
       <div
@@ -532,7 +673,7 @@ export function Conversation({
         tabIndex={0}
         aria-label="Scrollable retained conversation"
       >
-        {!items.length && (
+        {!rows.length && (
           <p className="chat-empty">
             {query || category !== 'all'
               ? 'No messages match this filter.'
@@ -541,7 +682,7 @@ export function Conversation({
                 : 'Conversation not retained. Its absence does not mean the agent did no work.'}
           </p>
         )}
-        <VirtualList items={items} keyOf={keyOf} render={render} scroller={scroll} target={target} estimate={estimate} />
+        <VirtualList items={rows} keyOf={keyOf} render={render} scroller={scroll} target={target ? rowOf.get(target) : undefined} estimate={estimate} />
       </div>
     </>
   )
