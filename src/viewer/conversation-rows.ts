@@ -14,13 +14,17 @@ export interface RowCall {
 
 /**
  * A key that survives a live record growing. Event ids hash the whole source file, so every append renames every
- * event of that file; the node, source path and position inside it do not change. Open rows, measured heights and
- * the tail position are kept by this key. Without a source position the event id is all there is.
+ * event of that file. The harness's own record id (`nativeRecordId`, one per session line or part) does not change;
+ * a call and its result can share one, so the kind and source item are part of the key. Without it, the node, source
+ * path and position inside the file are stable too; without either, the event id is all there is.
  */
 export function anchorOf(event: RecordEvent): string {
   const source = event.source as { path?: string; line?: number; pointer?: string; item?: number } | null | undefined
-  if (!source?.path) return event.id
-  return JSON.stringify([event.node, source.path, source.line ?? null, source.pointer ?? null, source.item ?? null])
+  const native = event.detail.nativeRecordId
+  if (typeof native === 'string' && native)
+    return JSON.stringify([event.node, 'native', native, event.kind, source?.item ?? null])
+  if (source?.path) return JSON.stringify([event.node, source.path, source.line ?? null, source.pointer ?? null, source.item ?? null])
+  return event.id
 }
 
 /** Anchors for events in recorded order; a repeated position gets an occurrence suffix so keys stay unique. */
