@@ -1788,13 +1788,14 @@
 /* Collapsed polls, withheld thinking, and absent captures: quiet rows that say what the record lacks. */
 .agent-record .tool-expansion + .tool-expansion { margin-left: 0; }
 .agent-record .poll-group { border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 50%, transparent); }
-.agent-record .poll-group > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 16px; font: 11.5px/1.5 var(--ar-font-mono); color: var(--ar-fg-muted); cursor: pointer; list-style: none; }
+.agent-record .poll-group > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 31px; padding: 6px 16px; font: 11.5px/1.5 var(--ar-font-mono); color: var(--ar-fg-muted); cursor: pointer; list-style: none; }
 .agent-record .poll-group > summary::-webkit-details-marker { display: none; }
-.agent-record .poll-group > summary::after { content: '+'; color: var(--ar-fg-faint); }
+.agent-record .poll-group > summary::before { display: none; }
+.agent-record .poll-group > summary::after { content: '+'; font-size: 13px; color: var(--ar-fg-faint); }
 .agent-record .poll-group[open] > summary::after { content: '−'; }
 .agent-record .poll-group > summary:hover { background: var(--ar-bg-alt); }
 .agent-record .poll-group .execution-icon { color: var(--ar-fg-faint); }
-.agent-record .poll-group .execution-name { color: var(--ar-fg); }
+.agent-record .poll-group .execution-name { color: var(--ar-fg); flex-shrink: 0; }
 .agent-record .poll-group .poll-facts { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
 .agent-record .poll-group .poll-args { color: var(--ar-fg-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 18rem; }
 .agent-record .poll-group time { color: var(--ar-fg-faint); font-size: 10.5px; }
@@ -1811,8 +1812,10 @@
 .agent-record .execution-preview.not-captured { font-style: italic; }
 @media (max-width: 640px) {
   .agent-record .poll-group > summary, .agent-record .thinking-note { padding-left: 12px; padding-right: 12px; }
-  .agent-record .poll-group .poll-args { max-width: 100%; }
-  .agent-record .poll-calls { padding-left: 16px; }
+  .agent-record .poll-group .poll-facts { order: 3; flex-basis: 100%; padding-left: 24px; }
+  .agent-record .poll-group .poll-args, .agent-record .poll-calls .poll-args { display: none; }
+  .agent-record .poll-group time { margin-left: auto; }
+  .agent-record .poll-calls { padding-left: 36px; }
 }
 /* Final output: what the run was asked to deliver, first on the run page. */
 .ar-ws .ws-final { background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 12px 16px; min-width: 0; }
