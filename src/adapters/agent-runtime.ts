@@ -1738,7 +1738,8 @@ export class Ingest {
       const native = row.value.seq !== undefined ? { nativeRecordId: String(row.value.seq) } : {}
       const full = () => this.lineSource(rel, row.line, row.raw)
       if (kind === 'tool_call') {
-        const input = this.clip(JSON.stringify(event.args ?? {}), full)
+        // A stream row without args says nothing about them: the call omits `input` rather than claiming `{}`.
+        const input = event.args === undefined || event.args === null ? null : this.clip(JSON.stringify(event.args), full)
         callIds.add(str(event.toolCallId))
         this.emit({
           node: node.id,
@@ -1747,7 +1748,7 @@ export class Ingest {
           category: categoryOf(str(event.toolName), event.args),
           label: `assistant · ${str(event.toolName)}`,
           source,
-          detail: { role: 'assistant', ...native, publicToolCalls: [{ id: str(event.toolCallId), name: str(event.toolName), input: input.text, ...(input.clip ? { clip: input.clip } : {}) }] },
+          detail: { role: 'assistant', ...native, publicToolCalls: [{ id: str(event.toolCallId), name: str(event.toolName), ...(input ? { input: input.text } : {}), ...(input?.clip ? { clip: input.clip } : {}) }] },
         })
       } else if (kind === 'tool_result') {
         const result = event.result
