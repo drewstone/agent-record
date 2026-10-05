@@ -16,6 +16,7 @@ import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, w
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { ProfileVersions } from './workspace/ProfileVersions.js'
+import { splitHidden } from './workspace/plays-filter.js'
 import { LineageGraph, TopologyGraph } from './workspace/RunGraph.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
 
@@ -102,15 +103,19 @@ function PlaysPage({ api }: { api: string }) {
   const query = params.get('q') ?? ''
   const program = params.get('program') ?? ''
   const sort = (['latest', 'spend', 'runs', 'name'] as const).find((value) => value === params.get('sort')) ?? 'latest'
+  const showHidden = params.get('show') === 'all'
   const [draft, setDraft] = useState(query)
   useEffect(() => setDraft(query), [query])
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
   const keys = useMemo(() => new Map((dimensions.data?.dimensions ?? []).map((dimension) => [dimension.id, dimension.key])), [dimensions.data])
-  const rows = useMemo(() => {
+  const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
     const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.paidUsd ?? 0) + (spend.listUsd ?? 0)
-    return (plays.data?.plays ?? [])
-      .filter((play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)))
+    const matching = (plays.data?.plays ?? []).filter(
+      (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
+    )
+    const { shown, hidden } = splitHidden(matching, showHidden)
+    const rows = shown
       .sort((a, b) =>
         sort === 'name'
           ? a.title.localeCompare(b.title)
@@ -120,7 +125,8 @@ function PlaysPage({ api }: { api: string }) {
               ? b.runCount - a.runCount
               : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
       )
-  }, [plays.data, query, program, sort])
+    return { rows, hidden }
+  }, [plays.data, query, program, sort, showHidden])
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
@@ -149,6 +155,10 @@ function PlaysPage({ api }: { api: string }) {
               <option value="runs">Most runs first</option>
               <option value="name">By name</option>
             </select>
+            <label className="toggle" title="Plays whose runs name no program, plays named smoke, canary or probe, and plays whose latest run failed">
+              <input type="checkbox" checked={showHidden} onChange={(event) => update({ show: event.target.checked ? 'all' : undefined })} data-show-hidden />
+              Show failed, test and smoke plays ({hidden})
+            </label>
           </div>
         </header>
         <section className="ws-section">
@@ -176,7 +186,9 @@ function PlaysPage({ api }: { api: string }) {
                         <a href={`/play/${encodeURIComponent(play.id)}`} onClick={(event) => event.preventDefault()}>{play.title}</a>
                         {play.title !== play.id && <small className="faint mono"> {play.id}</small>}
                       </td>
-                      <td className="mono">{play.program ?? <span className="faint">{play.playBasis}</span>}</td>
+                      <td className="mono">
+                        {play.program ?? <span className="faint">{play.noProgram ? 'no program' : play.playBasis}</span>}
+                      </td>
                       <td><span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span></td>
                       <td>
                         {play.latestRun ? (
@@ -214,7 +226,7 @@ function PlaysPage({ api }: { api: string }) {
               </tbody>
             </table>
           </div>
-          {!rows.length && <p className="chat-empty">No play matches.</p>}
+          {!rows.length && <p className="chat-empty">No play matches{hidden && !showHidden ? `; ${hidden} failed, test and smoke plays are hidden` : ''}.</p>}
         </section>
       </div>
     </Status>
@@ -356,12 +368,15 @@ function RunsTable({
   headline: Set<string> | null
   onOpen: (runId: string) => void
 }) {
+  // The column shows when any run's record states what it is for (the catalog reads it from the run input).
+  const purposes = play.runs.some((run) => run.purpose)
   return (
     <div className="table-scroll">
       <table className="data-table runs-table" data-runs>
         <thead>
           <tr>
             <th>Run</th>
+            {purposes && <th>Purpose</th>}
             <th>State</th>
             <th>Started</th>
             <th>Duration</th>
@@ -389,6 +404,11 @@ function RunsTable({
                 {run.versions && run.versions.count > 1 && <span className="chip">v{run.versions.count}</span>}
                 {run.inputDigest && latestDigest && run.inputDigest !== latestDigest && <span className="chip" title="Input differs from the latest run">input differs</span>}
               </td>
+              {purposes && (
+                <td className="run-purpose" data-purpose-basis={run.purposeBasis ?? undefined} title={run.purpose ? `${run.purpose}\n\nFrom the run record's ${run.purposeBasis ?? 'input'}` : 'The run record states no purpose'}>
+                  {run.purpose ? <div className="run-purpose-text">{run.purpose}</div> : <span className="faint">not stated</span>}
+                </td>
+              )}
               <td><span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>{run.reason && <small className="faint"> {run.reason}</small>}</td>
               <td>{when(run.startedAt)}</td>
               <td>{duration(run.durationMs)}</td>
