@@ -1831,3 +1831,92 @@
 .ar-ws .final-size, .ar-ws .final-label { color: var(--ar-fg-muted); font-size: 11.5px; white-space: nowrap; }
 .ar-ws .final-none { margin: 8px 0 0; font-size: 12.5px; }
 @media (max-width: 640px) { .ar-ws .ws-final { padding: 10px 12px; } }
+/* Profile versions on the play page: one node per exact profile, under the profile it came from. */
+.ar-ws .profile-versions { display: grid; gap: 8px; min-width: 0; }
+.ar-ws .profile-intro, .ar-ws .profile-hint, .ar-ws .profile-missing { margin: 0; font-size: 12.5px; max-width: 110ch; }
+.ar-ws .profile-canvas { max-height: 70vh; }
+.ar-ws .profile-edge path { fill: none; stroke: var(--ar-fg-muted); stroke-width: 1.2; }
+.ar-ws .profile-edge.relation-authored path { stroke: var(--ar-border-strong); stroke-width: 1; }
+.ar-ws .profile-edge.relation-revision path { stroke: var(--ws-accent); stroke-width: 1.8; }
+.ar-ws .profile-edge.relation-treatment path { stroke: var(--ar-c-run); stroke-width: 1.8; }
+.ar-ws .profile-edge.basis-inferred path { stroke-dasharray: 6 4; }
+.ar-ws .profile-edge.secondary path { stroke-width: 1; opacity: .45; stroke-dasharray: 2 4; }
+.ar-ws .profile-edge .edge-label { fill: var(--ar-fg-muted); font: 10px var(--ar-font-mono); paint-order: stroke; stroke: var(--ws-panel); stroke-width: 4px; stroke-linejoin: round; }
+.ar-ws .profile-edge .edge-delta { font: 10px var(--ar-font-mono); paint-order: stroke; stroke: var(--ws-panel); stroke-width: 4px; stroke-linejoin: round; }
+.ar-ws .profile-edge .edge-delta.known { fill: var(--ar-fg); }
+.ar-ws .profile-edge .edge-delta.unknown { fill: var(--ar-fg-faint); }
+.ar-ws .profile-arrow { fill: var(--ar-fg-muted); }
+.ar-ws .profile-node { color: var(--ar-fg-muted); }
+.ar-ws .profile-node.state-ok { color: var(--ar-c-ok); }
+.ar-ws .profile-node.state-fail { color: var(--ar-c-fail); }
+.ar-ws .profile-node.state-warn { color: var(--ar-c-run); }
+.ar-ws .profile-node.state-run { color: var(--ws-accent); }
+.ar-ws .profile-hit { cursor: pointer; outline: none; }
+.ar-ws .profile-hit-area { fill: transparent; }
+.ar-ws .profile-hit:hover .profile-hit-area { fill: var(--ws-raised); }
+.ar-ws .profile-hit:focus-visible .profile-hit-area { fill: var(--ws-raised); stroke: var(--ar-control-focus, var(--ws-frame)); stroke-width: 1.5; }
+.ar-ws .profile-dot { fill: currentColor; fill-opacity: .85; stroke: var(--ws-panel); stroke-width: 2; }
+.ar-ws .profile-node.kind-root .profile-dot { stroke: var(--ws-frame); stroke-width: 2; }
+.ar-ws .profile-node.registered .profile-dot { fill-opacity: 0; stroke: var(--ar-fg-muted); stroke-dasharray: 3 3; stroke-width: 1.5; }
+.ar-ws .profile-node .node-halo { fill: none; stroke: var(--ws-frame); stroke-width: 2; }
+.ar-ws .profile-label { fill: var(--ar-fg); font: 12px var(--ar-font-mono); }
+.ar-ws .profile-node.kind-root .profile-label { font-weight: 650; }
+.ar-ws .profile-node.selected .profile-label, .ar-ws .profile-hit:hover .profile-label { fill: var(--ws-title); }
+.ar-ws .profile-sub { fill: var(--ar-fg-muted); font: 10.5px var(--ar-font-mono); }
+.ar-ws .profile-toggle { fill: var(--ws-accent); font: 600 10.5px var(--ar-font-mono); cursor: pointer; outline: none; }
+.ar-ws .profile-toggle:hover, .ar-ws .profile-toggle:focus-visible { text-decoration: underline; fill: var(--ws-title); }
+.ar-ws .legend-line.relation-revision::before { border-top-color: var(--ws-accent); }
+.ar-ws .legend-line.relation-treatment::before { border-top-color: var(--ar-c-run); }
+.ar-ws .legend-line.relation-authored::before { border-top: 1px solid var(--ar-border-strong); }
+.ar-ws .legend-line.basis-inferred::before { border-top-style: dashed; }
+.ar-ws .link-button { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--ws-accent); font: inherit; cursor: pointer; }
+.ar-ws .link-button:hover, .ar-ws .link-button:focus-visible { text-decoration: underline; }
+.ar-ws .profile-detail { display: grid; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--ar-border); min-width: 0; }
+.ar-ws .profile-detail h4 { margin: 10px 0 0; }
+.ar-ws .profile-detail h5 { margin: 10px 0 4px; font: 600 11.5px var(--ar-font-body); color: var(--ar-fg-muted); }
+.ar-ws .profile-detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ar-ws .profile-detail-head h3 { margin: 0; font: 650 15px/1.3 var(--ar-font-mono); overflow-wrap: anywhere; }
+.ar-ws .profile-detail-head .chip { margin: 0; }
+.ar-ws .profile-close { margin-left: auto; min-height: 0; padding: 2px 10px; font-size: 12px; }
+.ar-ws .profile-description { margin: 0; font-size: 13px; max-width: 110ch; }
+.ar-ws .profile-empty { margin: 0; font-size: 12.5px; }
+.ar-ws .profile-parents { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12.5px; }
+.ar-ws .profile-evidence { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; color: var(--ar-fg-muted); font-size: 12px; overflow-wrap: anywhere; }
+.ar-ws .edge-chip { display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 4px; font: 600 10.5px/1.7 var(--ar-font-mono); color: var(--ar-fg-muted); background: var(--ws-raised); }
+.ar-ws .edge-chip.relation-revision { color: var(--ws-accent); }
+.ar-ws .edge-chip.relation-treatment { color: var(--ar-c-run); }
+.ar-ws .edge-chip.basis-inferred { background: transparent; box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
+.ar-ws .profile-runs td { vertical-align: top; }
+.ar-ws .score-judges { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ar-ws .score-chip { display: inline-block; padding: 0 6px; border-radius: 4px; font: 11px/1.7 var(--ar-font-mono); white-space: nowrap; }
+.ar-ws .score-chip.calibrated { color: var(--ar-fg); background: var(--ws-raised); }
+.ar-ws .score-chip.advisory { color: var(--ar-fg-muted); box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
+.ar-ws .profile-diff { display: grid; gap: 8px; min-width: 0; }
+.ar-ws .profile-diff-meta { margin: 0; font-size: 12px; }
+.ar-ws .diff-field { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 12.5px; min-width: 0; }
+.ar-ws .diff-field.diff-text, .ar-ws .diff-field.diff-files, .ar-ws .diff-field.score-delta { display: grid; gap: 4px; }
+.ar-ws .diff-name { font: 600 11px var(--ar-font-body); text-transform: uppercase; letter-spacing: .04em; color: var(--ar-fg-muted); min-width: 90px; }
+.ar-ws .diff-field del, .ar-ws .diff-field ins { text-decoration: none; overflow-wrap: anywhere; font-family: var(--ar-font-mono); font-size: 12px; }
+.ar-ws .diff-field del { color: var(--ar-c-fail); }
+.ar-ws .diff-field ins { color: var(--ar-c-ok); }
+.ar-ws .diff-field del.chip { margin: 0; text-decoration: line-through; }
+.ar-ws .diff-field ins.chip { margin: 0; }
+.ar-ws .diff-files ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.ar-ws .diff-files summary { cursor: pointer; }
+.ar-ws .diff-lines { margin: 0; padding: 8px 10px; max-height: 50vh; overflow: auto; background: var(--ar-bg-sink, var(--ws-raised)); border-radius: 6px; font: 11.5px/1.55 var(--ar-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ar-ws .diff-lines .add { color: var(--ar-c-ok); background: color-mix(in srgb, var(--ar-c-ok) 9%, transparent); display: block; }
+.ar-ws .diff-lines .del { color: var(--ar-c-fail); background: color-mix(in srgb, var(--ar-c-fail) 9%, transparent); display: block; }
+.ar-ws .diff-lines .ctx { color: var(--ar-fg-muted); display: block; }
+.ar-ws .diff-lines .hunk { color: var(--ar-fg-faint); display: block; }
+.ar-ws .score-delta .num.up { color: var(--ar-c-ok); }
+.ar-ws .score-delta .num.down { color: var(--ar-c-fail); }
+.ar-ws .score-delta p { margin: 0; font-size: 12px; }
+.ar-ws .profile-content > summary { cursor: pointer; font-size: 12.5px; color: var(--ar-fg-muted); }
+.ar-ws .profile-content pre { max-height: 40vh; overflow: auto; }
+.ar-ws .profile-instructions { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 12.5px; max-width: 110ch; }
+.ar-ws .profile-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 12px; }
+@media (max-width: 700px) {
+  .ar-ws .profile-canvas { max-height: 60vh; }
+  .ar-ws .diff-name { min-width: 0; flex-basis: 100%; }
+  .ar-ws .profile-close { margin-left: 0; }
+}

@@ -287,6 +287,167 @@ export const runDocumentSchema = z
   })
   .catchall(z.unknown())
 
+// ---------------------------------------------------------------------------------------------------------
+// Profile versions of a play: `plays/<id>/profiles`, written by discovery-lab `disco profiles index`.
+// ---------------------------------------------------------------------------------------------------------
+const profileDigest = z.string().regex(/^sha256:[0-9a-f]{64}$/)
+const contentRef = z.object({ bytes: z.number().int().nonnegative(), sha256: z.string() }).catchall(z.unknown())
+
+/** How a profile came from its parent. `authored`: written at runtime by an agent running the parent; `revision`: a
+ * later version of the parent; `treatment`: the parent is its control arm and this one adds the manipulated change. */
+export const profileRelations = ['authored', 'revision', 'treatment'] as const
+/** `recorded`: written at creation by the system that created the profile; `inferred`: reconstructed afterwards from
+ * records that prove it. */
+export const profileBases = ['recorded', 'inferred'] as const
+
+/** Unknown, a readout's judges, or a version chain's judge score: both known variants share `status`, so a plain union. */
+export const profileScoreSchema = z.union([
+  z.object({ status: z.literal('unknown'), reason: z.string() }).catchall(z.unknown()),
+  z
+    .object({
+      status: z.literal('known'),
+      source: z.literal('readout'),
+      path: z.string(),
+      generatedAt: z.string().nullable(),
+      judges: z.array(
+        z
+          .object({ category: z.string(), score: z.number().nullable(), max: z.number(), calibrated: z.boolean() })
+          .catchall(z.unknown()),
+      ),
+      verdicts: z.array(z.object({ id: z.string(), verdict: z.string() }).catchall(z.unknown())),
+    })
+    .catchall(z.unknown()),
+  z
+    .object({
+      status: z.literal('known'),
+      source: z.literal('version-judge'),
+      score: z.number().nullable(),
+      judgeDigest: z.string().nullable(),
+      ledger: z.string(),
+    })
+    .catchall(z.unknown()),
+])
+
+export const profileNodeSchema = z
+  .object({
+    digest: profileDigest,
+    short: z.string(),
+    name: z.string().nullable(),
+    description: z.string().nullable(),
+    version: z.string().nullable(),
+    play: z.string().nullable(),
+    kind: z.enum(['root', 'spawned']),
+    model: z.object({ id: z.string().nullable(), provider: z.string().nullable(), reasoningEffort: z.string().nullable() }),
+    harness: z.string().nullable(),
+    tools: z.array(z.string()),
+    systemPrompt: z.string().nullable(),
+    instructions: z.array(z.string()),
+    files: z.array(contentRef.extend({ path: z.string() })),
+    skills: z.array(contentRef.extend({ name: z.string() })),
+    author: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('operator'), registration: z.string().nullable() }).catchall(z.unknown()),
+      z
+        .object({ kind: z.literal('node'), runId: z.string(), nodeId: z.string(), profileDigest: z.string().nullable() })
+        .catchall(z.unknown()),
+      /** A pursuit-version chain's proposer wrote it. */
+      z.object({ kind: z.literal('proposer'), name: z.string(), source: z.string().nullable() }).catchall(z.unknown()),
+    ]),
+    createdIn: z.string().nullable(),
+    createdAt: z.string().nullable(),
+    label: z.string().nullable(),
+    budget: z.record(z.string(), z.number()).nullable(),
+    parents: z.array(
+      z
+        .object({
+          digest: profileDigest,
+          relation: z.enum(profileRelations),
+          basis: z.enum(profileBases),
+          primary: z.boolean(),
+          evidence: z.array(z.object({ source: z.string(), note: z.string() }).catchall(z.unknown())),
+        })
+        .catchall(z.unknown()),
+    ),
+    runs: z.array(
+      z
+        .object({
+          runId: z.string(),
+          nodeIds: z.array(z.string()),
+          outcome: z.string().nullable(),
+          run: z.object({ state: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown()),
+          score: profileScoreSchema,
+        })
+        .catchall(z.unknown()),
+    ),
+  })
+  .catchall(z.unknown())
+
+const diffLine = z.object({ op: z.enum([' ', '+', '-', '@']), text: z.string() })
+const fileRef = z.object({ path: z.string(), bytes: z.number().int().nonnegative(), sha256: z.string() }).catchall(z.unknown())
+
+export const profileDiffFieldSchema = z.discriminatedUnion('kind', [
+  z.object({ field: z.string(), kind: z.literal('value'), from: z.string().nullable(), to: z.string().nullable() }),
+  z.object({ field: z.string(), kind: z.literal('set'), added: z.array(z.string()), removed: z.array(z.string()), kept: z.number().int().nonnegative() }),
+  z.object({ field: z.string(), kind: z.literal('text'), added: z.number().int().nonnegative(), removed: z.number().int().nonnegative(), lines: z.array(diffLine) }),
+  z.object({
+    field: z.string(),
+    kind: z.literal('files'),
+    added: z.array(fileRef),
+    removed: z.array(fileRef),
+    changed: z.array(
+      z.object({
+        path: z.string(),
+        from: z.string(),
+        to: z.string(),
+        added: z.number().int().nonnegative(),
+        removed: z.number().int().nonnegative(),
+        lines: z.array(diffLine),
+      }),
+    ),
+  }),
+])
+
+export const profileDiffSchema = z
+  .object({
+    from: profileDigest,
+    to: profileDigest,
+    relation: z.enum(profileRelations),
+    basis: z.enum(profileBases),
+    identical: z.boolean(),
+    fields: z.array(profileDiffFieldSchema),
+    scoreDelta: z.discriminatedUnion('status', [
+      z.object({ status: z.literal('unknown'), reason: z.string() }).catchall(z.unknown()),
+      z
+        .object({
+          status: z.literal('known'),
+          source: z.enum(['readout', 'version-judge']),
+          categories: z.array(
+            z.object({
+              category: z.string(),
+              from: z.number().nullable(),
+              to: z.number().nullable(),
+              delta: z.number().nullable(),
+              calibrated: z.boolean(),
+            }),
+          ),
+          note: z.string(),
+        })
+        .catchall(z.unknown()),
+    ]),
+  })
+  .catchall(z.unknown())
+
+/** Every profile version used or registered in a play, with its parents, runs, scores and diffs. */
+export const profileGraphDocumentSchema = z
+  .object({
+    schema: z.literal('discovery-lab.profile-graph'),
+    play: z.string(),
+    builtAt: z.string(),
+    nodes: z.array(profileNodeSchema),
+    /** Keyed `${parentDigest}..${childDigest}`, one per parent edge whose relation is not `authored`. */
+    diffs: z.record(z.string(), profileDiffSchema),
+  })
+  .catchall(z.unknown())
+
 export type Gap = z.infer<typeof gapSchema>
 export type Spend = z.infer<typeof spendSchema>
 export type RecordStatus = z.infer<typeof recordStatusSchema>
@@ -298,3 +459,10 @@ export type RunDocument = z.infer<typeof runDocumentSchema>
 export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type OutputFile = z.infer<typeof outputFile>
+export type ProfileGraphDocument = z.infer<typeof profileGraphDocumentSchema>
+export type ProfileNode = z.infer<typeof profileNodeSchema>
+export type ProfileParent = ProfileNode['parents'][number]
+export type ProfileRun = ProfileNode['runs'][number]
+export type ProfileScore = z.infer<typeof profileScoreSchema>
+export type ProfileDiff = z.infer<typeof profileDiffSchema>
+export type ProfileDiffField = z.infer<typeof profileDiffFieldSchema>

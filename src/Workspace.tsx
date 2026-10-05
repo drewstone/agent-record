@@ -15,6 +15,7 @@ import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './wor
 import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
+import { ProfileVersions } from './workspace/ProfileVersions.js'
 import { LineageGraph, TopologyGraph } from './workspace/RunGraph.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
 
@@ -277,6 +278,10 @@ function PlayPage({ api, id }: { api: string; id: string }) {
               <>
                 <section className="ws-section">
                   <LineageGraph play={doc} onOpen={(runId) => open(runId)} />
+                </section>
+                <section className="ws-section" data-section="profile-versions">
+                  <h3>Profile versions</h3>
+                  <ProfileVersions api={api} play={doc.id} selected={params.get('profile')} onSelect={(short) => update({ profile: short })} />
                 </section>
                 <section className="ws-section">
                   <RunsTable play={doc} latestDigest={latestDigest} headlines={headlines} headline={dimensions.data ? new Set(dimensions.data.dimensions.filter((item) => item.headline).map((item) => item.id)) : null} onOpen={open} />
