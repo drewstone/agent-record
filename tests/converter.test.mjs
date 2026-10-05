@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
-import { ingestBundle, ingestRun } from '../dist/agent-runtime.js'
+import { createFileCache, ingestBundle, ingestRun } from '../dist/agent-runtime.js'
 
 const INGEST = join(dirname(fileURLToPath(import.meta.url)), '../tools/ingest.mjs')
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex')
@@ -207,4 +207,19 @@ test('a running node reads its session from the native index and the live tail, 
   assert.equal(second.detail.reasoning, 'The notes hold the cost model.')
   assert.equal(second.detail.reasoningRedacted, 1)
   assert.equal(events.find((event) => event.kind === 'tool-result').detail.publicText, 'notes.md')
+})
+
+test('a file cache shared across conversions never changes the record, and a changed file is read again', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const { run, native } = writeNativeRun(root, { liveLines: 2 })
+  const files = createFileCache()
+  const options = { runId: 'run-n', native }
+  assert.equal(ingestRun(run, { ...options, files }).json, ingestRun(run, options).json)
+  assert.ok(files.heldBytes() > 0)
+  const live = join(run, `evidence/native-live/${encodeURIComponent('run-n:s0')}/home/.claude/projects/-home-agent/abc.jsonl`)
+  writeFileSync(live, readFileSync(live, 'utf8') + JSON.stringify({ type: 'user', uuid: 'u9', timestamp: '2026-10-05T06:00:09Z', message: { role: 'user', content: 'Continue.' } }) + '\n')
+  const again = ingestRun(run, { ...options, files })
+  assert.equal(again.json, ingestRun(run, options).json)
+  assert.ok(again.record.events.some((event) => event.detail.publicText === 'Continue.'))
 })

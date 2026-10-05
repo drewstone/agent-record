@@ -79,6 +79,54 @@ export interface IngestOptions {
   manifest?: SnapshotManifest
   /** The sha256 hex of the manifest's bytes, recorded as input.snapshot. */
   manifestSha256?: string
+  /**
+   * Bytes of files an earlier conversion read (createFileCache). A process that converts a running run again and again
+   * passes the same cache, so each conversion reads only the files that changed since the last one.
+   */
+  files?: FileCache
+}
+
+/** Reads a file's bytes and sha256. */
+export interface FileCache {
+  read(abs: string): { bytes: Buffer; sha256: string }
+}
+
+/**
+ * A FileCache that keeps each file's bytes while its device, inode, size and change times are unchanged, least
+ * recently used first out past `maxBytes`. The output never depends on it: a changed file is read again.
+ */
+export function createFileCache({ maxBytes = 1024 * 1024 * 1024 }: { maxBytes?: number } = {}): FileCache & { heldBytes(): number } {
+  const entries = new Map<string, { key: string; bytes: Buffer; sha256: string }>()
+  let held = 0
+  return {
+    read(abs) {
+      const stats = statSync(abs)
+      const key = `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}:${stats.ctimeMs}`
+      const hit = entries.get(abs)
+      if (hit) {
+        entries.delete(abs)
+        held -= hit.bytes.length
+        if (hit.key === key) {
+          entries.set(abs, hit)
+          held += hit.bytes.length
+          return hit
+        }
+      }
+      const bytes = readFileSync(abs)
+      const entry = { key, bytes, sha256: sha(bytes) }
+      if (bytes.length <= maxBytes / 4) {
+        entries.set(abs, entry)
+        held += bytes.length
+      }
+      for (const [path, old] of entries) {
+        if (held <= maxBytes) break
+        entries.delete(path)
+        held -= old.bytes.length
+      }
+      return entry
+    },
+    heldBytes: () => held,
+  }
 }
 
 export interface IngestSummary {
@@ -386,7 +434,7 @@ export class Ingest {
     readonly runDir: string,
     readonly nativeRoot: string | undefined,
     readonly maxText: number,
-    readonly options: { runId?: string; manifest?: SnapshotManifest; manifestSha256?: string; prefix?: string } = {},
+    readonly options: { runId?: string; manifest?: SnapshotManifest; manifestSha256?: string; prefix?: string; files?: FileCache } = {},
   ) {
     const fromManifest = typeof options.manifest?.runId === 'string' && options.manifest.runId ? options.manifest.runId : undefined
     this.runId = options.runId ?? fromManifest ?? basename(runDir.replace(/\/+$/, ''))
@@ -404,10 +452,11 @@ export class Ingest {
   file(rel: string, abs = join(this.runDir, rel)) {
     const cached = this.fileCache.get(abs)
     if (cached) return cached
-    const bytes = readFileSync(abs)
+    const read = this.options.files?.read(abs)
+    const bytes = read?.bytes ?? readFileSync(abs)
     let text: string | undefined
     // Line files are read through splitLines(bytes); only a JSON document or a page is decoded whole.
-    const entry: FileEntry = { bytes, sha256: sha(bytes), get text() { return (text ??= bytes.toString('utf8')) } }
+    const entry: FileEntry = { bytes, sha256: read?.sha256 ?? sha(bytes), get text() { return (text ??= bytes.toString('utf8')) } }
     const listed = this.manifestFiles.get(this.sourcePath(rel))
     if (listed && hexOf(listed.sha256) !== entry.sha256) throw new SnapshotMismatchError(`${rel} does not match its snapshot manifest`)
     this.fileCache.set(abs, entry)
@@ -417,6 +466,14 @@ export class Ingest {
   digestOnly(rel: string, abs = join(this.runDir, rel)): { sha256: string; bytes: number } | null {
     const listed = this.manifestFiles.get(this.sourcePath(rel))
     if (listed) return { sha256: hexOf(listed.sha256)!, bytes: listed.bytes }
+    if (this.options.files) {
+      try {
+        const read = this.options.files.read(abs)
+        return { sha256: read.sha256, bytes: read.bytes.length }
+      } catch {
+        return null
+      }
+    }
     let fd: number
     try {
       fd = openSync(abs, 'r')
@@ -806,7 +863,7 @@ export class Ingest {
     const abs = join(this.runDir, NATIVE_INDEX)
     if (existsSync(abs)) {
       this.listSource(NATIVE_INDEX)
-      for (const row of splitLines(readFileSync(abs))) {
+      for (const row of splitLines(this.options.files?.read(abs).bytes ?? readFileSync(abs))) {
         const entry = row.value
         if (entry?.schema !== 'disco.native-capture.v1' || typeof entry.nodeId !== 'string') continue
         const held = latest.get(entry.nodeId)
@@ -2292,6 +2349,7 @@ export function ingestRun(runDir: string, options: IngestOptions = {}) {
     runId: options.runId,
     manifest: options.manifest,
     manifestSha256: options.manifestSha256,
+    files: options.files,
   })
   const { record, counts } = ingest.build()
   return finishRecord(record, counts)
