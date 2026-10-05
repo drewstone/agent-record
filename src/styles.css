@@ -1076,11 +1076,16 @@
   .agent-record .message-mark {
     left: 0.3rem;
   }
+  /* Icon, name, time, assessment flags, status, open mark. Status and the mark keep their own columns, so flags on a
+     narrow row never push the status word into the 10px mark column, where it clipped ("Retu"). */
   .agent-record .tool-execution > summary {
     display: grid;
-    grid-template-columns: 14px minmax(0, 1fr) auto auto 10px;
+    grid-template-columns: 14px minmax(0, 1fr) auto auto auto 10px;
     column-gap: 0.35rem;
   }
+  .agent-record .tool-execution > summary > .event-flags { grid-column: 4; grid-row: 1; }
+  .agent-record .tool-execution > summary > .execution-status { grid-column: 5; grid-row: 1; }
+  .agent-record .tool-execution > summary::after { grid-column: 6; grid-row: 1; }
   .agent-record .execution-preview {
     display: block;
     grid-column: 2 / -1;
