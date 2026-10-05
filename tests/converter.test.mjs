@@ -192,7 +192,7 @@ test('a running node reads its session from the native index and the live tail, 
   t.after(() => rmSync(root, { recursive: true, force: true }))
   const indexed = writeNativeRun(join(root, 'a'), { liveLines: 0 })
   const fromIndex = ingestRun(indexed.run, { runId: 'run-n', native: indexed.native }).record
-  const child = (record) => record.events.filter((event) => event.node === 'run-n:s0' && event.kind !== 'lifecycle')
+  const child = (record) => record.events.filter((event) => event.node === 'run-n:s0' && event.source.path !== 'spawn-journal.jsonl')
   assert.equal(fromIndex.nodes.find((node) => node.id === 'run-n:s0').capture.channel, 'native')
   assert.equal(child(fromIndex).filter((event) => event.kind === 'message').length, 2)
   assert.ok(fromIndex.nodes.find((node) => node.id === 'run-n:s0').sandboxes.includes('sandbox-0123456789ab'))
