@@ -152,10 +152,10 @@ Exit code 2 means the directory is unreadable; 3 means the record would exceed 1
 Every `spawned` ID in `spawn-journal.jsonl` is an agent node, and its parent is the ID without its last `:sN` segment.
 Each node's conversation comes from the first channel that holds it:
 
+0. `live`: only while the node has not settled, its Sandbox session events recorded so far, one JSON line per event under `evidence/live-stream/<encodeURIComponent(node id)>/`. The final state of each part id is shown, as for `part` below. Once the node settles its native session is read instead, so a turn is never shown from both.
 1. `native`: each Claude Code main session file, read from its longest stored copy. A session file is append-only, so every copy is a prefix of the same bytes. The copies are:
    - a retained harness transcript archive, extracted under `--native/<64-hex archive digest>/` and checked against the manifest's SHA-256;
-   - the node's latest capture in `evidence/native-index.jsonl` (`disco.native-capture.v1`), whose archive is extracted under the same cache;
-   - the live tail `evidence/native-live/<encodeURIComponent(node id)>/<home>/<path>`, whole lines appended by byte offset while the node runs.
+   - the node's latest capture in `evidence/native-index.jsonl` (`disco.native-capture.v1`), whose archive is extracted under the same cache.
 2. `oc`: OpenCode `native-trajectory.json`.
 3. `pi`: `trace/pi-sessions/**`, joined to the node whose spawned task digest equals the SHA-256 of the session's first user text as a JSON string.
 4. `bridge`: a retained cli-bridge export under `trace/bridge-sessions/`, joined to the node whose `materialized` receipt names the bridge session ID.
