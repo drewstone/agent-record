@@ -1975,23 +1975,27 @@ export class Ingest {
       const text = typeof instruction?.instruction === 'string' ? instruction.instruction : ''
       const to = typeof instruction?.toWorker === 'string' ? instruction.toWorker : null
       const at = isoAt(row.value?.at)
-      if (!text || !to || !at) continue
-      const sender = this.nodes.get(to)?.parent ?? this.rootId
-      if (!this.nodes.has(sender)) continue
+      if (!instruction || !at) continue
+      // The sender is the recipient's parent; an instruction to a worker this journal never spawned is not guessed.
+      const sender = to ? this.nodes.get(to)?.parent ?? (this.nodes.has(to) ? this.rootId : null) : null
+      if (!sender || !this.nodes.has(sender)) {
+        this.gaps.push({ nodeId: null, code: 'coordination-target-unknown', detail: `${this.sourcePath(rel)} line ${row.line} names no spawned worker (${to ?? 'no toWorker'})` })
+        continue
+      }
       const kind = str(instruction.kind) || 'instruction'
-      const shown = this.clip(text, () => this.lineSource(rel, row.line, row.raw))
+      const shown = text ? this.clip(text, () => this.lineSource(rel, row.line, row.raw)) : { text: '', clip: undefined }
       this.emit({
         node: sender,
         at,
         kind: 'message',
         category: 'coordination',
-        label: `${kind} → ${this.nodes.get(to)?.label ?? to}`,
+        label: `${kind} → ${this.nodes.get(to)!.label}`,
         source: { path: rel, sha256: entry.sha256, line: row.line },
         detail: {
           role: 'assistant',
-          publicText: shown.text,
+          ...(shown.text ? { publicText: shown.text } : {}),
           ...(shown.clip ? { clip: shown.clip } : {}),
-          coordination: { kind, toNode: this.nodes.has(to) ? to : null, receiptId: str(instruction.receiptId) || null, interrupt: instruction.interrupt === true },
+          coordination: { kind, toNode: to, receiptId: str(instruction.receiptId) || null, interrupt: instruction.interrupt === true },
         },
       })
       senders.add(sender)

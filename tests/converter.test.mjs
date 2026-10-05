@@ -128,6 +128,8 @@ function writeBridgeRun(root) {
   file('coordination-log.jsonl', jsonl([
     { runId: 'run-b', seq: 0, at: Date.parse('2026-08-16T20:05:00Z'), event: { type: 'instruction', instruction: { receiptId: 'r1', kind: 'steer', toWorker: 'run-b:s0', instruction: 'Use exact arithmetic.' } } },
     { runId: 'run-b', seq: 1, at: Date.parse('2026-08-16T20:05:01Z'), event: { type: 'steer', down: { receiptId: 'r1' } } },
+    { runId: 'run-b', seq: 2, at: Date.parse('2026-08-16T20:06:00Z'), event: { type: 'instruction', instruction: { receiptId: 'r2', kind: 'interrupt', toWorker: 'run-b:s0', instruction: '', interrupt: true } } },
+    { runId: 'run-b', seq: 3, at: Date.parse('2026-08-16T20:07:00Z'), event: { type: 'instruction', instruction: { receiptId: 'r3', kind: 'steer', toWorker: 'run-b:s9', instruction: 'Unknown worker.' } } },
   ]))
   return run
 }
@@ -141,7 +143,10 @@ test('a Pi session joins by its bridge session directory, and a parent keeps the
   assert.equal(child.joinProof.sessionId, 'supervised-worker-0123')
   assert.ok(!record.nodes.some((node) => node.id.startsWith('pi:')))
   const steer = record.events.filter((event) => event.source.path === 'coordination-log.jsonl')
-  assert.equal(steer.length, 1)
+  assert.equal(steer.length, 2)
+  assert.equal(steer[1].label, 'interrupt → s0')
+  assert.equal(steer[1].detail.publicText, undefined)
+  assert.ok(record.coverage.gaps.some((gap) => gap.code === 'coordination-target-unknown'))
   assert.equal(steer[0].node, 'run-b')
   assert.equal(steer[0].detail.publicText, 'Use exact arithmetic.')
   assert.equal(steer[0].detail.coordination.toNode, 'run-b:s0')
