@@ -486,6 +486,7 @@ function ScoreDelta({ delta }: { delta: ProfileDiff['scoreDelta'] }) {
   return (
     <div className="diff-field score-delta">
       <span className="diff-name">Score change</span>
+      <div className="table-scroll">
       <table className="data-table">
         <thead>
           <tr>
@@ -510,6 +511,7 @@ function ScoreDelta({ delta }: { delta: ProfileDiff['scoreDelta'] }) {
           ))}
         </tbody>
       </table>
+      </div>
       <p className="faint">{delta.note}</p>
     </div>
   )
