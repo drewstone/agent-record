@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { z } from 'zod'
 import { recordSchema } from '../dist/record.js'
 import { bundleSchema, snapshotSchema } from '../dist/publication.js'
-import { playsDocumentSchema, playDocumentSchema, runDocumentSchema } from '../dist/workspace.js'
+import { playsDocumentSchema, playDocumentSchema, profileGraphDocumentSchema, runDocumentSchema } from '../dist/workspace.js'
 import { assessmentsDocumentSchema, assessmentRowSchema, dimensionsDocumentSchema } from '../dist/assessment.js'
 
 const schemas = {
@@ -13,6 +13,7 @@ const schemas = {
   'agent-workspace.plays.v1': playsDocumentSchema,
   'agent-workspace.play.v1': playDocumentSchema,
   'agent-workspace.run.v1': runDocumentSchema,
+  'discovery-lab.profile-graph': profileGraphDocumentSchema,
   'agent-trace-assessments.v1': assessmentsDocumentSchema,
   'agent-trace-assessment.v1': assessmentRowSchema,
   'agent-trace-dimensions.v1': dimensionsDocumentSchema,
