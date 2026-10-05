@@ -1,0 +1,445 @@
+{
+ "schema": "agent-record.v1",
+ "runId": "run-live",
+ "title": "Live conversation fixture",
+ "nodes": [
+  {
+   "id": "run-live",
+   "label": "root",
+   "parent": null,
+   "kind": "agent",
+   "role": "director",
+   "capture": {
+    "channel": "native",
+    "status": "lossy",
+    "reason": "fixture"
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "68c9a9f9ef0f:1",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:00.000Z",
+   "kind": "message",
+   "category": "other",
+   "label": "user",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 1
+   },
+   "detail": {
+    "role": "user",
+    "publicText": "Estimate the unsubsidised cost of synthetic methane.",
+    "nativeRecordId": "1"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:2",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:02.000Z",
+   "kind": "message",
+   "category": "reasoning",
+   "label": "assistant",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 2
+   },
+   "detail": {
+    "role": "assistant",
+    "reasoning": "Plan: spawn three directors, then wait for their first results.",
+    "publicText": "Spawning the directors.",
+    "nativeRecordId": "2"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:3",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:03.000Z",
+   "kind": "message",
+   "category": "reasoning",
+   "label": "assistant",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 3
+   },
+   "detail": {
+    "role": "assistant",
+    "reasoningOmitted": 1,
+    "nativeRecordId": "3"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:4",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:04.000Z",
+   "kind": "message",
+   "category": "reasoning",
+   "label": "assistant",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 4
+   },
+   "detail": {
+    "role": "assistant",
+    "reasoningRedacted": 2,
+    "nativeRecordId": "4"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:5",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:05.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 5
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "toolu_wait",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{\"max\":5}"
+     }
+    ],
+    "nativeRecordId": "5"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:6",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:06.000Z",
+   "kind": "tool-result",
+   "category": "waiting",
+   "label": "tool result \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 6
+   },
+   "detail": {
+    "role": "toolResult",
+    "toolCallId": "toolu_wait",
+    "isError": false,
+    "publicText": "{\"pending\":true,\"live\":[{\"id\":\"run-live:s0\",\"status\":\"running\"}]}",
+    "durationMs": 1000,
+    "nativeRecordId": "6"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:7",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:10.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 7
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "100",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "7"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:8",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:15.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 8
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "101",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "8"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:9",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:20.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 9
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "102",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "9"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:10",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:25.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 10
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "103",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "10"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:11",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:30.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 11
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "104",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "11"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:12",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:40.000Z",
+   "kind": "message",
+   "category": "writing",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__knowledge_record",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 12
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "toolu_record",
+      "name": "mcp__agent-runtime-coordination__knowledge_record"
+     }
+    ],
+    "nativeRecordId": "12"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:13",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:45.000Z",
+   "kind": "message",
+   "category": "literature",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__knowledge_read",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 13
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "toolu_read0",
+      "name": "mcp__agent-runtime-coordination__knowledge_read",
+      "input": "{\"pageId\":\"params\"}"
+     }
+    ],
+    "nativeRecordId": "13"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:14",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:46.000Z",
+   "kind": "message",
+   "category": "literature",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__knowledge_read",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 14
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "toolu_read1",
+      "name": "mcp__agent-runtime-coordination__knowledge_read",
+      "input": "{\"pageId\":\"params\"}"
+     }
+    ],
+    "nativeRecordId": "14"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:15",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:50.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 15
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "200",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "15"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:16",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:55.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 16
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "201",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "16"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:17",
+   "node": "run-live",
+   "at": "2026-10-05T06:01:00.000Z",
+   "kind": "message",
+   "category": "waiting",
+   "label": "assistant \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 17
+   },
+   "detail": {
+    "role": "assistant",
+    "publicToolCalls": [
+     {
+      "id": "202",
+      "name": "mcp__agent-runtime-coordination__await_event",
+      "input": "{}"
+     }
+    ],
+    "nativeRecordId": "17"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:18",
+   "node": "run-live",
+   "at": "2026-10-05T06:00:56.000Z",
+   "kind": "tool-result",
+   "category": "waiting",
+   "label": "tool result \u00b7 mcp__agent-runtime-coordination__await_event",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 18
+   },
+   "detail": {
+    "role": "toolResult",
+    "toolCallId": "201",
+    "isError": false,
+    "publicText": "{\"settled\":\"run-live:s0\"}",
+    "durationMs": 1000,
+    "nativeRecordId": "18"
+   }
+  },
+  {
+   "id": "68c9a9f9ef0f:19",
+   "node": "run-live",
+   "at": "2026-10-05T06:01:10.000Z",
+   "kind": "begin",
+   "category": "lifecycle",
+   "label": "workspace checkpoint",
+   "source": {
+    "path": "session.jsonl",
+    "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e",
+    "line": 19
+   },
+   "detail": {
+    "lifecycle": "workspace-checkpoint"
+   }
+  }
+ ],
+ "sources": [
+  {
+   "path": "session.jsonl",
+   "sha256": "68c9a9f9ef0f47f16c4efc9739f4f45a8322de4d0ea176fe8032bc9228a4756e"
+  }
+ ]
+}
