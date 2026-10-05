@@ -9,7 +9,9 @@
  *
  * Nodes are the `spawned` ids in spawn-journal.jsonl. Each node's conversation comes from the first channel
  * that holds it, in this order; the others are listed as sources and never duplicated as events:
- *   1. native   Claude Code session .jsonl inside a retained-harness-transcript archive under --native/<hex>/
+ *   1. native   Claude Code session .jsonl files, each from its longest stored copy: a turn's retained-harness-transcript
+ *               archive or the run's latest native-index capture (both under --native/<hex>/), or the live tail under
+ *               evidence/native-live/ (see nativeFiles)
  *   2. oc       OpenCode native-trajectory.json (bridge-native roots)
  *   3. pi       trace/pi-sessions/**, joined when sha256(JSON.stringify(first user text)) == spawned taskDigest
  *   4. part     output blob parts at the node's outRefs, collapsed to the final state of each part id
@@ -35,7 +37,7 @@ import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.2.0'
+export const ADAPTER_VERSION = '2.3.0'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
@@ -150,6 +152,11 @@ export interface NodeDraft {
 const sha = (data: string | Buffer) => createHash('sha256').update(data).digest('hex')
 const hexOf = (digest: unknown) =>
   typeof digest === 'string' && /^(sha256[:-])?[0-9a-f]{64}$/.test(digest) ? digest.slice(-64) : null
+// A Claude Code main session file inside a harness home; subagent transcripts under `<session>/subagents/` are not.
+const CLAUDE_SESSION = /(^|\/)\.claude\/projects\/[^/]+\/[^/]+\.jsonl$/
+const sessionKey = (path: string) => (CLAUDE_SESSION.test(path) ? path.slice(path.lastIndexOf('.claude/projects/')) : null)
+const NATIVE_INDEX = 'evidence/native-index.jsonl'
+const NATIVE_LIVE = 'evidence/native-live'
 // Placeholder times such as the Unix epoch are not observations.
 const EARLIEST = Date.UTC(2001, 0, 1)
 const LATEST = Date.UTC(2100, 0, 1)
@@ -368,6 +375,7 @@ export class Ingest {
   readonly gaps: Gap[] = []
   readonly nodes = new Map<string, NodeDraft>()
   readonly fileCache = new Map<string, FileEntry>()
+  nativeIndexCache: Map<string, Json> | undefined
   rootId: string
   order = 0
   format = 'other'
@@ -695,32 +703,49 @@ export class Ingest {
   }
 
   // ----- channel 1: Claude Code native transcripts -----
-  nativeFiles(node: NodeDraft): { rel: string; abs: string; hex: string; sessionId: string | null }[] | 'not-cached' | null {
-    const manifests: Json[] = []
+  /**
+   * Every stored copy of each of a node's Claude Code session files, keyed by its path inside the harness home
+   * (`.claude/projects/<project>/<session>.jsonl`). A session file is append-only, so every copy is a prefix of the
+   * same bytes and the longest copy is the most complete one; an equal-length tie keeps the earlier source below.
+   *   1. a turn's retained-harness-transcript archive (spawn journal transcriptRef), under the native cache;
+   *   2. the latest copy in the run's native index (`evidence/native-index.jsonl`, disco.native-capture.v1: a capture
+   *      taken while the turn runs and when it ends), under the native cache;
+   *   3. the live tail (`evidence/native-live/<encodeURIComponent(node id)>/<home>/<path>`): whole lines appended by
+   *      byte offset while the node runs.
+   */
+  nativeFiles(node: NodeDraft): { rel: string; abs: string; hex: string | null; sessionId: string | null }[] | 'not-cached' | null {
+    const copies = new Map<string, { rel: string; abs: string; hex: string | null; sessionId: string | null; bytes: number; order: number }>()
+    let order = 0
+    let missing = false
+    const offer = (key: string, rel: string, abs: string, hex: string | null, sessionId: string | null) => {
+      let bytes: number
+      try {
+        bytes = statSync(abs).size
+      } catch {
+        return
+      }
+      const held = copies.get(key)
+      if (!held || bytes > held.bytes) copies.set(key, { rel, abs, hex, sessionId, bytes, order: held?.order ?? order++ })
+    }
+    const cacheDir = (hex: string) =>
+      this.nativeRoot ? [hex, `sha256-${hex}`, `sha256:${hex}`].map((name) => join(this.nativeRoot!, name)).find((path) => existsSync(path)) : undefined
+
     for (const ref of node.transcriptRefs) {
       const blob = this.blob(ref)
-      if (blob?.value?.kind === 'retained-harness-transcript') {
-        manifests.push(blob.value)
-        this.fileSource(blob.rel)
-      }
-    }
-    if (!manifests.length) return null
-    const found: { rel: string; abs: string; hex: string; sessionId: string | null }[] = []
-    let missing = false
-    for (const manifest of manifests) {
+      if (blob?.value?.kind !== 'retained-harness-transcript') continue
+      const manifest = blob.value
+      this.fileSource(blob.rel)
       const hex = hexOf(manifest.snapshot?.archive?.sha256 ?? manifest.snapshot?.archive?.locator?.digest)
       const sessionId = typeof manifest.source?.nativeSessionId === 'string' ? manifest.source.nativeSessionId : null
       node.nativeSessionId ??= sessionId ?? undefined
       if (typeof manifest.harness === 'string') node.harness ??= manifest.harness
       this.addSandbox(node, manifest.source?.environmentId)
       const files = (Array.isArray(manifest.files) ? manifest.files : []).filter(
-        (file: Json) => typeof file?.path === 'string' && /\/\.claude\/projects\/[^/]+\/[^/]+\.jsonl$/.test(file.path),
+        (file: Json) => typeof file?.path === 'string' && CLAUDE_SESSION.test(file.path),
       )
       const main = files.filter((file: Json) => !sessionId || file.path.endsWith(`/${sessionId}.jsonl`))
       if (!hex || !main.length) continue
-      const dir = this.nativeRoot
-        ? [hex, `sha256-${hex}`, `sha256:${hex}`].map((name) => join(this.nativeRoot!, name)).find((path) => existsSync(path))
-        : undefined
+      const dir = cacheDir(hex)
       if (!dir) {
         missing = true
         continue
@@ -741,12 +766,54 @@ export class Ingest {
           this.gaps.push({ nodeId: node.id, code: 'no-transcript:native-sha256-mismatch', detail: `${rel} does not match its manifest` })
           continue
         }
-        this.fileSource(rel, abs)
-        found.push({ rel, abs, hex, sessionId })
+        offer(sessionKey(file.path)!, rel, abs, hex, sessionId)
       }
     }
-    if (found.length) return found
+
+    const indexed = this.nativeIndex().get(node.id)
+    if (indexed) {
+      const hex = hexOf(indexed.snapshot?.archive)
+      this.addSandbox(node, indexed.environmentId)
+      if (typeof indexed.harness === 'string') node.harness ??= indexed.harness
+      const dir = hex ? cacheDir(hex) : undefined
+      if (hex && !dir) missing = true
+      for (const session of dir && Array.isArray(indexed.native?.sessions) ? indexed.native.sessions : []) {
+        const key = typeof session?.path === 'string' ? sessionKey(session.path) : null
+        if (!key || typeof session.sandboxSessionId !== 'string' || typeof session.rootScope !== 'string') continue
+        const relInside = ['workspace/__retention__/sessions', session.sandboxSessionId, 'native', ...(typeof session.sourceId === 'string' ? [session.sourceId] : []), session.rootScope, session.path].join('/')
+        offer(key, `native:${hex}/${relInside}`, join(dir!, relInside), hex, null)
+      }
+    }
+
+    const live = join(NATIVE_LIVE, encodeURIComponent(node.id))
+    for (const path of walk(join(this.runDir, live))) {
+      const key = sessionKey(path)
+      if (key) offer(key, `${live}/${path}`, join(this.runDir, live, path), null, null)
+    }
+
+    if (copies.size) {
+      const found = [...copies.values()].sort((a, b) => a.order - b.order)
+      for (const copy of found) this.fileSource(copy.rel, copy.abs)
+      return found
+    }
     return missing ? 'not-cached' : null
+  }
+
+  /** The latest stored copy per node in `evidence/native-index.jsonl` (a torn last line from a crash is skipped). */
+  nativeIndex(): Map<string, Json> {
+    if (this.nativeIndexCache) return this.nativeIndexCache
+    const latest = new Map<string, Json>()
+    const abs = join(this.runDir, NATIVE_INDEX)
+    if (existsSync(abs)) {
+      this.listSource(NATIVE_INDEX)
+      for (const row of splitLines(readFileSync(abs))) {
+        const entry = row.value
+        if (entry?.schema !== 'disco.native-capture.v1' || typeof entry.nodeId !== 'string') continue
+        const held = latest.get(entry.nodeId)
+        if (!held || String(entry.at) >= String(held.at)) latest.set(entry.nodeId, entry)
+      }
+    }
+    return (this.nativeIndexCache = latest)
   }
 
   readNative(node: NodeDraft, files: { rel: string; abs: string; sessionId: string | null }[]) {
@@ -794,6 +861,10 @@ export class Ingest {
         const blocks: Json[] = Array.isArray(message.content) ? message.content : [{ type: 'text', text: str(message.content) }]
         const text = blocks.filter((b) => b?.type === 'text').map((b) => str(b.text)).join('\n\n')
         const reasoning = blocks.filter((b) => b?.type === 'thinking').map((b) => str(b.thinking)).filter(Boolean).join('\n\n')
+        // Thinking the provider did not return as text: a signed block with no text (display omitted), or an
+        // encrypted redacted_thinking block. Counted so a reader sees that the model thought, never invented text.
+        const reasoningOmitted = blocks.filter((b) => b?.type === 'thinking' && !str(b.thinking)).length
+        const reasoningRedacted = blocks.filter((b) => b?.type === 'redacted_thinking').length
         const calls = blocks.filter((b) => b?.type === 'tool_use' || b?.type === 'server_tool_use')
         const usage = message.usage
         const first = typeof message.id === 'string' ? !seenMessages.has(message.id) : true
@@ -816,6 +887,8 @@ export class Ingest {
             ...native,
             ...(shownText ? { publicText: shownText.text } : {}),
             ...(shownReasoning ? { reasoning: shownReasoning.text } : {}),
+            ...(reasoningOmitted ? { reasoningOmitted } : {}),
+            ...(reasoningRedacted ? { reasoningRedacted } : {}),
             ...(shownText?.clip ?? shownReasoning?.clip ? { clip: shownText?.clip ?? shownReasoning?.clip } : {}),
             ...(calls.length
               ? {

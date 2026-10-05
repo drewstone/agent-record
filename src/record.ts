@@ -109,6 +109,10 @@ export const recordSchema = z
                 .catchall(z.unknown())
                 .nullish(),
               reasoning: z.string().optional(),
+              /** Thinking blocks the provider returned without text (display omitted): the model thought; no text exists. */
+              reasoningOmitted: z.number().int().nonnegative().optional(),
+              /** Encrypted redacted_thinking blocks. */
+              reasoningRedacted: z.number().int().nonnegative().optional(),
               durationMs: z.number().nonnegative().optional(),
               /** List-price estimate from recorded usage. Not a bill. */
               costListUsd: z.number().nonnegative().optional(),

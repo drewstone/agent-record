@@ -154,3 +154,57 @@ test('a Pi session joins by its bridge session directory, and a parent keeps the
   assert.deepEqual(director.capture, { channel: 'coordination', status: 'lossy', reason: 'instructions-to-workers-only' })
   assert.ok(record.coverage.gaps.some((gap) => gap.nodeId === 'run-b' && gap.code === 'conversation-not-retained'))
 })
+
+// A node's Claude Code session reaches the record from the run's native index (a capture taken while the turn runs)
+// and from the live tail; every copy is a prefix of one append-only file, so the longest copy is read.
+function writeNativeRun(root, { liveLines }) {
+  const run = join(root, 'run-n')
+  const native = join(root, 'native')
+  const file = (base, path, text) => {
+    mkdirSync(dirname(join(base, path)), { recursive: true })
+    writeFileSync(join(base, path), text)
+  }
+  const at = (s) => `2026-10-05T06:00:${String(s).padStart(2, '0')}Z`
+  const rows = [
+    { type: 'user', uuid: 'u1', timestamp: at(1), message: { role: 'user', content: 'Plan the economics pass.' } },
+    { type: 'assistant', uuid: 'a1', timestamp: at(2), message: { id: 'm1', model: 'claude-opus-5-5', content: [{ type: 'thinking', thinking: '', signature: 'sig' }, { type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }] } },
+    { type: 'user', uuid: 'r1', timestamp: at(3), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'notes.md' }] } },
+    { type: 'assistant', uuid: 'a2', timestamp: at(4), message: { id: 'm2', model: 'claude-opus-5-5', content: [{ type: 'thinking', thinking: 'The notes hold the cost model.', signature: 'sig' }, { type: 'redacted_thinking', data: 'enc' }, { type: 'text', text: 'Reading the notes.' }] } },
+  ]
+  const session = '.claude/projects/-home-agent/abc.jsonl'
+  file(run, 'spawn-journal.jsonl', jsonl([
+    { kind: 'event', root: 'run-n', event: { kind: 'spawned', id: 'run-n', at: at(0) } },
+    { kind: 'event', root: 'run-n', event: { kind: 'spawned', id: 'run-n:s0', at: at(0) } },
+  ]))
+  const hex = 'a'.repeat(64)
+  file(run, 'evidence/native-index.jsonl', jsonl([{
+    schema: 'disco.native-capture.v1', runId: 'run-n', at: at(5), nodeId: 'run-n:s0', environmentId: 'sandbox-0123456789ab', harness: 'claude-code',
+    snapshot: { archive: `sha256:${hex}` },
+    native: { harness: 'claude-code', sessions: [{ sandboxSessionId: 'sess', sourceId: 'exec', rootScope: 'session-home', path: session }] },
+  }]))
+  file(native, `${hex}/workspace/__retention__/sessions/sess/native/exec/session-home/${session}`, jsonl(rows.slice(0, 2)))
+  if (liveLines) file(run, `evidence/native-live/${encodeURIComponent('run-n:s0')}/home/${session}`, jsonl(rows.slice(0, liveLines)))
+  return { run, native }
+}
+
+test('a running node reads its session from the native index and the live tail, whichever copy is longer', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const indexed = writeNativeRun(join(root, 'a'), { liveLines: 0 })
+  const fromIndex = ingestRun(indexed.run, { runId: 'run-n', native: indexed.native }).record
+  const child = (record) => record.events.filter((event) => event.node === 'run-n:s0' && event.kind !== 'lifecycle')
+  assert.equal(fromIndex.nodes.find((node) => node.id === 'run-n:s0').capture.channel, 'native')
+  assert.equal(child(fromIndex).filter((event) => event.kind === 'message').length, 2)
+  assert.ok(fromIndex.nodes.find((node) => node.id === 'run-n:s0').sandboxes.includes('sandbox-0123456789ab'))
+
+  const live = writeNativeRun(join(root, 'b'), { liveLines: 4 })
+  const fromLive = ingestRun(live.run, { runId: 'run-n', native: live.native }).record
+  const events = child(fromLive)
+  assert.ok(events.every((event) => event.source.path.startsWith('evidence/native-live/')))
+  const [first, second] = events.filter((event) => event.detail.role === 'assistant')
+  assert.equal(first.detail.reasoningOmitted, 1)
+  assert.equal(first.detail.publicToolCalls[0].input, '{"command":"ls"}')
+  assert.equal(second.detail.reasoning, 'The notes hold the cost model.')
+  assert.equal(second.detail.reasoningRedacted, 1)
+  assert.equal(events.find((event) => event.kind === 'tool-result').detail.publicText, 'notes.md')
+})
