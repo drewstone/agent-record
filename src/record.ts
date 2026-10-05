@@ -58,6 +58,8 @@ export const recordSchema = z
           /** Execution environments, in first-seen order. */
           sandboxes: z.array(z.string()).optional(),
           capture: capture.optional(),
+          /** A reviewer's statement of what this agent's capture lacks and why. */
+          captureNote: z.string().optional(),
         })
         .catchall(z.unknown()),
     ),

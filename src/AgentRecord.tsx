@@ -137,8 +137,14 @@ function RecordView({
   const capture = node && typeof node.metadata === 'object' && node.metadata !== null
     ? node.metadata as Record<string, unknown> : undefined
   const retainedEvents = index.byActor.get(actor)?.length ?? 0
-  const captureLabel = capture?.captureStatus === 'retained-partial' ? 'Partial capture'
-    : capture?.captureStatus === 'missing-source' || retainedEvents === 0 ? 'Conversation unavailable'
+  // A converted record states capture per agent; a reviewed note says what is missing and why, else the converter's gaps.
+  const recordCapture = node?.capture
+  const gapText = (record.coverage?.gaps ?? []).filter((gap) => gap.nodeId === actor).map((gap) => gap.detail).join(' ')
+  const captureNote = typeof node?.captureNote === 'string' ? node.captureNote
+    : typeof capture?.captureReason === 'string' ? capture.captureReason
+      : recordCapture && recordCapture.status !== 'complete' && gapText ? gapText : null
+  const captureLabel = capture?.captureStatus === 'retained-partial' || recordCapture?.status === 'lossy' ? 'Partial capture'
+    : capture?.captureStatus === 'missing-source' || recordCapture?.status === 'absent' || retainedEvents === 0 ? 'Conversation unavailable'
       : capture?.captureStatus === 'retained' ? 'Retained capture' : null
   const view = selection.view ?? 'chat'
   const selectedAt = selection.at ? ms(selection.at) : index.end
@@ -555,10 +561,9 @@ function RecordView({
               ))}
             </Select>
           </div>
-          {(captureLabel || typeof capture?.captureReason === 'string' || node?.assignment) && <div className="agent-capture-summary" role="status">
+          {(captureLabel || captureNote || node?.assignment) && <div className="agent-capture-summary" role="status">
             {captureLabel}
-            {typeof capture?.captureReason === 'string'
-              ? <details><summary>Capture details</summary><p>{capture.captureReason}</p></details> : null}
+            {captureNote ? <details><summary>Capture details</summary><p>{captureNote}</p></details> : null}
             {node?.assignment && <details><summary>Assignment</summary><p>{node.assignment}</p></details>}
           </div>}
           <div className="ui-tabs" role="tablist" aria-label="Agent evidence">

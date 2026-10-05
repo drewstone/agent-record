@@ -35,7 +35,7 @@ import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.1.1'
+export const ADAPTER_VERSION = '2.2.0'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
@@ -1869,13 +1869,25 @@ export class Ingest {
     const piByNode = new Map<string, typeof pi>()
     const digests = new Map<string, string>()
     for (const node of this.nodes.values()) if (node.taskDigest) digests.set(node.taskDigest, node.id)
+    // cli-bridge keeps each Pi session under sha256("cli-bridge/pi-session\0" + bridge session id), and that id is the
+    // execution id in the child's materialization receipt: an exact join even for a session with no prompt.
+    const bridgeDirs = new Map<string, { node: string; line: number; sessionId: string }>()
+    for (const [sessionId, at] of this.executionOf) bridgeDirs.set(sha(`cli-bridge/pi-session\0${sessionId}`), { ...at, sessionId })
+    const piBasis = new Map<string, string>()
+    const piProof = new Map<string, Record<string, unknown>>()
     const unjoined: typeof pi = []
     for (const session of pi) {
-      const nodeId = session.digest ? digests.get(session.digest) : undefined
+      const dir = /^trace\/pi-sessions\/cli-bridge\/([0-9a-f]{64})\//.exec(session.rel)?.[1]
+      const bridge = dir ? bridgeDirs.get(dir) : undefined
+      const nodeId = bridge?.node ?? (session.digest ? digests.get(session.digest) : undefined)
       if (nodeId) {
         const list = piByNode.get(nodeId) ?? []
         list.push(session)
         piByNode.set(nodeId, list)
+        if (bridge) {
+          piBasis.set(nodeId, 'bridge-session-directory')
+          piProof.set(nodeId, { journal: { path: this.sourcePath('spawn-journal.jsonl'), line: bridge.line }, session: { path: this.sourcePath(session.rel) }, sessionId: bridge.sessionId })
+        } else if (!piBasis.has(nodeId)) piBasis.set(nodeId, 'task-digest')
       } else unjoined.push(session)
     }
     const streamsByNode = new Map<string, ReturnType<Ingest['bridgeStreams']>[number]>()
@@ -1898,7 +1910,8 @@ export class Ingest {
       if (node.id === this.rootId && existsSync(join(runDir, 'native-trajectory.json')) && this.readOpenCode(node)) continue
       const sessions = piByNode.get(node.id)
       if (sessions?.length) {
-        node.joinBasis = 'task-digest'
+        node.joinBasis = piBasis.get(node.id) ?? 'task-digest'
+        if (piProof.has(node.id)) node.joinProof = piProof.get(node.id)
         this.readPi(node, sessions)
         continue
       }
@@ -1918,8 +1931,9 @@ export class Ingest {
       node.capture = { channel: 'journal', status: 'absent', reason }
       this.gaps.push({ nodeId: node.id, code: `no-transcript:${reason}`, detail: 'Only lifecycle events are recorded for this agent' })
     }
+    this.readCoordination()
     // Every other channel is a listed source, never duplicated as events.
-    for (const name of ['root-stream.jsonl', 'native-trajectory.json', 'observer.jsonl', 'coordination-log.jsonl', 'driver-attempts.jsonl', 'spans.otlp.jsonl'])
+    for (const name of ['root-stream.jsonl', 'native-trajectory.json', 'observer.jsonl', 'driver-attempts.jsonl', 'spans.otlp.jsonl'])
       this.listSource(name)
     for (const session of unjoined) {
       const id = `pi:${session.sessionId}`
@@ -1943,6 +1957,54 @@ export class Ingest {
       this.gaps.push({ nodeId: id, code: 'pi-session-unjoined', detail: 'No spawned task digest matches this session' })
     }
     if (pages.length) this.readFindings(`finding:${this.runId}`)
+  }
+
+  /**
+   * The Runtime coordination log keeps every instruction a parent sent down to a worker (steer, interrupt). Those are
+   * the parent's own messages: they are emitted on the parent, so a director whose session was not retained still
+   * shows what it told its workers.
+   */
+  readCoordination() {
+    const rel = 'coordination-log.jsonl'
+    if (!existsSync(join(this.runDir, rel))) return
+    const entry = this.file(rel)
+    this.fileSource(rel)
+    const senders = new Set<string>()
+    for (const row of splitLines(entry.bytes)) {
+      const instruction = row.value?.event?.type === 'instruction' ? row.value.event.instruction : null
+      const text = typeof instruction?.instruction === 'string' ? instruction.instruction : ''
+      const to = typeof instruction?.toWorker === 'string' ? instruction.toWorker : null
+      const at = isoAt(row.value?.at)
+      if (!text || !to || !at) continue
+      const sender = this.nodes.get(to)?.parent ?? this.rootId
+      if (!this.nodes.has(sender)) continue
+      const kind = str(instruction.kind) || 'instruction'
+      const shown = this.clip(text, () => this.lineSource(rel, row.line, row.raw))
+      this.emit({
+        node: sender,
+        at,
+        kind: 'message',
+        category: 'coordination',
+        label: `${kind} → ${this.nodes.get(to)?.label ?? to}`,
+        source: { path: rel, sha256: entry.sha256, line: row.line },
+        detail: {
+          role: 'assistant',
+          publicText: shown.text,
+          ...(shown.clip ? { clip: shown.clip } : {}),
+          coordination: { kind, toNode: this.nodes.has(to) ? to : null, receiptId: str(instruction.receiptId) || null, interrupt: instruction.interrupt === true },
+        },
+      })
+      senders.add(sender)
+    }
+    for (const id of senders) {
+      const node = this.nodes.get(id)!
+      if (node.capture.status !== 'absent') continue
+      node.capture = { channel: 'coordination', status: 'lossy', reason: 'instructions-to-workers-only' }
+      const at = this.gaps.findIndex((gap) => gap.nodeId === id && gap.code.startsWith('no-transcript:'))
+      const gap = { nodeId: id, code: 'conversation-not-retained', detail: 'Only the instructions this agent sent to its workers were retained (coordination log)' }
+      if (at >= 0) this.gaps[at] = gap
+      else this.gaps.push(gap)
+    }
   }
 
   result: Json = null
