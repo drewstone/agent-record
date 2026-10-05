@@ -644,7 +644,7 @@ function RecordView({
                 </p>
                 {ms(event.at) > cutoff ? <p>This event occurs after the selected time. Advance the timeline to read it.</p> : <>
                   {textOf(event) && <StructuredContent text={textOf(event)} />}
-                  {event.detail.publicToolCalls?.map(call => <section className="event-tool" key={call.id}><h4>{call.name}</h4><StructuredContent text={call.input} rawLabel="Raw input" /></section>)}
+                  {event.detail.publicToolCalls?.map(call => <section className="event-tool" key={call.id}><h4>{call.name}</h4>{call.input === undefined ? <p className="publication-note">Args not captured.</p> : <StructuredContent text={call.input} rawLabel="Raw input" />}</section>)}
                   {!textOf(event) && !event.detail.publicToolCalls?.length && <p>{event.detail.contentOmitted ?? event.detail.publicationNote ?? 'No visible message or tool payload was retained for this event.'}</p>}
                   <details className="raw-data"><summary>Raw event and source</summary><pre data-event-detail>{JSON.stringify(event.detail, null, 2)}</pre><pre data-event-source>{JSON.stringify(eventSource(event, record, index), null, 2)}</pre></details>
                 </>}

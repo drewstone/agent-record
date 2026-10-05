@@ -85,7 +85,8 @@ export const recordSchema = z
                     .object({
                       id: z.string(),
                       name: z.string(),
-                      input: z.string(),
+                      /** Absent when the source holds no arguments for the call; the viewer says so. */
+                      input: z.string().optional(),
                       publicationNote: z.string().nullish(),
                     })
                     .catchall(z.unknown()),

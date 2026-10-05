@@ -13,6 +13,7 @@ import { advancePlayback } from './viewer/playback.js'
 import { StructuredContent, VerbatimContent } from './viewer/StructuredContent.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
 import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
+import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { LineageGraph, TopologyGraph } from './workspace/RunGraph.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
@@ -481,7 +482,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [poll, setPoll] = useState<number | undefined>(undefined)
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
   const run = useDocument<RunDocument>(runUrl, poll)
-  useEffect(() => setPoll(run.data?.live.polling ? 10_000 : undefined), [run.data?.live.polling])
+  // A live run's record digest changes every few seconds; a new digest refetches the record, so this sets the delay.
+  useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
   const digest = run.data?.run.record.digest ?? null
   const recordReady = run.data?.run.record.status === 'ready' || !!digest
   // A run being written gets a new record digest every few seconds: the page keeps the last record until the next one lands.
@@ -502,6 +504,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
   return (
     <div className="ws-page ws-run" data-run={summary.id}>
+      <FinalOutputPanel output={run.data!.finalOutput} />
       <RunHeader doc={run.data!} />
       {index ? (
         <RunBody
@@ -663,6 +666,8 @@ function RunBody({
   const conversationless = !(index.byActor.get(actor) ?? []).some((event) => event.category !== 'lifecycle' && event.detail.lifecycle === undefined)
   const [lifecycleChoice, setLifecycle] = useState<boolean | null>(null)
   const lifecycle = lifecycleChoice ?? conversationless
+  // A call without a result is pending while the run is being mirrored and this agent has not settled.
+  const live = !!doc.live.polling && (!node?.status || /^(running|pending|active|live|started|spawned|paused|waiting)$/i.test(node.status))
   const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
   const flags = useMemo(() => flagsFrom(assessments?.rows ?? [], catalogue), [assessments, catalogue])
   const latest = useRef({ cutoff, index, update })
@@ -848,6 +853,7 @@ function RunBody({
                 }}
                 flags={flags}
                 lifecycle={lifecycle}
+                live={live}
                 onFlag={(flag: EventFlag) => select({ tab: 'assessments', dim: flag.dimension })}
               />
             </>

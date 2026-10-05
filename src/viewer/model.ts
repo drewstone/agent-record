@@ -60,7 +60,7 @@ export function callsOf(event: RecordEvent): ToolCall[] {
 }
 
 export function preview(call: ToolCall) {
-  if (call.input === undefined) return 'Arguments unavailable'
+  if (call.input === undefined) return 'args not captured'
   try {
     const value: unknown = JSON.parse(call.input)
     if (value && typeof value === 'object') {

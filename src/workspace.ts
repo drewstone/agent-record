@@ -245,6 +245,36 @@ const nodeSpend = spendSchema.extend({
     .catchall(z.unknown()),
 })
 
+const outputFile = z
+  .object({
+    path: z.string(),
+    bytes: z.number().int().nonnegative().nullable(),
+    sha256: sha256.nullable(),
+    /** Same-origin link to the file's bytes; null when the host cannot serve it. */
+    href: z.string().nullable(),
+  })
+  .catchall(z.unknown())
+
+/** What the run was asked to deliver and whether it did. Absent on documents built before the field existed. */
+export const finalOutputSchema = z
+  .object({
+    declared: z
+      .object({
+        source: z.enum(['deliverable-check', 'run-input']),
+        field: z.string(),
+        path: z.string().nullable(),
+        description: z.string().nullable(),
+      })
+      .catchall(z.unknown())
+      .nullable(),
+    status: z.enum(['none-declared', 'delivered', 'not-delivered', 'unknown']),
+    checkedAt: time.nullable(),
+    files: z.array(outputFile),
+    /** The root agent's last output, shown when nothing was declared. */
+    rootOutput: outputFile.nullable(),
+  })
+  .catchall(z.unknown())
+
 export const runDocumentSchema = z
   .object({
     schema: z.literal('agent-workspace.run.v1'),
@@ -253,6 +283,7 @@ export const runDocumentSchema = z
     spend: spendSchema.extend({ nodes: z.record(z.string(), nodeSpend) }),
     versions: z.array(runSummarySchema),
     live: z.object({ mirrorAt: time.nullable(), polling: z.boolean() }),
+    finalOutput: finalOutputSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -265,3 +296,5 @@ export type PlaysDocument = z.infer<typeof playsDocumentSchema>
 export type PlayDocument = z.infer<typeof playDocumentSchema>
 export type RunDocument = z.infer<typeof runDocumentSchema>
 export type NodeSpend = z.infer<typeof nodeSpend>
+export type FinalOutput = z.infer<typeof finalOutputSchema>
+export type OutputFile = z.infer<typeof outputFile>
