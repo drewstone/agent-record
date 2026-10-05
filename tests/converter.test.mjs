@@ -105,3 +105,52 @@ test('a directory that differs from its snapshot manifest, or a repeated anchor,
   assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'b', '--out', join(root, 'b.json')]).status, 0)
   assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'other', '--out', join(root, 'c.json')]).status, 64)
 })
+
+// A cli-bridge Pi session lives under sha256("cli-bridge/pi-session\0" + bridge session id); that id is the execution id
+// in the child's materialization receipt. The coordination log keeps what a parent told its workers.
+function writeBridgeRun(root) {
+  const run = join(root, 'run-b')
+  const file = (path, text) => {
+    mkdirSync(dirname(join(run, path)), { recursive: true })
+    writeFileSync(join(run, path), text)
+  }
+  const execution = 'supervised-worker-0123'
+  file('spawn-journal.jsonl', jsonl([
+    { kind: 'event', root: 'run-b', event: { kind: 'spawned', id: 'run-b', at: '2026-08-16T20:00:00Z' } },
+    { kind: 'event', root: 'run-b', event: { kind: 'spawned', id: 'run-b:s0', at: '2026-08-16T20:01:00Z', identity: { taskDigest: 'sha256:00' } } },
+    { kind: 'event', root: 'run-b', event: { kind: 'materialized', id: 'run-b:s0', at: '2026-08-16T20:01:01Z', receipt: { status: 'known', execution: { kind: 'session', id: execution } } } },
+    { kind: 'event', root: 'run-b', event: { kind: 'settled', id: 'run-b:s0', at: '2026-08-16T20:09:00Z', status: 'up' } },
+  ]))
+  // A header-only session: no prompt, so no task digest could ever join it.
+  file(`trace/pi-sessions/cli-bridge/${sha(`cli-bridge/pi-session\0${execution}`)}/b.jsonl`, jsonl([
+    { type: 'session', id: 'pi-session-b', timestamp: '2026-08-16T20:01:05Z', cwd: '/w' },
+  ]))
+  file('coordination-log.jsonl', jsonl([
+    { runId: 'run-b', seq: 0, at: Date.parse('2026-08-16T20:05:00Z'), event: { type: 'instruction', instruction: { receiptId: 'r1', kind: 'steer', toWorker: 'run-b:s0', instruction: 'Use exact arithmetic.' } } },
+    { runId: 'run-b', seq: 1, at: Date.parse('2026-08-16T20:05:01Z'), event: { type: 'steer', down: { receiptId: 'r1' } } },
+    { runId: 'run-b', seq: 2, at: Date.parse('2026-08-16T20:06:00Z'), event: { type: 'instruction', instruction: { receiptId: 'r2', kind: 'interrupt', toWorker: 'run-b:s0', instruction: '', interrupt: true } } },
+    { runId: 'run-b', seq: 3, at: Date.parse('2026-08-16T20:07:00Z'), event: { type: 'instruction', instruction: { receiptId: 'r3', kind: 'steer', toWorker: 'run-b:s9', instruction: 'Unknown worker.' } } },
+  ]))
+  return run
+}
+
+test('a Pi session joins by its bridge session directory, and a parent keeps the instructions it sent', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const { record } = ingestRun(writeBridgeRun(root), { runId: 'run-b' })
+  const child = record.nodes.find((node) => node.id === 'run-b:s0')
+  assert.equal(child.joinBasis, 'bridge-session-directory')
+  assert.equal(child.joinProof.sessionId, 'supervised-worker-0123')
+  assert.ok(!record.nodes.some((node) => node.id.startsWith('pi:')))
+  const steer = record.events.filter((event) => event.source.path === 'coordination-log.jsonl')
+  assert.equal(steer.length, 2)
+  assert.equal(steer[1].label, 'interrupt → s0')
+  assert.equal(steer[1].detail.publicText, undefined)
+  assert.ok(record.coverage.gaps.some((gap) => gap.code === 'coordination-target-unknown'))
+  assert.equal(steer[0].node, 'run-b')
+  assert.equal(steer[0].detail.publicText, 'Use exact arithmetic.')
+  assert.equal(steer[0].detail.coordination.toNode, 'run-b:s0')
+  const director = record.nodes.find((node) => node.id === 'run-b')
+  assert.deepEqual(director.capture, { channel: 'coordination', status: 'lossy', reason: 'instructions-to-workers-only' })
+  assert.ok(record.coverage.gaps.some((gap) => gap.nodeId === 'run-b' && gap.code === 'conversation-not-retained'))
+})
