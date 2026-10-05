@@ -82,9 +82,28 @@ export function thinkingMarkers(detail: RecordEvent['detail']): string[] {
 const WAITING = /await|wait|poll|sleep|observe|status/i
 
 /**
+ * A result that only says the call is still running: a JSON object with `pending: true` (Runtime's coordination tools
+ * answer a long call this way, with its elapsed time, before its real answer). It carries no answer, so a call whose
+ * every result is one still counts as unanswered for collapsing.
+ */
+export function pendingReceipt(text: unknown): boolean {
+  if (typeof text !== 'string' || !text.trimStart().startsWith('{')) return false
+  try {
+    const value = JSON.parse(text)
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value) && value.pending === true
+  } catch {
+    return false
+  }
+}
+
+/** Whether any of a call's results answers it: a result that is not a pending receipt. */
+export const answeredBy = (results: readonly RecordEvent[] | undefined) =>
+  (results ?? []).some((result) => !pendingReceipt(result.detail.publicText))
+
+/**
  * The one call of an event that is a poll: an assistant turn whose only content is a single tool call, with no text,
- * thinking, note or clipped body, and with no result anywhere in the record. A call that has a result is never a poll,
- * whatever the result says, so collapsing can hide no returned content. Its arguments are empty or absent, or the
+ * thinking, note or clipped body, and with no answer anywhere in the record: no result, or only pending receipts
+ * (pendingReceipt). A call with any other result is never a poll, so collapsing can hide no returned answer. Its arguments are empty or absent, or the
  * tool is a waiting tool (await, wait, poll, sleep, observe, status).
  */
 export function pollCall(event: RecordEvent, calls: readonly RowCall[], answered: (callId: string) => boolean): RowCall | null {
