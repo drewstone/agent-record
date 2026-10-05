@@ -116,6 +116,10 @@ export const runSummarySchema = z
     versions: z
       .object({ count: z.number().int().nonnegative(), latest: z.string(), states: z.record(z.string(), z.number()) })
       .nullable(),
+    /** What the run record says the run is for; null when the record states nothing the catalog read. */
+    purpose: z.string().nullable().optional(),
+    /** The record field the purpose came from: acceptance.purpose, task or task.objective. */
+    purposeBasis: z.string().nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -165,6 +169,8 @@ export const playsDocumentSchema = z
           program: z.string().nullable(),
           line: z.string().nullable(),
           playBasis: z.string(),
+          /** The play groups runs whose records name no program: tests and smoke runs. */
+          noProgram: z.boolean().optional(),
           state: z.string().nullable(),
           latestRun: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable(),
           runCount: z.number().int().nonnegative(),
@@ -186,6 +192,7 @@ export const playDocumentSchema = z
     program: z.string().nullable(),
     line: z.string().nullable(),
     playBasis: z.string(),
+    noProgram: z.boolean().optional(),
     charter: z.string().nullable(),
     frontier: z
       .object({

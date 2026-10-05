@@ -1945,3 +1945,6 @@
   .ar-ws .diff-name { min-width: 0; flex-basis: 100%; }
   .ar-ws .profile-close { margin-left: 0; }
 }
+/* A run's purpose, as its record states it: two lines in the runs table, the rest on hover. */
+.ar-ws .runs-table .run-purpose { min-width: 16rem; max-width: 30rem; white-space: normal; }
+.ar-ws .runs-table .run-purpose-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
