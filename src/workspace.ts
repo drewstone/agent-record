@@ -274,8 +274,38 @@ const outputFile = z
     path: z.string(),
     bytes: z.number().int().nonnegative().nullable(),
     sha256: sha256.nullable(),
+    /** How the viewer reads it: markdown, image, csv, json, html, code or other. Absent on documents built before it existed. */
+    kind: z.string().optional(),
     /** Same-origin link to the file's bytes; null when the host cannot serve it. */
     href: z.string().nullable(),
+  })
+  .catchall(z.unknown())
+
+/**
+ * The latest observer brief of the run (discovery-lab `runner/readout-brief.mjs`): written every 90 minutes while it runs
+ * and once when it ends, in plain English, with what each agent is doing and the risks the observer sees.
+ */
+export const progressBriefSchema = z
+  .object({
+    sequence: z.number().int(),
+    phase: z.string(),
+    final: z.boolean(),
+    generatedAt: time.nullable(),
+    headline: z.string().nullable(),
+    answer: z
+      .object({ text: z.string(), confidence: z.string().nullable(), why: z.string().nullable().optional(), fromSequence: z.number().int().nullable().optional() })
+      .catchall(z.unknown())
+      .nullable(),
+    changed: z.array(z.string()),
+    team: z.array(
+      z
+        .object({ node: z.string(), label: z.string().nullable(), state: z.string().nullable(), model: z.string().nullable(), usd: usd, lastActiveAt: time.nullable(), doing: z.string().nullable() })
+        .catchall(z.unknown()),
+    ),
+    risks: z.array(
+      z.object({ severity: z.string().nullable(), kind: z.string().nullable(), risk: z.string(), evidence: z.string().nullable(), source: z.string().nullable() }).catchall(z.unknown()),
+    ),
+    links: z.object({ latest: z.string().nullable(), brief: z.string().nullable(), gist: z.string().nullable() }).catchall(z.unknown()),
   })
   .catchall(z.unknown())
 
@@ -351,6 +381,14 @@ export const finalOutputSchema = z
     rootOutput: outputFile.nullable(),
     /** Absent on documents built before the readout existed. */
     readout: readoutSchema.nullable().optional(),
+    /** The run's latest progress brief; null when it has none. */
+    brief: progressBriefSchema.nullable().optional(),
+    /** The readable result of a run that ended without its deliverable: its latest brief. */
+    fallback: z
+      .object({ source: z.string(), sequence: z.number().int(), generatedAt: time.nullable(), headline: z.string().nullable(), answer: z.string().nullable(), url: z.string().nullable() })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
   })
   .catchall(z.unknown())
 
@@ -539,6 +577,7 @@ export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type Readout = z.infer<typeof readoutSchema>
 export type OutputFile = z.infer<typeof outputFile>
+export type ProgressBrief = z.infer<typeof progressBriefSchema>
 export type ProfileGraphDocument = z.infer<typeof profileGraphDocumentSchema>
 export type ProfileNode = z.infer<typeof profileNodeSchema>
 export type ProfileParent = ProfileNode['parents'][number]

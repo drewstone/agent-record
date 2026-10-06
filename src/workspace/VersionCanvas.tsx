@@ -3,6 +3,7 @@ import type { PlayDocument, ProfileGraphDocument, ProfileNode } from '../workspa
 import { duration, money, stateClass, stateLabel, when } from './data.js'
 import { absoluteJudges, absoluteMedian, authoredTree, changeSummary, compareProfiles, judgeShort, judgeSummary, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Judge, Version } from './profile-compare.js'
+import { OutputChanges } from './Outputs.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
@@ -187,12 +188,14 @@ export function VersionCanvas({
 
 /** What the inspector shows for the selected version or authored profile. */
 export function Inspector({
+  api,
   play,
   graph,
   versions,
   selection,
   onSelect,
 }: {
+  api: string
   play: PlayDocument
   graph: ProfileGraphDocument | null
   versions: Version[]
@@ -236,10 +239,10 @@ export function Inspector({
       </div>
     )
   }
-  return <VersionInspector play={play} version={version} />
+  return <VersionInspector api={api} play={play} version={version} />
 }
 
-function VersionInspector({ play, version }: { play: PlayDocument; version: Version }) {
+function VersionInspector({ api, play, version }: { api: string; play: PlayDocument; version: Version }) {
   const run = version.run
   const scores = judgesOf(version.root, run.id)
   return (
@@ -265,6 +268,14 @@ function VersionInspector({ play, version }: { play: PlayDocument; version: Vers
           </>
         ) : (
           <p className="faint">{version.root ? 'The first version of this play on this host: nothing to compare.' : 'No registered profile is indexed for this run.'}</p>
+        )}
+      </section>
+      <section data-inspector-outputs>
+        <h3>{version.previous ? `What the output changed from ${shortRun(play.id, version.previous.run.id)}` : 'What the output changed'}</h3>
+        {version.previous ? (
+          <OutputChanges api={api} beforeRunId={version.previous.run.id} afterRunId={run.id} beforeLabel={shortRun(play.id, version.previous.run.id)} />
+        ) : (
+          <p className="faint">The first version of this play on this host: nothing to compare.</p>
         )}
       </section>
       <section>

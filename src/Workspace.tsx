@@ -15,6 +15,7 @@ import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './wor
 import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
+import { OutputsView } from './workspace/Outputs.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
 import type { HiddenReason } from './workspace/plays-filter.js'
 import { profileGraph, findProfile } from './workspace/profile-graph.js'
@@ -365,7 +366,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                     <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />
                   </section>
                   <aside className="inspector-pane" aria-label="Inspector">
-                    <Inspector play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
+                    <Inspector api={api} play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
                   </aside>
                 </div>
               </>
@@ -620,16 +621,20 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const index = nodes.index
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
-  const drawer = view === 'readout' ? 'readout' : params.get('drawer') === 'closed' ? null : actor ? 'agent' : null
+  const drawer = view === 'readout' ? 'readout' : view === 'outputs' ? 'outputs' : params.get('drawer') === 'closed' ? null : actor ? 'agent' : null
   const agent = useRecordPart(drawer === 'agent' && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
   const summary = run.data?.run
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
-  const closeDrawer = () => update({ view: undefined, drawer: 'closed', node: undefined, event: undefined, tab: undefined, t: undefined })
+  const closeDrawer = () => update({ view: undefined, drawer: 'closed', node: undefined, event: undefined, tab: undefined, t: undefined, file: undefined })
+  const openOutputs = () => update({ view: 'outputs', drawer: undefined, file: undefined })
+  const outputs = (
+    <OutputsView doc={run.data!} selected={params.get('file')} onSelect={(file) => update({ view: 'outputs', file: file ?? undefined })} onClose={closeDrawer} />
+  )
   return (
     <div className="ws-page ws-run" data-run={summary.id}>
       <RunHeader doc={run.data!} />
-      <AnswerStrip doc={run.data!} onOpen={() => update({ view: 'readout', drawer: undefined })} />
+      <AnswerStrip doc={run.data!} onOpen={() => update({ view: 'readout', drawer: undefined, file: undefined })} onOutputs={openOutputs} />
       {index ? (
         <div className={`run-layout ${drawer ? 'with-drawer' : ''}`}>
           <section className="run-agents" aria-label="Agents">
@@ -640,7 +645,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
               assessments={assessments.data?.rows ?? []}
               dimensions={catalogue}
               selected={drawer === 'agent' ? actor : null}
-              onSelect={(node) => update({ node, view: undefined, drawer: undefined, event: undefined, t: undefined })}
+              onSelect={(node) => update({ node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
             />
           </section>
           {drawer === 'readout' && (
@@ -650,6 +655,11 @@ function RunPage({ api, id }: { api: string; id: string }) {
                 <button type="button" className="ui-button" onClick={closeDrawer}>Close</button>
               </div>
               <FinalOutputPanel output={run.data!.finalOutput} />
+            </aside>
+          )}
+          {drawer === 'outputs' && (
+            <aside className="run-drawer" aria-label="Outputs" data-drawer="outputs">
+              {outputs}
             </aside>
           )}
           {drawer === 'agent' && actor && (
@@ -702,6 +712,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
                 {nodes.fetchError && !summary.record.reason ? ` ${nodes.fetchError}` : ''}
               </p>
               <RunExtras api={api} doc={run.data!} />
+              {view === 'outputs' && <div className="run-drawer outputs-standalone">{outputs}</div>}
             </div>
           )}
         </div>
