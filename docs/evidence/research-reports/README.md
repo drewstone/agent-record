@@ -6,14 +6,14 @@ The primary workflow is now a source-linked assessment: choose a play, read its 
 
 | View | Published 0.1.0 | Research report |
 | --- | --- | --- |
-| Desktop, 1280 × 900 | [Before](before-desktop.png) | [After](after-desktop.png) |
-| Phone, 390 × 844 | [Before](before-phone.png) | [After](after-phone.png) |
+| Desktop, 1280 × 900 | [Before](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/before-desktop.png) | [After](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/after-desktop.png) |
+| Phone, 390 × 844 | [Before](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/before-phone.png) | [After](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/after-phone.png) |
 
-[Phone workspace](after-phone-workspace.png) · [Phone dark theme](after-phone-dark.png) · [Exact event source](source-event.png) · [Keyboard focus](keyboard-source.png) · [Reduced motion](reduced-motion.png).
+[Phone workspace](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/after-phone-workspace.png) · [Phone dark theme](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/after-phone-dark.png) · [Exact event source](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/source-event.png) · [Keyboard focus](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/keyboard-source.png) · [Reduced motion](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/reduced-motion.png).
 
 [Browser check receipt](browser-checks.json) covers empty search, assessment filtering, source inspection, event cutoffs, replay/pause, reduced motion, keyboard tabs, phone fit, play selection, dark theme, and a real per-play LaTeX download. The download-event observer timed out, but the exported 3,709-byte file was found in Downloads and its contents inspected.
 
-[Recorded replay and pause](replay-pause.mp4) preserves the actual browser screenshot sequence at its measured intervals ([timestamps](replay-timestamps.json)). It is a sampled capture, not a full-frame-rate animation recording. The viewer advances from supplied event timestamps, at a user-selected speed, and ends paused. Browser capture latency leaves gaps between frames; no intermediate activity was synthesized.
+[Recorded replay and pause](https://github.com/drewstone/agent-record/blob/2312a793b814e403d675d7fe277362ea54a1cee6/docs/evidence/research-reports/replay-pause.mp4) preserves the actual browser screenshot sequence at its measured intervals ([timestamps](replay-timestamps.json)). It is a sampled capture, not a full-frame-rate animation recording. The viewer advances from supplied event timestamps, at a user-selected speed, and ends paused. Browser capture latency leaves gaps between frames; no intermediate activity was synthesized.
 
 The private standalone renderer was also opened locally: its server-rendered content hydrated under the inline script hash policy, play selection updated the report, and the browser reported no errors. Private research contents and screenshots are not included here. The public development server had an older duplicate-root warning during hot reload; the standalone production output did not.
 

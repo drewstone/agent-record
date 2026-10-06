@@ -1,8 +1,8 @@
-// A synthetic profile-graph document with the shape of the Terraform economics play: registered roots d -> e -> f/g -> h
+// A synthetic profile-graph document for a sample play: registered roots d -> e -> f/g -> h
 // and the agents e and f wrote at runtime. Digests are hashes of labels, not of real profiles.
 import { createHash } from 'node:crypto'
 
-const PLAY = 'terraform-economics'
+const PLAY = 'sample-study'
 const digest = (seed) => `sha256:${createHash('sha256').update(seed).digest('hex')}`
 const unknown = (reason) => ({ status: 'unknown', reason })
 const noReadout = unknown('no readout for this run')
@@ -13,7 +13,7 @@ function node({ seed, name, kind, createdIn, author, parents = [], runs = [], in
     digest: d,
     short: d.slice(7, 19),
     name,
-    description: kind === 'root' ? 'Terraform economics, engineering and business expansion with multiple directors' : `Specialist ${name}`,
+    description: kind === 'root' ? 'A sample study with multiple directors' : `Specialist ${name}`,
     version: null,
     play,
     kind,
@@ -34,23 +34,23 @@ function node({ seed, name, kind, createdIn, author, parents = [], runs = [], in
   }
 }
 
-const operator = (runId) => ({ kind: 'operator', registration: `prereg/terraform-economics-20261005/${runId}.json` })
+const operator = (runId) => ({ kind: 'operator', registration: `prereg/sample-study-20261005/${runId}.json` })
 const run = (runId, outcome, state, reason, score = noReadout) => ({ runId, nodeIds: [runId], outcome, run: { state, reason }, score })
 const edge = (parent, relation, basis, primary, source, note) => ({ digest: parent.digest, relation, basis, primary, evidence: [{ source, note }] })
 
 const baseInstructions = [
-  'Read inputs/commission.md, inputs/predecessor-research.md and inputs/terraform-sources.md before acting.',
+  'Read inputs/commission.md, inputs/predecessor-research.md and inputs/sources.md before acting.',
   'Grant managers enough of the shared budget for descendants. This run has 24 million tokens and at most 6000 iterations.',
-  'Retain every partial result in Knowledge under pages/terraform/economics-20261005/.',
+  'Retain every partial result in Knowledge under pages/sample/study-20261005/.',
 ]
 
-export function terraformProfileGraph({ withReadout = true } = {}) {
+export function sampleProfileGraph({ withReadout = true } = {}) {
   const d = node({
-    seed: 'd', name: 'terraform-solar-fuels-20261003d-director', kind: 'root', play: 'terraform-solar-fuels', createdIn: 'terraform-solar-fuels-20261003d',
-    author: operator('terraform-solar-fuels-20261003d'), instructions: baseInstructions.slice(0, 2),
+    seed: 'd', name: 'sample-pilot-20261003d-director', kind: 'root', play: 'sample-pilot', createdIn: 'sample-pilot-20261003d',
+    author: operator('sample-pilot-20261003d'), instructions: baseInstructions.slice(0, 2),
   })
   const readout = {
-    status: 'known', source: 'readout', path: '/mnt/traces/readouts/terraform-economics-20261005e/readout.json', generatedAt: '2026-10-05T19:40:00Z',
+    status: 'known', source: 'readout', path: 'readouts/sample-study-20261005e/readout.json', generatedAt: '2026-10-05T19:40:00Z',
     judges: [
       { category: 'technical', score: 1, max: 4, calibrated: false },
       { category: 'software', score: 1, max: 4, calibrated: true },
@@ -62,39 +62,39 @@ export function terraformProfileGraph({ withReadout = true } = {}) {
   // a, c and e are re-presses of one registration (identical except the name); b, d and f add the blind rule.
   const econ = (letter, parents, runState = 'no-winner') =>
     node({
-      seed: `econ-${letter}`, name: `terraform-economics-20261005${letter}-director`, kind: 'root', createdIn: `terraform-economics-20261005${letter}`,
-      author: operator(`terraform-economics-20261005${letter}`), parents, instructions: baseInstructions,
-      runs: [run(`terraform-economics-20261005${letter}`, runState === 'unknown' ? null : runState, runState === 'unknown' ? null : runState, runState === 'unknown' ? null : 'operator cancellation')],
+      seed: `econ-${letter}`, name: `sample-study-20261005${letter}-director`, kind: 'root', createdIn: `sample-study-20261005${letter}`,
+      author: operator(`sample-study-20261005${letter}`), parents, instructions: baseInstructions,
+      runs: [run(`sample-study-20261005${letter}`, runState === 'unknown' ? null : runState, runState === 'unknown' ? null : runState, runState === 'unknown' ? null : 'operator cancellation')],
     })
-  const a = econ('a', [edge(d, 'revision', 'inferred', true, 'prereg/terraform-economics-20261005/build.py', 'built from the d run input')], 'unknown')
-  const b = econ('b', [edge(a, 'treatment', 'inferred', true, 'prereg/terraform-economics-20261005/terraform-economics-20261005b.json#/acceptance/experiment/arms', 'identical record plus one root instruction')], 'unknown')
-  const c = econ('c', [edge(a, 'revision', 'inferred', true, 'prereg/terraform-economics-20261005/build.py', 're-press of a: identical except the name')])
-  const dd = econ('d', [edge(c, 'treatment', 'inferred', true, 'prereg/terraform-economics-20261005/terraform-economics-20261005d.json#/acceptance/experiment/arms', 'identical record plus one root instruction')])
+  const a = econ('a', [edge(d, 'revision', 'inferred', true, 'prereg/sample-study-20261005/build.py', 'built from the d run input')], 'unknown')
+  const b = econ('b', [edge(a, 'treatment', 'inferred', true, 'prereg/sample-study-20261005/sample-study-20261005b.json#/acceptance/experiment/arms', 'identical record plus one root instruction')], 'unknown')
+  const c = econ('c', [edge(a, 'revision', 'inferred', true, 'prereg/sample-study-20261005/build.py', 're-press of a: identical except the name')])
+  const dd = econ('d', [edge(c, 'treatment', 'inferred', true, 'prereg/sample-study-20261005/sample-study-20261005d.json#/acceptance/experiment/arms', 'identical record plus one root instruction')])
   const e = node({
-    seed: 'e', name: 'terraform-economics-20261005e-director', kind: 'root', createdIn: 'terraform-economics-20261005e', author: operator('terraform-economics-20261005e'),
-    parents: [edge(c, 'revision', 'inferred', true, 'prereg/terraform-economics-20261005/build.py', 're-press of c: identical except the name')],
-    runs: [run('terraform-economics-20261005e', 'no-winner', 'no-winner', 'budget-exhausted', withReadout ? readout : noReadout)],
+    seed: 'e', name: 'sample-study-20261005e-director', kind: 'root', createdIn: 'sample-study-20261005e', author: operator('sample-study-20261005e'),
+    parents: [edge(c, 'revision', 'inferred', true, 'prereg/sample-study-20261005/build.py', 're-press of c: identical except the name')],
+    runs: [run('sample-study-20261005e', 'no-winner', 'no-winner', 'budget-exhausted', withReadout ? readout : noReadout)],
     instructions: baseInstructions,
   })
   const f = node({
-    seed: 'f', name: 'terraform-economics-20261005f-director', kind: 'root', createdIn: 'terraform-economics-20261005f', author: operator('terraform-economics-20261005f'),
+    seed: 'f', name: 'sample-study-20261005f-director', kind: 'root', createdIn: 'sample-study-20261005f', author: operator('sample-study-20261005f'),
     parents: [
-      edge(e, 'treatment', 'inferred', true, 'prereg/terraform-economics-20261005/terraform-economics-20261005f.json#/acceptance/experiment/arms', 'identical record plus one root instruction'),
-      edge(d, 'revision', 'inferred', false, 'prereg/terraform-economics-20261005/build.py', 'built from the d run input'),
+      edge(e, 'treatment', 'inferred', true, 'prereg/sample-study-20261005/sample-study-20261005f.json#/acceptance/experiment/arms', 'identical record plus one root instruction'),
+      edge(d, 'revision', 'inferred', false, 'prereg/sample-study-20261005/build.py', 'built from the d run input'),
     ],
-    runs: [run('terraform-economics-20261005f', 'no-winner', 'no-winner', 'budget-exhausted')],
+    runs: [run('sample-study-20261005f', 'no-winner', 'no-winner', 'budget-exhausted')],
     instructions: [...baseInstructions, 'Blind re-derivation: before any claim changes a recommendation, commission one independent re-derivation.'],
   })
   const g = node({
-    seed: 'g', name: 'terraform-economics-20261005g-director', kind: 'root', createdIn: 'terraform-economics-20261005g', author: operator('terraform-economics-20261005g'),
-    parents: [edge(e, 'revision', 'inferred', true, 'prereg/terraform-economics-20261005/next-pair/diff-from-e.json', 'next-pair/build.py built g from the committed e registration')],
+    seed: 'g', name: 'sample-study-20261005g-director', kind: 'root', createdIn: 'sample-study-20261005g', author: operator('sample-study-20261005g'),
+    parents: [edge(e, 'revision', 'inferred', true, 'prereg/sample-study-20261005/next-pair/diff-from-e.json', 'next-pair/build.py built g from the committed e registration')],
     instructions: [baseInstructions[0], 'This run has 48 million tokens and at most 24000 iterations.', 'The deliverable is the one repository inputs/deliverable-contract.md describes.'],
   })
   const h = node({
-    seed: 'h', name: 'terraform-economics-20261005h-director', kind: 'root', createdIn: 'terraform-economics-20261005h', author: operator('terraform-economics-20261005h'),
+    seed: 'h', name: 'sample-study-20261005h-director', kind: 'root', createdIn: 'sample-study-20261005h', author: operator('sample-study-20261005h'),
     parents: [
-      edge(g, 'treatment', 'inferred', true, 'prereg/terraform-economics-20261005/terraform-economics-20261005h.json#/acceptance/experiment/arms', 'identical record plus mid-run critique'),
-      edge(e, 'revision', 'inferred', false, 'prereg/terraform-economics-20261005/next-pair/build.py', 'built from the committed e registration'),
+      edge(g, 'treatment', 'inferred', true, 'prereg/sample-study-20261005/sample-study-20261005h.json#/acceptance/experiment/arms', 'identical record plus mid-run critique'),
+      edge(e, 'revision', 'inferred', false, 'prereg/sample-study-20261005/next-pair/build.py', 'built from the committed e registration'),
     ],
     instructions: [...g.instructions, 'Critique loop: each checkpoint event also carries the scores that a review panel outside this run gave.'],
   })
@@ -110,22 +110,22 @@ export function terraformProfileGraph({ withReadout = true } = {}) {
     spawned.push(child)
     return child
   }
-  const eRun = 'terraform-economics-20261005e'
+  const eRun = 'sample-study-20261005e'
   const em = spawn(e, eRun, 's0', 'director-model', e, 'done', 'claude-opus-5-5')
   for (const [i, n] of ['model:sourcer', 'model:blind-referee', 'model:company-builder', 'model:blind-referee-b'].entries()) spawn(e, eRun, `s0:s${i}`, n, em)
   const eb = spawn(e, eRun, 's1', 'director-business', e, 'done', 'claude-opus-5-5')
   for (const [i, n] of ['business scan-sourcer', 'business demand-sourcer', 'business skeptic (blind)'].entries()) spawn(e, eRun, `s1:s${i}`, n, eb)
   const ee = spawn(e, eRun, 's2', 'director-engineering', e, 'done', 'claude-opus-5-5')
-  for (const [i, n] of ['eng: CO2 supply + interconnect data', 'eng: blind calciner energy re-derivation retry', 'eng: blind calciner re-derivation replacement'].entries()) spawn(e, eRun, `s2:s${i}`, n, ee, i === 1 ? 'failed' : 'done')
+  for (const [i, n] of ['eng: supply data', 'eng: blind re-derivation retry', 'eng: blind re-derivation replacement'].entries()) spawn(e, eRun, `s2:s${i}`, n, ee, i === 1 ? 'failed' : 'done')
   spawn(e, eRun, 's3', 'e38 reader arm A (raw pages)', e)
   spawn(e, eRun, 's4', 'e38 reader arm B (curated brief)', e)
-  const fRun = 'terraform-economics-20261005f'
+  const fRun = 'sample-study-20261005f'
   const fm = spawn(f, fRun, 's0', 'director-model', f, 'done', 'claude-opus-5-5')
-  for (const [i, n] of ['model:sources', 'model:simrepro', 'model:blind-plant', 'model:blind-company', 'model:blind-h2'].entries()) spawn(f, fRun, `s0:s${i}`, n, fm)
+  for (const [i, n] of ['model:sources', 'model:simrepro', 'model:blind-plant', 'model:blind-company', 'model:blind-cost'].entries()) spawn(f, fRun, `s0:s${i}`, n, fm)
   const fe = spawn(f, fRun, 's1', 'director-engineering', f, 'done', 'claude-opus-5-5')
-  for (const [i, n] of ['investigator-dac', 'investigator-buffer', 'blind-rederiver'].entries()) spawn(f, fRun, `s1:s${i}`, n, fe)
+  for (const [i, n] of ['investigator-a', 'investigator-b', 'blind-rederiver'].entries()) spawn(f, fRun, `s1:s${i}`, n, fe)
   const fb = spawn(f, fRun, 's2', 'director-business', f, 'done', 'claude-opus-5-5')
-  for (const [i, n] of ['biz-widescan', 'biz-deep-h2-attributes', 'biz-deep-emethane', 'biz-blind-rederiver', 'biz-blind-rederiver-2'].entries()) spawn(f, fRun, `s2:s${i}`, n, fb)
+  for (const [i, n] of ['biz-widescan', 'biz-deep-attributes', 'biz-deep-market', 'biz-blind-rederiver', 'biz-blind-rederiver-2'].entries()) spawn(f, fRun, `s2:s${i}`, n, fb)
   for (const [i, n] of ['root-blind-attributes', 'root-blind-parity', 'root-review-model'].entries()) spawn(f, fRun, `s${i + 3}`, n, f)
 
   const textDiff = (from, to) => {
@@ -150,7 +150,7 @@ export function terraformProfileGraph({ withReadout = true } = {}) {
       { field: 'name', kind: 'value', from: d.name, to: a.name },
       textDiff(d.instructions, a.instructions),
       { field: 'tools', kind: 'set', added: [], removed: ['agent_runtime_coordination_research_history'], kept: 10 },
-      { field: 'files', kind: 'files', added: [{ path: 'inputs/predecessor-research.md', bytes: 2410, sha256: digest('pr') }], removed: [{ path: 'inputs/predecessor-handoff.md', bytes: 5030, sha256: digest('ph') }], changed: [{ path: 'inputs/commission.md', from: digest('c1'), to: digest('c2'), added: 2, removed: 1, lines: [{ op: '@', text: 'line 4' }, { op: ' ', text: '# Terraform Industries' }, { op: '-', text: 'Program: solar fuels.' }, { op: '+', text: 'Program: program:solar-fuels.' }, { op: '+', text: 'Predecessor: terraform-solar-fuels-20261003d.' }] }] },
+      { field: 'files', kind: 'files', added: [{ path: 'inputs/predecessor-research.md', bytes: 2410, sha256: digest('pr') }], removed: [{ path: 'inputs/predecessor-handoff.md', bytes: 5030, sha256: digest('ph') }], changed: [{ path: 'inputs/commission.md', from: digest('c1'), to: digest('c2'), added: 2, removed: 1, lines: [{ op: '@', text: 'line 4' }, { op: ' ', text: '# Sample commission' }, { op: '-', text: 'Program: sample.' }, { op: '+', text: 'Program: program:sample.' }, { op: '+', text: 'Predecessor: sample-pilot-20261003d.' }] }] },
     ]),
     diff(e, f, 'treatment', [{ field: 'name', kind: 'value', from: e.name, to: f.name }, textDiff(e.instructions, f.instructions)]),
     diff(e, g, 'revision', [

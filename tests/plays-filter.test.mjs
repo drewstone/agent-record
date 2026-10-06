@@ -10,10 +10,10 @@ const play = (id, fields = {}) => ({ id, title: id, program: 'research', line: n
 // The live plays index of 2026-10-05, as the host classifies it: a play is hidden only when every run of it is.
 const plays = [
   play('no-program', { title: 'Tests & smoke runs (no program)', program: null, playBasis: 'unassigned', noProgram: true, state: 'running', runCount: 738, hidden: 'smoke', counts: counts(0, 0, 738) }),
-  play('terraform-economics', { program: 'terraform', runCount: 6, counts: counts(6) }),
+  play('sample-study', { program: 'sample', runCount: 6, counts: counts(6) }),
   play('research-math', { state: 'driver-failed', runCount: 6, hidden: 'failed', counts: counts(0, 6) }),
   // A failed latest run does not hide a play with a shown run: the failure stays in view as the play's state.
-  play('research-oratomic', { state: 'driver-failed', runCount: 6, counts: counts(1, 5) }),
+  play('research-physics', { state: 'driver-failed', runCount: 6, counts: counts(1, 5) }),
   play('research-old', { state: 'winner', runCount: 3, hidden: 'archived', counts: counts(0, 0, 0, 3) }),
 ]
 
@@ -28,7 +28,7 @@ test('the plays index and run summaries with the filter fields satisfy the serve
 
 test('plays the host hides stay out of view by default and are counted by reason, open or closed', () => {
   const byDefault = splitHidden(plays, false)
-  assert.deepEqual(byDefault.shown.map((p) => p.id), ['terraform-economics', 'research-oratomic'])
+  assert.deepEqual(byDefault.shown.map((p) => p.id), ['sample-study', 'research-physics'])
   assert.deepEqual(byDefault.counts, { failed: 1, smoke: 1, archived: 1 })
   assert.equal(byDefault.hidden, 3)
   const all = splitHidden(plays, true)
