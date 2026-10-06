@@ -1538,44 +1538,6 @@
 .ar-ws .chips .chip { margin: 0; }
 
 /* graphs */
-.ar-ws .graph-canvas { overflow: auto; max-width: 100%; }
-.ar-ws .graph-canvas svg { display: block; }
-.ar-ws .graph-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 2px 0; font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg-muted); }
-.ar-ws .graph-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.ar-ws .graph-legend .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
-.ar-ws .graph-legend .dot.ring { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ar-fg-muted); border: 1px dashed var(--ar-fg-muted); }
-.ar-ws .graph-legend .dot.gap { background: transparent; border: 1.5px dashed var(--ar-fg-muted); }
-.ar-ws .legend-line::before { content: ''; width: 22px; border-top: 2px solid var(--ar-fg-muted); }
-.ar-ws .legend-line.edge-continues::before { border-top-style: dashed; }
-.ar-ws .legend-line.edge-retry::before { border-top-style: dotted; }
-.ar-ws .legend-note { margin-left: auto; }
-.ar-ws .topology-edge { fill: none; stroke: var(--ar-border-strong); stroke-width: 1.3; }
-.ar-ws .topology-node { cursor: pointer; outline: none; }
-.ar-ws .topology-node .node-dot { fill: var(--ar-fg-faint); stroke: var(--ws-panel); stroke-width: 1.5; }
-.ar-ws .topology-node.node-done .node-dot { fill: var(--ar-c-ok); }
-.ar-ws .topology-node.node-down .node-dot { fill: var(--ar-c-fail); }
-.ar-ws .topology-node.node-running .node-dot, .ar-ws .topology-node.node-open .node-dot { fill: var(--ws-accent); }
-.ar-ws .topology-node.capture-absent .node-dot { fill-opacity: .28; stroke: currentColor; stroke-dasharray: 2 2; }
-.ar-ws .topology-node.node-done.capture-absent { color: var(--ar-c-ok); }
-.ar-ws .topology-node.node-down.capture-absent { color: var(--ar-c-fail); }
-.ar-ws .topology-node .node-halo { fill: none; stroke: var(--ws-frame); stroke-width: 2; }
-.ar-ws .topology-node .node-label { fill: var(--ar-fg); font: var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .topology-node:hover .node-label, .ar-ws .topology-node:focus-visible .node-label, .ar-ws .topology-node.selected .node-label { fill: var(--ws-title); font-weight: 600; }
-.ar-ws .topology-node:focus-visible .node-dot { stroke: var(--ar-control-focus); stroke-width: 2.5; }
-.ar-ws .lineage-node { cursor: pointer; outline: none; color: var(--ar-fg-muted); }
-.ar-ws .lineage-node .run-dot { fill: currentColor; fill-opacity: .85; stroke: var(--ws-panel); stroke-width: 2; }
-.ar-ws .lineage-node.gap { cursor: default; }
-.ar-ws .lineage-node.gap .run-dot { fill-opacity: 0; stroke: var(--ar-fg-muted); stroke-dasharray: 3 3; stroke-width: 1.5; }
-.ar-ws .lineage-node:hover .run-dot, .ar-ws .lineage-node:focus-visible .run-dot { stroke: var(--ws-frame); }
-.ar-ws .lineage-node .run-label { fill: var(--ar-fg); font: 600 var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .lineage-node .run-sub { fill: var(--ar-fg-muted); font: var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .lineage-node .run-versions { fill: var(--ws-panel); font: 700 var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .lineage-edge path { fill: none; stroke: var(--ar-fg-muted); stroke-width: 1.6; }
-.ar-ws .lineage-edge.edge-continues path { stroke-dasharray: 6 4; }
-.ar-ws .lineage-edge.edge-retry path { stroke-dasharray: 2 3; }
-.ar-ws .lineage-edge.edge-version path { stroke-width: 1; opacity: .6; }
-.ar-ws .lineage-edge .edge-label { fill: var(--ar-fg-muted); font: var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .lineage-arrow { fill: var(--ar-fg-muted); }
 
 /* tables */
 .ar-ws .table-scroll { overflow-x: auto; }
@@ -1602,8 +1564,6 @@
 
 /* run layout */
 .ar-ws .ws-body { display: grid; grid-template-columns: minmax(400px, 38%) minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
-.ar-ws .ws-topology { position: sticky; top: var(--ar-sticky-top, 8px); background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
-.ar-ws .ws-topology .graph-canvas { max-height: calc(100vh - 250px); min-height: 160px; }
 .ar-ws .replay { display: grid; grid-template-columns: auto auto minmax(80px, 1fr) auto auto; gap: 8px; align-items: center; padding-top: 10px; border-top: 1px solid var(--ar-border); }
 .ar-ws .replay input[type='range'] { width: 100%; accent-color: var(--ws-frame); }
 .ar-ws .replay output { font: var(--ar-text-s) var(--ar-font-mono); white-space: nowrap; }
@@ -1733,8 +1693,6 @@
 
 @media (max-width: 1100px) {
   .ar-ws .ws-body { grid-template-columns: minmax(0, 1fr); }
-  .ar-ws .ws-topology { position: static; }
-  .ar-ws .ws-topology .graph-canvas { max-height: 50vh; }
   .ar-ws .input-columns { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 700px) {
@@ -1746,20 +1704,12 @@
   .ar-ws .kv > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 
-.ar-ws .topology-graph, .ar-ws .lineage-graph { min-width: 0; }
 .ar-ws .chat-message { padding: 14px 18px; }
 .ar-ws .conversation-toolbar { padding: 4px 16px; border-bottom: 0; }
 .ar-ws .message-heading { padding-bottom: 6px; }
 .ar-ws .chat-message.tool-turn { padding: 3px 18px; border-bottom: 0; }
 .ar-ws .chat-message.tool-turn .tool-stack { margin: 0; }
 .ar-ws .tool-execution > summary { min-height: 32px; }
-.ar-ws .lineage-node.state-ok { color: var(--ar-c-ok); }
-.ar-ws .lineage-node.state-fail { color: var(--ar-c-fail); }
-.ar-ws .lineage-node.state-warn { color: var(--ar-c-run); }
-.ar-ws .lineage-node.state-run { color: var(--ws-accent); }
-.ar-ws .topology-node.node-no-winner .node-dot { fill: var(--ar-c-run); }
-.ar-ws .topology-node.node-ended .node-dot { fill: var(--ar-fg-muted); }
-.ar-ws .topology-node .node-label { paint-order: stroke; stroke: var(--ws-panel); stroke-width: 4px; stroke-linejoin: round; }
 .ar-ws .scorecard { display: grid; gap: 6px; margin-bottom: 14px; }
 .ar-ws .scorecard-group { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 10px; align-items: start; }
 .ar-ws .scorecard-name { font-size: var(--ar-text-s); color: var(--ar-fg-muted); padding-top: 4px; }
@@ -1783,7 +1733,6 @@
 .ar-ws h1 .crumb { color: var(--ar-fg-muted); font-weight: 500; }
 .ar-ws h1 .crumb:hover, .ar-ws h1 .crumb:focus-visible { color: var(--ws-title); }
 .ar-ws h1 .crumb-sep { color: var(--ar-fg-faint); font-weight: 400; }
-.ar-ws .graph-legend .dot.ended { background: var(--ar-fg-muted); }
 
 /* Tool input and output as recorded. */
 .ar-ws .verbatim-block { display: grid; gap: 4px; margin: 0 0 8px; }
@@ -1859,43 +1808,7 @@
 .ar-ws .final-more:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 2px; border-radius: 3px; }
 @media (max-width: 640px) { .ar-ws .ws-final { padding: 10px 12px; } }
 /* Profile versions on the play page: one node per exact profile, under the profile it came from. */
-.ar-ws .profile-versions { display: grid; gap: 8px; min-width: 0; }
-.ar-ws .profile-intro, .ar-ws .profile-hint, .ar-ws .profile-missing { margin: 0; font-size: var(--ar-text-s); max-width: 110ch; }
-.ar-ws .profile-canvas { max-height: 70vh; }
-.ar-ws .profile-edge path { fill: none; stroke: var(--ar-fg-muted); stroke-width: 1.2; }
-.ar-ws .profile-edge.relation-authored path { stroke: var(--ar-border-strong); stroke-width: 1; }
-.ar-ws .profile-edge.relation-revision path { stroke: var(--ws-accent); stroke-width: 1.8; }
-.ar-ws .profile-edge.relation-treatment path { stroke: var(--ar-c-run); stroke-width: 1.8; }
-.ar-ws .profile-edge.basis-inferred path { stroke-dasharray: 6 4; }
-.ar-ws .profile-edge.secondary path { stroke-width: 1; opacity: .45; stroke-dasharray: 2 4; }
-.ar-ws .profile-edge .edge-label { fill: var(--ar-fg-muted); font: var(--ar-text-s) var(--ar-font-mono); paint-order: stroke; stroke: var(--ws-panel); stroke-width: 4px; stroke-linejoin: round; }
-.ar-ws .profile-edge .edge-delta { font: var(--ar-text-s) var(--ar-font-mono); paint-order: stroke; stroke: var(--ws-panel); stroke-width: 4px; stroke-linejoin: round; }
-.ar-ws .profile-edge .edge-delta.known { fill: var(--ar-fg); }
-.ar-ws .profile-edge .edge-delta.unknown { fill: var(--ar-fg-faint); }
 .ar-ws .profile-arrow { fill: var(--ar-fg-muted); }
-.ar-ws .profile-node { color: var(--ar-fg-muted); }
-.ar-ws .profile-node.state-ok { color: var(--ar-c-ok); }
-.ar-ws .profile-node.state-fail { color: var(--ar-c-fail); }
-.ar-ws .profile-node.state-warn { color: var(--ar-c-run); }
-.ar-ws .profile-node.state-run { color: var(--ws-accent); }
-.ar-ws .profile-hit { cursor: pointer; outline: none; }
-.ar-ws .profile-hit-area { fill: transparent; }
-.ar-ws .profile-hit:hover .profile-hit-area { fill: var(--ws-raised); }
-.ar-ws .profile-hit:focus-visible .profile-hit-area { fill: var(--ws-raised); stroke: var(--ar-control-focus, var(--ws-frame)); stroke-width: 1.5; }
-.ar-ws .profile-dot { fill: currentColor; fill-opacity: .85; stroke: var(--ws-panel); stroke-width: 2; }
-.ar-ws .profile-node.kind-root .profile-dot { stroke: var(--ws-frame); stroke-width: 2; }
-.ar-ws .profile-node.registered .profile-dot { fill-opacity: 0; stroke: var(--ar-fg-muted); stroke-dasharray: 3 3; stroke-width: 1.5; }
-.ar-ws .profile-node .node-halo { fill: none; stroke: var(--ws-frame); stroke-width: 2; }
-.ar-ws .profile-label { fill: var(--ar-fg); font: var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .profile-node.kind-root .profile-label { font-weight: 650; }
-.ar-ws .profile-node.selected .profile-label, .ar-ws .profile-hit:hover .profile-label { fill: var(--ws-title); }
-.ar-ws .profile-sub { fill: var(--ar-fg-muted); font: var(--ar-text-s) var(--ar-font-mono); }
-.ar-ws .profile-toggle { fill: var(--ws-accent); font: 600 var(--ar-text-s) var(--ar-font-mono); cursor: pointer; outline: none; }
-.ar-ws .profile-toggle:hover, .ar-ws .profile-toggle:focus-visible { text-decoration: underline; fill: var(--ws-title); }
-.ar-ws .legend-line.relation-revision::before { border-top-color: var(--ws-accent); }
-.ar-ws .legend-line.relation-treatment::before { border-top-color: var(--ar-c-run); }
-.ar-ws .legend-line.relation-authored::before { border-top: 1px solid var(--ar-border-strong); }
-.ar-ws .legend-line.basis-inferred::before { border-top-style: dashed; }
 .ar-ws .link-button { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--ws-accent); font: inherit; cursor: pointer; }
 .ar-ws .link-button:hover, .ar-ws .link-button:focus-visible { text-decoration: underline; }
 .ar-ws .profile-detail { display: grid; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--ar-border); min-width: 0; }
@@ -1945,7 +1858,6 @@
 .ar-ws .profile-instructions { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: var(--ar-text-s); max-width: 110ch; }
 .ar-ws .profile-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--ar-text-s); }
 @media (max-width: 700px) {
-  .ar-ws .profile-canvas { max-height: 60vh; }
   .ar-ws .diff-name { min-width: 0; flex-basis: 100%; }
   .ar-ws .profile-close { margin-left: 0; }
 }
@@ -1953,18 +1865,8 @@
 /* The usage chart draws in a fixed 580-unit viewBox that scales with its panel: its labels are sized in those units. */
 .agent-record svg[data-tokens] .axis-label { font-size: 10px; }
 /* Graph rows select as a whole: a transparent hit area behind each node's dot and label. */
-.ar-ws .node-hit { fill: transparent; }
-.ar-ws .topology-node:hover .node-hit, .ar-ws .topology-node.selected .node-hit, .ar-ws .lineage-node:hover .node-hit { fill: var(--ws-raised); }
-.ar-ws .lineage-node .run-label, .ar-ws .lineage-node .run-sub { paint-order: stroke; stroke: var(--ws-panel); stroke-width: 4px; stroke-linejoin: round; }
 /* The selected profile's detail beside its graph, kept in view while the graph scrolls. */
-.ar-ws .profile-graph-pane { display: grid; gap: 8px; min-width: 0; align-content: start; }
-.ar-ws .profile-versions.has-detail { grid-template-columns: minmax(0, 1fr) minmax(440px, 44%); gap: 18px; align-items: start; }
-.ar-ws .profile-versions { scroll-margin-top: calc(var(--ar-sticky-top, 8px) + 12px); }
-.ar-ws .profile-detail-pane { position: sticky; top: var(--ar-sticky-top, 8px); max-height: calc(100vh - var(--ar-sticky-top, 8px) - 16px); overflow: auto; padding-left: 18px; border-left: 1px solid var(--ar-border); min-width: 0; scroll-margin-top: var(--ar-sticky-top, 8px); }
-.ar-ws .profile-detail-pane .profile-detail { margin-top: 0; padding-top: 0; border-top: 0; }
 @media (max-width: 1100px) {
-  .ar-ws .profile-versions.has-detail { grid-template-columns: minmax(0, 1fr); }
-  .ar-ws .profile-detail-pane { position: static; max-height: none; padding-left: 0; border-left: 0; padding-top: 12px; border-top: 1px solid var(--ar-border); }
 }
 /* The default filter: what it hides, counted where it is seen first; failures lead in the failure colour. */
 .ar-ws .hidden-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 10px 14px; border-radius: 8px; background: var(--ws-raised); color: var(--ar-fg); }
@@ -1984,3 +1886,125 @@
 .ar-ws .runs-table .run-purpose { min-width: 16rem; max-width: 30rem; white-space: normal; }
 .ar-ws .runs-table .run-purpose-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .run-purpose-line { color: var(--ar-fg-muted); }
+/* ---- The run page: the answer strip, the agents tree-table, the drawer. */
+.ar-ws .answer-strip { position: sticky; top: var(--ar-sticky-top, 8px); z-index: 6; display: grid; grid-template-columns: 1.3fr 1.1fr 1.2fr 1.5fr 1.1fr; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; box-shadow: 0 6px 18px #0004; }
+.ar-ws .answer-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 10px 18px; border: 0; border-right: 1px solid var(--ar-border); background: transparent; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; }
+.ar-ws .answer-cell:last-child { border-right: 0; }
+.ar-ws .answer-cell:hover, .ar-ws .answer-cell:focus-visible { background: var(--ws-raised); outline: none; }
+.ar-ws .answer-label { color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
+.ar-ws .answer-value { font-weight: 650; overflow-wrap: anywhere; }
+.ar-ws .answer-link { font-size: var(--ar-text-s); }
+.ar-ws .run-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
+.ar-ws .run-layout.with-drawer { grid-template-columns: minmax(0, 1fr) minmax(520px, 46%); }
+.ar-ws .run-agents { background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; overflow-x: auto; }
+.ar-ws .run-drawer { position: sticky; top: calc(var(--ar-sticky-top, 8px) + 112px); max-height: calc(100vh - var(--ar-sticky-top, 8px) - 124px); overflow: auto; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; }
+.ar-ws .run-drawer .ws-final { border: 0; border-radius: 0; }
+.ar-ws .drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .drawer-head h2 { font-family: var(--ar-font-body); }
+.ar-ws .agent-drawer .ws-panel { border: 0; border-radius: 0; }
+.ar-ws .agent-drawer .replay { padding: 8px 16px; border-top: 0; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .agent-drawer .conversation-scroll { height: calc(100vh - var(--ar-sticky-top, 8px) - 440px); min-height: 360px; }
+.ar-ws .drawer-close { align-self: flex-start; }
+.ar-ws .agent-table { display: grid; min-width: 0; }
+.ar-ws .agent-row { display: grid; grid-template-columns: minmax(240px, 1.6fr) 170px minmax(180px, 1.4fr) 80px 84px 96px 170px minmax(110px, 0.8fr); align-items: center; column-gap: 14px; min-height: 46px; padding: 6px 16px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 70%, transparent); background: transparent; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.ar-ws .agent-row:hover, .ar-ws .agent-row:focus-visible { background: var(--ws-raised); outline: none; }
+.ar-ws .agent-row.on { background: color-mix(in srgb, var(--ws-accent) 14%, transparent); box-shadow: inset 3px 0 0 var(--ws-frame); }
+.ar-ws .agent-row > * { min-width: 0; }
+.ar-ws .agent-row-head { position: sticky; top: 0; z-index: 1; cursor: default; background: var(--ws-panel); color: var(--ar-fg-muted); font-size: var(--ar-text-s); min-height: 38px; }
+.ar-ws .agent-row-head:hover { background: var(--ws-panel); }
+.ar-ws .agent-name { display: flex; align-items: center; min-width: 0; }
+.ar-ws .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ar-ws .lane { position: relative; display: block; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--ar-fg-faint) 18%, transparent); }
+.ar-ws .lane .seg { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--ar-fg-muted); }
+.ar-ws .lane .seg.state-ok { background: var(--ar-c-ok); }
+.ar-ws .lane .seg.state-fail { background: var(--ar-c-fail); }
+.ar-ws .lane .seg.state-warn { background: var(--ar-c-run); }
+.ar-ws .lane .seg.state-run { background: var(--ws-accent); }
+.ar-ws .lane-head { position: relative; height: 22px; }
+.ar-ws .lane-head i { position: absolute; transform: translateX(-50%); font-style: normal; white-space: nowrap; }
+.ar-ws .lane-head i:first-child { transform: none; }
+.ar-ws .lane-head i:last-child { transform: translateX(-100%); }
+.ar-ws .agent-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ar-ws .agent-flags { display: flex; flex-wrap: wrap; gap: 4px; }
+.ar-ws .capture-text.capture-absent { color: var(--ar-fg-muted); }
+.ar-ws .agent-table-note { margin: 10px 16px 14px; }
+/* With the drawer open the table keeps the columns that place an agent: name, outcome, time bar and list price. */
+.ar-ws .run-layout.with-drawer .agent-row { grid-template-columns: minmax(180px, 1.4fr) 150px minmax(120px, 1fr) 90px; }
+.ar-ws .run-layout.with-drawer .agent-row > :nth-child(4),
+.ar-ws .run-layout.with-drawer .agent-row > :nth-child(5),
+.ar-ws .run-layout.with-drawer .agent-row > :nth-child(7),
+.ar-ws .run-layout.with-drawer .agent-row > :nth-child(8) { display: none; }
+@media (max-width: 1100px) {
+  .ar-ws .answer-strip { grid-template-columns: 1fr 1fr; position: static; }
+  .ar-ws .answer-cell { border-right: 0; border-bottom: 1px solid var(--ar-border); }
+  .ar-ws .run-layout.with-drawer { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .run-drawer { position: static; max-height: none; }
+  .ar-ws .agent-row, .ar-ws .run-layout.with-drawer .agent-row { grid-template-columns: minmax(0, 1fr) 130px 84px; }
+  .ar-ws .agent-row > :nth-child(3), .ar-ws .agent-row > :nth-child(4), .ar-ws .agent-row > :nth-child(5), .ar-ws .agent-row > :nth-child(7), .ar-ws .agent-row > :nth-child(8) { display: none; }
+}
+/* ---- The play page: the version graph and its inspector. */
+.ar-ws .lineage-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(440px, 33%); min-height: 600px; height: calc(100vh - var(--ar-sticky-top, 8px) - 40px); background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
+.ar-ws .lineage-pane { overflow: auto; min-width: 0; border-right: 1px solid var(--ar-border); }
+.ar-ws .lineage-key { margin: 12px 24px 0; max-width: 100ch; }
+.ar-ws .inspector-pane { overflow: auto; min-width: 0; padding: 18px 22px 28px; }
+.ar-ws .version-canvas { padding-bottom: 12px; }
+.ar-ws .version-host { position: relative; }
+.ar-ws .version-lines { position: absolute; inset: 0; pointer-events: none; }
+.ar-ws .version-lines path { fill: none; stroke: var(--ar-border-strong); stroke-width: 2; }
+.ar-ws .version-lines path.hot { stroke: var(--ws-accent); }
+.ar-ws .canvas-node { position: absolute; display: flex; flex-direction: column; gap: 4px; padding: 10px 14px; border: 1px solid var(--ar-border-strong); border-radius: 12px; background: var(--ws-panel); color: var(--ar-fg); font: inherit; text-align: left; overflow: hidden; cursor: pointer; }
+.ar-ws button.canvas-node:hover, .ar-ws button.canvas-node:focus-visible { border-color: var(--ws-accent); outline: none; }
+.ar-ws .canvas-node.on { border: 2px solid var(--ws-frame); background: color-mix(in srgb, var(--ws-accent) 12%, var(--ws-panel)); }
+.ar-ws .canvas-node.open:not(.on) { border-color: color-mix(in srgb, var(--ws-accent) 55%, var(--ar-border-strong)); }
+.ar-ws .canvas-node.ghost { border-style: dashed; background: transparent; cursor: default; }
+.ar-ws .canvas-node .node-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ar-ws .canvas-node .node-title .state-pill { margin-left: auto; }
+.ar-ws .canvas-node .delta { color: var(--ws-accent); }
+.ar-ws .canvas-node .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex: none; }
+.ar-ws .judge-line { display: flex; align-items: flex-end; gap: 10px; min-width: 0; }
+.ar-ws .judge-bars { display: inline-flex; align-items: flex-end; gap: 4px; height: 28px; flex: none; }
+.ar-ws .judge-bars i { display: block; width: 10px; border-radius: 3px 3px 0 0; background: var(--ar-fg); }
+.ar-ws .judge-bars i.advisory { background: transparent; box-shadow: inset 0 0 0 2px var(--ar-fg-muted); }
+.ar-ws .judge-bars i.zero { background: color-mix(in srgb, var(--ar-fg-faint) 40%, transparent); box-shadow: none; }
+.ar-ws .inspector { display: grid; gap: 14px; min-width: 0; }
+.ar-ws .inspector > p, .ar-ws .inspector section > p { margin: 0; }
+.ar-ws .inspector section { display: grid; gap: 8px; }
+.ar-ws .inspector section h3 { margin: 6px 0 0; }
+.ar-ws .inspector-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ar-ws .inspector-head h2 { margin: 0; font-size: var(--ar-text-l); }
+.ar-ws .inspector-head .chip { margin: 0; }
+.ar-ws .inspector-link { justify-self: start; }
+.ar-ws .judge-rows { display: grid; gap: 2px; }
+.ar-ws .judge-row { display: grid; grid-template-columns: minmax(110px, 1fr) auto 70px 90px; align-items: center; column-gap: 12px; min-height: 30px; }
+.ar-ws .pips { display: inline-flex; gap: 4px; }
+.ar-ws .pips i { width: 16px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
+.ar-ws .pips i.on { background: var(--ar-fg); }
+.ar-ws .pips i.on.advisory { background: transparent; box-shadow: inset 0 0 0 2px var(--ar-fg-muted); }
+.ar-ws .absolute-scale { display: grid; gap: 4px; margin-top: 8px; }
+.ar-ws .scale-track { position: relative; height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--ar-fg-faint) 22%, transparent); }
+.ar-ws .scale-band { position: absolute; top: 0; bottom: 0; left: 85%; right: 0; border-radius: 0 6px 6px 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ar-c-ok) 55%, transparent) 0 4px, transparent 4px 8px); }
+.ar-ws .scale-mark { position: absolute; top: -4px; bottom: -4px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--ws-accent); }
+.ar-ws .scale-ticks { display: flex; justify-content: space-between; color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
+.ar-ws .verdict-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.ar-ws .verdict-met { color: var(--ar-c-ok); }
+.ar-ws .verdict-not-met { color: var(--ar-c-fail); }
+@media (max-width: 1100px) {
+  .ar-ws .lineage-layout { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .ar-ws .lineage-pane { border-right: 0; border-bottom: 1px solid var(--ar-border); max-height: 70vh; }
+}
+.ar-ws .canvas-node .node-sub { font-size: var(--ar-text-s); color: var(--ar-fg-muted); line-height: 1.4; }
+.ar-ws .canvas-node .node-sub.delta { color: var(--ws-accent); }
+.ar-ws .canvas-node .judge-line { align-items: center; }
+.ar-ws .canvas-node .judge-line .node-sub { flex: 1 1 auto; }
+/* The drawer's agent head: identity, capture and Close on one row; the tab row scrolls instead of wrapping. */
+.ar-ws .agent-drawer .agent-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: start; gap: 12px; }
+.ar-ws .agent-drawer .ws-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+.ar-ws .agent-drawer .ws-tabs button { flex: none; }
+@media (max-width: 700px) {
+  /* On a phone the graph is a list: versions, then the selected version's authored profiles; the lines are dropped. */
+  .ar-ws .version-host { width: auto !important; height: auto !important; display: grid; gap: 10px; padding: 12px; }
+  .ar-ws .version-lines { display: none; }
+  .ar-ws .canvas-node { position: static; width: auto !important; height: auto !important; }
+  .ar-ws .canvas-node.authored { margin-left: 18px; }
+  .ar-ws .lineage-key { margin: 12px 12px 0; }
+}
