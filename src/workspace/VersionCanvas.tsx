@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode } from '../workspace.js'
 import { duration, money, stateClass, stateLabel, when } from './data.js'
-import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sameNamed } from './profile-compare.js'
+import { absoluteJudges, absoluteMedian, authoredTree, changeSummary, compareProfiles, judgeShort, judgeSummary, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Judge, Version } from './profile-compare.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
 
@@ -23,15 +23,18 @@ const AUTH_STEP = AUTH_W + 40
 
 export type Selection = { kind: 'version'; runId: string } | { kind: 'profile'; runId: string; digest: string }
 
-/** The judges as mini bars: height is the rubric score, a filled bar a calibrated judge, an outlined one advisory. */
+/** The absolute-scale judges as mini bars: height is the score out of 100, a filled bar a calibrated judge, an
+ * outlined one advisory. A judge on the retired relative scale draws nothing. */
 function JudgeBars({ judges }: { judges: readonly Judge[] }) {
+  const absolute = absoluteJudges(judges)
+  if (!absolute.length) return null
   return (
     <span className="judge-bars" aria-hidden="true">
-      {judges.map((judge) => (
+      {absolute.map((judge) => (
         <i
           key={judge.category}
           className={`${judge.calibrated ? 'calibrated' : 'advisory'} ${!judge.score ? 'zero' : ''}`}
-          style={{ height: `${Math.max(3, ((judge.score ?? 0) / (judge.max || 4)) * 26)}px` }}
+          style={{ height: `${Math.max(3, ((judge.score ?? 0) / 100) * 26)}px` }}
         />
       ))}
     </span>
@@ -137,7 +140,7 @@ export function VersionCanvas({
               <span className="node-sub clip" title={version.run.purpose ?? version.root?.description ?? undefined}>
                 {version.run.purpose ?? version.root?.description ?? (version.root ? version.root.name : 'no registered profile on this host')}
               </span>
-              <span className="judge-line" title={scores?.judges.map((j) => `${j.category} ${j.score ?? '—'}/${j.max}${j.calibrated ? '' : ' advisory'}`).join(' · ')}>
+              <span className="judge-line" title={scores ? judgeSummary(scores.judges) : 'no readout'}>
                 {scores?.judges.length ? <JudgeBars judges={scores.judges} /> : null}
                 <span className="node-sub clip">{scores ? judgeShort(scores.judges) : 'no readout'}</span>
               </span>
@@ -265,25 +268,26 @@ function VersionInspector({ play, version }: { play: PlayDocument; version: Vers
         )}
       </section>
       <section>
-        <h3>Judges</h3>
-        {scores?.judges.length ? (
+        <h3>Judges, absolute 0–100 vs world class</h3>
+        {absoluteJudges(scores?.judges).length ? (
           <>
             <div className="judge-rows">
-              {scores.judges.map((judge) => (
+              {absoluteJudges(scores!.judges).map((judge) => (
                 <div key={judge.category} className="judge-row">
                   <span>{judge.category}</span>
-                  <span className="pips" aria-hidden="true">
-                    {Array.from({ length: judge.max }, (_, i) => <i key={i} className={judge.score !== null && i < judge.score ? (judge.calibrated ? 'on' : 'on advisory') : ''} />)}
-                  </span>
-                  <b>{judge.score ?? '—'} of {judge.max}</b>
+                  <span className="score-track" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, judge.score ?? 0))}%` }} /></span>
+                  <b>{judge.score} of 100</b>
                   <span className="faint">{judge.calibrated ? 'calibrated' : 'advisory'}</span>
                 </div>
               ))}
             </div>
-            <AbsoluteScale />
+            <AbsoluteScale score={absoluteMedian(scores!.judges)} />
           </>
         ) : (
-          <p className="faint">No readout judged this run.</p>
+          <>
+            <p className="faint">{scores?.judges.length ? judgeSummary(scores.judges) + '.' : 'No readout judged this run.'}</p>
+            <AbsoluteScale />
+          </>
         )}
       </section>
       {scores && scores.verdicts.length > 0 && (
@@ -316,7 +320,7 @@ export function AbsoluteScale({ score }: { score?: number | null }) {
         <span>world class</span>
         <span>100</span>
       </div>
-      <p className="faint">{typeof score === 'number' ? `Absolute score ${score} of 100.` : 'Absolute 0–100 score: not calibrated yet. The bars above are a 1–4 rubric.'}</p>
+      <p className="faint">{typeof score === 'number' ? `Median of the judges: ${score} of 100.` : 'No absolute 0–100 score yet.'}</p>
     </div>
   )
 }

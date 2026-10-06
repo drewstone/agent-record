@@ -6,7 +6,7 @@ import { agentState, ms, roleOf } from '../viewer/model.js'
 import type { RunDocument } from '../workspace.js'
 import { polarityOf, shownPolarity } from './Assessments.js'
 import { duration, money, stateClass, tokens } from './data.js'
-import { judgeShort } from './profile-compare.js'
+import { absoluteJudges, absoluteMedian } from './profile-compare.js'
 
 /** Per agent, from the record's `nodes` part: event count, first and last event, recorded usage and list price. */
 export interface NodeStats {
@@ -34,7 +34,8 @@ export function AnswerStrip({ doc, onOpen }: { doc: RunDocument; onOpen: () => v
   const verdicts = finished?.verdicts ?? []
   const verdictCounts = new Map<string, number>()
   for (const verdict of verdicts) verdictCounts.set(verdict.verdict, (verdictCounts.get(verdict.verdict) ?? 0) + 1)
-  const judges = (finished?.judges ?? []).map((judge) => ({ category: judge.category, score: judge.score, max: judge.max ?? 4, calibrated: judge.calibrated === true }))
+  const judges = (finished?.judges ?? []).map((judge) => ({ category: judge.category, score: judge.score, max: judge.max, calibrated: judge.calibrated ?? null, scale: (judge as { scale?: string }).scale }))
+  const absolute = absoluteMedian(judges)
   const spend = doc.spend
   return (
     <div className="answer-strip" role="group" aria-label="The run's answer" data-answer-strip>
@@ -63,9 +64,11 @@ export function AnswerStrip({ doc, onOpen }: { doc: RunDocument; onOpen: () => v
         </span>
       </button>
       <button type="button" className="answer-cell" onClick={onOpen}>
-        <span className="answer-label">Score, 0–100</span>
-        <span className="answer-value">not calibrated yet</span>
-        <span className="faint">{judges.length ? `rubric 1–4: ${judgeShort(judges)}` : 'no judges ran'}</span>
+        <span className="answer-label">Score, 0–100 vs world class</span>
+        <span className="answer-value">{absolute !== null ? `${absolute} of 100` : 'no absolute score yet'}</span>
+        <span className="faint">
+          {absolute !== null ? `median of ${absoluteJudges(judges).length} judges` : judges.length ? 'the judges used the retired relative scale' : 'no judges ran'}
+        </span>
       </button>
       <button type="button" className="answer-cell" onClick={onOpen}>
         <span className="answer-label">Paid · list price</span>

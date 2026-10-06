@@ -141,9 +141,18 @@ export function changeSummary(comparison: Comparison | null): string {
 export interface Judge {
   category: string
   score: number | null
-  max: number
-  calibrated: boolean
+  max: number | null
+  calibrated: boolean | null
+  /** The readout's scale label; only `ABSOLUTE_SCALE` is a score the page shows (discovery-lab runner/readout-scale.mjs). */
+  scale?: string
 }
+
+/** The one scale a judge score is shown on. A score on the retired relative 0–4 scale is never shown as a score. */
+export const ABSOLUTE_SCALE = 'absolute 0–100 vs world-class'
+
+/** The judges whose score is on the absolute 0–100 world-class scale. */
+export const absoluteJudges = (judges: readonly Judge[] | null | undefined) =>
+  (judges ?? []).filter((judge) => judge.score !== null && (judge.scale === ABSOLUTE_SCALE || judge.max === 100))
 
 /** The readout judges of one run, as the profile that ran as its root records them. */
 export function judgesOf(node: ProfileNode | null, runId: string): { judges: Judge[]; verdicts: { id: string; verdict: string }[] } | null {
@@ -153,21 +162,32 @@ export function judgesOf(node: ProfileNode | null, runId: string): { judges: Jud
   return { judges: score.judges as Judge[], verdicts: score.verdicts as { id: string; verdict: string }[] }
 }
 
-/** "6 calibrated judges, median 1 of 4": what a rubric says, never more. */
-export function judgeSummary(judges: readonly Judge[] | null | undefined): string {
-  if (!judges?.length) return 'no readout judges'
-  const calibrated = judges.filter((judge) => judge.calibrated && judge.score !== null).map((judge) => judge.score!).sort((a, b) => a - b)
-  if (!calibrated.length) return `${judges.length} advisory ${judges.length === 1 ? 'judge' : 'judges'}, none calibrated`
-  const median = calibrated[Math.floor((calibrated.length - 1) / 2)]
-  return `${calibrated.length} calibrated ${calibrated.length === 1 ? 'judge' : 'judges'}, median ${median} of ${judges[0]!.max}`
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b)
+  return sorted[Math.floor((sorted.length - 1) / 2)]!
 }
 
-/** The card form: "median 1/4 · 6 calibrated". */
+/** "median 12 of 100 across 6 judges, 4 calibrated": what the absolute judges say, never more. */
+export function judgeSummary(judges: readonly Judge[] | null | undefined): string {
+  if (!judges?.length) return 'no readout judges'
+  const absolute = absoluteJudges(judges)
+  if (!absolute.length) return 'no absolute score yet: these judges used the retired relative 0–4 scale'
+  const calibrated = absolute.filter((judge) => judge.calibrated).length
+  return `median ${median(absolute.map((judge) => judge.score!))} of 100 across ${absolute.length} ${absolute.length === 1 ? 'judge' : 'judges'}, ${calibrated} calibrated`
+}
+
+/** The card form: "median 12/100 · 6 judges". */
 export function judgeShort(judges: readonly Judge[] | null | undefined): string {
   if (!judges?.length) return 'no readout judges'
-  const calibrated = judges.filter((judge) => judge.calibrated && judge.score !== null).map((judge) => judge.score!).sort((a, b) => a - b)
-  if (!calibrated.length) return `${judges.length} advisory, none calibrated`
-  return `median ${calibrated[Math.floor((calibrated.length - 1) / 2)]}/${judges[0]!.max} · ${calibrated.length} calibrated`
+  const absolute = absoluteJudges(judges)
+  if (!absolute.length) return 'no absolute score yet'
+  return `median ${median(absolute.map((judge) => judge.score!))}/100 · ${absolute.length} ${absolute.length === 1 ? 'judge' : 'judges'}`
+}
+
+/** The median absolute score, or null when no judge scored on the absolute scale. */
+export function absoluteMedian(judges: readonly Judge[] | null | undefined): number | null {
+  const absolute = absoluteJudges(judges)
+  return absolute.length ? median(absolute.map((judge) => judge.score!)) : null
 }
 
 export interface Version {
