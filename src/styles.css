@@ -1965,15 +1965,21 @@
   .ar-ws .profile-versions.has-detail { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .profile-detail-pane { position: static; max-height: none; padding-left: 0; border-left: 0; padding-top: 12px; border-top: 1px solid var(--ar-border); }
 }
-/* The default filter: what it hides, counted. */
+/* The default filter: what it hides, counted where it is seen first; failures lead in the failure colour. */
+.ar-ws .hidden-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 10px 14px; border-radius: 8px; background: var(--ws-raised); color: var(--ar-fg); }
+.ar-ws .ws-content > .hidden-summary { border: 1px solid var(--ar-border); background: var(--ws-panel); }
+.ar-ws .hidden-summary b { font-weight: 650; }
+.ar-ws .hidden-summary .hidden-failed { color: var(--ar-c-fail); font-weight: 600; }
 .ar-ws .hidden-filter { color: var(--ar-fg); }
 .ar-ws .hidden-filter input { width: 18px; height: 18px; accent-color: var(--ws-frame); }
-.ar-ws .ws-filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
 /* An agent with nothing recorded says so, in place of an empty conversation. */
 .ar-ws .agent-empty { padding: 18px 16px; display: grid; gap: 8px; max-width: 80ch; }
 .ar-ws .agent-empty h3 { margin: 0; }
 .ar-ws .agent-empty p { margin: 0; color: var(--ar-fg-muted); }
 .ar-ws .agent-empty-children { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
-.ar-ws .run-purpose { display: block; max-width: 56ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--ar-font-body); color: var(--ar-fg-muted); }
 /* Small print stays on the scale: the browser's own `small` would be a fourth size. */
 .agent-record small { font-size: var(--ar-text-s); }
+/* A run's purpose, as its record states it: two lines in the runs table, the rest on hover. */
+.ar-ws .runs-table .run-purpose { min-width: 16rem; max-width: 30rem; white-space: normal; }
+.ar-ws .runs-table .run-purpose-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ar-ws .run-purpose-line { color: var(--ar-fg-muted); }

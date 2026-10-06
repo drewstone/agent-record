@@ -12,11 +12,11 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { StructuredContent, VerbatimContent } from './viewer/StructuredContent.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { duration, go, hiddenSummary, money, readRecord, splitRuns, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
-import type { HiddenReason } from './workspace/data.js'
+import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { ProfileVersions } from './workspace/ProfileVersions.js'
+import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
 import { LineageGraph, TopologyGraph } from './workspace/RunGraph.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
 
@@ -89,18 +89,33 @@ function Status({ loading, error, children }: { loading: boolean; error?: string
   return <>{children}</>
 }
 
+type HiddenReason = keyof typeof HIDDEN_LABEL
+
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
 
-/** The default filter: smoke tests, failures and archived runs stay out of view until asked for, and are counted. */
-function HiddenFilter({ showAll, onChange, summary, note }: { showAll: boolean; onChange: (all: boolean) => void; summary: string; note?: string }) {
-  if (!summary) return null
+/**
+ * What the default filter holds back, said where it is seen first: failed runs are a health signal, not noise, so the
+ * failed count leads in the failure colour. `noun` names what is counted (plays or runs).
+ */
+function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: Record<HiddenReason, number>; total: number; noun: string; showHidden: boolean; onChange: (all: boolean) => void }) {
+  const hidden = HIDDEN_ORDER.reduce((sum, reason) => sum + counts[reason], 0)
+  if (!hidden) return null
   return (
-    <label className="toggle hidden-filter" data-hidden-filter>
-      <input type="checkbox" checked={showAll} onChange={(event) => onChange(event.target.checked)} />
+    <div className="hidden-summary" data-hidden-summary>
       <span>
-        {showAll ? 'Showing' : 'Show'} failed, test & smoke, and archived runs <span className="faint">({summary}{note ? `; ${note}` : ''})</span>
+        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}:{' '}
+        {HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason, i) => (
+          <span key={reason} className={reason === 'failed' ? 'hidden-failed' : undefined}>
+            {i > 0 && ' · '}
+            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'whose runs all failed' : HIDDEN_LABEL[reason]}
+          </span>
+        ))}
       </span>
-    </label>
+      <label className="toggle hidden-filter">
+        <input type="checkbox" checked={showHidden} onChange={(event) => onChange(event.target.checked)} data-show-hidden />
+        Show them
+      </label>
+    </div>
   )
 }
 
@@ -116,7 +131,7 @@ function PlaysPage({ api }: { api: string }) {
   const query = params.get('q') ?? ''
   const program = params.get('program') ?? ''
   const sort = (['latest', 'spend', 'runs', 'name'] as const).find((value) => value === params.get('sort')) ?? 'latest'
-  const showAll = params.get('all') === '1'
+  const showHidden = params.get('show') === 'all'
   const [draft, setDraft] = useState(query)
   useEffect(() => setDraft(query), [query])
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
@@ -127,16 +142,9 @@ function PlaysPage({ api }: { api: string }) {
     const matching = (plays.data?.plays ?? []).filter(
       (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
     )
-    // The default view leaves out plays whose every run is a smoke test, a failure or archived, and counts what it left out.
-    const counts: Record<HiddenReason, number> = { smoke: 0, failed: 0, archived: 0 }
-    let plays_ = 0
-    for (const play of matching)
-      if (play.counts) {
-        for (const reason of ['smoke', 'failed', 'archived'] as const) counts[reason] += play.counts[reason]
-        if (play.counts.shown === 0) plays_ += 1
-      }
-    const rows = matching
-      .filter((play) => showAll || !play.counts || play.counts.shown > 0)
+    // Plays whose every run is a test, a failure or archived stay out of view until asked for, and are counted by reason.
+    const { shown, counts, hidden } = splitHidden(matching, showHidden)
+    const rows = shown
       .sort((a, b) =>
         sort === 'name'
           ? a.title.localeCompare(b.title)
@@ -146,8 +154,8 @@ function PlaysPage({ api }: { api: string }) {
               ? b.runCount - a.runCount
               : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
       )
-    return { rows, hidden: { plays: plays_, runs: counts } }
-  }, [plays.data, query, program, sort, showAll])
+    return { rows, hidden: { plays: hidden, counts, total: matching.length } }
+  }, [plays.data, query, program, sort, showHidden])
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
@@ -176,13 +184,8 @@ function PlaysPage({ api }: { api: string }) {
               <option value="runs">Most runs first</option>
               <option value="name">By name</option>
             </select>
-            <HiddenFilter
-              showAll={showAll}
-              onChange={(all) => update({ all: all ? '1' : undefined })}
-              summary={hiddenSummary(hidden.runs)}
-              note={hidden.plays ? `${hidden.plays} ${hidden.plays === 1 ? 'play has' : 'plays have'} only these` : undefined}
-            />
           </div>
+          <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         </header>
         <section className="ws-section">
           <div className="table-scroll">
@@ -203,17 +206,18 @@ function PlaysPage({ api }: { api: string }) {
                 {rows.map((play) => {
                   const open = () => go(`/play/${encodeURIComponent(play.id)}`)
                   const flags = Object.entries(play.headline).filter(([, value]) => value.polarity === 'bad')
-                  const latest = !showAll && play.latestShown ? play.latestShown : play.latestRun
-                  const state = play.state === 'running' || showAll || !play.latestShown ? play.state : play.latestShown.state
-                  const runs = !showAll && play.counts ? play.counts.shown : play.runCount
+                  const latest = play.latestRun
+                  const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
                   return (
                     <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
                       <td>
                         <a href={`/play/${encodeURIComponent(play.id)}`} onClick={(event) => event.preventDefault()}>{play.title}</a>
                         {play.title !== play.id && <small className="faint mono"> {play.id}</small>}
                       </td>
-                      <td className="mono">{play.program ?? <span className="faint">{play.playBasis}</span>}</td>
-                      <td><span className={`state-pill ${stateClass(state)}`}>{stateLabel(state)}</span></td>
+                      <td className="mono">
+                        {play.program ?? <span className="faint">{play.noProgram ? 'no program' : play.playBasis}</span>}
+                      </td>
+                      <td><span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span></td>
                       <td>
                         {latest ? (
                           <a
@@ -252,7 +256,7 @@ function PlaysPage({ api }: { api: string }) {
               </tbody>
             </table>
           </div>
-          {!rows.length && <p className="chat-empty">{hidden.plays && !showAll ? 'No play with a run the filter shows matches; show failed, test & smoke, and archived runs to see the rest.' : 'No play matches.'}</p>}
+          {!rows.length && <p className="chat-empty">No {hidden.plays && !showHidden ? 'shown ' : ''}play matches.</p>}
         </section>
       </div>
     </Status>
@@ -270,12 +274,12 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const tab = (['input', 'runs', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'runs'
   const selectedRun = params.get('run')
-  const showAll = params.get('all') === '1'
+  const showHidden = params.get('show') === 'all'
   const doc = play.data
-  const split = useMemo(() => splitRuns(doc?.runs ?? []), [doc])
+  const split = useMemo(() => splitRuns(doc?.runs ?? [], showHidden), [doc, showHidden])
   // What the runs tab draws: every run, or only those the default filter shows (with their lineage and gaps).
   const view = useMemo(() => {
-    if (!doc || showAll || !split.hidden) return doc
+    if (!doc || showHidden || !split.hidden) return doc
     const hidden = new Set(doc.runs.filter((run) => run.hidden).map((run) => run.id))
     return {
       ...doc,
@@ -286,7 +290,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
       },
       gaps: doc.gaps.filter((gap) => !gap.runId || !hidden.has(gap.runId)),
     }
-  }, [doc, showAll, split])
+  }, [doc, showHidden, split])
   const latestDigest = doc?.input?.digest ?? null
   const runDoc = useDocument<RunDocument>(tab === 'input' && selectedRun && selectedRun !== doc?.input?.runId ? `${api}/runs/${encodeURIComponent(selectedRun)}` : null)
   const input: PlayInput | null = selectedRun && selectedRun !== doc?.input?.runId ? (runDoc.data?.input ?? null) : (doc?.input ?? null)
@@ -330,14 +334,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
           <div className="ws-content" role="tabpanel">
             {tab === 'runs' && (
               <>
-                {split.hidden > 0 && (
-                  <div className="ws-filter-bar">
-                    <span>
-                      {showAll ? `All ${doc.runs.length} runs` : `${split.shown.length} of ${doc.runs.length} runs`}
-                    </span>
-                    <HiddenFilter showAll={showAll} onChange={(all) => update({ all: all ? '1' : undefined })} summary={hiddenSummary(split.counts)} />
-                  </div>
-                )}
+                <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
                 <section className="ws-section">
                   <LineageGraph play={view!} onOpen={(runId) => open(runId)} />
                 </section>
@@ -418,12 +415,15 @@ function RunsTable({
   headline: Set<string> | null
   onOpen: (runId: string) => void
 }) {
+  // The column shows when any run's record states what it is for (the catalog reads it from the run input).
+  const purposes = play.runs.some((run) => run.purpose)
   return (
     <div className="table-scroll">
       <table className="data-table runs-table" data-runs>
         <thead>
           <tr>
             <th>Run</th>
+            {purposes && <th>Purpose</th>}
             <th>State</th>
             <th>Started</th>
             <th>Duration</th>
@@ -450,8 +450,12 @@ function RunsTable({
                 <a href={`/run/${encodeURIComponent(run.id)}`} onClick={(event) => event.preventDefault()}>{shortRun(play.id, run.id)}</a>
                 {run.versions && run.versions.count > 1 && <span className="chip">v{run.versions.count}</span>}
                 {run.inputDigest && latestDigest && run.inputDigest !== latestDigest && <span className="chip" title="Input differs from the latest run">input differs</span>}
-                {run.purpose && <span className="run-purpose" title={run.purpose}>{run.purpose}</span>}
               </td>
+              {purposes && (
+                <td className="run-purpose" data-purpose-basis={run.purposeBasis ?? undefined} title={run.purpose ? `${run.purpose}\n\nFrom the run record's ${run.purposeBasis ?? 'input'}` : 'The run record states no purpose'}>
+                  {run.purpose ? <div className="run-purpose-text">{run.purpose}</div> : <span className="faint">not stated</span>}
+                </td>
+              )}
               <td><span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>{run.reason && <small className="faint"> {run.reason}</small>}</td>
               <td>{when(run.startedAt)}</td>
               <td>{duration(run.durationMs)}</td>

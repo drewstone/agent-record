@@ -168,25 +168,3 @@ export function writeSearch(patch: Record<string, string | undefined | null>, re
   if (replace) window.history.replaceState(null, '', next)
   else window.history.pushState(null, '', next)
 }
-
-// ----- the default filter -----
-export type HiddenReason = 'smoke' | 'failed' | 'archived'
-export const HIDDEN_LABEL: Record<HiddenReason, string> = { smoke: 'tests & smoke', failed: 'failed', archived: 'archived' }
-
-/** Runs split by the default filter, with the hidden ones counted by reason. */
-export function splitRuns<T extends { hidden?: HiddenReason | null }>(runs: readonly T[]) {
-  const counts: Record<HiddenReason, number> = { smoke: 0, failed: 0, archived: 0 }
-  const shown: T[] = []
-  for (const run of runs) {
-    if (run.hidden) counts[run.hidden] += 1
-    else shown.push(run)
-  }
-  return { shown, counts, hidden: runs.length - shown.length }
-}
-
-/** "2 failed · 1 archived": the non-zero hidden counts, in the filter's order. */
-export const hiddenSummary = (counts: Record<HiddenReason, number>) =>
-  (['failed', 'smoke', 'archived'] as const)
-    .filter((reason) => counts[reason] > 0)
-    .map((reason) => `${counts[reason]} ${HIDDEN_LABEL[reason]}`)
-    .join(' · ')
