@@ -146,6 +146,7 @@ The example includes a second-instance toggle.
 Import CSS once.
 All selectors are scoped to `.agent-record`; it does not restyle the surrounding page.
 Override `--ar-background`, `--ar-foreground`, `--ar-font`, and `--ar-mono`, or the semantic tokens in [styles.css](src/styles.css).
+A host with a sticky header of its own sets `--ar-sticky-top` (default 8px) so the topology column and the profile detail stick below it.
 Text uses one scale of three sizes: `--ar-text-s` (15px: labels, chips, axes, table headers), `--ar-text-m` (17px: body, tabs, table cells) and `--ar-text-l` (26px: titles); override them together to scale the viewer.
 
 ## Run the example
