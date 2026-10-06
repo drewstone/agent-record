@@ -17,6 +17,7 @@ import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { ProfileVersions } from './workspace/ProfileVersions.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
+import type { HiddenReason } from './workspace/plays-filter.js'
 import { LineageGraph, TopologyGraph } from './workspace/RunGraph.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
 
@@ -88,8 +89,6 @@ function Status({ loading, error, children }: { loading: boolean; error?: string
   if (loading) return <p className="ws-status" role="status">Loading…</p>
   return <>{children}</>
 }
-
-type HiddenReason = keyof typeof HIDDEN_LABEL
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
 
@@ -206,7 +205,6 @@ function PlaysPage({ api }: { api: string }) {
                 {rows.map((play) => {
                   const open = () => go(`/play/${encodeURIComponent(play.id)}`)
                   const flags = Object.entries(play.headline).filter(([, value]) => value.polarity === 'bad')
-                  const latest = play.latestRun
                   const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
                   return (
                     <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
@@ -219,20 +217,20 @@ function PlaysPage({ api }: { api: string }) {
                       </td>
                       <td><span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span></td>
                       <td>
-                        {latest ? (
+                        {play.latestRun ? (
                           <a
                             className="mono"
-                            href={`/run/${encodeURIComponent(latest.id)}`}
+                            href={`/run/${encodeURIComponent(play.latestRun.id)}`}
                             onClick={(event) => {
                               event.preventDefault()
                               event.stopPropagation()
-                              go(`/run/${encodeURIComponent(latest.id)}`)
+                              go(`/run/${encodeURIComponent(play.latestRun!.id)}`)
                             }}
                           >
-                            {shortRun(play.id, latest.id)}
+                            {shortRun(play.id, play.latestRun.id)}
                           </a>
                         ) : '—'}
-                        <small className="faint"> {when(latest?.startedAt)}</small>
+                        <small className="faint"> {when(play.latestRun?.startedAt)}</small>
                       </td>
                       <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
                         {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
@@ -308,7 +306,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
           <header className="ws-head">
             <div className="ws-title-row">
               <h1>{doc.title}</h1>
-              {view!.runs[0] && <span className={`state-pill ${stateClass(view!.runs[0].state)}`}>{stateLabel(view!.runs[0].state)}</span>}
+              {doc.runs[0] && <span className={`state-pill ${stateClass(doc.runs[0].state)}`}>{stateLabel(doc.runs[0].state)}</span>}
             </div>
             {(doc.frontier?.statement || doc.charter) && <p className="ws-charter">{doc.frontier?.statement ?? doc.charter}</p>}
             <div className="ws-facts">
@@ -316,10 +314,10 @@ function PlayPage({ api, id }: { api: string; id: string }) {
               {doc.line && <span><b>Line</b> {doc.line}</span>}
               {doc.frontier?.target && <span><b>Target</b> {doc.frontier.target}</span>}
               {doc.frontier?.asOf && <span><b>Frontier as of</b> {doc.frontier.asOf}</span>}
-              {view!.runs[0] && (
+              {doc.runs[0] && (
                 <span>
                   <b>Latest run</b>{' '}
-                  <a href={`/run/${encodeURIComponent(view!.runs[0].id)}`} className="mono">{shortRun(doc.id, view!.runs[0].id)}</a> · {when(view!.runs[0].startedAt)}
+                  <a href={`/run/${encodeURIComponent(doc.runs[0].id)}`} className="mono">{shortRun(doc.id, doc.runs[0].id)}</a> · {when(doc.runs[0].startedAt)}
                 </span>
               )}
             </div>
