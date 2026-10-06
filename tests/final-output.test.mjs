@@ -11,7 +11,7 @@ const readout = {
   settle: { kind: 'no-winner', reason: 'budget-exhausted' },
   summary: 'The director wrote a decision brief; no option cleared the bar before the budget ran out.',
   deliverables: [
-    { id: 'decision-brief', kind: 'report', path: 'knowledge/terraform/decision-brief.md', bar: 'A brief a lead can act on',
+    { id: 'decision-brief', kind: 'report', path: 'knowledge/sample/decision-brief.md', bar: 'A brief a lead can act on',
       present: true, bytes: 24_000, url: 'https://gist.github.com/drewstone/abc#file-decision-brief-md' },
   ],
   verdicts: [
