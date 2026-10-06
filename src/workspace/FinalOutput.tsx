@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FinalOutput, OutputFile, Readout } from '../workspace.js'
 import { byteSize, deliveryLabel, externalHref, judgeBasis, sameOriginHref, scoreLabel, verdictView } from './final-output.js'
 import { money, when } from './data.js'
+import { ChartGallery, GradeControl, ScoresTable } from './Scores.js'
 
 function FileRow({ file, label }: { file: OutputFile; label?: string }) {
   const href = typeof window === 'undefined' ? null : sameOriginHref(file.href, window.location.href)
@@ -66,7 +67,7 @@ const READOUT_LINKS = [
 ] as const
 
 /** The readout the Lab writes after the run settles: summary, deliverables, verdicts, judges, cost and its links. */
-function ReadoutSection({ readout }: { readout: Readout }) {
+function ReadoutSection({ readout, output, grading }: { readout: Readout; output: FinalOutput; grading?: Grading }) {
   if (readout.status === 'pending') {
     return (
       <div className="final-readout" data-readout="pending">
@@ -93,6 +94,7 @@ function ReadoutSection({ readout }: { readout: Readout }) {
       </div>
       {readout.error && <p className="final-error" role="note">{readout.error}</p>}
       {readout.summary && <p className="final-summary">{readout.summary}</p>}
+      <ChartGallery charts={readout.charts} />
       <p className="final-links">
         {READOUT_LINKS.map(([key, label]) => {
           const href = externalHref(readout.links[key])
@@ -154,7 +156,19 @@ function ReadoutSection({ readout }: { readout: Readout }) {
         </div>
       )}
 
-      <h4>Judges</h4>
+      <h4>Scores, 0–100 vs world class</h4>
+      <ScoresTable readout={readout} panel={output.panel} grades={output.grades?.latest} target={grading ? { kind: 'run', id: grading.runId } : { kind: 'run', id: '' }} />
+      {grading && (
+        <GradeControl
+          api={grading.api}
+          runId={grading.runId}
+          target={{ kind: 'run', id: grading.runId }}
+          label="Your grade of this run"
+          current={output.grades?.latest.filter((grade) => grade.target.kind === 'run').at(-1) ?? null}
+          onSaved={grading.onSaved}
+        />
+      )}
+      <h4>AI judges' reasons</h4>
       {readout.judges.length === 0 ? (
         <p className="faint final-none">No judge scored this run.</p>
       ) : (
@@ -185,7 +199,14 @@ function ReadoutSection({ readout }: { readout: Readout }) {
 }
 
 /** What the run was asked to deliver and whether it did. Older run documents carry no field, and show nothing. */
-export function FinalOutputPanel({ output }: { output: FinalOutput | null | undefined }) {
+/** Where a writer's grade goes, and what to do once it is saved. */
+export interface Grading {
+  api: string
+  runId: string
+  onSaved?: () => void
+}
+
+export function FinalOutputPanel({ output, grading }: { output: FinalOutput | null | undefined; grading?: Grading }) {
   if (!output) return null
   const declared = output.declared
   const tone = output.status === 'delivered' ? 'state-ok' : output.status === 'not-delivered' ? 'state-fail' : 'state-unknown'
@@ -196,7 +217,7 @@ export function FinalOutputPanel({ output }: { output: FinalOutput | null | unde
         {declared && <span className={`state-pill ${tone}`} data-final-status>{deliveryLabel(output.status)}</span>}
         {output.checkedAt && <span className="faint final-checked">checked {when(output.checkedAt)}</span>}
       </header>
-      {output.readout && <ReadoutSection readout={output.readout} />}
+      {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} />}
       {declared ? (
         <>
           <p className="final-declared">

@@ -2030,6 +2030,33 @@
   .ar-ws .reliability { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .reliability-days { gap: 3px; }
 }
+/* ---- Scores side by side, a writer's grade, and the readout's charts. */
+.ar-ws .scores-table { font-variant-numeric: tabular-nums; }
+.ar-ws .scores-table td.num, .ar-ws .scores-table th.num { text-align: right; white-space: nowrap; }
+.ar-ws .scores-key { margin: 6px 0 0; font-size: var(--ar-text-s); }
+.ar-ws .grade-control { display: grid; gap: 6px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--ar-border); border-radius: 8px; background: color-mix(in srgb, var(--ws-accent) 6%, transparent); max-width: 640px; }
+.ar-ws .grade-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.ar-ws .grade-value { font-variant-numeric: tabular-nums; }
+.ar-ws .grade-track { position: relative; height: 28px; border-radius: 6px; background: color-mix(in srgb, var(--ar-fg-faint) 18%, transparent); cursor: pointer; }
+.ar-ws .grade-track:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 2px; }
+.ar-ws .grade-band { position: absolute; top: 0; bottom: 0; left: 85%; right: 0; border-radius: 0 6px 6px 0; background: color-mix(in srgb, var(--ar-c-ok) 22%, transparent); }
+.ar-ws .grade-track i { position: absolute; top: -3px; bottom: -3px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--ws-accent); }
+.ar-ws .grade-ticks { display: flex; justify-content: space-between; font-size: var(--ar-text-s); }
+.ar-ws .grade-comment { display: grid; gap: 4px; font-size: var(--ar-text-s); }
+.ar-ws .grade-comment textarea { font: inherit; font-size: var(--ar-text-m); color: var(--ar-fg); background: var(--ar-bg-sink, transparent); border: 1px solid var(--ar-border); border-radius: 6px; padding: 6px 8px; resize: vertical; }
+.ar-ws .grade-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: var(--ar-text-s); }
+.ar-ws .grade-error { color: var(--ar-c-fail); }
+.ar-ws .grades-of { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: var(--ar-text-s); }
+.ar-ws .chart-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; margin: 10px 0; }
+.ar-ws .chart-figure { margin: 0; display: grid; gap: 4px; min-width: 0; align-content: start; }
+.ar-ws .chart-figure img { display: block; width: 100%; height: auto; border: 1px solid var(--ar-border); border-radius: 6px; background: #fff; }
+.ar-ws .chart-figure figcaption { font-size: var(--ar-text-s); }
+.ar-ws .chart-none { border: 1px dashed var(--ar-border); border-radius: 6px; padding: 10px; }
+.ar-ws .chart-pairs { display: grid; gap: 12px; margin-top: 6px; }
+.ar-ws .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 700px) {
+  .ar-ws .chart-pair { grid-template-columns: 1fr; }
+}
 /* ---- The play page: the version graph and its inspector. */
 .ar-ws .lineage-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(440px, 33%); min-height: 600px; height: calc(100vh - var(--ar-sticky-top, 8px) - 40px); background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
 .ar-ws .lineage-pane { overflow: auto; min-width: 0; border-right: 1px solid var(--ar-border); }
