@@ -126,7 +126,7 @@ test('final output sizes and links never invent a value', () => {
   assert.equal(byteSize(0), '0 B')
   assert.equal(byteSize(12_700), '12.4 KB')
   assert.equal(byteSize(5 * 1024 * 1024), '5.0 MB')
-  const page = 'http://100.87.125.67:8769/run/x'
+  const page = 'https://lab.example.com/run/x'
   assert.equal(sameOriginHref('/api/discovery/runs/x/file/a.md', page), '/api/discovery/runs/x/file/a.md')
   assert.equal(sameOriginHref('https://example.com/a.md', page), null)
   assert.equal(sameOriginHref('javascript:alert(1)', page), null)

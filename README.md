@@ -4,7 +4,7 @@ A React component for reading what an agent team did: conversations, tool inputs
 
 [Live example](https://drewstone.github.io/agent-record/) · [Research using the viewer](https://drewstone.github.io/research/bcww/#agent-record)
 
-![Agent Record with a real research run](docs/evidence/desktop.png)
+![Agent Record with a real research run](docs/screenshot.png)
 
 ## Install
 
@@ -170,6 +170,8 @@ pnpm test
 pnpm build:example
 pnpm pack
 ```
+
+This repository is public. Keep evidence screenshots and recordings in private storage and describe them in the pull request; never commit them under `docs/evidence`. Never commit a tailnet address (`100.64.0.0/10` or a `ts.net` name). `tests/public-repo.test.mjs` refuses both.
 
 [Consumer evidence](docs/evidence/README.md) covers the built package, browser interactions, source preservation, server rendering, and the blog integration.
 The conversation renders only the rows near its viewport.
