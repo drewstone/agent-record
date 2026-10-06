@@ -206,7 +206,7 @@ export function ComparisonView({ comparison }: { comparison: Comparison }) {
   )
 }
 
-function ProfileDiffView({ diff }: { diff: ProfileDiff }) {
+export function ProfileDiffView({ diff }: { diff: ProfileDiff }) {
   return (
     <div className="profile-diff" data-profile-diff={`${shortDigest(diff.from)}..${shortDigest(diff.to)}`}>
       <p className="faint profile-diff-meta">
