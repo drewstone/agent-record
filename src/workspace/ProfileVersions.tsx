@@ -269,7 +269,7 @@ function DiffFieldView({ field }: { field: ProfileDiffField }) {
   )
 }
 
-function DiffLines({ lines }: { lines: { op: ' ' | '+' | '-' | '@'; text: string }[] }) {
+export function DiffLines({ lines }: { lines: { op: ' ' | '+' | '-' | '@'; text: string }[] }) {
   return (
     <pre className="diff-lines">
       {lines.map((line, i) => (
