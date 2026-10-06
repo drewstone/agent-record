@@ -171,7 +171,7 @@ pnpm build:example
 pnpm pack
 ```
 
-This repository is public. Keep evidence screenshots and recordings in private storage and describe them in the pull request; never commit them under `docs/evidence`. Never commit a tailnet address (`100.64.0.0/10` or a `ts.net` name). `tests/public-repo.test.mjs` refuses both.
+This repository is public. Keep evidence screenshots and recordings in private storage and describe them in the pull request; never commit them under `docs/evidence`. Never commit a tailnet address (a Tailscale `100.x` IP or a `ts.net` name). `tests/public-repo.test.mjs` refuses both.
 
 [Consumer evidence](docs/evidence/README.md) covers the built package, browser interactions, source preservation, server rendering, and the blog integration.
 The conversation renders only the rows near its viewport.

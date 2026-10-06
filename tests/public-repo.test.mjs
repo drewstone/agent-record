@@ -9,7 +9,7 @@ import test from 'node:test'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean)
 const MEDIA = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|webm|mp4|mov|mkv|avi)$/i
-// Tailscale assigns 100.64.0.0/10 and MagicDNS names under ts.net.
+// Tailscale assigns IPs from the CGNAT block (100.x with a second octet of 64 to 127) and MagicDNS names under ts.net.
 const TAILNET = /\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}\b|\b[a-z0-9-]+\.[a-z0-9-]+\.ts\.net\b/i
 
 test('no screenshot or recording is committed under docs/evidence', () => {
