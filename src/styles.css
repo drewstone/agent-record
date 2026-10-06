@@ -2057,6 +2057,11 @@
 @media (max-width: 700px) {
   .ar-ws .chart-pair { grid-template-columns: 1fr; }
 }
+/* The workspace keeps one type scale (15, 17 and 26 px) inside conversations and delivered documents too. */
+.ar-ws .activity-prose { font-size: var(--ar-text-s); }
+.ar-ws .activity-prose code, .ar-ws .activity-prose pre, .ar-ws .rr-markdown code, .ar-ws .rr-markdown pre, .ar-ws .rr-markdown table { font-size: var(--ar-text-s); }
+.ar-ws .rr-markdown h1 { font-size: var(--ar-text-l); }
+.ar-ws .rr-markdown h2, .ar-ws .rr-markdown h3, .ar-ws .rr-markdown h4, .ar-ws .rr-markdown h5, .ar-ws .rr-markdown h6 { font-size: var(--ar-text-m); }
 /* Buttons in the workspace use the type scale, not the browser's button size. */
 .ar-ws .ui-button { font-size: var(--ar-text-s); }
 /* ---- An optimizer search: its claim, best-per-dollar curve, replay, version tree with effects, and the inspector. */
