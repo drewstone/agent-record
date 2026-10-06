@@ -1602,7 +1602,7 @@
 
 /* run layout */
 .ar-ws .ws-body { display: grid; grid-template-columns: minmax(400px, 38%) minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
-.ar-ws .ws-topology { position: sticky; top: 8px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.ar-ws .ws-topology { position: sticky; top: var(--ar-sticky-top, 8px); background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
 .ar-ws .ws-topology .graph-canvas { max-height: calc(100vh - 250px); min-height: 160px; }
 .ar-ws .replay { display: grid; grid-template-columns: auto auto minmax(80px, 1fr) auto auto; gap: 8px; align-items: center; padding-top: 10px; border-top: 1px solid var(--ar-border); }
 .ar-ws .replay input[type='range'] { width: 100%; accent-color: var(--ws-frame); }
@@ -1959,7 +1959,8 @@
 /* The selected profile's detail beside its graph, kept in view while the graph scrolls. */
 .ar-ws .profile-graph-pane { display: grid; gap: 8px; min-width: 0; align-content: start; }
 .ar-ws .profile-versions.has-detail { grid-template-columns: minmax(0, 1fr) minmax(440px, 44%); gap: 18px; align-items: start; }
-.ar-ws .profile-detail-pane { position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow: auto; padding-left: 18px; border-left: 1px solid var(--ar-border); min-width: 0; scroll-margin-top: 64px; }
+.ar-ws .profile-versions { scroll-margin-top: calc(var(--ar-sticky-top, 8px) + 12px); }
+.ar-ws .profile-detail-pane { position: sticky; top: var(--ar-sticky-top, 8px); max-height: calc(100vh - var(--ar-sticky-top, 8px) - 16px); overflow: auto; padding-left: 18px; border-left: 1px solid var(--ar-border); min-width: 0; scroll-margin-top: var(--ar-sticky-top, 8px); }
 .ar-ws .profile-detail-pane .profile-detail { margin-top: 0; padding-top: 0; border-top: 0; }
 @media (max-width: 1100px) {
   .ar-ws .profile-versions.has-detail { grid-template-columns: minmax(0, 1fr); }

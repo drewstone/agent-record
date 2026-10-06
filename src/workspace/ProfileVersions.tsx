@@ -75,9 +75,12 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
   }, [focusAt?.x, focusAt?.y]) // eslint-disable-line react-hooks/exhaustive-deps
   // A selection must visibly change the screen: its detail sits beside the graph on a wide screen and is brought into
   // view on a narrow one (below the graph it was off-screen, so a click looked like it did nothing).
+  const root = useRef<HTMLDivElement>(null)
   const detail = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (chosen) detail.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    // Beside the graph, the section is brought to the top so the graph and the whole detail show together; stacked
+    // under the graph (narrow screens), the detail itself is.
+    if (chosen) (window.matchMedia('(max-width: 1100px)').matches ? detail.current : root.current)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }, [chosen?.digest]) // eslint-disable-line react-hooks/exhaustive-deps
   const roots = doc.nodes.filter((node) => node.kind === 'root').length
   const spawned = doc.nodes.length - roots
@@ -88,7 +91,7 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
       .map((parent) => ({ parent, child: entry, from: layout.placed.get(parent.digest)!, primary: graph.parentOf.get(entry.node.digest)?.digest === parent.digest })),
   )
   return (
-    <div className={`profile-versions ${chosen ? 'has-detail' : ''}`} data-profile-versions={doc.play}>
+    <div className={`profile-versions ${chosen ? 'has-detail' : ''}`} data-profile-versions={doc.play} ref={root}>
       <div className="profile-graph-pane">
       <p className="profile-intro faint">
         {roots} registered {roots === 1 ? 'profile' : 'profiles'} and {spawned} written by agents at runtime. Each node is one exact profile; a line runs
