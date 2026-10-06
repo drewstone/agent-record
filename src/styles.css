@@ -2008,3 +2008,5 @@
   .ar-ws .canvas-node.authored { margin-left: 18px; }
   .ar-ws .lineage-key { margin: 12px 12px 0; }
 }
+.ar-ws .score-track { display: inline-block; width: 120px; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); overflow: hidden; }
+.ar-ws .score-track i { display: block; height: 100%; background: var(--ar-fg); }

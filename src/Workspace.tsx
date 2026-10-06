@@ -357,8 +357,9 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 <div className="lineage-layout" data-section="versions">
                   <section className="lineage-pane" aria-label="Version graph">
                     <p className="faint lineage-key">
-                      Left to right: what the versions supersede, each run's registered profile with its judges (bars: rubric 1–4, outlined advisory) and
-                      what changed from the version before it, then the profiles the selected version's agents wrote.
+                      Left to right: what the versions supersede, each run's registered profile with its judges (bars: absolute 0–100 vs world class,
+                      outlined advisory; none for the retired relative scale) and what changed from the version before it, then the profiles the selected
+                      version's agents wrote.
                     </p>
                     {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
                     <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />

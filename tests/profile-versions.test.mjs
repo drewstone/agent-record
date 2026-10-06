@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { profileGraphDocumentSchema } from '../dist/workspace.js'
 import { deltaSummary, findProfile, primaryDiff, profileGraph, profileLabel } from '../src/workspace/profile-graph.ts'
-import { authoredTree, changeSummary, compareProfiles, judgeSummary, judgesOf, lineDiff, sameNamed, versionsOf } from '../src/workspace/profile-compare.ts'
+import { absoluteMedian, authoredTree, changeSummary, compareProfiles, judgeShort, judgeSummary, judgesOf, lineDiff, sameNamed, versionsOf } from '../src/workspace/profile-compare.ts'
 import { terraformProfileGraph } from './fixtures/profile-graph.mjs'
 
 const doc = terraformProfileGraph()
@@ -74,11 +74,21 @@ test('the profiles a version wrote hang under it as a tree, and match their name
   assert.equal(sameNamed(doc, tree.at(-1).node, 'terraform-economics-20261005e'), null)
 })
 
-test('judges read as a rubric, never as a calibrated absolute score', () => {
+test('only absolute-scale judge scores are scores; the retired relative scale is named, never shown', () => {
   const e = byName('terraform-economics-20261005e-director')
-  const scores = judgesOf(e, 'terraform-economics-20261005e')
-  assert.equal(scores.judges.length, 4)
-  assert.equal(judgeSummary(scores.judges), '3 calibrated judges, median 1 of 4')
+  const relative = judgesOf(e, 'terraform-economics-20261005e')
+  assert.equal(relative.judges.length, 4)
+  assert.equal(judgeSummary(relative.judges), 'no absolute score yet: these judges used the retired relative 0–4 scale')
+  assert.equal(judgeShort(relative.judges), 'no absolute score yet')
+  assert.equal(absoluteMedian(relative.judges), null)
+  const absolute = [
+    { category: 'economics', score: 12, max: 100, calibrated: true, scale: 'absolute 0–100 vs world-class' },
+    { category: 'software', score: 4, max: 100, calibrated: false, scale: 'absolute 0–100 vs world-class' },
+    { category: 'clarity', score: 30, max: 100, calibrated: true, scale: 'absolute 0–100 vs world-class' },
+    { category: 'graphics', score: 3, max: 4, calibrated: true },
+  ]
+  assert.equal(judgeSummary(absolute), 'median 12 of 100 across 3 judges, 2 calibrated')
+  assert.equal(judgeShort(absolute), 'median 12/100 · 3 judges')
   assert.equal(judgesOf(byName('terraform-economics-20261005f-director'), 'terraform-economics-20261005f'), null)
   assert.equal(judgeSummary([]), 'no readout judges')
 })
