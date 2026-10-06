@@ -90,6 +90,10 @@ const runKey = z
   .object({ id: z.string(), name: z.string(), capUsd: usd, spentUsd: usd, final: z.boolean() })
   .catchall(z.unknown())
 
+/** Why a run is hidden by default; the server decides it (discovery_workspace.hidden_reason). */
+export const hiddenReasons = ['smoke', 'failed', 'archived'] as const
+const hiddenReason = z.enum(hiddenReasons)
+
 export const runSummarySchema = z
   .object({
     id: z.string(),
@@ -116,6 +120,10 @@ export const runSummarySchema = z
     versions: z
       .object({ count: z.number().int().nonnegative(), latest: z.string(), states: z.record(z.string(), z.number()) })
       .nullable(),
+    /** Why the run sits behind the default filter (a test or smoke run, a failure, an archived run); null shows it. */
+    hidden: hiddenReason.nullable().optional(),
+    /** What the run was for, in its task's own words (objective, else the instruction's first line); null when unknown. */
+    purpose: z.string().nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -168,6 +176,17 @@ export const playsDocumentSchema = z
           state: z.string().nullable(),
           latestRun: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable(),
           runCount: z.number().int().nonnegative(),
+          /** Runs by why they are hidden by default; `shown` counts the rest. */
+          counts: z
+            .object({
+              shown: z.number().int().nonnegative(),
+              smoke: z.number().int().nonnegative(),
+              failed: z.number().int().nonnegative(),
+              archived: z.number().int().nonnegative(),
+            })
+            .optional(),
+          /** The newest run the default filter shows; null when every run is hidden. */
+          latestShown: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable().optional(),
           spend: spendSchema,
           headline: z.record(z.string(), headlineLabel),
         })

@@ -1,12 +1,14 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { RecordNode } from '../record.js'
 import type { RecordIndex } from '../viewer/model.js'
-import { ms, roleOf } from '../viewer/model.js'
+import { agentState, measuredUsage, ms, roleOf } from '../viewer/model.js'
 import type { PlayDocument, RunSummary, Spend } from '../workspace.js'
 import { duration, money, stateClass, stateLabel, when } from './data.js'
 
 /** A lineage label's longest form; the full id is in the node's title. */
 const LABEL_CHARS = 24
+/** Advance of one Geist Mono character at the workspace's meta size (15px): graph labels are measured by characters. */
+export const MONO_CHAR = 9.1
 
 /** Edges run from the older run to the newer one. */
 const EDGE_LABEL: Record<string, string> = { supersedes: 'superseded by', continues: 'continued by', retry: 'retried by', version: 'next version' }
@@ -57,9 +59,8 @@ export function TopologyGraph({
   onSelect: (id: string) => void
   nodeSpend?: Record<string, Spend>
 }) {
-  const ROW = 28
-  // Geist Mono at 12px; a label is measured by its characters.
-  const CHAR = 7.3
+  const ROW = 34
+  const CHAR = MONO_CHAR
   const RADIUS = 14
   const GAP = 26
   const [canvas, available] = useWidth<HTMLDivElement>()
@@ -180,9 +181,11 @@ export function TopologyGraph({
             const capture = (node.capture as { status?: string; reason?: string } | undefined) ?? undefined
             const value = values.get(node.id)
             const spent = nodeSpend?.[node.id]
+            const measured = measuredUsage(index, node.id)
+            const label = layout.shown.get(node.id) ?? ''
             const title = [
               node.label,
-              `${roleOf(node)} · ${state === 'running' ? 'running at this time' : stateLabel(node.status)}`,
+              `${roleOf(node)} · ${state === 'running' ? 'running at this time' : agentState(node, measured)}`,
               node.servedModel ?? node.model ?? null,
               capture ? `conversation: ${capture.status ?? 'unknown'}${capture.reason ? ` (${capture.reason})` : ''}` : null,
               spent ? `paid ${money(spent.paidUsd)} · list price ${money(spent.listUsd)}` : value?.basis === 'time' ? `active ${duration(value.value)}` : null,
@@ -190,7 +193,7 @@ export function TopologyGraph({
             return (
               <g
                 key={node.id}
-                className={`topology-node node-${state} ${selected === node.id ? 'selected' : ''} ${capture?.status === 'absent' ? 'capture-absent' : ''}`}
+                className={`topology-node node-${state} ${selected === node.id ? 'selected' : ''} ${capture?.status === 'absent' || (!measured && state !== 'running') ? 'capture-absent' : ''}`}
                 transform={`translate(${entry.x},${entry.y})`}
                 role="button"
                 tabIndex={0}
@@ -206,11 +209,13 @@ export function TopologyGraph({
                 }}
               >
                 <title>{title}</title>
+                {/* The whole row selects the agent, not only its painted dot and glyphs. */}
+                <rect className="node-hit" x={-r - 4} y={-ROW / 2} width={r * 2 + 14 + label.length * CHAR} height={ROW} rx={6} />
                 {selected === node.id && <circle className="node-halo" r={r + 5} />}
                 <circle className="node-dot" r={r} />
                 {/* Labels carry a panel-coloured halo so edges passing beneath stay readable. */}
-                <text x={r + 6} y={4} className="node-label">
-                  {layout.shown.get(node.id)}
+                <text x={r + 6} y={5} className="node-label">
+                  {label}
                 </text>
               </g>
             )
@@ -223,7 +228,7 @@ export function TopologyGraph({
         <span><i className="dot state-warn" />no winner</span>
         <span><i className="dot state-run" />running</span>
         <span><i className="dot ended" />ended, state not recorded</span>
-        <span><i className="dot ring" />no conversation</span>
+        <span><i className="dot ring" />no conversation or usage recorded</span>
         <span className="legend-note">{anySpend ? 'size: paid and list price' : 'size: active time'}</span>
       </div>
     </div>
@@ -289,11 +294,11 @@ export function LineageGraph({
       lanes[index] = last
       for (const id of members) lane.set(id, index)
     }
-    // Labels sit centred under their run: a column is as wide as the longest label (Geist Mono 11.5px).
+    // Labels sit centred under their run: a column is as wide as the longest label (Geist Mono at the meta size).
     const longest = Math.max(8, ...order.map((id) => Math.min(LABEL_CHARS, short(id).length)))
-    const COLUMN = Math.max(112, Math.ceil(longest * 7 + 20))
-    const ROW = 120
-    const TOP = 112
+    const COLUMN = Math.max(140, Math.ceil(longest * MONO_CHAR + 28))
+    const ROW = 140
+    const TOP = 120
     const positions = new Map(order.map((id) => [id, { x: 70 + rank.get(id)! * COLUMN, y: TOP + lane.get(id)! * ROW }]))
     return { order, positions, column: COLUMN, width: 140 + Math.max(0, order.length - 1) * COLUMN, height: TOP - 30 + Math.max(1, lanes.length) * ROW }
   }, [play, runs]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -351,7 +356,7 @@ export function LineageGraph({
             return (
               <g key={`${a}>${b}`} className={`lineage-edge edge-${kind}`}>
                 <path d={`M${x1},${older.y} C${mid},${older.y} ${mid},${newer.y} ${x2},${newer.y}`} markerEnd="url(#lineage-arrow)" />
-                {x2 - x1 > label.length * 6.2 + 12 && <text x={mid} y={(older.y + newer.y) / 2 - 6} textAnchor="middle" className="edge-label">{label}</text>}
+                {x2 - x1 > label.length * MONO_CHAR + 12 && <text x={mid} y={(older.y + newer.y) / 2 - 6} textAnchor="middle" className="edge-label">{label}</text>}
               </g>
             )
           })}
@@ -393,10 +398,11 @@ export function LineageGraph({
                     lineage?.record.reason ?? null,
                   ].filter(Boolean).join('\n')}
                 </title>
+                <rect className="node-hit" x={-layout.column / 2 + 6} y={-r - 6} width={layout.column - 12} height={r * 2 + 50} rx={8} />
                 <circle className="run-dot" r={r} />
-                {run?.versions && run.versions.count > 1 && <text className="run-versions" y={4} textAnchor="middle">{run.versions.count}</text>}
-                <text className="run-label" y={r + 14} textAnchor="middle">{fit(short(id), LABEL_CHARS)}</text>
-                <text className="run-sub" y={r + 26} textAnchor="middle">{sub}</text>
+                {run?.versions && run.versions.count > 1 && <text className="run-versions" y={5} textAnchor="middle">{run.versions.count}</text>}
+                <text className="run-label" y={r + 20} textAnchor="middle">{fit(short(id), LABEL_CHARS)}</text>
+                <text className="run-sub" y={r + 38} textAnchor="middle">{sub}</text>
               </g>
             )
           })}

@@ -124,6 +124,23 @@ export function indexRecord(record: RunRecord) {
 }
 export type RecordIndex = ReturnType<typeof indexRecord>
 
+/** Whether any event of this agent recorded token usage or a list price: a status alone measures nothing. */
+export function measuredUsage(index: RecordIndex, id: string) {
+  return (index.byActor.get(id) ?? []).some(
+    (event) =>
+      typeof event.detail.costListUsd === 'number' ||
+      Object.values(event.detail.usage ?? {}).some((value) => typeof value === 'number' && value > 0),
+  )
+}
+
+/** An agent's recorded state, qualified when nothing about it was measured or captured. */
+export function agentState(node: RecordNode | undefined, measured: boolean) {
+  const status = node?.status ?? 'no terminal state recorded'
+  if (measured) return status
+  const capture = (node?.capture as { status?: string } | undefined)?.status
+  return `${status} · no usage recorded${capture === 'absent' ? '; capture missing' : capture === 'lossy' ? '; capture partial' : ''}`
+}
+
 export function eventMatches(
   event: RecordEvent,
   index: RecordIndex,

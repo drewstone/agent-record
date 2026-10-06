@@ -73,6 +73,12 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
     if (focusAt.x + focusAt.width + 40 > element.clientWidth) element.scrollLeft = Math.max(0, focusAt.x + focusAt.width / 2 - element.clientWidth / 2)
     if (focusAt.y + 40 > element.clientHeight) element.scrollTop = Math.max(0, focusAt.y - element.clientHeight / 2)
   }, [focusAt?.x, focusAt?.y]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A selection must visibly change the screen: its detail sits beside the graph on a wide screen and is brought into
+  // view on a narrow one (below the graph it was off-screen, so a click looked like it did nothing).
+  const detail = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (chosen) detail.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [chosen?.digest]) // eslint-disable-line react-hooks/exhaustive-deps
   const roots = doc.nodes.filter((node) => node.kind === 'root').length
   const spawned = doc.nodes.length - roots
   const inferred = doc.nodes.reduce((sum, node) => sum + node.parents.filter((parent) => parent.basis === 'inferred').length, 0)
@@ -82,7 +88,8 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
       .map((parent) => ({ parent, child: entry, from: layout.placed.get(parent.digest)!, primary: graph.parentOf.get(entry.node.digest)?.digest === parent.digest })),
   )
   return (
-    <div className="profile-versions" data-profile-versions={doc.play}>
+    <div className={`profile-versions ${chosen ? 'has-detail' : ''}`} data-profile-versions={doc.play}>
+      <div className="profile-graph-pane">
       <p className="profile-intro faint">
         {roots} registered {roots === 1 ? 'profile' : 'profiles'} and {spawned} written by agents at runtime. Each node is one exact profile; a line runs
         from the profile it came from. {inferred > 0 && <>Dashed lines were inferred afterwards from the records that prove them.</>}
@@ -119,13 +126,13 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
               <g key={key} className={classes}>
                 <path d={`M${x1},${from.y} C${mid},${from.y} ${mid},${child.y} ${x2},${child.y}`} markerEnd={version ? 'url(#profile-arrow)' : undefined} />
                 {version && (
-                  <text x={x2 - 6} y={child.y - 20} textAnchor="end" className="edge-label">
+                  <text x={x2 - 6} y={child.y - 26} textAnchor="end" className="edge-label">
                     {RELATION_LABEL[parent.relation]}
                     {parent.basis === 'inferred' ? ' · inferred' : ''}
                   </text>
                 )}
                 {version && (
-                  <text x={x2 - 6} y={child.y - 7} textAnchor="end" className={`edge-delta ${summary ? 'known' : 'unknown'}`}>
+                  <text x={x2 - 6} y={child.y - 8} textAnchor="end" className={`edge-delta ${summary ? 'known' : 'unknown'}`}>
                     {summary ? `Δ ▲${summary.up} ▼${summary.down} =${summary.same}` : 'Δ unknown'}
                   </text>
                 )}
@@ -163,16 +170,16 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
                     }
                   }}
                 >
-                  <rect className="profile-hit-area" x={-entry.r - 4} y={-entry.r - 4} width={entry.r * 2 + 16 + entry.width} height={entry.r * 2 + 20} rx={6} />
+                  <rect className="profile-hit-area" x={-entry.r - 4} y={-entry.r - 8} width={entry.r * 2 + 16 + entry.width} height={entry.r * 2 + 34} rx={6} />
                   {isSelected && <circle className="node-halo" r={entry.r + 5} />}
                   <circle className="profile-dot" r={entry.r} />
-                  <text x={entry.r + 8} y={4} className="profile-label">{entry.label}</text>
-                  <text x={entry.r + 8} y={18} className="profile-sub">{entry.sub}</text>
+                  <text x={entry.r + 8} y={5} className="profile-label">{entry.label}</text>
+                  <text x={entry.r + 8} y={25} className="profile-sub">{entry.sub}</text>
                 </g>
                 {entry.toggle && (
                   <text
                     x={entry.r + 8}
-                    y={33}
+                    y={46}
                     className="profile-toggle"
                     role="button"
                     tabIndex={0}
@@ -206,10 +213,12 @@ function ProfileGraphView({ doc, selected, onSelect }: { doc: ProfileGraphDocume
         <span><i className="dot gap" />registered, not run</span>
         <span className="legend-note">Δ calibrated judge categories up, down, unchanged</span>
       </div>
-      {chosen ? (
-        <ProfileDetail doc={doc} node={chosen} onSelect={onSelect} />
-      ) : (
-        <p className="profile-hint faint">Select a profile to see its runs, its scores and what changed from its parent.</p>
+      {!chosen && <p className="profile-hint faint">Select a profile to see its runs, its scores and what changed from its parent.</p>}
+      </div>
+      {chosen && (
+        <div className="profile-detail-pane" ref={detail}>
+          <ProfileDetail doc={doc} node={chosen} onSelect={onSelect} />
+        </div>
       )}
     </div>
   )

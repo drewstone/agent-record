@@ -92,7 +92,10 @@ The run page shows the agent topology at the replay time, each agent's conversat
 Above them, Final output shows what the run was asked to deliver and its readout when the host supplies one (`finalOutput.readout`): the summary, each declared deliverable as present or missing with its size and link, the hypothesis verdicts with evidence, the judge scores marked calibrated or advisory, the readout and run cost, and the report and dossier links.
 A readout not yet written reads "Readout pending"; a missing number reads "unknown", never 0, and only absolute http(s) links are followed.
 It reads `plays/<id>`, `plays/<id>/profiles`, `runs/<id>`, `runs/<id>/record`, `runs/<id>/assessments`, `runs/<id>/source/<sha256>` and `dimensions` under `data-api`; the shapes are the schemas in `@drewstone/agent-record/workspace` and `/assessment`.
-Page state lives in the URL (`?tab=&run=&profile=` on a play, `?node=&event=&tab=&t=&dim=` on a run), and a running run polls every 10 seconds.
+Page state lives in the URL (`?tab=&run=&profile=&all=` on a play, `?q=&program=&sort=&all=` on the plays index, `?node=&event=&tab=&t=&dim=` on a run), and a running run polls every 3 seconds.
+Tests and smoke runs, failed runs and archived runs are hidden until `all=1` (the "Show failed, test & smoke, and archived runs" checkbox), and the page counts what it hides; the host decides each run's `hidden` reason, the viewer never guesses it.
+A document the host serves as last composed while it recomposes it (`X-Workspace-Stale: 1`) is fetched again after 2.5 s, backing off, for about a minute.
+An agent whose status says `done` with no recorded usage reads `done · no usage recorded` (and `; capture missing` when its conversation was not captured); an agent with no recorded event says so in place of an empty conversation.
 Theme tokens come from the host: `--ar-background`, `--ar-surface`, `--ar-raised`, `--ar-line`, `--ar-foreground`, `--ar-muted`, `--ar-faint`, `--ar-accent`, `--ar-frame`, `--ar-ok`, `--ar-warn`, `--ar-crit`, `--ar-font` and `--ar-mono`.
 
 The conversation list renders only the rows near its viewport, so records with tens of thousands of events stay responsive.
@@ -143,6 +146,7 @@ The example includes a second-instance toggle.
 Import CSS once.
 All selectors are scoped to `.agent-record`; it does not restyle the surrounding page.
 Override `--ar-background`, `--ar-foreground`, `--ar-font`, and `--ar-mono`, or the semantic tokens in [styles.css](src/styles.css).
+Text uses one scale of three sizes: `--ar-text-s` (15px: labels, chips, axes, table headers), `--ar-text-m` (17px: body, tabs, table cells) and `--ar-text-l` (26px: titles); override them together to scale the viewer.
 
 ## Run the example
 
