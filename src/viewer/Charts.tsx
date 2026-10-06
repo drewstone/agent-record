@@ -57,8 +57,9 @@ export function Timeline({
   baseWidth?: number
 }) {
   const width = baseWidth * zoom,
-    left = 160,
-    step = 23,
+    // Lane labels at the meta size (15px Geist Mono): 20 characters fit the left gutter.
+    left = 200,
+    step = 30,
     height = Math.max(85, 48 + index.actors.length * step)
   const span = Math.max(index.end - index.start, 1)
   const x = (at: number) =>
@@ -127,7 +128,7 @@ export function Timeline({
           <g key={node.id}>
             <text x={4} y={44 + i * step} className="lane-label">
               <title>{node.label}</title>
-              {node.label.length > 21
+              {node.label.length > 20
                 ? `${node.label.slice(0, 19)}…`
                 : node.label}
             </text>

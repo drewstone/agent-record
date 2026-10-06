@@ -90,6 +90,10 @@ const runKey = z
   .object({ id: z.string(), name: z.string(), capUsd: usd, spentUsd: usd, final: z.boolean() })
   .catchall(z.unknown())
 
+/** Why a run or play is hidden by default; the host decides it (tangle-tools discovery_workspace.hidden_reason). */
+export const hiddenReasons = ['failed', 'smoke', 'archived'] as const
+const hiddenReason = z.enum(hiddenReasons)
+
 export const runSummarySchema = z
   .object({
     id: z.string(),
@@ -116,6 +120,8 @@ export const runSummarySchema = z
     versions: z
       .object({ count: z.number().int().nonnegative(), latest: z.string(), states: z.record(z.string(), z.number()) })
       .nullable(),
+    /** Why the run sits behind the default filter (a test or smoke run, a failure, an archived run); null shows it. */
+    hidden: hiddenReason.nullable().optional(),
     /** What the run record says the run is for; null when the record states nothing the catalog read. */
     purpose: z.string().nullable().optional(),
     /** The record field the purpose came from: acceptance.purpose, task or task.objective. */
@@ -174,6 +180,17 @@ export const playsDocumentSchema = z
           state: z.string().nullable(),
           latestRun: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable(),
           runCount: z.number().int().nonnegative(),
+          /** Runs by why they are hidden by default; `shown` counts the rest. */
+          counts: z
+            .object({
+              shown: z.number().int().nonnegative(),
+              smoke: z.number().int().nonnegative(),
+              failed: z.number().int().nonnegative(),
+              archived: z.number().int().nonnegative(),
+            })
+            .optional(),
+          /** Why the default filter hides the play: set only when it hides every run of it. */
+          hidden: hiddenReason.nullable().optional(),
           spend: spendSchema,
           headline: z.record(z.string(), headlineLabel),
         })

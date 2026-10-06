@@ -163,7 +163,7 @@ export function layoutProfiles(
   shown: ReadonlySet<string>,
   expanded: ReadonlySet<string>,
   play: string,
-  { main = 7.5, small = 6.7, labelChars = 32 } = {},
+  { main = 9.1, small = 9.1, labelChars = 32 } = {},
 ) {
   const placed = new Map<string, PlacedProfile>()
   const depthOf = new Map<string, number>()
@@ -193,8 +193,8 @@ export function layoutProfiles(
   const radius = (node: ProfileNode) => (node.kind === 'root' ? 9 : 6)
   const columnX = [20]
   for (let depth = 1; depth <= maxDepth; depth++)
-    columnX[depth] = columnX[depth - 1]! + 9 + 8 + (columnWidth.get(depth - 1) ?? 0) + (versionInto.has(depth) ? 164 : 34)
-  let y = 26
+    columnX[depth] = columnX[depth - 1]! + 9 + 8 + (columnWidth.get(depth - 1) ?? 0) + (versionInto.has(depth) ? 220 : 40)
+  let y = 30
   const visit = (node: ProfileNode, depth: number): number => {
     const existing = placed.get(node.digest)
     if (existing) return existing.y
@@ -202,7 +202,7 @@ export function layoutProfiles(
     const entry: PlacedProfile = { node, x: columnX[depth]!, y: 0, depth, r: radius(node), ...t }
     placed.set(node.digest, entry)
     const kids = (graph.children.get(node.digest) ?? []).filter((child) => shown.has(child.digest))
-    const rowHeight = node.kind === 'root' || t.toggle ? 54 : 34
+    const rowHeight = node.kind === 'root' || t.toggle ? 70 : 48
     if (!kids.length) {
       entry.y = y
       y += rowHeight

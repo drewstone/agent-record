@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import type { RunRecord } from '../record.js'
 import type { Spend } from '../workspace.js'
 
+/** How soon a document the server marked stale (X-Workspace-Stale) is fetched again, backing off by half each time:
+ * about a minute in all, the longest a plays index takes to recompose on a loaded host. */
+const STALE_RETRY_MS = 2_500
+const STALE_RETRIES = 6
+
 /**
  * Same-origin JSON with ETag revalidation. `poll` refetches every `poll` ms while set; turning polling on or off keeps
  * the document. With `keepPrevious`, a new URL (a record's next digest) keeps showing the previous document until the
- * new one arrives, so a run being written never blanks between versions.
+ * new one arrives, so a run being written never blanks between versions. A response marked stale is refetched until it is current.
  */
 export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false) {
   const [state, setState] = useState<{ data?: T; error?: string; status?: number; loading: boolean }>({ loading: !!url })
@@ -20,6 +25,8 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
     if (!url) return
     let alive = true
     let timer = 0
+    let stale = false
+    let retries = 0
     const controller = new AbortController()
     const load = async () => {
       try {
@@ -29,6 +36,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
           headers: etag.current ? { 'If-None-Match': etag.current } : {},
         })
         if (!alive) return
+        stale = response.headers.get('X-Workspace-Stale') === '1'
         if (response.status === 304) return
         if (!response.ok) {
           let reason = `HTTP ${response.status}`
@@ -48,7 +56,12 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         if (alive && !controller.signal.aborted)
           setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
       } finally {
+        // A document served as last composed while the server recomposes it is asked for again, a few times at most.
         if (alive && poll) timer = window.setTimeout(load, poll)
+        else if (alive && stale && retries < STALE_RETRIES) {
+          timer = window.setTimeout(load, STALE_RETRY_MS * 1.5 ** retries)
+          retries += 1
+        }
       }
     }
     void load()

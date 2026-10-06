@@ -7,7 +7,7 @@ import { Conversation } from './viewer/Conversation.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
-import { indexRecord, interval, ms, roleOf, textOf, utcTime } from './viewer/model.js'
+import { agentState, indexRecord, interval, measuredUsage, ms, roleOf, textOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { StructuredContent, VerbatimContent } from './viewer/StructuredContent.js'
@@ -16,7 +16,8 @@ import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, w
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { ProfileVersions } from './workspace/ProfileVersions.js'
-import { splitHidden } from './workspace/plays-filter.js'
+import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
+import type { HiddenReason } from './workspace/plays-filter.js'
 import { LineageGraph, TopologyGraph } from './workspace/RunGraph.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
 
@@ -91,6 +92,32 @@ function Status({ loading, error, children }: { loading: boolean; error?: string
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
 
+/**
+ * What the default filter holds back, said where it is seen first: failed runs are a health signal, not noise, so the
+ * failed count leads in the failure colour. `noun` names what is counted (plays or runs).
+ */
+function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: Record<HiddenReason, number>; total: number; noun: string; showHidden: boolean; onChange: (all: boolean) => void }) {
+  const hidden = HIDDEN_ORDER.reduce((sum, reason) => sum + counts[reason], 0)
+  if (!hidden) return null
+  return (
+    <div className="hidden-summary" data-hidden-summary>
+      <span>
+        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}:{' '}
+        {HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason, i) => (
+          <span key={reason} className={reason === 'failed' ? 'hidden-failed' : undefined}>
+            {i > 0 && ' · '}
+            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'whose runs all failed' : HIDDEN_LABEL[reason]}
+          </span>
+        ))}
+      </span>
+      <label className="toggle hidden-filter">
+        <input type="checkbox" checked={showHidden} onChange={(event) => onChange(event.target.checked)} data-show-hidden />
+        Show them
+      </label>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------------------------------------
 // /plays: every play this host has a run of
 // ---------------------------------------------------------------------------------------------------------
@@ -114,7 +141,8 @@ function PlaysPage({ api }: { api: string }) {
     const matching = (plays.data?.plays ?? []).filter(
       (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
     )
-    const { shown, hidden } = splitHidden(matching, showHidden)
+    // Plays whose every run is a test, a failure or archived stay out of view until asked for, and are counted by reason.
+    const { shown, counts, hidden } = splitHidden(matching, showHidden)
     const rows = shown
       .sort((a, b) =>
         sort === 'name'
@@ -125,7 +153,7 @@ function PlaysPage({ api }: { api: string }) {
               ? b.runCount - a.runCount
               : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
       )
-    return { rows, hidden }
+    return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
@@ -155,11 +183,8 @@ function PlaysPage({ api }: { api: string }) {
               <option value="runs">Most runs first</option>
               <option value="name">By name</option>
             </select>
-            <label className="toggle" title="Plays whose runs name no program, plays named smoke, canary or probe, and plays whose latest run failed">
-              <input type="checkbox" checked={showHidden} onChange={(event) => update({ show: event.target.checked ? 'all' : undefined })} data-show-hidden />
-              Show failed, test and smoke plays ({hidden})
-            </label>
           </div>
+          <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         </header>
         <section className="ws-section">
           <div className="table-scroll">
@@ -180,6 +205,7 @@ function PlaysPage({ api }: { api: string }) {
                 {rows.map((play) => {
                   const open = () => go(`/play/${encodeURIComponent(play.id)}`)
                   const flags = Object.entries(play.headline).filter(([, value]) => value.polarity === 'bad')
+                  const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
                   return (
                     <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
                       <td>
@@ -206,7 +232,9 @@ function PlaysPage({ api }: { api: string }) {
                         ) : '—'}
                         <small className="faint"> {when(play.latestRun?.startedAt)}</small>
                       </td>
-                      <td className="num">{play.runCount}</td>
+                      <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
+                        {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
+                      </td>
                       <td className={`num ${play.spend.paidUsd === null ? 'unknown' : ''}`}>
                         {money(play.spend.paidUsd)}{!play.spend.paidKnown && play.spend.paidUsd !== null ? '+' : ''}
                       </td>
@@ -226,7 +254,7 @@ function PlaysPage({ api }: { api: string }) {
               </tbody>
             </table>
           </div>
-          {!rows.length && <p className="chat-empty">No play matches{hidden && !showHidden ? `; ${hidden} failed, test and smoke plays are hidden` : ''}.</p>}
+          {!rows.length && <p className="chat-empty">No {hidden.plays && !showHidden ? 'shown ' : ''}play matches.</p>}
         </section>
       </div>
     </Status>
@@ -244,7 +272,23 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const tab = (['input', 'runs', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'runs'
   const selectedRun = params.get('run')
+  const showHidden = params.get('show') === 'all'
   const doc = play.data
+  const split = useMemo(() => splitRuns(doc?.runs ?? [], showHidden), [doc, showHidden])
+  // What the runs tab draws: every run, or only those the default filter shows (with their lineage and gaps).
+  const view = useMemo(() => {
+    if (!doc || showHidden || !split.hidden) return doc
+    const hidden = new Set(doc.runs.filter((run) => run.hidden).map((run) => run.id))
+    return {
+      ...doc,
+      runs: split.shown,
+      lineage: {
+        nodes: doc.lineage.nodes.filter((node) => !hidden.has(node.runId)),
+        edges: doc.lineage.edges.filter((edge) => !hidden.has(edge.from) && !hidden.has(edge.to)),
+      },
+      gaps: doc.gaps.filter((gap) => !gap.runId || !hidden.has(gap.runId)),
+    }
+  }, [doc, showHidden, split])
   const latestDigest = doc?.input?.digest ?? null
   const runDoc = useDocument<RunDocument>(tab === 'input' && selectedRun && selectedRun !== doc?.input?.runId ? `${api}/runs/${encodeURIComponent(selectedRun)}` : null)
   const input: PlayInput | null = selectedRun && selectedRun !== doc?.input?.runId ? (runDoc.data?.input ?? null) : (doc?.input ?? null)
@@ -288,21 +332,22 @@ function PlayPage({ api, id }: { api: string; id: string }) {
           <div className="ws-content" role="tabpanel">
             {tab === 'runs' && (
               <>
+                <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
                 <section className="ws-section">
-                  <LineageGraph play={doc} onOpen={(runId) => open(runId)} />
+                  <LineageGraph play={view!} onOpen={(runId) => open(runId)} />
                 </section>
                 <section className="ws-section" data-section="profile-versions">
                   <h3>Profile versions</h3>
                   <ProfileVersions api={api} play={doc.id} selected={params.get('profile')} onSelect={(short) => update({ profile: short })} />
                 </section>
                 <section className="ws-section">
-                  <RunsTable play={doc} latestDigest={latestDigest} headlines={headlines} headline={dimensions.data ? new Set(dimensions.data.dimensions.filter((item) => item.headline).map((item) => item.id)) : null} onOpen={open} />
+                  <RunsTable play={view!} latestDigest={latestDigest} headlines={headlines} headline={dimensions.data ? new Set(dimensions.data.dimensions.filter((item) => item.headline).map((item) => item.id)) : null} onOpen={open} />
                 </section>
-                {doc.gaps.length > 0 && (
+                {view!.gaps.length > 0 && (
                   <section className="ws-section gaps">
                     <h3>Missing evidence</h3>
                     <ul className="gap-list">
-                      {doc.gaps.map((gap, i) => (
+                      {view!.gaps.map((gap, i) => (
                         <li key={i}>
                           <code>{gap.code}</code> {gap.runId && <span className="mono">{shortRun(doc.id, gap.runId)}</span>} {gap.detail}
                         </li>
@@ -334,7 +379,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             {tab === 'spend' && <PlaySpend play={doc} onOpen={open} catalogue={dimensionMap(dimensions.data)} />}
             {tab === 'assessments' && (
               <section className="ws-section">
-                <AssessmentMatrix play={doc} dimensions={dimensions.data} onOpen={open} />
+                <AssessmentMatrix play={view!} dimensions={dimensions.data} onOpen={open} />
               </section>
             )}
           </div>
@@ -544,7 +589,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
         />
       ) : (
         <div className="ws-section">
-          {recordDoc.loading ? (
+          {/* The record's request starts after the run document names it ready: until it answers, it is loading, not missing. */}
+          {recordDoc.loading || (recordReady && recordDoc.data === undefined && !recordDoc.error) ? (
             <p className="ws-status" role="status">Loading the record…</p>
           ) : (
             <div className="record-missing" data-record-status={summary.record.status}>
@@ -584,6 +630,7 @@ function RunHeader({ doc }: { doc: RunDocument }) {
         <span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>
         {run.reason && <span className="faint">{run.reason}</span>}
       </div>
+      {run.purpose && <p className="ws-charter run-purpose-line">{run.purpose}</p>}
       <div className="ws-facts">
         <span><b>Started</b> {when(run.startedAt)}</span>
         <span><b>Settled</b> {when(run.settledAt)}</span>
@@ -781,6 +828,8 @@ function RunBody({
   const position = index.end > index.start ? ((cutoff - index.start) / (index.end - index.start)) * 1000 : 1000
   const role = roleOf(node)
   const model = node?.servedModel ? `${node.servedModel}` : node?.model ? `${node.model} (declared)` : null
+  const measured = useMemo(() => measuredUsage(index, actor), [index, actor])
+  const empty = !(index.byActor.get(actor) ?? []).length
   return (
     <div className="ws-body" onScrollCapture={hideTooltip}>
       <section className="ws-topology" aria-label="Agents">
@@ -826,13 +875,13 @@ function RunBody({
       <section className="ws-panel" aria-label="Agent record">
         <div className="agent-head">
           <div className="agent-identity">
-            <span className={`agent-avatar ${node?.status === 'done' ? 'state-ok' : node?.status === 'down' ? 'state-fail' : ''}`} aria-hidden="true">
+            <span className={`agent-avatar ${node?.status === 'done' && measured ? 'state-ok' : node?.status === 'down' ? 'state-fail' : ''}`} aria-hidden="true">
               {role.slice(0, 1).toUpperCase()}
             </span>
             <div>
               <h2 data-agent-title>{node?.label ?? actor}</h2>
               <p className="agent-meta">
-                {[role, model, node?.harness as string | undefined, node?.status ?? 'no terminal state'].filter(Boolean).join(' · ')}
+                {[role, model, node?.harness as string | undefined, agentState(node, measured)].filter(Boolean).join(' · ')}
               </p>
             </div>
           </div>
@@ -851,7 +900,8 @@ function RunBody({
         )}
         <Tabs label="Run record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={RUN_TABS} />
         <div className="ws-panel-body" role="tabpanel">
-          {tab === 'messages' && (
+          {tab === 'messages' && empty && <EmptyAgent index={index} actor={actor} onSelect={selectNode} />}
+          {tab === 'messages' && !empty && (
             <>
               <div className="message-filters">
                 <select aria-label="Activity type" value={category} onChange={(event) => setCategory(event.target.value)} data-category>
@@ -978,6 +1028,34 @@ function RunBody({
   )
 }
 
+/** An agent with no recorded event: say what is missing instead of an empty pane, and lead to its agents. */
+function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: string; onSelect: (id: string) => void }) {
+  const node = index.nodes.get(actor)
+  const capture = node?.capture as { channel?: string; status?: string; reason?: string | null } | undefined
+  const children = index.actors.filter((item) => item.kind !== 'finding' && item.parent && index.canonical(item.parent) === actor)
+  return (
+    <div className="agent-empty" data-agent-empty={actor}>
+      <h3>Nothing was recorded for {node?.label ?? actor}</h3>
+      <p>
+        {index.events.length ? 'The record holds no event from this agent' : 'This run’s record holds no events at all'}, and no usage.{' '}
+        Capture: {capture?.status ?? 'unknown'}
+        {capture?.channel ? ` (${capture.channel})` : ''}
+        {capture?.reason ? `; ${capture.reason}` : ''}. An empty record is not evidence that the agent did no work.
+      </p>
+      {children.length > 0 && (
+        <p className="agent-empty-children">
+          <span className="faint">Its agents:</span>{' '}
+          {children.map((child) => (
+            <button key={child.id} type="button" className="link-button" onClick={() => onSelect(child.id)}>
+              {child.label}
+            </button>
+          ))}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function Coverage({ index, doc, gaps: recordGaps, onSelect }: { index: RecordIndex; doc: RunDocument; gaps: RecordGap[]; onSelect: (id: string) => void }) {
   const gaps = [...recordGaps, ...doc.spend.gaps]
   return (
@@ -995,7 +1073,7 @@ function Coverage({ index, doc, gaps: recordGaps, onSelect }: { index: RecordInd
                 <td className="mono">{capture?.channel ?? '—'}</td>
                 <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{capture?.status ?? 'unknown'}</span></td>
                 <td className="mono faint">{capture?.reason ?? ''}</td>
-                <td>{node.status ?? '—'}</td>
+                <td>{agentState(node, measuredUsage(index, node.id))}</td>
               </tr>
             )
           })}
