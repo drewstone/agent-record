@@ -494,6 +494,39 @@ export const profileScoreSchema = z.union([
     .catchall(z.unknown()),
 ])
 
+/** A split's mean score and how many units it covers. */
+const splitScore = z.object({ mean: z.number(), units: z.number().int() }).catchall(z.unknown()).nullable().optional()
+
+/** One search's view of one version (discovery-lab `disco profiles index`, from the search ledger). */
+const nodeSearchSchema = z
+  .object({
+    searchId: z.string(),
+    kind: z.string().nullable().optional(),
+    runId: z.string().nullable().optional(),
+    nodeId: z.string().nullable().optional(),
+    registeredAt: z.string().nullable().optional(),
+    scores: z.object({ train: splitScore, selection: splitScore, test: splitScore }).catchall(z.unknown()).nullable().optional(),
+    cost: z.object({ usd: z.number().nullable(), cells: z.number().nullable().optional(), unknownCells: z.number().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+    decisions: z
+      .array(
+        z
+          .object({
+            status: z.string(),
+            reason: z.string().nullable().optional(),
+            rule: z.string().nullable().optional(),
+            at: z.string().nullable().optional(),
+            basis: z
+              .object({ against: z.string().nullable().optional(), split: z.string(), pairs: z.number(), delta: z.number(), interval: z.array(z.number()).nullable().optional(), method: z.string().nullable().optional() })
+              .catchall(z.unknown())
+              .nullable()
+              .optional(),
+          })
+          .catchall(z.unknown()),
+      )
+      .optional(),
+  })
+  .catchall(z.unknown())
+
 export const profileNodeSchema = z
   .object({
     digest: profileDigest,
@@ -502,7 +535,8 @@ export const profileNodeSchema = z
     description: z.string().nullable(),
     version: z.string().nullable(),
     play: z.string().nullable(),
-    kind: z.enum(['root', 'spawned']),
+    /** `root`: a run's registered profile; `spawned`: written at runtime by an agent; `proposed`: an optimizer search proposed it. */
+    kind: z.enum(['root', 'spawned', 'proposed']),
     model: z.object({ id: z.string().nullable(), provider: z.string().nullable(), reasoningEffort: z.string().nullable() }),
     harness: z.string().nullable(),
     tools: z.array(z.string()),
@@ -544,6 +578,66 @@ export const profileNodeSchema = z
         })
         .catchall(z.unknown()),
     ),
+    /** The optimizer searches that evaluated this version: its scores per split, its evaluation cost and the decisions. */
+    searches: z.array(nodeSearchSchema).optional(),
+  })
+  .catchall(z.unknown())
+
+/** One optimizer search over a play's profile (`searches` in the profile index): its policy, its claim and its curve. */
+export const profileSearchSchema = z
+  .object({
+    searchId: z.string(),
+    kind: z.string().nullable().optional(),
+    runId: z.string().nullable().optional(),
+    policy: z.record(z.string(), z.unknown()).nullable().optional(),
+    ranking: z.string().nullable().optional(),
+    openedAt: z.string().nullable().optional(),
+    closedAt: z.string().nullable().optional(),
+    closeReason: z.string().nullable().optional(),
+    claim: z
+      .object({
+        decision: z.string(),
+        reason: z.string().nullable().optional(),
+        selected: z.string().nullable().optional(),
+        finalists: z
+          .array(
+            z
+              .object({
+                digest: z.string(),
+                promote: z.boolean().nullable().optional(),
+                test: z.object({ pairs: z.number(), delta: z.number(), low: z.number(), high: z.number() }).catchall(z.unknown()).nullable().optional(),
+              })
+              .catchall(z.unknown()),
+          )
+          .optional(),
+      })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
+    /** The best version so far against cumulative evaluation cost, one point per change of best. */
+    curve: z
+      .array(
+        z
+          .object({
+            at: z.string(),
+            usd: z.number(),
+            unknownCost: z.number().nullable().optional(),
+            versions: z.number().int(),
+            best: z.object({ digest: z.string(), score: z.number() }).catchall(z.unknown()).nullable(),
+          })
+          .catchall(z.unknown()),
+      )
+      .optional(),
+  })
+  .catchall(z.unknown())
+
+/** For one version, each line of its prompt and the version that introduced it. */
+export const profileBlameSchema = z
+  .object({
+    digest: z.string(),
+    complete: z.boolean().optional(),
+    versions: z.array(z.string()).optional(),
+    rows: z.array(z.object({ field: z.string(), text: z.string(), introducedBy: z.string().nullable() }).catchall(z.unknown())),
   })
   .catchall(z.unknown())
 
@@ -611,6 +705,10 @@ export const profileGraphDocumentSchema = z
     nodes: z.array(profileNodeSchema),
     /** Keyed `${parentDigest}..${childDigest}`, one per parent edge whose relation is not `authored`. */
     diffs: z.record(z.string(), profileDiffSchema),
+    /** Optimizer searches over this play's profiles. */
+    searches: z.array(profileSearchSchema).optional(),
+    /** Keyed by version digest. */
+    blame: z.record(z.string(), profileBlameSchema).optional(),
   })
   .catchall(z.unknown())
 
@@ -637,3 +735,5 @@ export type ProfileRun = ProfileNode['runs'][number]
 export type ProfileScore = z.infer<typeof profileScoreSchema>
 export type ProfileDiff = z.infer<typeof profileDiffSchema>
 export type ProfileDiffField = z.infer<typeof profileDiffFieldSchema>
+export type ProfileSearch = z.infer<typeof profileSearchSchema>
+export type ProfileBlame = z.infer<typeof profileBlameSchema>

@@ -180,7 +180,13 @@ export function VersionCanvas({
         })}
         {selectedRun && !authored.length && (
           <div className="canvas-node ghost" style={{ left: AUTH_X, top: PAD, width: AUTH_W + 60 }}>
-            <span className="faint">{graph ? 'No profile written at runtime is indexed for this version.' : 'Profile versions are not indexed for this play.'}</span>
+            <span className="faint">
+              {!graph
+                ? 'Profile versions are not indexed for this play.'
+                : graph.nodes.some((node) => node.kind === 'proposed' && node.createdIn === selectedRun)
+                  ? `${graph.nodes.filter((node) => node.kind === 'proposed' && node.createdIn === selectedRun).length} versions an optimizer search proposed: see the search below.`
+                  : 'No profile written at runtime is indexed for this version.'}
+            </span>
           </div>
         )}
       </div>

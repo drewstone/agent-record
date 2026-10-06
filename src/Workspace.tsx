@@ -17,6 +17,7 @@ import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
 import { ReliabilityPanel } from './workspace/Reliability.js'
+import { Searches } from './workspace/SearchView.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
 import type { HiddenReason } from './workspace/plays-filter.js'
 import { profileGraph, findProfile } from './workspace/profile-graph.js'
@@ -371,6 +372,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                     <Inspector api={api} play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
                   </aside>
                 </div>
+                <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
               </>
             )}
             {tab === 'runs' && (
