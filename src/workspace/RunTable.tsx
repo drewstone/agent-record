@@ -8,7 +8,7 @@ import { polarityOf, shownPolarity } from './Assessments.js'
 import { duration, money, stateClass, tokens } from './data.js'
 import { externalHref } from './final-output.js'
 import { briefLines } from './outputs.js'
-import { absoluteJudges, absoluteMedian } from './profile-compare.js'
+import { headlineScore, scoreRows } from './scores.js'
 
 /** Per agent, from the record's `nodes` part: event count, first and last event, recorded usage and list price. */
 export interface NodeStats {
@@ -39,8 +39,9 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
   const verdicts = finished?.verdicts ?? []
   const verdictCounts = new Map<string, number>()
   for (const verdict of verdicts) verdictCounts.set(verdict.verdict, (verdictCounts.get(verdict.verdict) ?? 0) + 1)
-  const judges = (finished?.judges ?? []).map((judge) => ({ category: judge.category, score: judge.score, max: judge.max, calibrated: judge.calibrated ?? null, scale: (judge as { scale?: string }).scale }))
-  const absolute = absoluteMedian(judges)
+  const final = doc.finalOutput
+  const headline = headlineScore(scoreRows(finished, final?.panel, final?.grades?.latest, { kind: 'run', id: run.id }))
+  const yours = final?.grades?.latest.filter((grade) => grade.target.kind === 'run' && grade.category === 'overall').at(-1) ?? null
   const spend = doc.spend
   const brief = doc.finalOutput?.brief ?? null
   const fallback = doc.finalOutput?.fallback ?? null
@@ -89,9 +90,16 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
       </button>
       <button type="button" className="answer-cell" onClick={onOpen}>
         <span className="answer-label">Score, 0–100 vs world class</span>
-        <span className="answer-value">{absolute !== null ? `${absolute} of 100` : 'no absolute score yet'}</span>
+        <span className="answer-value">{headline ? `${headline.score} of 100` : 'no absolute score yet'}</span>
         <span className="faint">
-          {absolute !== null ? `median of ${absoluteJudges(judges).length} judges` : judges.length ? 'the judges used the retired relative scale' : 'no judges ran'}
+          {headline
+            ? headline.source === 'judges'
+              ? `median of the AI judges`
+              : `median of ${headline.n} AI personas, advisory`
+            : finished?.judges.length
+              ? 'the judges used the retired relative scale'
+              : 'no judges ran'}
+          {yours ? ` · ${yours.by.split('@')[0]}: ${yours.score}` : ''}
         </span>
       </button>
       <button type="button" className="answer-cell" onClick={onOpen}>

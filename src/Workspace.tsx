@@ -608,7 +608,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
   const [poll, setPoll] = useState<number | undefined>(undefined)
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
-  const run = useDocument<RunDocument>(runUrl, poll)
+  // A saved grade changes the run's document; asking under a new query fetches it again (the host ignores the query).
+  const [revision, setRevision] = useState(0)
+  const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
   const digest = run.data?.run.record.digest ?? null
@@ -630,8 +632,15 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
   const closeDrawer = () => update({ view: undefined, drawer: 'closed', node: undefined, event: undefined, tab: undefined, t: undefined, file: undefined })
   const openOutputs = () => update({ view: 'outputs', drawer: undefined, file: undefined })
+  const grading = { api, runId: summary.id, onSaved: () => setRevision((value) => value + 1) }
   const outputs = (
-    <OutputsView doc={run.data!} selected={params.get('file')} onSelect={(file) => update({ view: 'outputs', file: file ?? undefined })} onClose={closeDrawer} />
+    <OutputsView
+      doc={run.data!}
+      grading={grading}
+      selected={params.get('file')}
+      onSelect={(file) => update({ view: 'outputs', file: file ?? undefined })}
+      onClose={closeDrawer}
+    />
   )
   return (
     <div className="ws-page ws-run" data-run={summary.id}>
@@ -656,7 +665,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
                 <h2>Readout</h2>
                 <button type="button" className="ui-button" onClick={closeDrawer}>Close</button>
               </div>
-              <FinalOutputPanel output={run.data!.finalOutput} />
+              <FinalOutputPanel output={run.data!.finalOutput} grading={grading} />
             </aside>
           )}
           {drawer === 'outputs' && (

@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
-import type { PlayDocument, ProfileGraphDocument, ProfileNode } from '../workspace.js'
-import { duration, money, stateClass, stateLabel, when } from './data.js'
-import { absoluteJudges, absoluteMedian, authoredTree, changeSummary, compareProfiles, judgeShort, judgeSummary, judgesOf, sameNamed } from './profile-compare.js'
+import { useMemo, useState } from 'react'
+import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunDocument } from '../workspace.js'
+import { duration, money, stateClass, stateLabel, useDocument, when } from './data.js'
+import { absoluteJudges, authoredTree, changeSummary, compareProfiles, judgeShort, judgeSummary, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Judge, Version } from './profile-compare.js'
 import { OutputChanges } from './Outputs.js'
+import { GradeControl, ScoresTable } from './Scores.js'
+import { headlineScore, scoreRows } from './scores.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
@@ -245,6 +247,11 @@ export function Inspector({
 function VersionInspector({ api, play, version }: { api: string; play: PlayDocument; version: Version }) {
   const run = version.run
   const scores = judgesOf(version.root, run.id)
+  const [revision, setRevision] = useState(0)
+  const runUrl = `${api}/runs/${encodeURIComponent(run.id)}`
+  const doc = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, undefined, true)
+  const final = doc.data?.run.id === run.id ? doc.data.finalOutput : null
+  const headline = final ? headlineScore(scoreRows(final.readout, final.panel, final.grades?.latest, { kind: 'run', id: run.id })) : null
   return (
     <div className="inspector" data-inspector={run.id}>
       <header className="inspector-head">
@@ -273,32 +280,35 @@ function VersionInspector({ api, play, version }: { api: string; play: PlayDocum
       <section data-inspector-outputs>
         <h3>{version.previous ? `What the output changed from ${shortRun(play.id, version.previous.run.id)}` : 'What the output changed'}</h3>
         {version.previous ? (
-          <OutputChanges api={api} beforeRunId={version.previous.run.id} afterRunId={run.id} beforeLabel={shortRun(play.id, version.previous.run.id)} />
+          <OutputChanges
+            api={api}
+            beforeRunId={version.previous.run.id}
+            after={doc.data?.run.id === run.id ? doc.data : null}
+            beforeLabel={shortRun(play.id, version.previous.run.id)}
+            afterLabel={shortRun(play.id, run.id)}
+          />
         ) : (
           <p className="faint">The first version of this play on this host: nothing to compare.</p>
         )}
       </section>
-      <section>
-        <h3>Judges, absolute 0–100 vs world class</h3>
-        {absoluteJudges(scores?.judges).length ? (
+      <section data-inspector-scores>
+        <h3>Scores, 0–100 vs world class</h3>
+        {final ? (
           <>
-            <div className="judge-rows">
-              {absoluteJudges(scores!.judges).map((judge) => (
-                <div key={judge.category} className="judge-row">
-                  <span>{judge.category}</span>
-                  <span className="score-track" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, judge.score ?? 0))}%` }} /></span>
-                  <b>{judge.score} of 100</b>
-                  <span className="faint">{judge.calibrated ? 'calibrated' : 'advisory'}</span>
-                </div>
-              ))}
-            </div>
-            <AbsoluteScale score={absoluteMedian(scores!.judges)} />
+            <ScoresTable readout={final.readout} panel={final.panel} grades={final.grades?.latest} target={{ kind: 'run', id: run.id }} />
+            <AbsoluteScale score={headline?.score ?? null} />
+            {headline?.source === 'personas' && <p className="faint">The mark is the AI personas' median ({headline.n}); advisory, not calibrated.</p>}
+            <GradeControl
+              api={api}
+              runId={run.id}
+              target={{ kind: 'run', id: run.id }}
+              label={`Your grade of ${shortRun(play.id, run.id)}`}
+              current={final.grades?.latest.filter((grade) => grade.target.kind === 'run').at(-1) ?? null}
+              onSaved={() => setRevision((value) => value + 1)}
+            />
           </>
         ) : (
-          <>
-            <p className="faint">{scores?.judges.length ? judgeSummary(scores.judges) + '.' : 'No readout judged this run.'}</p>
-            <AbsoluteScale />
-          </>
+          <p className="faint">{doc.error ? `The run's scores are unavailable: ${doc.error}` : 'Loading the run’s scores…'}</p>
         )}
       </section>
       {scores && scores.verdicts.length > 0 && (

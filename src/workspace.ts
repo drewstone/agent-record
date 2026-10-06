@@ -359,6 +359,51 @@ export const readoutSchema = z
     links: z.object({ report: z.string().nullable(), dossier: z.string().nullable(), gist: z.string().nullable() }).catchall(z.unknown()),
     cost: z.object({ readoutUsd: usd, runUsd: usd }).catchall(z.unknown()),
     error: z.string().nullable(),
+    /** The charts the readout drew from the run's outputs. Absent on documents built before they were served. */
+    charts: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            title: z.string().nullable(),
+            unit: z.string().nullable(),
+            kind: z.string().nullable(),
+            caption: z.string().nullable(),
+            width: z.number().int().nullable(),
+            height: z.number().int().nullable(),
+            href: z.string(),
+          })
+          .catchall(z.unknown()),
+      )
+      .optional(),
+  })
+  .catchall(z.unknown())
+
+/** A person's grade of a run or one of its outputs (`discovery.human-grade.v1`), on the readout's absolute scale. */
+export const humanGradeSchema = z
+  .object({
+    at: time,
+    by: z.string(),
+    target: z.object({ kind: z.enum(['run', 'deliverable', 'file']), id: z.string() }),
+    category: z.string(),
+    score: z.number().int().min(0).max(100),
+    comment: z.string(),
+    scale: z.string(),
+  })
+  .catchall(z.unknown())
+
+/** One AI persona's review of the run (discovery-lab `runner/readout-panel.mjs`): absolute 0–100 per category; advisory. */
+export const panelReviewSchema = z
+  .object({
+    panel: z.string(),
+    persona: z.string(),
+    overall: z.number().nullable(),
+    decision: z.string().nullable(),
+    verdict: z.string().nullable(),
+    scores: z.record(
+      z.string(),
+      z.object({ score: z.number().nullable(), band: z.string().nullable(), competence: z.string().nullable(), why: z.string().nullable() }).catchall(z.unknown()),
+    ),
   })
   .catchall(z.unknown())
 
@@ -389,6 +434,10 @@ export const finalOutputSchema = z
       .catchall(z.unknown())
       .nullable()
       .optional(),
+    /** People's grades of the run and its outputs: the latest per grader, target and category, and how many were given. */
+    grades: z.object({ latest: z.array(humanGradeSchema), count: z.number().int() }).optional(),
+    /** The AI persona panel's reviews of the run. */
+    panel: z.array(panelReviewSchema).optional(),
   })
   .catchall(z.unknown())
 
@@ -578,6 +627,9 @@ export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type Readout = z.infer<typeof readoutSchema>
 export type OutputFile = z.infer<typeof outputFile>
 export type ProgressBrief = z.infer<typeof progressBriefSchema>
+export type HumanGrade = z.infer<typeof humanGradeSchema>
+export type PanelReview = z.infer<typeof panelReviewSchema>
+export type ReadoutChart = NonNullable<Readout['charts']>[number]
 export type ProfileGraphDocument = z.infer<typeof profileGraphDocumentSchema>
 export type ProfileNode = z.infer<typeof profileNodeSchema>
 export type ProfileParent = ProfileNode['parents'][number]

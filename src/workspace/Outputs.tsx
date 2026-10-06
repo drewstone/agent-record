@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { FinalOutput, OutputFile, RunDocument } from '../workspace.js'
+import type { FinalOutput, HumanGrade, OutputFile, RunDocument } from '../workspace.js'
 import { useDocument, when } from './data.js'
 import { byteSize, deliveryLabel, externalHref, sameOriginHref } from './final-output.js'
 import { compareOutputs, KIND_LABEL, groupOutputs, outputKind, parseDelimited, pathInGroup, type DeliverableChange, type FilePair, type OutputGroup } from './outputs.js'
 import { lineDiff } from './profile-compare.js'
 import { DiffLines } from './ProfileVersions.js'
+import type { Grading } from './FinalOutput.js'
+import { ChartGallery, ChartPairsView, GradeControl } from './Scores.js'
 
 /** Above this a file is linked, not drawn: the page would hold megabytes of text it cannot show usefully. */
 const DRAW_LIMIT = 4 << 20
@@ -55,7 +57,7 @@ function resolveLink(from: string, href: string): string | null {
  * The run's outputs in the drawer: each deliverable the readout names with the files under it, and the selected file
  * drawn by its kind. A link inside a delivered page opens the file it names when the run delivered it.
  */
-export function OutputsView({ doc, selected, onSelect, onClose }: { doc: RunDocument; selected: string | null; onSelect: (path: string | null) => void; onClose: () => void }) {
+export function OutputsView({ doc, grading, selected, onSelect, onClose }: { doc: RunDocument; grading?: Grading; selected: string | null; onSelect: (path: string | null) => void; onClose: () => void }) {
   const output = doc.finalOutput ?? null
   const groups = useMemo(() => groupOutputs(output), [output])
   const files = output?.files ?? []
@@ -77,7 +79,7 @@ export function OutputsView({ doc, selected, onSelect, onClose }: { doc: RunDocu
       </div>
       {output?.fallback && <Fallback output={output} />}
       {file ? (
-        <OutputReader key={file.path} file={file} files={files} onBack={() => onSelect(null)} onOpen={onSelect} />
+        <OutputReader key={file.path} file={file} files={files} onBack={() => onSelect(null)} onOpen={onSelect} grading={grading} grades={output?.grades?.latest} />
       ) : selected ? (
         <div className="outputs-body">
           <p className="chat-empty" role="alert">{selected} is not among this run's listed outputs.</p>
@@ -90,7 +92,15 @@ export function OutputsView({ doc, selected, onSelect, onClose }: { doc: RunDocu
               {output?.status === 'none-declared' ? 'This run declared no deliverable and its readout names none.' : 'No output file is listed for this run.'}
             </p>
           ) : null}
-          {groups.map((group) => <GroupView key={group.key || 'rest'} group={group} root={output?.declared?.path ?? null} onSelect={onSelect} />)}
+          {output?.readout?.charts?.length ? (
+            <section className="output-group" data-output-group="charts">
+              <header className="output-group-head"><h3>Charts the readout drew</h3></header>
+              <ChartGallery charts={output.readout.charts} />
+            </section>
+          ) : null}
+          {groups.map((group) => (
+            <GroupView key={group.key || 'rest'} group={group} root={output?.declared?.path ?? null} onSelect={onSelect} grading={grading} grades={output?.grades?.latest} />
+          ))}
           {output?.rootOutput && (
             <section className="output-group" data-output-group="root-output">
               <header className="output-group-head"><h3>The root's last output</h3></header>
@@ -115,7 +125,7 @@ function Fallback({ output }: { output: FinalOutput }) {
   )
 }
 
-function GroupView({ group, root, onSelect }: { group: OutputGroup; root: string | null; onSelect: (path: string) => void }) {
+function GroupView({ group, root, onSelect, grading, grades }: { group: OutputGroup; root: string | null; onSelect: (path: string) => void; grading?: Grading; grades?: readonly HumanGrade[] }) {
   const [all, setAll] = useState(false)
   const deliverable = group.deliverable
   const link = externalHref(deliverable?.url)
@@ -157,7 +167,34 @@ function GroupView({ group, root, onSelect }: { group: OutputGroup; root: string
         </button>
       )}
       {deliverable && !group.whole && group.files.length === 0 && <p className="faint">No file is listed under {deliverable.path ?? 'its path'}.</p>}
+      {deliverable && <GradesOf grades={grades} kind="deliverable" id={deliverable.id} />}
+      {deliverable && grading && (
+        <GradeControl
+          api={grading.api}
+          runId={grading.runId}
+          target={{ kind: 'deliverable', id: deliverable.id }}
+          label={`Your grade of ${deliverable.id}`}
+          current={grades?.filter((grade) => grade.target.kind === 'deliverable' && grade.target.id === deliverable.id).at(-1) ?? null}
+          onSaved={grading.onSaved}
+        />
+      )}
     </section>
+  )
+}
+
+/** People's latest grades of one output, each with its comment. */
+function GradesOf({ grades, kind, id }: { grades?: readonly HumanGrade[]; kind: HumanGrade['target']['kind']; id: string }) {
+  const mine = (grades ?? []).filter((grade) => grade.target.kind === kind && grade.target.id === id)
+  if (!mine.length) return null
+  return (
+    <ul className="grades-of" data-grades-of={kind}>
+      {mine.map((grade) => (
+        <li key={`${grade.by}:${grade.category}`}>
+          <b>{grade.score} of 100</b> <span className="faint">{grade.category === 'overall' ? '' : `${grade.category} · `}{grade.by} · {when(grade.at)}</span>
+          {grade.comment && <span> {grade.comment}</span>}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -175,7 +212,7 @@ function FileButton({ file, name, onSelect }: { file: OutputFile; name: string; 
 }
 
 /** One output file drawn by its kind. Nothing a run wrote is executed: HTML and code are shown as text. */
-function OutputReader({ file, files, onBack, onOpen }: { file: OutputFile; files: OutputFile[]; onBack: () => void; onOpen: (path: string) => void }) {
+function OutputReader({ file, files, onBack, onOpen, grading, grades }: { file: OutputFile; files: OutputFile[]; onBack: () => void; onOpen: (path: string) => void; grading?: Grading; grades?: readonly HumanGrade[] }) {
   const kind = outputKind(file)
   const href = pageHref(file.href)
   const tooLarge = file.bytes !== null && file.bytes > DRAW_LIMIT
@@ -221,6 +258,17 @@ function OutputReader({ file, files, onBack, onOpen }: { file: OutputFile; files
         </div>
       </header>
       <div className="output-content" data-output-content={kind}>{body}</div>
+      <GradesOf grades={grades} kind="file" id={file.path} />
+      {grading && (
+        <GradeControl
+          api={grading.api}
+          runId={grading.runId}
+          target={{ kind: 'file', id: file.path }}
+          label="Your grade of this file"
+          current={grades?.filter((grade) => grade.target.kind === 'file' && grade.target.id === file.path).at(-1) ?? null}
+          onSaved={grading.onSaved}
+        />
+      )}
     </article>
   )
 }
@@ -318,9 +366,10 @@ const CHANGE_LABEL: Record<FilePair['change'], string> = { added: 'added', remov
  * removed or changed, each changed text one click from its line diff and each changed image drawn before and after.
  * A comparison of the files, never a measured effect.
  */
-export function OutputChanges({ api, beforeRunId, afterRunId, beforeLabel }: { api: string; beforeRunId: string; afterRunId: string; beforeLabel: string }) {
+export function OutputChanges({ api, beforeRunId, after: afterDoc, beforeLabel, afterLabel }: { api: string; beforeRunId: string; after: RunDocument | null; beforeLabel: string; afterLabel: string }) {
   const before = useDocument<RunDocument>(`${api}/runs/${encodeURIComponent(beforeRunId)}`)
-  const after = useDocument<RunDocument>(`${api}/runs/${encodeURIComponent(afterRunId)}`)
+  const after = { data: afterDoc ?? undefined, error: undefined as string | undefined }
+  const afterRunId = afterDoc?.run.id ?? ''
   const changes = useMemo(
     () => (before.data && after.data ? compareOutputs(before.data.finalOutput, after.data.finalOutput) : null),
     [before.data, after.data],
@@ -332,6 +381,13 @@ export function OutputChanges({ api, beforeRunId, afterRunId, beforeLabel }: { a
     <div className="output-changes" data-output-changes={`${beforeRunId}..${afterRunId}`}>
       <p className="faint">The files each run delivered, compared by content with {beforeLabel}. A comparison of the outputs, not a measured effect.</p>
       {changes.map((change) => <DeliverableChangeView key={change.key || 'rest'} change={change} />)}
+      <details className="output-change" data-output-change="charts">
+        <summary>
+          <b>charts</b>
+          <span className="output-change-counts"> {before.data?.finalOutput?.readout?.charts?.length ?? 0} → {after.data?.finalOutput?.readout?.charts?.length ?? 0} drawn by the readouts</span>
+        </summary>
+        <ChartPairsView before={before.data?.finalOutput?.readout?.charts} after={after.data?.finalOutput?.readout?.charts} beforeLabel={beforeLabel} afterLabel={afterLabel} />
+      </details>
     </div>
   )
 }
