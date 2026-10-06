@@ -2009,6 +2009,27 @@
   .ar-ws .output-file > :nth-child(2) { display: none; }
   .ar-ws .output-image-pair { grid-template-columns: 1fr; }
 }
+/* ---- The plays page: run reliability over the last seven days. */
+.ar-ws .reliability { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr) minmax(320px, 2fr); gap: 14px 28px; align-items: start; padding: 14px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
+.ar-ws .reliability-figure, .ar-ws .reliability-causes { display: grid; gap: 4px; min-width: 0; }
+.ar-ws .reliability-rate { font-size: var(--ar-text-l); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ar-ws .reliability-rate.state-fail { color: var(--ar-c-fail); }
+.ar-ws .reliability-rate.state-ok { color: var(--ar-c-ok); }
+.ar-ws .reliability-days { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; align-items: end; }
+.ar-ws .reliability-day { display: grid; gap: 2px; justify-items: center; font-size: var(--ar-text-s); font-variant-numeric: tabular-nums; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; }
+.ar-ws .reliability-chart { display: grid; gap: 6px; min-width: 0; }
+.ar-ws .reliability-days-key { font-size: var(--ar-text-s); }
+.ar-ws .reliability-bar { position: relative; display: block; width: 100%; height: 64px; border-radius: 4px; background: color-mix(in srgb, var(--ar-fg-faint) 16%, transparent); overflow: hidden; }
+.ar-ws .reliability-bar i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--ar-c-ok); }
+.ar-ws .reliability-bar i.low { background: var(--ar-c-fail); }
+.ar-ws .reliability-causes ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.ar-ws .reliability-causes li { display: grid; gap: 1px; }
+.ar-ws .reliability-causes li .faint { font-size: var(--ar-text-s); }
+.ar-ws .reliability-definition { grid-column: 1 / -1; margin: 0; font-size: var(--ar-text-s); }
+@media (max-width: 1100px) {
+  .ar-ws .reliability { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .reliability-days { gap: 3px; }
+}
 /* ---- The play page: the version graph and its inspector. */
 .ar-ws .lineage-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(440px, 33%); min-height: 600px; height: calc(100vh - var(--ar-sticky-top, 8px) - 40px); background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
 .ar-ws .lineage-pane { overflow: auto; min-width: 0; border-right: 1px solid var(--ar-border); }
