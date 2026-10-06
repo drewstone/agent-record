@@ -16,6 +16,7 @@ import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, w
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
+import { ReliabilityPanel } from './workspace/Reliability.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
 import type { HiddenReason } from './workspace/plays-filter.js'
 import { profileGraph, findProfile } from './workspace/profile-graph.js'
@@ -191,6 +192,7 @@ function PlaysPage({ api }: { api: string }) {
           </div>
           <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         </header>
+        <ReliabilityPanel api={api} />
         <section className="ws-section">
           <div className="table-scroll">
             <table className="data-table runs-table plays-table" data-play-list>
