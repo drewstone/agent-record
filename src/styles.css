@@ -1850,6 +1850,15 @@
 .ar-ws .edge-chip.relation-treatment { color: var(--ar-c-run); }
 .ar-ws .edge-chip.basis-inferred { background: transparent; box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
 .ar-ws .profile-runs td { vertical-align: top; }
+.ar-ws .role-scorecards { display: grid; gap: 6px; margin-top: 14px; min-width: 0; }
+.ar-ws .role-scorecards h4, .ar-ws .role-edit h4 { margin: 10px 0 0; }
+.ar-ws .role-table td { vertical-align: top; }
+.ar-ws .role-table .chips { display: flex; flex-wrap: wrap; gap: 3px; }
+.ar-ws .role-blockers summary { cursor: pointer; color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
+.ar-ws .role-blocker-list h5 { margin: 8px 0 2px; font-family: var(--ar-font-mono); }
+.ar-ws .role-edit { display: grid; gap: 6px; min-width: 0; }
+.ar-ws .role-rules { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.ar-ws .role-rule-text { margin: 4px 0; font-size: var(--ar-text-s); overflow-wrap: anywhere; }
 .ar-ws .score-judges { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .ar-ws .score-chip { display: inline-block; padding: 0 6px; border-radius: 4px; font: var(--ar-text-s)/1.7 var(--ar-font-mono); white-space: nowrap; }
 .ar-ws .score-chip.calibrated { color: var(--ar-fg); background: var(--ws-raised); }

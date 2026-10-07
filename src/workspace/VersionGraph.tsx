@@ -3,6 +3,7 @@ import { versionGraphDocumentSchema } from '../workspace.js'
 import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace.js'
 import { money, useDocument, when } from './data.js'
 import { flagLabel, layoutVersionGraph, runGraphModel, scoreLine } from './version-graph.js'
+import { RunRoles } from './RoleScorecards.js'
 import type { GraphModel, GraphNode } from './version-graph.js'
 
 // Geometry, in CSS pixels at the workspace's type scale; a phone gets narrower lanes so the text keeps its room.
@@ -228,6 +229,7 @@ export function RunVersions({
           {doc.builtAt ? `, read ${when(doc.builtAt)}` : ''}.
         </p>
         <VersionGraph model={model} selected={commit?.id ?? null} onSelect={onSelect} label="Run versions" />
+        {doc.roles && <RunRoles roles={doc.roles} />}
       </section>
       <aside className="inspector-pane" aria-label="Inspector">
         {commit ? <CommitInspector doc={doc} commit={commit} onSelect={onSelect} onOpenAgent={onOpenAgent} /> : <p className="faint">No version to show.</p>}

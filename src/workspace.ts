@@ -649,6 +649,155 @@ const nodeSearchSchema = z
   })
   .catchall(z.unknown())
 
+/** One role's scorecard in one run, as a profile version carries it (discovery-lab runner/profiles.mjs `scorecardSummary`). */
+export const roleScorecardSummarySchema = z
+  .object({
+    runId: z.string(),
+    role: z.string(),
+    builtAt: z.string().nullable().optional(),
+    burden: z.object({ total: z.number() }).catchall(z.unknown()),
+    blockers: z.object({ total: z.number(), bySeverity: z.record(z.string(), z.number()), byClass: z.record(z.string(), z.number()) }).catchall(z.unknown()),
+    regressions: z.number(),
+    rework: z.number(),
+    expectations: z.object({ status: z.string(), owned: z.number(), met: z.number(), partial: z.number(), missing: z.number() }).catchall(z.unknown()),
+    milestones: z.object({ count: z.number(), done: z.number(), medianMs: z.number().nullable() }).catchall(z.unknown()),
+    cost: z
+      .object({
+        acceptedPages: z.number(),
+        perAcceptedPage: z.object({ usd: z.number(), outputTokens: z.number(), complete: z.boolean() }).catchall(z.unknown()).nullable(),
+        unmeasuredNodes: z.number(),
+      })
+      .catchall(z.unknown()),
+  })
+  .catchall(z.unknown())
+
+const blockerItemSchema = z
+  .object({
+    id: z.string(),
+    severity: z.string(),
+    class: z.string(),
+    owners: z.array(z.string()),
+    basis: z.string(),
+    writers: z.array(z.string()).optional(),
+    pages: z.array(z.string()).optional(),
+    raisedAt: z.string().nullable().optional(),
+    source: z.string(),
+    summary: z.string(),
+    resolves: z.string().optional(),
+  })
+  .catchall(z.unknown())
+
+/** One role of one run in full (discovery-lab runner/role-scorecard.mjs). */
+export const roleCardSchema = z
+  .object({
+    role: z.string(),
+    digests: z.array(z.string()),
+    harness: z.string().nullable().optional(),
+    model: z.string().nullable().optional(),
+    nodes: z.number(),
+    milestones: z
+      .object({
+        count: z.number(),
+        done: z.number(),
+        medianMs: z.number().nullable(),
+        items: z.array(z.object({ nodeId: z.string(), label: z.string().nullable(), status: z.string().nullable(), ms: z.number().nullable() }).catchall(z.unknown())),
+      })
+      .catchall(z.unknown()),
+    expectations: z.object({ status: z.string(), owned: z.number(), met: z.number(), partial: z.number(), missing: z.number(), reason: z.string().optional(), source: z.string().optional() }).catchall(z.unknown()),
+    blockers: z
+      .object({
+        total: z.number(),
+        bySeverity: z.record(z.string(), z.number()),
+        byClass: z.record(z.string(), z.object({ count: z.number(), weight: z.number(), ids: z.array(z.string()) }).catchall(z.unknown())),
+        items: z.array(blockerItemSchema),
+      })
+      .catchall(z.unknown()),
+    regressions: z.array(z.object({ tag: z.string(), from: z.string(), checks: z.array(z.string()), share: z.number() }).catchall(z.unknown())),
+    rework: z.object({ cycles: z.number(), items: z.array(z.object({ id: z.string(), cycles: z.number() }).catchall(z.unknown())) }).catchall(z.unknown()),
+    cost: z
+      .object({
+        usd: z.number().nullable(),
+        measuredNodes: z.number(),
+        unmeasuredNodes: z.array(z.string()),
+        acceptedPages: z.number(),
+        acceptedAt: z.string().nullable(),
+        perAcceptedPage: z.object({ usd: z.number(), outputTokens: z.number(), complete: z.boolean() }).catchall(z.unknown()).nullable(),
+      })
+      .catchall(z.unknown()),
+    burden: z.object({ total: z.number(), blockers: z.number(), regressions: z.number(), expectations: z.number(), rework: z.number() }).catchall(z.unknown()),
+  })
+  .catchall(z.unknown())
+
+/** A run's role scorecard: every role, the blocker classes, regressions between tags, and the role versions delivered to it. */
+export const runRoleCardSchema = z
+  .object({
+    available: z.boolean(),
+    reason: z.string().optional(),
+    runId: z.string().optional(),
+    builtAt: z.string().optional(),
+    best: z.object({ tag: z.string() }).catchall(z.unknown()).nullable().optional(),
+    classes: z.record(z.string(), z.number()).optional(),
+    regressions: z
+      .array(z.object({ tag: z.string(), from: z.string(), checks: z.array(z.string()), infrastructure: z.boolean(), shares: z.record(z.string(), z.number()) }).catchall(z.unknown()))
+      .optional(),
+    edits: z
+      .array(
+        z
+          .object({
+            operationId: z.string(),
+            role: z.string(),
+            digest: z.string().nullable(),
+            markers: z.array(z.string()),
+            deliveredAt: z.string().nullable(),
+            effect: z.string(),
+            adopted: z.object({ nodeId: z.string(), label: z.string().nullable(), at: z.string().nullable() }).catchall(z.unknown()).nullable(),
+          })
+          .catchall(z.unknown()),
+      )
+      .optional(),
+    roles: z.array(roleCardSchema).optional(),
+  })
+  .catchall(z.unknown())
+
+/** A role version's edit: each rule with the referee blockers it cites, the size budget, and its replay decision. */
+export const roleEditSchema = z
+  .object({
+    role: z.string(),
+    target: z.string().nullable().optional(),
+    rules: z.array(
+      z
+        .object({
+          id: z.string(),
+          label: z.string().optional(),
+          text: z.string(),
+          check: z.string().optional(),
+          weight: z.number().optional(),
+          evidence: z.array(
+            z.object({ source: z.string(), blocker: z.string().optional(), severity: z.string().optional(), raisedAt: z.string().nullable().optional(), note: z.string().optional() }).catchall(z.unknown()),
+          ),
+        })
+        .catchall(z.unknown()),
+    ),
+    budget: z.object({ before: z.number(), after: z.number(), limit: z.number() }).catchall(z.unknown()).nullable().optional(),
+    evidenceLabel: z.string().nullable().optional(),
+    replay: z
+      .object({
+        decision: z.string(),
+        reason: z.string().nullable().optional(),
+        lift: z.number().nullable().optional(),
+        liftInterval: z.object({ low: z.number(), high: z.number() }).catchall(z.unknown()).nullable().optional(),
+        checksFell: z.array(z.string()).optional(),
+        library: z.string().optional(),
+        tieBreak: z.string().nullable().optional(),
+        source: z.string().optional(),
+      })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
+    source: z.string().optional(),
+  })
+  .catchall(z.unknown())
+
 export const profileNodeSchema = z
   .object({
     digest: profileDigest,
@@ -657,8 +806,9 @@ export const profileNodeSchema = z
     description: z.string().nullable(),
     version: z.string().nullable(),
     play: z.string().nullable(),
-    /** `root`: a run's registered profile; `spawned`: written at runtime by an agent; `proposed`: an optimizer search proposed it. */
-    kind: z.enum(['root', 'spawned', 'proposed']),
+    /** `root`: a run's registered profile; `spawned`: written at runtime by an agent; `proposed`: an optimizer search proposed it;
+     * `proposal`: a readout or the role loop proposed it as a revision. */
+    kind: z.enum(['root', 'spawned', 'proposed', 'proposal']),
     model: z.object({ id: z.string().nullable(), provider: z.string().nullable(), reasoningEffort: z.string().nullable() }),
     harness: z.string().nullable(),
     tools: z.array(z.string()),
@@ -673,6 +823,8 @@ export const profileNodeSchema = z
         .catchall(z.unknown()),
       /** A pursuit-version chain's proposer wrote it. */
       z.object({ kind: z.literal('proposer'), name: z.string(), source: z.string().nullable() }).catchall(z.unknown()),
+      /** A run's readout proposed it. */
+      z.object({ kind: z.literal('readout'), runId: z.string(), readout: z.string().nullable(), source: z.string() }).catchall(z.unknown()),
     ]),
     createdIn: z.string().nullable(),
     createdAt: z.string().nullable(),
@@ -702,6 +854,10 @@ export const profileNodeSchema = z
     ),
     /** The optimizer searches that evaluated this version: its scores per split, its evaluation cost and the decisions. */
     searches: z.array(nodeSearchSchema).optional(),
+    /** Each run a role ran this version in, with that role's scorecard there. */
+    scorecards: z.array(roleScorecardSummarySchema).optional(),
+    /** A role version's rules, the evidence each cites, and its replay decision. */
+    edit: roleEditSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -831,6 +987,8 @@ export const profileGraphDocumentSchema = z
     searches: z.array(profileSearchSchema).optional(),
     /** Keyed by version digest. */
     blame: z.record(z.string(), profileBlameSchema).optional(),
+    /** Keyed by run id: the whole role scorecard of each run whose roles ran a version of this play. */
+    scorecards: z.record(z.string(), runRoleCardSchema).optional(),
   })
   .catchall(z.unknown())
 
@@ -857,6 +1015,8 @@ export const versionGraphDocumentSchema = z
     reason: z.string().optional(),
     refsDigest: z.string().nullable().optional(),
     builtAt: z.string().optional(),
+    /** The run's role scorecard (discovery-lab runner/role-scorecard.mjs). */
+    roles: runRoleCardSchema.optional(),
     rule: z.string().optional(),
     lanes: z
       .array(
@@ -988,5 +1148,9 @@ export type ProfileRun = ProfileNode['runs'][number]
 export type ProfileScore = z.infer<typeof profileScoreSchema>
 export type ProfileDiff = z.infer<typeof profileDiffSchema>
 export type ProfileDiffField = z.infer<typeof profileDiffFieldSchema>
+export type RoleScorecardSummary = z.infer<typeof roleScorecardSummarySchema>
+export type RoleCard = z.infer<typeof roleCardSchema>
+export type RunRoleCard = z.infer<typeof runRoleCardSchema>
+export type RoleEdit = z.infer<typeof roleEditSchema>
 export type ProfileSearch = z.infer<typeof profileSearchSchema>
 export type ProfileBlame = z.infer<typeof profileBlameSchema>
