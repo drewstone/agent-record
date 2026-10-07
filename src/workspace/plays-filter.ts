@@ -30,8 +30,9 @@ function split<T>(items: readonly T[], reason: (item: T) => HiddenReason | null 
 /** The plays a page shows, and the plays the filter holds back counted by reason, whether or not they are shown. */
 export const splitHidden = <T extends PlayRow>(plays: readonly T[], showHidden: boolean) => split(plays, (play) => play.hidden, showHidden)
 
-/** A play's runs the same way. */
-export const splitRuns = <T extends { hidden?: HiddenReason | null }>(runs: readonly T[], showHidden: boolean) => split(runs, (run) => run.hidden, showHidden)
+/** A play's runs the same way; a reason in `keep` is never hidden (the play page keeps its failed runs in view). */
+export const splitRuns = <T extends { hidden?: HiddenReason | null }>(runs: readonly T[], showHidden: boolean, keep: readonly HiddenReason[] = []) =>
+  split(runs, (run) => (run.hidden && !keep.includes(run.hidden) ? run.hidden : null), showHidden)
 
 /** "2 failed · 1 archived": the non-zero counts, in the filter's order. */
 export const hiddenSummary = (counts: Record<HiddenReason, number>) =>

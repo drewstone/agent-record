@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { FindingsFeedDocument } from '../workspace.js'
+import type { FeedItem, FindingsFeedDocument } from '../workspace.js'
 import { stateClass, useDocument } from './data.js'
 
 const KINDS = [
@@ -64,26 +64,33 @@ export function FindingsFeed({ api, query = '', program: selectedProgram }: { ap
       {items.length === 0 ? (
         <p className="ws-status">No findings match.</p>
       ) : (
-        <ol className="feed-grid">
-          {items.map((item) => (
-            <li key={`${item.runId}:${item.sha256}`}>
-              <a className="feed-card" href={`/run/${encodeURIComponent(item.runId)}?section=findings`}>
-                <span className="feed-meta">
-                  <span className="mono clamp-1" title={item.runId}>{item.play} · {shortRunId(item.play, item.runId)}</span>
-                  <span className={`state-pill ${stateClass(item.state)}`}>{(item.state ?? 'state unknown').replaceAll('-', ' ')}</span>
-                </span>
-                <span className="feed-title">{item.ledger ? `${short(item.agentLabel)}'s result` : item.title}</span>
-                <span className="feed-text clamp-3">{plain(item.text)}</span>
-                <span className="feed-tags">
-                  <span className={`ftag kind-${item.kind}`}>{item.ledger ? 'result ledger' : item.kind}</span>
-                  {item.class && <span className="ftag tone-neutral">{item.class.toLowerCase()}</span>}
-                  <span className="faint mono">{short(item.agentLabel)} · {day(item.at)}</span>
-                </span>
-              </a>
-            </li>
-          ))}
-        </ol>
+        <FeedCards items={items} />
       )}
     </section>
+  )
+}
+
+/** Findings as cards, each opening its run's findings: the play, run and how it ended, the title, the text and its kind. */
+export function FeedCards({ items }: { items: readonly FeedItem[] }) {
+  return (
+    <ol className="feed-grid">
+      {items.map((item) => (
+        <li key={`${item.runId}:${item.sha256}`}>
+          <a className="feed-card" href={`/run/${encodeURIComponent(item.runId)}?section=findings`}>
+            <span className="feed-meta">
+              <span className="mono clamp-1" title={item.runId}>{item.play} · {shortRunId(item.play, item.runId)}</span>
+              <span className={`state-pill ${stateClass(item.state)}`}>{(item.state ?? 'state unknown').replaceAll('-', ' ')}</span>
+            </span>
+            <span className="feed-title">{item.ledger ? `${short(item.agentLabel)}'s result` : item.title}</span>
+            <span className="feed-text clamp-3">{plain(item.text)}</span>
+            <span className="feed-tags">
+              <span className={`ftag kind-${item.kind}`}>{item.ledger ? 'result ledger' : item.kind}</span>
+              {item.class && <span className="ftag tone-neutral">{item.class.toLowerCase()}</span>}
+              <span className="faint mono">{short(item.agentLabel)} · {day(item.at)}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
   )
 }

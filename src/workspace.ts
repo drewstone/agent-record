@@ -153,6 +153,8 @@ export const runSummarySchema = z
     purpose: z.string().nullable().optional(),
     /** The record field the purpose came from: acceptance.purpose, task or task.objective. */
     purposeBasis: z.string().nullable().optional(),
+    /** The results and claims its agents wrote, as last derived; null when not derived yet (unknown, not none). */
+    findings: z.object({ results: z.number().int(), claims: z.number().int() }).catchall(z.unknown()).nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -235,6 +237,25 @@ export const playsDocumentSchema = z
 
 export const lineageEdgeKinds = ['supersedes', 'continues', 'retry', 'version'] as const
 
+/** One result or claim an agent wrote, as the findings feed and a play's results list it. */
+export const feedItemSchema = z
+  .object({
+    runId: z.string(),
+    play: z.string(),
+    program: z.string().nullable(),
+    state: z.string().nullable(),
+    startedAt: z.string().nullable(),
+    at: z.string().nullable(),
+    agentLabel: z.string().nullable(),
+    kind: z.string(),
+    title: z.string().nullable(),
+    text: z.string(),
+    class: z.string().nullable(),
+    ledger: z.boolean(),
+    sha256: z.string(),
+  })
+  .catchall(z.unknown())
+
 export const playDocumentSchema = z
   .object({
     schema: z.literal('agent-workspace.play.v1'),
@@ -279,6 +300,10 @@ export const playDocumentSchema = z
         .catchall(z.unknown()),
     ),
     gaps: z.array(gapSchema),
+    /** The newest run that settled with a winner: the play's best result, a separate fact from its latest run. */
+    best: z.string().nullable().optional(),
+    /** The play's results and claims, newest run first, each run's result ledgers first. */
+    findings: z.array(feedItemSchema).optional(),
   })
   .catchall(z.unknown())
 
@@ -371,8 +396,11 @@ export const runProgressSchema = z
           node: z.string(),
           label: z.string(),
           status: z.string(),
-          startedAt: time,
-          endedAt: time,
+          parent: z.string().nullable().optional(),
+          depth: z.number().int().nullable().optional(),
+          /** Null for an agent with no record yet. */
+          startedAt: time.nullable(),
+          endedAt: time.nullable(),
           usd: usd,
           usdEstimated: z.boolean(),
           model: z.string().nullable(),
@@ -382,7 +410,11 @@ export const runProgressSchema = z
     /** Each brief's figures when it was written. */
     briefs: z.array(z.object({ sequence: z.number().int(), at: time, runUsd: usd, files: z.number().int().nullable(), final: z.boolean() }).catchall(z.unknown())),
     /** The figures at each refresh, oldest first; a brief's own refresh is one of them. */
-    samples: z.array(z.object({ at: time, runUsd: usd, files: z.number().int().nonnegative(), working: z.number().int().nonnegative() }).catchall(z.unknown())),
+    samples: z.array(
+      z.object({ at: time, runUsd: usd, files: z.number().int().nonnegative(), working: z.number().int().nonnegative(), sequence: z.number().int().optional() }).catchall(z.unknown()),
+    ),
+    /** When each record the document reads last changed. */
+    sources: z.record(z.string(), time.nullable()).optional(),
   })
   .catchall(z.unknown())
 
@@ -597,25 +629,7 @@ export const findingsFeedSchema = z
     builtAt: z.string(),
     since: z.string(),
     runs: z.object({ considered: z.number().int(), withFindings: z.number().int(), results: z.number().int(), claims: z.number().int() }).catchall(z.unknown()),
-    items: z.array(
-      z
-        .object({
-          runId: z.string(),
-          play: z.string(),
-          program: z.string().nullable(),
-          state: z.string().nullable(),
-          startedAt: z.string().nullable(),
-          at: z.string().nullable(),
-          agentLabel: z.string().nullable(),
-          kind: z.string(),
-          title: z.string().nullable(),
-          text: z.string(),
-          class: z.string().nullable(),
-          ledger: z.boolean(),
-          sha256: z.string(),
-        })
-        .catchall(z.unknown()),
-    ),
+    items: z.array(feedItemSchema),
   })
   .catchall(z.unknown())
 
@@ -1193,6 +1207,7 @@ export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type Findings = z.infer<typeof findingsSchema>
 export type FindingsFeedDocument = z.infer<typeof findingsFeedSchema>
+export type FeedItem = z.infer<typeof feedItemSchema>
 
 type Bin = { lo: number; hi: number; n: number }
 /** The Discovery overview (`agent-workspace.overview.v1`, served at `overview`): runs, findings, tokens, money, the

@@ -113,8 +113,9 @@ export function ChartCard({ title, note, legend, wide, children }: { title: stri
   )
 }
 
-/** Bars per day, stacked by series, on one axis; hovering a day lists every series' value for it. */
-export function DayBars({ days, series, format = compact, rows = 13, missing = 'No runs started' }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number; missing?: string }) {
+/** Bars per day (or per any label: `tick` shortens it on the axis), stacked by series, on one axis; hovering a bar lists
+ * every series' value for it, and `onOpen` makes a bar a link. */
+export function DayBars({ days, series, format = compact, rows = 13, missing = 'No runs started', tick = (day: string) => day.slice(5), onOpen }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number; missing?: string; tick?: (day: string) => string; onOpen?: (index: number) => void }) {
   const [ref, width, em] = useWidth<HTMLDivElement>()
   const height = Math.round(rows * em)
   const [tip, setTip] = useState<Tip | null>(null)
@@ -154,7 +155,7 @@ export function DayBars({ days, series, format = compact, rows = 13, missing = '
                   return <rect key={s.name} x={x} y={y1} width={bar} height={Math.max(2, y0 - y1 - 2)} rx={2} fill={s.color} />
                 })}
                 {(i === days.length - 1 || (i % labelEvery === 0 && i + labelGap <= days.length - 1)) && (
-                  <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{day.slice(5)}</text>
+                  <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{tick(day)}</text>
                 )}
                 <rect
                   x={left + i * slot}
@@ -162,6 +163,8 @@ export function DayBars({ days, series, format = compact, rows = 13, missing = '
                   width={slot}
                   height={plotH}
                   fill="transparent"
+                  style={onOpen ? { cursor: 'pointer' } : undefined}
+                  onClick={onOpen ? () => onOpen(i) : undefined}
                   onMouseEnter={() =>
                     setTip({
                       x: Math.min(left + i * slot + slot + 8, width - em * 14),

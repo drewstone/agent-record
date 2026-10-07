@@ -45,10 +45,10 @@ export function RunProgressView({ doc }: { doc: RunDocument }) {
         {doc.finalOutput?.readout?.charts?.length ? ' The readout charts are under Readout.' : ''}
       </p>
     )
-  const start = progress.startedAt ? Date.parse(progress.startedAt) : Math.min(...progress.agents.map((agent) => Date.parse(agent.startedAt)))
   const rows = progress.agents
-    .map((agent) => ({ label: agent.label, start: Date.parse(agent.startedAt), end: Date.parse(agent.endedAt), state: agent.status, note: agent.model ?? undefined }))
+    .flatMap((agent) => (agent.startedAt ? [{ label: agent.label, start: Date.parse(agent.startedAt), end: Date.parse(agent.endedAt ?? agent.startedAt), state: agent.status, note: agent.model ?? undefined }] : []))
     .sort((a, b) => a.start - b.start)
+  const start = progress.startedAt ? Date.parse(progress.startedAt) : Math.min(...rows.map((row) => row.start))
   const states = [...new Set(rows.map((row) => row.state))]
   const priced = progress.agents
     .filter((agent) => agent.usd !== null && agent.usd > 0)
@@ -62,7 +62,7 @@ export function RunProgressView({ doc }: { doc: RunDocument }) {
     <section className="run-panel run-progress" aria-label="Progress" data-progress={progress.final ? 'final' : 'live'}>
       <p className="faint run-progress-note">
         {progress.final ? 'Final figures' : 'Live figures'} as of {when(progress.generatedAt)}
-        {progress.final ? '' : ', refreshed every few minutes while the run runs'}. Spend is API-equivalent ({progress.spend.provenance ?? 'basis not stated'}): every
+        {progress.final ? '' : ', following the run\'s records within a minute'}. Spend is API-equivalent ({progress.spend.provenance ?? 'basis not stated'}): every
         token at API list price, whoever paid. Each brief&rsquo;s figures are marked.
       </p>
       <div className="ov-grid run-progress-grid">
