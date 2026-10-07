@@ -1144,6 +1144,7 @@ export interface OverviewPlayWeek {
   play: string; title: string; running: number; runs: { runId: string; state: string; startedAt: string | null; lostHours: number }[]; runCount: number
   results: number; claims: number; findingsPending?: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
   subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null; costUnknownRuns?: number
+  apiKnownRuns?: number; sandboxKnownRuns?: number
 }
 export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
 
@@ -1162,7 +1163,7 @@ export interface OverviewDocument {
     byDay: { input: number[]; output: number[]; cacheRead: number[]; cacheWrite: number[] }
     harness: { harness: string; agents: number; measured: number; output: number; list: number }[]
     agentOutputHistogram: Bin[]
-    topPlays: { play: string; output: number; input: number; cacheRead: number; list: number; paid: number; subscription?: number; api?: number; sandbox?: number; runs: number; claims: number }[]
+    topPlays: { play: string; output: number; input: number; cacheRead: number; list: number; paid: number; subscription?: number; api?: number | null; sandbox?: number | null; apiKnown?: number; sandboxKnown?: number; runs: number; claims: number }[]
   }
   money: {
     costByDay?: { subscription: (number | null)[]; otherList: (number | null)[]; api: (number | null)[]; sandbox: (number | null)[] }
