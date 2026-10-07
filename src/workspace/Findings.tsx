@@ -127,7 +127,7 @@ function StopCard({ findings, doc }: { findings: Findings; doc: RunDocument }) {
             <span className="mono">end</span>
             <span>
               <b>driver</b> stopped{stop.attempts ? ` after ${plural(stop.attempts, 'attempt')}` : ''}
-              {stop.firstFailure ? `; first failure: ${stop.firstFailure}` : ''}
+              {stop.firstFailure ? `; first driver failure: ${stop.firstFailure}` : ''}
             </span>
           </li>
         )}
@@ -245,7 +245,8 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
   if (!findings || (!findings.total && !findings.agents.some((agent) => agent.lastWords))) return null
   const pageHref = (item: FindingItem) => `${runUrl}/page/${item.sha256}`
   const shown = all || hiddenOpen ? groups.lead : groups.lead.slice(0, SHOWN)
-  const agentsWithPages = findings.agents.filter((agent) => agent.pages > 0).length
+  const agentsWithLead = new Set(groups.lead.map((item) => item.agent).filter(Boolean)).size
+  const retainedPageAuthors = new Set(findings.items.map((item) => item.agent).filter(Boolean)).size
   const notSettled = doc.run.state !== 'winner' && doc.run.state !== 'running'
   return (
     <section className="run-findings" aria-label="What this run found" data-findings={findings.total}>
@@ -261,8 +262,13 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
           </div>
         ) : (
           <p className="findings-lead">
-            {plural(groups.lead.length, 'result or claim')} written by {plural(agentsWithPages, 'agent')}.
+            {groups.lead.length
+              ? `${plural(groups.lead.length, 'result or claim')} written by ${plural(agentsWithLead, 'agent')}.`
+              : 'No result or claim pages recorded.'}
           </p>
+        )}
+        {!groups.lead.length && doc.run.nodes !== null && findings.items.length > 0 && (
+          <p className="faint card-note">This run has {plural(doc.run.nodes, 'agent node')}; {plural(retainedPageAuthors, 'agent')} wrote its {plural(findings.items.length, 'retained page')}.</p>
         )}
         {notSettled && groups.lead.length > 0 && (
           <p className="findings-caution">

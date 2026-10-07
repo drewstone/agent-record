@@ -2537,6 +2537,8 @@
 .ar-ws .ov-costs dt { color: var(--ar-fg-muted); }
 .ar-ws .ov-costs dd { margin: 0; font: 650 1.5em/1.1 var(--ar-font-body); font-variant-numeric: tabular-nums; color: var(--ar-fg); }
 @media (max-width: 760px) {
+  .ar-ws .ov-page, .ar-ws .ov-section { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .ov-card { overflow-wrap: anywhere; }
   .ar-ws .ov-week ol { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .8em; }
   .ar-ws .ov-week .ov-week-head { display: none; }
   .ar-ws .ov-week-play, .ar-ws .ov-week-runs, .ar-ws .ov-week-found { grid-column: 1 / -1; }
@@ -2547,6 +2549,10 @@
 /* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
    four never leaves one card beside two empty slots. */
 .ar-ws .ov-grid { display: flex; flex-wrap: wrap; gap: 1em; }
+.ar-ws .ov-loss-total { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: .25em .9em; padding: .65em 1em; border-left: 3px solid var(--ar-c-run); border-radius: 6px; background: var(--ws-panel); }
+.ar-ws .ov-loss-total-label { color: var(--ar-fg-muted); font-size: .9em; }
+.ar-ws .ov-loss-total strong { color: var(--ar-c-run); font-size: 1.7em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ar-ws .ov-loss-total-scope { color: var(--ar-fg-faint); font-size: .82em; }
 .ar-ws .ov-run-trends { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26em), 1fr)); gap: 1em; min-width: 0; }
 .ar-ws .ov-card { flex: 1 1 min(100%, 30em); margin: 0; display: grid; gap: .7em; align-content: start; padding: 1em 1.2em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; box-sizing: border-box; }
 .ar-ws .ov-card.wide { flex-basis: 100%; }
