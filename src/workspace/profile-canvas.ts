@@ -71,7 +71,7 @@ export interface CanvasModel {
 
 export const NODE_W = 264
 export const NODE_H = 96
-export const COL_W = NODE_W + 96
+export const COL_W = NODE_W + 150
 export const ROW_H = NODE_H + 22
 /** A profile with more runtime-written children than this shows them as one expandable cluster. */
 export const CLUSTER_MIN = 10

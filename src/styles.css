@@ -2617,7 +2617,8 @@
 .ar-ws .pc-edge.cross { stroke: var(--ar-fg); stroke-width: 2.8; }
 .ar-ws .pc-edge.hot { stroke: var(--ws-accent); opacity: 1; stroke-width: 2.8; }
 .ar-ws .pc-edge.dim { opacity: 0.18; }
-.ar-ws .pc-edge-label { position: absolute; transform: translate(-50%, -50%); padding: 1px 8px; border: 1px solid var(--ar-border); border-radius: 999px; background: var(--ws-panel); color: var(--ar-fg-muted); font: 600 13px/1.5 var(--ar-font-mono); white-space: nowrap; pointer-events: none; transition: opacity 120ms ease; }
+.ar-ws .pc-edge-label { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; max-width: 140px; padding: 1px 8px; border: 1px solid var(--ar-border); border-radius: 8px; background: var(--ws-panel); color: var(--ar-fg-muted); font: 600 12px/1.45 var(--ar-font-mono); white-space: nowrap; pointer-events: none; transition: opacity 120ms ease; }
+.ar-ws .pc-edge-label small { max-width: 124px; overflow: hidden; text-overflow: ellipsis; font: 500 11px/1.4 var(--ar-font-mono); color: var(--ar-fg-faint); }
 .ar-ws .pc-edge-label.cross { color: var(--ar-fg); border-color: var(--ar-border-strong); }
 .ar-ws .pc-edge-label.dim { opacity: 0.25; }
 .ar-ws .pc-node { position: absolute; display: grid; grid-template-rows: auto auto auto; align-content: center; gap: 3px; padding: 9px 12px; border: 1px solid var(--ar-border-strong); border-radius: 10px; background: var(--ws-panel); color: var(--ar-fg); font: inherit; font-size: var(--ar-text-s); text-align: left; cursor: pointer; box-shadow: 0 1px 2px color-mix(in srgb, var(--ar-fg) 8%, transparent); transition: opacity 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }

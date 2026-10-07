@@ -14,7 +14,7 @@ const runHref = (runId: string) => `/run/${encodeURIComponent(runId)}`
 const playHref = (play: string) => `/play/${encodeURIComponent(play)}`
 const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k))
 const KIND_LABEL: Record<string, string> = { root: 'registered', spawned: 'runtime', proposed: 'optimizer', proposal: 'proposed' }
-const RELATION_TEXT: Record<string, string> = { authored: 'written by', replaced: 'restart of', revision: 'revision of', treatment: 'treatment of' }
+const RELATION_TEXT: Record<string, string> = { authored: 'written at runtime by an agent running', replaced: 'restarted from', revision: 'revised from', treatment: 'the treatment arm of' }
 
 type View = { x: number; y: number; k: number }
 
@@ -139,7 +139,13 @@ function CanvasPane({
   const viewport = useRef<HTMLDivElement>(null)
   const buttons = useRef(new Map<string, HTMLButtonElement>())
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
-  const [view, setView] = useState<View | null>(null)
+  const [view, setRawView] = useState<View | null>(null)
+  // Until the reader moves the canvas, the opening view follows the viewport's size as the page settles.
+  const touched = useRef(false)
+  const setView = (next: View | null | ((current: View | null) => View | null)) => {
+    touched.current = true
+    setRawView(next)
+  }
   const viewRef = useRef<View | null>(null)
   viewRef.current = view
   const [hover, setHover] = useState<string | null>(null)
@@ -175,18 +181,16 @@ function CanvasPane({
   )
 
   // The opening view: the whole canvas when it reads at half size or more, else the focus at a readable size.
-  const opened = useRef(false)
   useEffect(() => {
-    if (opened.current || !size) return
-    opened.current = true
+    if (touched.current || !size) return
     const fit = fitView()
     const start = selectedId ?? model.focus
     const node = start ? model.byId.get(start) : undefined
-    if (fit && (fit.k >= 0.55 || !node)) return setView(fit)
+    if (fit && (fit.k >= 0.55 || !node)) return setRawView(fit)
     // Too wide to read whole: open at a readable size with the focus's parent column at the left edge.
     const k = 0.85
     const left = PAD + Math.max(0, node!.x - (node!.parent ? COL_W : 0))
-    setView({ k, x: 24 - left * k, y: size.h / 2 - (PAD + node!.y + NODE_H / 2) * k })
+    setRawView({ k, x: 24 - left * k, y: size.h / 2 - (PAD + node!.y + NODE_H / 2) * k })
   }, [size, fitView, centred, model.focus, selectedId])
 
   // A selection made outside the canvas (a link in the inspector, the URL) is brought into view.
@@ -363,7 +367,6 @@ function CanvasPane({
             .filter((edge) => edge.relation !== 'authored')
             .map((edge) => {
               const label = edgeLabel(model, edge, lit, shortRun)
-              if (!label) return null
               const from = model.byId.get(edge.from)!
               const to = model.byId.get(edge.to)!
               return (
@@ -372,7 +375,8 @@ function CanvasPane({
                   className={`pc-edge-label rel-${edge.relation}${edge.crossPlay ? ' cross' : ''}${lit && !(lit.has(edge.from) && lit.has(edge.to)) ? ' dim' : ''}`}
                   style={{ left: PAD + (from.x + NODE_W + to.x) / 2, top: PAD + (from.y + to.y + NODE_H) / 2 }}
                 >
-                  {label}
+                  {label.head}
+                  {label.sub && <small title={label.sub}>{label.sub}</small>}
                 </span>
               )
             })}
@@ -491,14 +495,28 @@ function edgeClass(edge: CanvasEdge, lit: Set<string> | null): string {
   return ['pc-edge', `rel-${edge.relation}`, edge.home ? 'home' : 'secondary', edge.crossPlay && 'cross', hot && 'hot', lit && !hot && 'dim'].filter(Boolean).join(' ')
 }
 
-/** A lineage edge's label: its relation, whether it crosses plays, and the run that made it when that says something new. */
-function edgeLabel(model: CanvasModel, edge: CanvasEdge, lit: Set<string> | null, shortRun: (runId: string) => string): string | null {
+/** A lineage edge's label: its relation (and whether it crosses plays) over the run that made it, when that says something new. */
+function edgeLabel(model: CanvasModel, edge: CanvasEdge, lit: Set<string> | null, shortRun: (runId: string) => string): { head: string; sub: string | null } {
   const to = model.byId.get(edge.to)
   const hot = !!lit && lit.has(edge.from) && lit.has(edge.to)
-  const origin = originText(edge, shortRun)
   const telling = !!edge.origin && (hot || !to?.inScope || edge.originKind === 'proposed' || edge.crossPlay)
   const relation = edge.relation === 'replaced' ? 'restart' : edge.relation
-  return [relation, edge.crossPlay ? 'across plays' : null, telling ? origin : null].filter(Boolean).join(' · ')
+  return { head: edge.crossPlay ? `${relation} · across plays` : relation, sub: telling ? originText(edge, shortRun) : null }
+}
+
+/** The origin chain as rows: each step with the edge to the step below it, a run of restarts of one role folded into one row. */
+function chainRows(chain: { node: CanvasNode; edge: CanvasEdge | null }[]) {
+  const rows: { step: CanvasNode; count: number; edge: CanvasEdge | null; next: CanvasNode | null }[] = []
+  const nameOf = (node: CanvasNode) => node.node?.name ?? node.node?.label ?? node.id
+  for (let i = 0; i < chain.length; i++) {
+    const step = chain[i]!
+    let count = 1
+    let j = i
+    while (chain[j]?.edge?.relation === 'replaced' && chain[j + 1] && chain[j + 1]!.edge?.relation === 'replaced' && nameOf(chain[j + 1]!.node) === nameOf(step.node)) j++, count++
+    rows.push({ step: step.node, count, edge: chain[j]!.edge, next: chain[j + 1]?.node ?? null })
+    i = j
+  }
+  return rows
 }
 
 /** Each run's summary (with its spend) from the play documents of the given plays; loaded once per page. */
@@ -612,9 +630,10 @@ function CanvasInspector({
       <section data-origin-chain>
         <h3>Where it came from</h3>
         <ol className="pc-chain">
-          {chain.map(({ node: step, edge }, i) => {
+          {chainRows(chain).map(({ step, count, edge, next }, i) => {
             const profile = step.node
             const label = profile ? (profile.name ?? profile.label ?? profile.short) : 'runtime profiles'
+            const nextLabel = next?.node ? (next.node.name ?? next.node.label ?? next.node.short) : null
             return (
               <li key={step.id} className={step.foreign ? 'foreign' : undefined}>
                 {i === 0 ? <b>{label}</b> : <button type="button" className="link-button" onClick={() => onChoose(step.id)}>{label}</button>}{' '}
@@ -622,7 +641,7 @@ function CanvasInspector({
                 {step.foreign && step.play && <> <a className="chip mono pc-foreign-chip" href={playHref(step.play)}>{step.play}</a></>}
                 {edge && (
                   <div className="faint pc-chain-edge">
-                    {RELATION_TEXT[edge.relation] ?? edge.relation}
+                    {count > 1 ? `restarted ${count} times, first from` : (RELATION_TEXT[edge.relation] ?? edge.relation)} {nextLabel ?? 'the version below'}
                     {edge.origin && <> · {originVerb(edge)} <a className="mono" href={runHref(edge.origin)}>{shortRun(edge.origin)}</a></>}
                     {edge.basis === 'inferred' && ' · inferred from records'}
                   </div>
