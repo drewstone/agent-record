@@ -2544,7 +2544,7 @@
   .ar-ws .ov-attention-text small:first-of-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ar-ws .ov-consumption-item { padding: .3em .45em; grid-template-rows: auto auto 1.25em; }
   .ar-ws .ov-consumption-item .ov-spark { height: 1.25em; }
-  .ar-ws .ov-week li { padding-block: .08em; }
+  .ar-ws .ov-week li:not(.ov-week-head):not(.ov-week-total) { line-height: 1.3; padding-block: .2em; }
 }
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
 .ar-ws .ov-week { gap: .6em; }
