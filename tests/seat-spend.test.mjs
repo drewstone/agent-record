@@ -3,8 +3,8 @@ import test from 'node:test'
 import { runDocumentSchema, spendSchema } from '../dist/workspace.js'
 
 const spend = {
-  paidUsd: null, sandboxUsd: null, routerUsd: null, costBasisUsd: null, listUsd: null,
-  tokens: null, sandboxHours: null, paidKnown: false, sources: [], gaps: [],
+  paidUsd: null, subscriptionUsd: null, apiUsd: null, sandboxUsd: null, routerUsd: null, costBasisUsd: null, listUsd: null,
+  tokens: null, sandboxHours: null, paidKnown: false, subscriptionKnown: false, sources: [], gaps: [],
 }
 
 test('seat allowance values and provenance keep measured, partial, and unknown distinct', () => {

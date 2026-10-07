@@ -150,7 +150,7 @@ function PlaysPage({ api }: { api: string }) {
   const keys = useMemo(() => new Map((dimensions.data?.dimensions ?? []).map((dimension) => [dimension.id, dimension.key])), [dimensions.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.paidUsd ?? 0) + (spend.listUsd ?? 0)
+    const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.apiUsd ?? 0) + (spend.sandboxUsd ?? 0)
     const matching = (plays.data?.plays ?? []).filter(
       (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
     )
@@ -230,8 +230,9 @@ function PlaysPage({ api }: { api: string }) {
                   <th>State</th>
                   <th>Latest run</th>
                   <th className="num">Runs</th>
-                  <th className="num">Paid</th>
-                  <th className="num">List price</th>
+                  <th className="num" title="Subscription model use at API prices; not billed">Subscription use</th>
+                  <th className="num" title="Model API charges billed through Router">Model API</th>
+                  <th className="num" title="Billed sandbox compute">Sandbox compute</th>
                   <th>Flags</th>
                 </tr>
               </thead>
@@ -269,11 +270,12 @@ function PlaysPage({ api }: { api: string }) {
                       <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
                         {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
                       </td>
-                      <td className={`num ${play.spend.paidUsd === null ? 'unknown' : ''}`}>
-                        {money(play.spend.paidUsd)}{!play.spend.paidKnown && play.spend.paidUsd !== null ? '+' : ''}
+                      <td className={`num ${play.spend.subscriptionUsd === null ? 'unknown' : ''}`}>
+                        {money(play.spend.subscriptionUsd)}{!play.spend.subscriptionKnown && play.spend.subscriptionUsd !== null ? '+' : ''}
                       </td>
-                      <td className={`num ${play.spend.listUsd === null ? 'unknown' : ''}`}>
-                        {money(play.spend.listUsd)}{play.spend.listKnown === false && play.spend.listUsd !== null ? '+' : ''}
+                      <td className={`num ${play.spend.apiUsd === null ? 'unknown' : ''}`}>{money(play.spend.apiUsd)}</td>
+                      <td className={`num ${play.spend.sandboxUsd === null ? 'unknown' : ''}`}>
+                        {money(play.spend.sandboxUsd)}
                       </td>
                       <td className="headline-cell">
                         {flags.map(([dimension, value]) => (
@@ -491,8 +493,9 @@ function RunsTable({
             <th>Started</th>
             <th>Duration</th>
             <th>Agents</th>
-            <th className="num">Paid</th>
-            <th className="num">List price</th>
+            <th className="num" title="Subscription model use at API prices; not billed">Subscription use</th>
+            <th className="num" title="Model API charges billed through Router">Model API</th>
+            <th className="num" title="Billed sandbox compute">Sandbox compute</th>
             <th>Conversation</th>
             <th>Flags</th>
           </tr>
@@ -523,12 +526,11 @@ function RunsTable({
               <td>{when(run.startedAt)}</td>
               <td>{duration(run.durationMs)}</td>
               <td>{run.nodes ?? '—'}{run.depth !== null && run.nodes ? <small className="faint"> depth {run.depth}</small> : null}</td>
-              <td className={`num ${run.spend.paidUsd === null ? 'unknown' : ''}`} title={!run.spend.paidKnown && run.spend.paidUsd !== null ? 'Paid is not fully known' : undefined}>
-                {money(run.spend.paidUsd)}{!run.spend.paidKnown && run.spend.paidUsd !== null ? '+' : ''}
+              <td className={`num ${run.spend.subscriptionUsd === null ? 'unknown' : ''}`}>
+                {money(run.spend.subscriptionUsd)}{!run.spend.subscriptionKnown && run.spend.subscriptionUsd !== null ? '+' : ''}
               </td>
-              <td className={`num ${run.spend.listUsd === null ? 'unknown' : ''}`} title={run.spend.listKnown === false ? 'Usage of some agents is unknown' : undefined}>
-                {money(run.spend.listUsd)}{run.spend.listKnown === false && run.spend.listUsd !== null ? '+' : ''}
-              </td>
+              <td className={`num ${run.spend.apiUsd === null ? 'unknown' : ''}`}>{money(run.spend.apiUsd)}</td>
+              <td className={`num ${run.spend.sandboxUsd === null ? 'unknown' : ''}`}>{money(run.spend.sandboxUsd)}</td>
               <td>
                 {run.record.capture ? (
                   <CaptureBar capture={run.record.capture} />
@@ -572,7 +574,8 @@ function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (r
       <SpendSummary spend={play.spend} />
       <h3>By run</h3>
       <SpendBars
-        rows={play.runs.map((run) => ({ label: shortRun(play.id, run.id), paid: run.spend.paidUsd, list: run.spend.listUsd, paidKnown: run.spend.paidKnown, listKnown: run.spend.listKnown, href: run.id }))}
+        rows={play.runs.map((run) => ({ label: shortRun(play.id, run.id), subscription: run.spend.subscriptionUsd, api: run.spend.apiUsd,
+          sandbox: run.spend.sandboxUsd, subscriptionKnown: run.spend.subscriptionKnown, href: run.id }))}
         onOpen={(row) => row.href && onOpen(row.href)}
       />
       {byModel(play.spend).length > 0 && (
@@ -898,7 +901,7 @@ function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
       )}
       {Object.values(doc.spend.nodes).some((spend) => spend.sandboxes.length > 0) && (
         <table className="data-table">
-          <thead><tr><th>Sandbox</th><th className="num">Paid</th><th className="num">Cost basis</th><th className="num">Hours</th></tr></thead>
+          <thead><tr><th>Sandbox</th><th className="num">Compute billed</th><th className="num">Cost basis</th><th className="num">Hours</th></tr></thead>
           <tbody>
             {Object.entries(doc.spend.nodes).flatMap(([node, spend]) => spend.sandboxes.map((box) => (
               <tr key={`${node}:${box.id}`}>
@@ -1253,7 +1256,8 @@ function RunPanels({
           .filter((item) => item.kind !== 'finding')
           .map((item) => {
             const spend = doc.spend.nodes[item.id]
-            return { label: item.label, paid: spend?.paidUsd ?? null, list: spend?.listUsd ?? null, paidKnown: spend?.paidKnown, listKnown: spend?.listKnown, href: item.id }
+            return { label: item.label, subscription: spend?.subscriptionUsd ?? null, api: spend?.apiUsd ?? null,
+              sandbox: spend?.sandboxUsd ?? null, subscriptionKnown: spend?.subscriptionKnown, href: item.id }
           })}
         onOpen={(row) => row.href && onSelectAgent(row.href)}
       />

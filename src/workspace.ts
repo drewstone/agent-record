@@ -42,6 +42,10 @@ const seatSegment = z.object({
 export const spendSchema = z
   .object({
     paidUsd: usd,
+    /** Subscription model use priced at API rates; never billed as a model API charge. */
+    subscriptionUsd: usd,
+    /** Model API charge from the Router ledger. */
+    apiUsd: usd,
     sandboxUsd: usd,
     routerUsd: usd,
     costBasisUsd: usd,
@@ -63,6 +67,7 @@ export const spendSchema = z
       seatWeeks, known: z.boolean(),
     }).catchall(z.unknown())).optional(),
     paidKnown: z.boolean(),
+    subscriptionKnown: z.boolean(),
     /** False when some agent's usage is unknown: `listUsd` then covers only the agents whose usage is known. */
     listKnown: z.boolean().optional(),
     /** "ledger:<keyId>", "keeper:sandbox-cost", "record:usage" */
@@ -78,6 +83,9 @@ export const spendSchema = z
             model: z.string(),
             paidUsd: usd,
             listUsd: usd,
+            subscriptionUsd: usd,
+            apiUsd: usd,
+            sandboxUsd: usd,
             tokens: z.number().nonnegative().nullable(),
             agents: z.number().int().nonnegative(),
           })
@@ -164,9 +172,11 @@ export const playInputSchema = z
     profile: z
       .object({
         name: z.string().nullable(),
+        version: z.string().nullable(),
+        /** The root's admitted canonical profile identity, when its spawn journal survived. */
+        digest: z.string().regex(/^sha256:[0-9a-f]{64}$/).nullable(),
         harness: z.string().nullable(),
         model: z.string().nullable(),
-        provider: z.string().nullable(),
         reasoningEffort: z.string().nullable(),
         credentialSource: z.string().nullable(),
         tools: z.array(z.string()),

@@ -3,7 +3,8 @@ import test from 'node:test'
 import { playsDocumentSchema, runSummarySchema } from '../dist/workspace.js'
 import { hiddenSummary, splitHidden, splitRuns } from '../src/workspace/plays-filter.ts'
 
-const spend = { paidUsd: null, sandboxUsd: null, routerUsd: null, costBasisUsd: null, listUsd: null, tokens: null, sandboxHours: null, paidKnown: false, sources: [], gaps: [] }
+const spend = { paidUsd: null, subscriptionUsd: null, apiUsd: null, sandboxUsd: null, routerUsd: null,
+  costBasisUsd: null, listUsd: null, tokens: null, sandboxHours: null, paidKnown: false, subscriptionKnown: false, sources: [], gaps: [] }
 const counts = (shown, failed = 0, smoke = 0, archived = 0) => ({ shown, failed, smoke, archived })
 const play = (id, fields = {}) => ({ id, title: id, program: 'research', line: null, playBasis: 'run-id', state: 'no-winner', latestRun: null, runCount: 1, spend, headline: {}, hidden: null, counts: counts(1), ...fields })
 
