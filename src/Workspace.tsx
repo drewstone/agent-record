@@ -581,10 +581,12 @@ function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (r
       {byModel(play.spend).length > 0 && (
         <>
           <h3>By model</h3>
+          <p className="faint">The Router bill cannot be split by model.</p>
           <SpendBars rows={byModel(play.spend)} />
         </>
       )}
       <SeatWeeksPanel spend={play.spend} />
+      <p className="faint">Activity and waste price recorded model usage at API rates; they do not allocate charges.</p>
       <div className="breakdown-grid">
         <BreakdownTable title="By activity" rows={(play.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
         <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
@@ -1264,10 +1266,12 @@ function RunPanels({
       {byModel(doc.spend).length > 0 && (
         <>
           <h3>By model</h3>
+          <p className="faint">The Router bill cannot be split by model.</p>
           <SpendBars rows={byModel(doc.spend)} />
         </>
       )}
       <SeatWeeksPanel spend={doc.spend} />
+      <p className="faint">Activity and waste price recorded model usage at API rates; they do not allocate charges.</p>
       <div className="breakdown-grid">
         <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
         <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />

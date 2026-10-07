@@ -123,7 +123,7 @@ export function BreakdownTable({
   const unmeasured = [
     rows.some((row) => row.ms === null) && 'time',
     rows.some((row) => row.tokens === null) && 'tokens',
-    rows.some((row) => row.listUsd === null) && 'list price',
+    rows.some((row) => row.listUsd === null) && 'usage price',
   ].filter(Boolean).join(', ')
   return (
     <section className="breakdown">
@@ -137,7 +137,7 @@ export function BreakdownTable({
             </span>
             <span className="breakdown-track">{row.ms === null ? <i className="unknown" style={{ width: '100%' }} /> : <i style={{ width: `${(row.ms / max) * 100}%` }} />}</span>
             <span className="breakdown-value">
-              {row.ms === null ? '—' : duration(row.ms)} · {row.tokens === null ? '—' : tokens(row.tokens)} tokens · {row.listUsd === null ? '—' : money(row.listUsd)} list
+              {row.ms === null ? '—' : duration(row.ms)} · {row.tokens === null ? '—' : tokens(row.tokens)} tokens · {row.listUsd === null ? '—' : money(row.listUsd)} at API prices
             </span>
           </div>
         ))}
@@ -151,7 +151,7 @@ export function BreakdownTable({
 export function byModel(spend: Spend | null | undefined) {
   return (spend?.byModel ?? [])
     .map((row) => ({ label: row.model, subscription: row.subscriptionUsd, api: row.apiUsd, sandbox: row.sandboxUsd,
-      note: `${row.agents} agents; Router charges cannot be split by model` }))
+      note: `${row.agents} agents` }))
     .sort((a, b) => (b.subscription ?? 0) + (b.sandbox ?? 0) - ((a.subscription ?? 0) + (a.sandbox ?? 0)))
 }
 
