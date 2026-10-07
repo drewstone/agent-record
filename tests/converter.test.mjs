@@ -134,7 +134,7 @@ function writeBridgeRun(root) {
   return run
 }
 
-test('a Pi session joins by its bridge session directory, and a parent keeps the instructions it sent', (t) => {
+test('a Pi session joins by its bridge session directory, and steering appears on both parent and worker', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'converter-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   const { record } = ingestRun(writeBridgeRun(root), { runId: 'run-b' })
@@ -143,13 +143,18 @@ test('a Pi session joins by its bridge session directory, and a parent keeps the
   assert.equal(child.joinProof.sessionId, 'supervised-worker-0123')
   assert.ok(!record.nodes.some((node) => node.id.startsWith('pi:')))
   const steer = record.events.filter((event) => event.source.path === 'coordination-log.jsonl')
-  assert.equal(steer.length, 2)
-  assert.equal(steer[1].label, 'interrupt → s0')
-  assert.equal(steer[1].detail.publicText, undefined)
+  assert.equal(steer.length, 3)
+  assert.equal(steer[2].label, 'interrupt → s0')
+  assert.equal(steer[2].detail.publicText, undefined)
   assert.ok(record.coverage.gaps.some((gap) => gap.code === 'coordination-target-unknown'))
   assert.equal(steer[0].node, 'run-b')
   assert.equal(steer[0].detail.publicText, 'Use exact arithmetic.')
   assert.equal(steer[0].detail.coordination.toNode, 'run-b:s0')
+  assert.equal(steer[1].node, 'run-b:s0')
+  assert.equal(steer[1].detail.promptKind, 'steering')
+  assert.equal(steer[1].detail.promptSender, 'Parent agent')
+  assert.equal(steer[1].detail.publicText, 'Use exact arithmetic.')
+  assert.notEqual(steer[0].id, steer[1].id)
   const director = record.nodes.find((node) => node.id === 'run-b')
   assert.deepEqual(director.capture, { channel: 'coordination', status: 'lossy', reason: 'instructions-to-workers-only' })
   assert.ok(record.coverage.gaps.some((gap) => gap.nodeId === 'run-b' && gap.code === 'conversation-not-retained'))

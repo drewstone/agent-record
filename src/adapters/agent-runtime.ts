@@ -2125,11 +2125,7 @@ export class Ingest {
     if (pages.length) this.readFindings(`finding:${this.runId}`)
   }
 
-  /**
-   * The Runtime coordination log keeps every instruction a parent sent down to a worker (steer, interrupt). Those are
-   * the parent's own messages: they are emitted on the parent, so a director whose session was not retained still
-   * shows what it told its workers.
-   */
+  /** The coordination log records both a parent's outgoing instruction and what the worker received. */
   readCoordination() {
     const rel = 'coordination-log.jsonl'
     if (!existsSync(join(this.runDir, rel))) return
@@ -2164,6 +2160,31 @@ export class Ingest {
           coordination: { kind, toNode: to, receiptId: str(instruction.receiptId) || null, interrupt: instruction.interrupt === true },
         },
       })
+      if (to && shown.text && kind !== 'interrupt') {
+        // A retained native user turn is the better source for the same instruction.
+        const native = this.events.find((event) => event.node === to && event.detail.role === 'user' && event.detail.publicText === shown.text && Math.abs(Date.parse(event.at) - Date.parse(at)) < 60_000)
+        if (native) {
+          native.detail.promptKind = 'steering'
+          native.detail.promptSender = 'Parent agent'
+        } else {
+          this.emit({
+            node: to,
+            at,
+            kind: 'message',
+            category: 'other',
+            label: 'Steering',
+            source: { path: rel, sha256: entry.sha256, line: row.line, item: 1 },
+            detail: {
+              role: 'user',
+              publicText: shown.text,
+              ...(shown.clip ? { clip: shown.clip } : {}),
+              promptKind: 'steering',
+              promptSender: 'Parent agent',
+              coordination: { kind, fromNode: sender, receiptId: str(instruction.receiptId) || null },
+            },
+          })
+        }
+      }
       senders.add(sender)
     }
     for (const id of senders) {

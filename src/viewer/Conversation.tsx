@@ -404,7 +404,7 @@ export function Conversation({
       event.detail.toolCallId !== undefined ||
       event.detail.role === 'toolResult'
     const title = user
-      ? 'Assignment'
+      ? event.detail.promptKind === 'initial' ? 'Prompt' : event.detail.promptKind === 'steering' ? 'Steering' : 'Input'
       : finding
         ? 'Recorded finding'
         : failed
@@ -468,6 +468,7 @@ export function Conversation({
               {user ? '↳' : finding ? '◇' : failed ? '!' : standalone ? '↵' : '·'}
             </span>
             <strong>{title}</strong>
+            {user && typeof event.detail.promptSender === 'string' && <span className="prompt-sender">from {event.detail.promptSender}</span>}
             <time dateTime={event.at}>{utcTime(event.at)}</time>
             {flagMarks(event)}
             {sourceButton(event)}

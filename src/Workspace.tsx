@@ -9,6 +9,7 @@ import { OverviewPage } from './workspace/Overview.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
+import { withPrompts } from './viewer/prompts.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
@@ -615,7 +616,7 @@ function useRecordPart(url: string | null) {
   const parsed = useMemo(() => {
     if (!doc.data) return { record: null, index: null, stats: {} as Record<string, NodeStats>, error: undefined as string | undefined }
     try {
-      const record = readRecord(doc.data)
+      const record = withPrompts(readRecord(doc.data))
       const stats = ((doc.data as { nodeStats?: Record<string, NodeStats> }).nodeStats ?? {}) as Record<string, NodeStats>
       return { record, index: indexRecord(record), stats, error: undefined }
     } catch (error) {
@@ -1102,12 +1103,6 @@ function RunBody({
             Full time
           </button>
         </div>
-        {node?.assignment && (
-          <details className="agent-assignment">
-            <summary>Assignment</summary>
-            <StructuredContent text={node.assignment} />
-          </details>
-        )}
         <Tabs label="Agent record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={AGENT_TABS} />
         <div className="ws-panel-body" role="tabpanel">
           {tab === 'messages' && empty && <EmptyAgent index={index} actor={actor} onSelect={selectNode} />}
@@ -1116,6 +1111,7 @@ function RunBody({
               <div className="message-filters">
                 <select aria-label="Activity type" value={category} onChange={(event) => setCategory(event.target.value)} data-category>
                   <option value="all">All activity</option>
+                  <option value="prompts">Prompts and steering</option>
                   {categories.map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
                 <input type="search" aria-label="Search this agent" placeholder="Search this agent" value={query} onChange={(event) => setQuery(event.target.value)} />
