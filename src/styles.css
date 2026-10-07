@@ -2477,20 +2477,67 @@
 .ar-ws .ov-page { font-size: 16px; gap: 1.3em; }
 .ar-ws .ov-page .kicker { font-size: .82em; gap: .55em; }
 .ar-ws .ov-page .kicker::before { width: .6em; height: .6em; }
-.ar-ws .ov-banner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .8em 1.6em; align-items: center; padding: 1em 1.3em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-left: 4px solid var(--ar-c-ok); border-radius: 10px; }
-.ar-ws .ov-banner.tone-warn { border-left-color: var(--ar-c-run); color: inherit; }
-.ar-ws .ov-banner h1 { font-size: 1.4em; }
-.ar-ws .ov-banner p { margin: .3em 0 0; color: var(--ar-fg-muted); font-size: 1.02em; max-width: 90ch; }
-.ar-ws .ov-banner-facts { display: flex; flex-wrap: wrap; gap: .4em 1.4em; font-size: .95em; color: var(--ar-fg-muted); }
-.ar-ws .ov-banner-facts b { color: var(--ar-fg); font-size: 1.35em; margin-right: .25em; font-variant-numeric: tabular-nums; }
 .ar-ws .ov-toolbar { display: flex; flex-wrap: wrap; gap: .5em; }
 .ar-ws .ov-toolbar .filter-chip { font-size: .9em; padding: .3em .9em; }
-.ar-ws .ov-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11em), 1fr)); gap: .8em; }
-.ar-ws .ov-kpi { display: grid; gap: .2em; align-content: start; padding: .8em 1em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; color: inherit; }
-.ar-ws .ov-kpi-title { font-size: .9em; color: var(--ar-fg-muted); }
-.ar-ws .ov-kpi-value { font: 650 2.2em/1.1 var(--ar-font-body); font-variant-numeric: tabular-nums; color: var(--ar-fg); }
-.ar-ws .ov-kpi.tone-warn .ov-kpi-value { color: var(--ar-c-run); }
-.ar-ws .ov-kpi-sub { font-size: .8em; line-height: 1.35; color: var(--ar-fg-faint); }
+.ar-ws .ov-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4em 1em; }
+.ar-ws .ov-card-sub { font-size: .85em; color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .ov-quiet { margin: 0; color: var(--ar-fg-muted); }
+.ar-ws .ov-light { display: inline-block; flex: none; width: .65em; height: .65em; border-radius: 50%; background: var(--ar-fg-faint); }
+.ar-ws .ov-light.tone-live { background: var(--ws-accent); box-shadow: 0 0 0 .22em color-mix(in srgb, var(--ws-accent) 22%, transparent); }
+.ar-ws .ov-light.tone-fail { background: var(--ar-c-fail); }
+.ar-ws .ov-light.tone-warn { background: var(--ar-c-run); }
+.ar-ws .ov-light.tone-info { background: var(--ar-fg-muted); }
+/* Now: the running runs beside what needs a person. */
+.ar-ws .ov-now { display: flex; flex-wrap: wrap; gap: 1em; align-items: stretch; }
+.ar-ws .ov-now-runs { flex: 3 1 min(100%, 36em); }
+.ar-ws .ov-attention { flex: 2 1 min(100%, 24em); }
+.ar-ws .ov-running { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
+.ar-ws .ov-running-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .3em .7em; align-items: baseline; padding: .7em .8em; border: 1px solid var(--ar-border); border-radius: 8px; color: inherit; text-decoration: none; }
+.ar-ws .ov-running-row:hover, .ar-ws .ov-running-row:focus-visible { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
+.ar-ws .ov-running-row > :not(.ov-light) { grid-column: 2; }
+.ar-ws .ov-running-title { font-size: 1.15em; font-weight: 650; color: var(--ar-fg); overflow-wrap: anywhere; }
+.ar-ws .ov-running-meta { display: flex; flex-wrap: wrap; gap: .2em 1.1em; font-size: .88em; color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .ov-running-meta .is-stale { color: var(--ar-c-fail); }
+.ar-ws .ov-running-purpose { font-size: .88em; line-height: 1.4; color: var(--ar-fg-faint); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ar-ws .ov-lead { display: flex; gap: .5em; align-items: baseline; min-width: 0; }
+.ar-ws .ov-lead-kind { flex: none; padding: .2em .45em; border-radius: 4px; font: 600 .7em/1.2 var(--ar-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg); background: color-mix(in srgb, var(--ar-c-ok) 24%, transparent); }
+.ar-ws .ov-lead-kind.kind-claim { background: color-mix(in srgb, var(--ar-c-run) 24%, transparent); }
+.ar-ws .ov-lead-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ar-fg); }
+.ar-ws .ov-attention ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .15em; }
+.ar-ws .ov-attention li > a, .ar-ws .ov-attention li > div { display: flex; gap: .7em; align-items: baseline; padding: .45em .5em; border-radius: 6px; color: var(--ar-fg); text-decoration: none; }
+.ar-ws .ov-attention li > a:hover, .ar-ws .ov-attention li > a:focus-visible { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
+.ar-ws .ov-attention-text { display: grid; gap: .1em; }
+.ar-ws .ov-attention-text small { font-size: .82em; color: var(--ar-fg-faint); }
+/* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
+.ar-ws .ov-week { gap: .6em; }
+.ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1.1fr) minmax(6em, .8fr) minmax(0, 2.6fr) repeat(4, max-content); column-gap: 1.2em; }
+.ar-ws .ov-week li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; row-gap: .3em; padding: .55em .5em; border-top: 1px solid var(--ar-border); border-radius: 0; }
+.ar-ws .ov-week li:hover { background: var(--ar-hover, var(--ar-bg-alt)); }
+.ar-ws .ov-week li.is-running { background: color-mix(in srgb, var(--ws-accent) 8%, transparent); }
+.ar-ws .ov-week .ov-week-head { border-top: 0; padding-block: .2em .4em; font-size: .75em; letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg-faint); }
+.ar-ws .ov-week .ov-week-head:hover, .ar-ws .ov-week .ov-week-total:hover { background: none; }
+.ar-ws .ov-week-head > :nth-child(n+4) { text-align: right; }
+.ar-ws .ov-week .ov-week-total { font-weight: 650; color: var(--ar-fg-muted); border-top: 1px solid var(--ar-border-strong); }
+.ar-ws .ov-week-play { display: flex; flex-wrap: wrap; gap: .3em .5em; align-items: center; min-width: 0; color: var(--ar-fg); font-weight: 600; overflow-wrap: anywhere; text-decoration: none; }
+.ar-ws .ov-week-play:hover { text-decoration: underline; }
+.ar-ws .ov-badge { padding: .2em .45em; border-radius: 4px; font: 600 .68em/1.2 var(--ar-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg); background: color-mix(in srgb, var(--ws-accent) 24%, transparent); }
+.ar-ws .ov-week-runs { display: flex; flex-wrap: wrap; gap: .3em; align-items: center; }
+.ar-ws .ov-chip { display: inline-block; width: .95em; height: .95em; border-radius: 3px; }
+.ar-ws .ov-chip:hover, .ar-ws .ov-chip:focus-visible { outline: 2px solid var(--ar-fg); outline-offset: 1px; }
+.ar-ws .ov-week-more { font-size: .8em; color: var(--ar-fg-faint); }
+.ar-ws .ov-week-found { display: grid; gap: .15em; min-width: 0; }
+.ar-ws .ov-week-counts, .ar-ws .ov-week-none { font-size: .8em; color: var(--ar-fg-faint); }
+.ar-ws .ov-week-num { font: .92em var(--ar-font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--ar-fg); white-space: nowrap; }
+.ar-ws .ov-week-num.is-warn { color: var(--ar-c-run); }
+.ar-ws .ov-week-ago { color: var(--ar-fg-muted); }
+.ar-ws .ov-week-all { justify-self: start; }
+@media (max-width: 760px) {
+  .ar-ws .ov-week ol { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .8em; }
+  .ar-ws .ov-week .ov-week-head { display: none; }
+  .ar-ws .ov-week-play, .ar-ws .ov-week-runs, .ar-ws .ov-week-found { grid-column: 1 / -1; }
+  .ar-ws .ov-week-num { text-align: left; font-size: .85em; }
+  .ar-ws .ov-week li:not(.ov-week-total) .ov-week-num::before { content: attr(data-label); display: block; font: .78em var(--ar-font-body); color: var(--ar-fg-faint); }
+}
 .ar-ws .ov-section { display: grid; gap: .7em; }
 /* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
    four never leaves one card beside two empty slots. */

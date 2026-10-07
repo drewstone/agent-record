@@ -1116,8 +1116,25 @@ export type FindingsFeedDocument = z.infer<typeof findingsFeedSchema>
 type Bin = { lo: number; hi: number; n: number }
 /** The Discovery overview (`agent-workspace.overview.v1`, served at `overview`): runs, findings, tokens, money, the
  * sandbox fleet, storage and subscription seats over its `days`. Every series is aligned to `days`. */
+/** A run's lead finding on the overview: its result ledger, else its newest result, else its newest claim. */
+export interface OverviewLead { title: string | null; kind: 'result' | 'claim'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string }
+export interface OverviewRun {
+  runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
+  results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
+  play: string; title: string; purpose: string | null; supersedes?: string | null
+}
+export interface OverviewPlayWeek {
+  play: string; title: string; running: number; runs: { runId: string; state: string; startedAt: string | null; lostHours: number }[]; runCount: number
+  results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
+}
+export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string }
+
 export interface OverviewDocument {
   schema: 'agent-workspace.overview.v1'
+  now?: OverviewRun[]
+  week?: OverviewPlayWeek[]
+  weekDays?: number
+  attention?: OverviewAttention[]
   composedAt: string
   days: string[]
   state: { standdown: { reason?: string; by?: string; at?: string } | null; lastResearchStart: string | null; running: number; queued: number; sandboxesRunning: number | null; sandboxesByKind: Record<string, number>; boxesUnreleased: number | null; censusAt: string | null }
