@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
-import type { PlayDocument, ProfileGraphDocument, RunSummary } from '../workspace.js'
+import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace.js'
 import { money, stateClass, stateLabel } from './data.js'
 import { canvasModel, COL_W, lineageOf, neighbour, NODE_H, NODE_W, originChain, originText, originVerb, profileRunCost, runPlays } from './profile-canvas.js'
 import type { CanvasEdge, CanvasModel, CanvasNode, CanvasScope } from './profile-canvas.js'
@@ -368,6 +368,7 @@ function CanvasPane({
             .filter((edge) => edge.relation !== 'authored')
             .map((edge) => {
               const label = edgeLabel(model, edge, lit, shortRun)
+              if (!label) return null
               const from = model.byId.get(edge.from)!
               const to = model.byId.get(edge.to)!
               return (
@@ -473,11 +474,21 @@ function NodeCard({
       <span className="pc-line mono faint">
         {profile.short}
         {profile.version ? ` · v${profile.version}` : ''}
-        {` · ${profile.runs.length} ${profile.runs.length === 1 ? 'run' : 'runs'}`}
+        {searchText(profile) ?? ` · ${profile.runs.length} ${profile.runs.length === 1 ? 'run' : 'runs'}`}
         {node.elsewhere.plays.length > 0 ? ` · ${node.elsewhere.plays.length} other ${node.elsewhere.plays.length === 1 ? 'play' : 'plays'}` : ''}
       </span>
     </button>
   )
+}
+
+/** An optimizer version's standing in its search: its mean on the selection split (else train) and its last decision. */
+function searchText(profile: ProfileNode): string | null {
+  const search = profile.searches?.at(-1)
+  if (!search) return null
+  const score = search.scores?.selection ?? search.scores?.train ?? null
+  const decision = search.decisions?.at(-1)?.status
+  const mean = score && typeof score.mean === 'number' ? `${search.scores?.selection ? 'selection' : 'train'} ${score.mean.toFixed(2)}` : null
+  return [mean, decision].filter(Boolean).map((part) => ` · ${part}`).join('') || null
 }
 
 function edgePath(model: CanvasModel, edge: CanvasEdge): string {
@@ -497,10 +508,13 @@ function edgeClass(edge: CanvasEdge, lit: Set<string> | null): string {
 }
 
 /** A lineage edge's label: its relation (and whether it crosses plays) over the run that made it, when that says something new. */
-function edgeLabel(model: CanvasModel, edge: CanvasEdge, lit: Set<string> | null, shortRun: (runId: string) => string): { head: string; sub: string | null } {
+function edgeLabel(model: CanvasModel, edge: CanvasEdge, lit: Set<string> | null, shortRun: (runId: string) => string): { head: string; sub: string | null } | null {
   const to = model.byId.get(edge.to)
   const hot = !!lit && lit.has(edge.from) && lit.has(edge.to)
   const telling = !!edge.origin && (hot || !to?.inScope || edge.originKind === 'proposed' || edge.crossPlay)
+  // A fan of many like edges reads from its line style; a label on each would stack on the bundle.
+  const fan = (model.byId.get(edge.from)?.children.length ?? 0) > 2
+  if (fan && !hot && !telling && !edge.crossPlay) return null
   const relation = edge.relation === 'replaced' ? 'restart' : edge.relation
   return { head: edge.crossPlay ? `${relation} · across plays` : relation, sub: telling ? originText(edge, shortRun) : null }
 }
