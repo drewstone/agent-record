@@ -294,8 +294,8 @@ export function OverviewPage({ api }: { api: string }) {
         <ChartCard title="Subscription use at API prices, per day" note="Seat use (Claude, Codex, Kimi, Gemini) priced at API list rates; covered by the seats, never billed.">
           <DayBars days={days} series={[{ name: 'subscription at API prices', color: SERIES[0], values: cut(cost?.subscription ?? d.money.listByDay) }]} format={usd} />
         </ChartCard>
-        <ChartCard title="List price per run">
-          <Histogram bins={d.money.runListHistogram} unit="list $ per run" format={usd} />
+        <ChartCard title="Subscription use at API prices, per run" note="30 days; not billed.">
+          <Histogram bins={d.money.runListHistogram} unit="at API prices per run" format={usd} />
         </ChartCard>
         <ChartCard title="Discovery fleet key" note={`${usd(d.money.fleetKey.debits48h)} debited in the last 48 h.`}>
           <Meter used={d.money.fleetKey.spent} total={d.money.fleetKey.cap} format={usd} />
