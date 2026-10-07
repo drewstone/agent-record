@@ -35,8 +35,8 @@ export const bytes = (value: number | null | undefined) => {
 }
 export const pct = (value: number | null | undefined) => (value === null || value === undefined || !Number.isFinite(value) ? '—' : `${Math.round(value * 100)}%`)
 
-/** The rendered width and font size of an element, so an SVG chart draws at its real size and its geometry scales
- * with the page's type (the overview sizes type to the screen it is on, a wall across a room or a phone). */
+/** The rendered width and font size of an element, so an SVG chart draws at its real size and its geometry follows
+ * the page's type. */
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null)
   const [size, setSize] = useState({ width: 0, em: 16 })

@@ -2457,9 +2457,10 @@
 .ar-ws .feed-tags { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; }
 
 /* ---- The Discovery overview: a banner with the fleet's state, KPI tiles, then sections of charts. */
-/* Sized in em off one root that follows the screen: 15px on a laptop, about 20px on the 2560 px wall read from across
-   the room. Charts read the same em (useWidth), so plot height, margins and marks grow with the type. */
-.ar-ws .ov-page { font-size: clamp(15px, 0.78vw, 21px); gap: 1.3em; }
+/* Sized in em off one 16px root. The wall's pages zoom by screen height (wall-scale.js: about 1.5 on the 2560x1440
+   wall), so the same layout reads from across the room there and at laptop size elsewhere; charts read the same em
+   (useWidth), so plot height, margins and marks follow the type. */
+.ar-ws .ov-page { font-size: 16px; gap: 1.3em; }
 .ar-ws .ov-page .kicker { font-size: .82em; gap: .55em; }
 .ar-ws .ov-page .kicker::before { width: .6em; height: .6em; }
 .ar-ws .ov-banner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .8em 1.6em; align-items: center; padding: 1em 1.3em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-left: 4px solid var(--ar-c-ok); border-radius: 10px; }
