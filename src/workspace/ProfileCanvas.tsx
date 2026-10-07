@@ -487,7 +487,7 @@ function searchText(profile: ProfileNode): string | null {
   if (!search) return null
   const score = search.scores?.selection ?? search.scores?.train ?? null
   const decision = search.decisions?.at(-1)?.status
-  const mean = score && typeof score.mean === 'number' ? `${search.scores?.selection ? 'selection' : 'train'} ${score.mean.toFixed(2)}` : null
+  const mean = score && typeof score.mean === 'number' ? `${search.scores?.selection ? 'sel' : 'train'} ${score.mean.toFixed(2)}` : null
   return [mean, decision].filter(Boolean).map((part) => ` · ${part}`).join('') || null
 }
 
