@@ -4,7 +4,8 @@ import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
-import { FindingsFeed } from './workspace/FindingsFeed.js'
+import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
+import { PlayCharts } from './workspace/PlayCharts.js'
 import { OverviewPage } from './workspace/Overview.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
@@ -29,6 +30,7 @@ import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
+import { RunProgressView } from './workspace/RunProgress.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -324,19 +326,21 @@ function PlaysPage({ api }: { api: string }) {
 // ---------------------------------------------------------------------------------------------------------
 // /play/<id>
 // ---------------------------------------------------------------------------------------------------------
-type PlayTab = 'versions' | 'profiles' | 'input' | 'runs' | 'spend' | 'assessments'
+/** The play's tabs: what it found first (charts across its runs, then its results and claims), then its runs and versions. */
+type PlayTab = 'results' | 'runs' | 'versions' | 'profiles' | 'input' | 'spend' | 'assessments'
 
 function PlayPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
   const play = useDocument<PlayDocument>(`${api}/plays/${encodeURIComponent(id)}`)
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
-  const tab = (['versions', 'profiles', 'input', 'runs', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'versions'
+  const tab = (['results', 'runs', 'versions', 'profiles', 'input', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'results'
   const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(id)}/profiles`)
   const graph = profiles.data ?? null
   const selectedRun = params.get('run')
   const showHidden = params.get('show') === 'all'
   const doc = play.data
-  const split = useMemo(() => splitRuns(doc?.runs ?? [], showHidden), [doc, showHidden])
+  // Failed runs are a health signal: the play keeps them in view, and holds back only tests and archived runs.
+  const split = useMemo(() => splitRuns(doc?.runs ?? [], showHidden, ['failed']), [doc, showHidden])
   // What the runs tab draws: every run, or only those the default filter shows (with their lineage and gaps).
   const view = useMemo(() => {
     if (!doc || showHidden || !split.hidden) return doc
@@ -386,30 +390,35 @@ function PlayPage({ api, id }: { api: string; id: string }) {
           <header className="ws-head">
             <div className="ws-title-row">
               <h1>{doc.title}</h1>
-              {doc.runs[0] && <span className={`state-pill ${stateClass(doc.runs[0].state)}`}>{stateLabel(doc.runs[0].state)}</span>}
             </div>
+            <PlayStanding play={doc} />
             {(doc.frontier?.statement || doc.charter) && <p className="ws-charter">{doc.frontier?.statement ?? doc.charter}</p>}
             <div className="ws-facts">
               {doc.program && <span><b>Program</b> {doc.program}</span>}
               {doc.line && <span><b>Line</b> {doc.line}</span>}
               {doc.frontier?.target && <span><b>Target</b> {doc.frontier.target}</span>}
               {doc.frontier?.asOf && <span><b>Frontier as of</b> {doc.frontier.asOf}</span>}
-              {doc.runs[0] && (
-                <span>
-                  <b>Latest run</b>{' '}
-                  <a href={`/run/${encodeURIComponent(doc.runs[0].id)}`} className="mono">{shortRun(doc.id, doc.runs[0].id)}</a> · {when(doc.runs[0].startedAt)}
-                </span>
-              )}
             </div>
             <SpendSummary spend={doc.spend} />
           </header>
           <Tabs
             label="Play"
             value={tab}
-            onChange={(next) => update({ tab: next === 'versions' ? undefined : next })}
-            tabs={[['versions', 'Versions'], ['profiles', 'Profiles'], ['runs', 'Runs'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
+            onChange={(next) => update({ tab: next === 'results' ? undefined : next })}
+            tabs={[['results', 'Results'], ['runs', 'Runs'], ['versions', 'Versions'], ['profiles', 'Profiles'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
           />
           <div className="ws-content" role="tabpanel">
+            {tab === 'results' && (
+              <div className="ws-section play-results" data-section="results">
+                <PlayCharts play={doc} />
+                <h3>What this play found</h3>
+                {doc.findings?.length ? (
+                  <FeedCards items={doc.findings} />
+                ) : (
+                  <p className="ws-status">No result or claim has been derived from this play&rsquo;s runs yet. Each run&rsquo;s pages are under its Findings.</p>
+                )}
+              </div>
+            )}
             {tab === 'versions' && (
               <>
                 <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
@@ -498,6 +507,42 @@ function PlayPage({ api, id }: { api: string; id: string }) {
 }
 
 /** One adverse label per headline dimension. */
+/**
+ * The play's standing as two facts: its best result (the newest run that won) and its latest run with how it is going.
+ * A failed latest run never hides an earlier winner, and no winner yet is said plainly.
+ */
+function PlayStanding({ play }: { play: PlayDocument }) {
+  const latest = play.runs[0] ?? null
+  const best = play.best ? (play.runs.find((run) => run.id === play.best) ?? null) : null
+  const results = play.runs.reduce((sum, run) => sum + (run.findings?.results ?? 0), 0)
+  const claims = play.runs.reduce((sum, run) => sum + (run.findings?.claims ?? 0), 0)
+  return (
+    <div className="play-standing" data-play-standing>
+      <a className="play-fact" href={best ? `/run/${encodeURIComponent(best.id)}` : '?tab=runs'} data-best={best?.id ?? 'none'}>
+        <span className="answer-label">Best result</span>
+        {best ? (
+          <>
+            <span className="answer-value state-ok">winner</span>
+            <span className="mono">{shortRun(play.id, best.id)}</span>
+            <span className="faint">{when(best.settledAt ?? best.startedAt)}</span>
+          </>
+        ) : (
+          <span className="answer-value">no winner yet</span>
+        )}
+        {results + claims > 0 && <span className="faint">· {results} results, {claims} claims across its runs</span>}
+      </a>
+      {latest && (
+        <a className="play-fact" href={`/run/${encodeURIComponent(latest.id)}`} data-latest={latest.id}>
+          <span className="answer-label">Latest run</span>
+          <span className={`state-pill ${stateClass(latest.state)}`}>{stateLabel(latest.state)}</span>
+          <span className="mono">{shortRun(play.id, latest.id)}</span>
+          <span className="faint">{when(latest.startedAt)}</span>
+        </a>
+      )}
+    </div>
+  )
+}
+
 function adverse(rows: PlayDocument['assessments'], headline: Set<string> | null) {
   const seen = new Set<string>()
   return rows.filter((row) => {
@@ -689,21 +734,26 @@ function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; ru
   )
 }
 
-/** The run page's sections, in one tab bar under the header: what the run found first, then its agents and the rest. */
-type RunSection = 'findings' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
+/**
+ * The run page's sections, in one tab bar under the header: what the run found first, then how it progressed, its
+ * agents and the rest. The first six are tabs; the others sit behind More, which names the one open.
+ */
+type RunSection = 'findings' | 'progress' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
 const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
   ['findings', 'Findings'],
+  ['progress', 'Progress'],
   ['agents', 'Agents'],
+  ['spend', 'Spend'],
+  ['readout', 'Readout'],
+  ['outputs', 'Outputs'],
   ['graph', 'Graph'],
   ['versions', 'Versions'],
   ['profiles', 'Profiles'],
-  ['readout', 'Readout'],
-  ['outputs', 'Outputs'],
-  ['spend', 'Spend'],
   ['assessments', 'Assessments'],
   ['input', 'Input'],
   ['coverage', 'Coverage'],
 ]
+const RUN_TABS = 6
 /** Sections that draw from the selected agent's record part (every node, that agent's events). */
 const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'spend', 'assessments', 'coverage'])
 
@@ -778,22 +828,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
       <RunHeader doc={doc} />
-      <AnswerStrip doc={doc} onOpen={() => open('readout')} onOutputs={() => open('outputs')} />
-      <nav className="run-tabs" aria-label="Run sections">
-        {RUN_SECTIONS.map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={`run-tab ${section === value ? 'on' : ''}`}
-            aria-current={section === value ? 'page' : undefined}
-            data-section-tab={value}
-            onClick={() => open(value)}
-          >
-            {label}
-            {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
-          </button>
-        ))}
-      </nav>
+      <AnswerStrip doc={doc} onOpen={() => open('readout')} onOutputs={() => open('outputs')} onFindings={() => open('findings')} onProgress={() => open('progress')} />
+      <RunTabs section={section} counts={counts} onOpen={open} />
+      {section === 'progress' && <RunProgressView doc={doc} />}
       {section === 'findings' &&
         (doc.findings?.total ? (
           <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
@@ -913,6 +950,39 @@ function RunPage({ api, id }: { api: string; id: string }) {
         </div>
       )}
     </div>
+  )
+}
+
+/** The run's section tabs: the first RUN_TABS as tabs, the rest in a More menu that names the section open in it. */
+function RunTabs({ section, counts, onOpen }: { section: RunSection; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void }) {
+  const more = useRef<HTMLDetailsElement>(null)
+  const tab = ([value, label]: readonly [RunSection, string], inMenu = false) => (
+    <button
+      key={value}
+      type="button"
+      className={`run-tab ${section === value ? 'on' : ''}`}
+      aria-current={section === value ? 'page' : undefined}
+      data-section-tab={value}
+      role={inMenu ? 'menuitem' : undefined}
+      onClick={() => {
+        if (more.current) more.current.open = false
+        onOpen(value)
+      }}
+    >
+      {label}
+      {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
+    </button>
+  )
+  const hidden = RUN_SECTIONS.slice(RUN_TABS)
+  const current = hidden.find(([value]) => value === section)
+  return (
+    <nav className="run-tabs" aria-label="Run sections">
+      {RUN_SECTIONS.slice(0, RUN_TABS).map((entry) => tab(entry))}
+      <details className="run-tab-more" ref={more}>
+        <summary className={`run-tab ${current ? 'on' : ''}`} data-section-tab="more">{current ? `More: ${current[1]}` : 'More'}</summary>
+        <div className="run-tab-menu" role="menu">{hidden.map((entry) => tab(entry, true))}</div>
+      </details>
+    </nav>
   )
 }
 

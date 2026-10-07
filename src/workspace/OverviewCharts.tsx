@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 // Categorical slots in the Tangle palette (lavender first), validated together on the workspace's dark surface
 // (#16181f): lightness band, chroma, adjacent CVD separation (worst 13.5) and the normal-vision floor (worst 20.9),
@@ -41,17 +41,17 @@ export const pct = (value: number | null | undefined) => (value === null || valu
 /** The rendered width and font size of an element, so an SVG chart draws at its real size and its geometry follows
  * the page's type. */
 function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
+  // A callback ref: a chart that first renders its empty message (no element) starts measuring when its plot mounts.
+  const [element, ref] = useState<T | null>(null)
   const [size, setSize] = useState({ width: 0, em: 16 })
   useEffect(() => {
-    const element = ref.current
     if (!element) return
     const observer = new ResizeObserver(([entry]) =>
       setSize({ width: Math.floor(entry!.contentRect.width), em: parseFloat(getComputedStyle(element).fontSize) || 16 }),
     )
     observer.observe(element)
     return () => observer.disconnect()
-  }, [])
+  }, [element])
   return [ref, size.width, size.em] as const
 }
 
@@ -113,8 +113,9 @@ export function ChartCard({ title, note, legend, wide, children }: { title: stri
   )
 }
 
-/** Bars per day, stacked by series, on one axis; hovering a day lists every series' value for it. */
-export function DayBars({ days, series, format = compact, rows = 13, missing = 'No runs started' }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number; missing?: string }) {
+/** Bars per day (or per any label: `tick` shortens it on the axis), stacked by series, on one axis; hovering a bar lists
+ * every series' value for it, and `onOpen` makes a bar a link. */
+export function DayBars({ days, series, format = compact, rows = 13, missing = 'No runs started', tick = (day: string) => day.slice(5), onOpen }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number; missing?: string; tick?: (day: string) => string; onOpen?: (index: number) => void }) {
   const [ref, width, em] = useWidth<HTMLDivElement>()
   const height = Math.round(rows * em)
   const [tip, setTip] = useState<Tip | null>(null)
@@ -154,7 +155,7 @@ export function DayBars({ days, series, format = compact, rows = 13, missing = '
                   return <rect key={s.name} x={x} y={y1} width={bar} height={Math.max(2, y0 - y1 - 2)} rx={2} fill={s.color} />
                 })}
                 {(i === days.length - 1 || (i % labelEvery === 0 && i + labelGap <= days.length - 1)) && (
-                  <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{day.slice(5)}</text>
+                  <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{tick(day)}</text>
                 )}
                 <rect
                   x={left + i * slot}
@@ -162,6 +163,8 @@ export function DayBars({ days, series, format = compact, rows = 13, missing = '
                   width={slot}
                   height={plotH}
                   fill="transparent"
+                  style={onOpen ? { cursor: 'pointer' } : undefined}
+                  onClick={onOpen ? () => onOpen(i) : undefined}
                   onMouseEnter={() =>
                     setTip({
                       x: Math.min(left + i * slot + slot + 8, width - em * 14),
@@ -256,8 +259,9 @@ export function Histogram({ bins, format = compact, color = SERIES[0], unit, row
   )
 }
 
-/** Lines over time on one axis (at most four series); the crosshair readout lists each series at the nearest time. */
-export function Lines({ series, format = compact, rows = 13 }: { series: { name: string; color: string; points: [number, number][] }[]; format?: (v: number) => string; rows?: number }) {
+/** Lines over time on one axis (at most four series); the crosshair readout lists each series at the nearest time. A
+ * `dots` series draws its points as marks (checkpoints) instead of a line; `axis` labels the time axis (default MM-DD). */
+export function Lines({ series, format = compact, rows = 13, axis }: { series: { name: string; color: string; points: [number, number][]; dots?: boolean; label?: (t: number) => string }[]; format?: (v: number) => string; rows?: number; axis?: (t: number) => string }) {
   const [ref, width, em] = useWidth<HTMLDivElement>()
   const height = Math.round(rows * em)
   const [hover, setHover] = useState<number | null>(null)
@@ -294,11 +298,19 @@ export function Lines({ series, format = compact, rows = 13 }: { series: { name:
             </g>
           ))}
           {[t0, (t0 + t1) / 2, t1].map((t, i) => (
-            <text key={i} x={x(t)} y={height - em * 0.35} className="ov-axis" textAnchor={i === 0 ? 'start' : i === 2 ? 'end' : 'middle'}>{day(t).slice(0, 5)}</text>
+            <text key={i} x={x(t)} y={height - em * 0.35} className="ov-axis" textAnchor={i === 0 ? 'start' : i === 2 ? 'end' : 'middle'}>{axis ? axis(t) : day(t).slice(0, 5)}</text>
           ))}
-          {series.map((s) => (
-            <polyline key={s.name} fill="none" stroke={s.color} strokeWidth={Math.max(2, em / 8)} strokeLinejoin="round" points={s.points.map((p) => `${x(p[0])},${y(p[1])}`).join(' ')} />
-          ))}
+          {series.map((s) =>
+            s.dots ? (
+              <g key={s.name}>
+                {s.points.map((p) => (
+                  <circle key={p[0]} cx={x(p[0])} cy={y(p[1])} r={Math.max(3, em / 5)} fill={s.color} stroke="var(--ws-panel)" strokeWidth={1.5} />
+                ))}
+              </g>
+            ) : (
+              <polyline key={s.name} fill="none" stroke={s.color} strokeWidth={Math.max(2, em / 8)} strokeLinejoin="round" points={s.points.map((p) => `${x(p[0])},${y(p[1])}`).join(' ')} />
+            ),
+          )}
           {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={8} y2={8 + plotH} className="ov-crosshair" />}
           {hover !== null &&
             series.map((s) => {
@@ -313,7 +325,10 @@ export function Lines({ series, format = compact, rows = 13 }: { series: { name:
             x: Math.min(x(hover) + 10, width - em * 14),
             y: 8,
             title: day(hover),
-            lines: series.filter((s) => s.points.length).map((s) => ({ label: s.name, value: format(nearest(s.points, hover)[1]), color: s.color })),
+            lines: series.filter((s) => s.points.length).map((s) => {
+              const p = nearest(s.points, hover)
+              return { label: s.label ? s.label(p[0]) : s.name, value: format(p[1]), color: s.color }
+            }),
           }}
         />
       )}
@@ -348,5 +363,52 @@ export function Spark({ points, max = 1, color = SERIES[0] }: { points: [number,
     <svg viewBox={`0 0 ${w} ${h}`} className="ov-spark" aria-hidden="true">
       <polyline fill="none" stroke={color} strokeWidth={1.6} points={d} />
     </svg>
+  )
+}
+
+/** One bar per row on a shared time axis (who worked when): each row's bar spans its start to its end, coloured by its
+ * state; hovering a row names it, its state and its span. Times are epoch ms; `axis` labels the time axis. */
+export function Gantt({ rows, colors, axis, span }: { rows: { label: string; start: number; end: number; state: string; note?: string }[]; colors: Record<string, string>; axis: (t: number) => string; span: (start: number, end: number) => string }) {
+  const [ref, width, em] = useWidth<HTMLDivElement>()
+  const [tip, setTip] = useState<Tip | null>(null)
+  if (!rows.length) return <p className="ov-empty">No agent has started.</p>
+  const rowH = Math.round(1.25 * em)
+  const labelW = Math.min(Math.round(13 * em), Math.round(width * 0.32))
+  const top = 4
+  const bottom = Math.round(1.8 * em)
+  const height = top + rows.length * rowH + bottom
+  const t0 = Math.min(...rows.map((row) => row.start))
+  const t1 = Math.max(...rows.map((row) => row.end), t0 + 60_000)
+  const plotW = Math.max(0, width - labelW - 10)
+  const x = (t: number) => labelW + ((t - t0) / (t1 - t0)) * plotW
+  const fallback = colors.unknown ?? '#8e8e8e'
+  return (
+    <div ref={ref} className="ov-plot" onMouseLeave={() => setTip(null)}>
+      {width > 0 && (
+        <svg width={width} height={height} role="img" aria-label={`${rows.length} agents over time`}>
+          {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+            <g key={f}>
+              <line x1={labelW + f * plotW} x2={labelW + f * plotW} y1={top} y2={top + rows.length * rowH} className="ov-gridline" />
+              <text x={labelW + f * plotW} y={height - em * 0.35} className="ov-axis" textAnchor={f === 0 ? 'start' : f === 1 ? 'end' : 'middle'}>{axis(t0 + f * (t1 - t0))}</text>
+            </g>
+          ))}
+          {rows.map((row, i) => {
+            const y = top + i * rowH
+            const color = colors[row.state] ?? fallback
+            return (
+              <g key={`${row.label}-${i}`}
+                onMouseEnter={() => setTip({ x: Math.min(x(row.end) + 8, width - em * 16), y: Math.max(0, y - em), title: row.label, lines: [{ label: row.state, value: span(row.start, row.end), color }, ...(row.note ? [{ label: row.note, value: '' }] : [])] })}>
+                <rect x={0} y={y} width={width} height={rowH} fill="transparent" />
+                <text x={labelW - em * 0.5} y={y + rowH / 2} dominantBaseline="middle" textAnchor="end" className="ov-axis ov-gantt-label">
+                  {row.label.length > 26 ? `${row.label.slice(0, 25)}…` : row.label}
+                </text>
+                <rect x={x(row.start)} y={y + rowH * 0.18} width={Math.max(2, x(row.end) - x(row.start))} height={rowH * 0.64} rx={2} fill={color} />
+              </g>
+            )
+          })}
+        </svg>
+      )}
+      <Tooltip tip={tip} />
+    </div>
   )
 }
