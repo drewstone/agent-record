@@ -2510,7 +2510,7 @@
 .ar-ws .ov-attention-text small { font-size: .82em; color: var(--ar-fg-faint); }
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
 .ar-ws .ov-week { gap: .6em; }
-.ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1.1fr) minmax(6em, .8fr) minmax(0, 2.6fr) repeat(4, max-content); column-gap: 1.2em; }
+.ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1.1fr) minmax(6em, .8fr) minmax(0, 2.4fr) repeat(5, max-content); column-gap: 1.1em; }
 .ar-ws .ov-week li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; row-gap: .3em; padding: .55em .5em; border-top: 1px solid var(--ar-border); border-radius: 0; }
 .ar-ws .ov-week li:hover { background: var(--ar-hover, var(--ar-bg-alt)); }
 .ar-ws .ov-week li.is-running { background: color-mix(in srgb, var(--ws-accent) 8%, transparent); }
@@ -2531,6 +2531,10 @@
 .ar-ws .ov-week-num.is-warn { color: var(--ar-c-run); }
 .ar-ws .ov-week-ago { color: var(--ar-fg-muted); }
 .ar-ws .ov-week-all { justify-self: start; }
+.ar-ws .ov-costs { display: grid; gap: .5em; margin: 0; }
+.ar-ws .ov-costs > div { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; padding-bottom: .4em; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .ov-costs dt { color: var(--ar-fg-muted); }
+.ar-ws .ov-costs dd { margin: 0; font: 650 1.5em/1.1 var(--ar-font-body); font-variant-numeric: tabular-nums; color: var(--ar-fg); }
 @media (max-width: 760px) {
   .ar-ws .ov-week ol { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .8em; }
   .ar-ws .ov-week .ov-week-head { display: none; }

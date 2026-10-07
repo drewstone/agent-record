@@ -16,6 +16,8 @@ const ago = (value: string | null | undefined) => {
 // A running run with no activity this long reads as needing a look (the composer's STUCK_AFTER_S).
 const STALE_MS = 2 * 3_600_000
 const label = (value: string) => value.replaceAll('-', ' ')
+// Cost never mixes kinds: subscription use priced at API rates is not a bill; model API (Router) and sandbox compute are.
+const money = (value: number | null | undefined) => (value === null || value === undefined ? '?' : value ? usd(value) : '—')
 // Runs whose outcome is not known draw hollow, so they never pass for a near hue with a known outcome
 // (unknown beside no winner, no record beside driver failed).
 const HOLLOW = new Set(['unknown', 'no-record'])
@@ -59,7 +61,7 @@ function RunningRow({ run }: { run: OverviewRun }) {
           <span className={stale ? 'is-stale' : undefined}>active {ago(run.activeAt)}</span>
           {run.agents !== null && <span>{run.agents} agents{run.depth !== null ? `, depth ${run.depth}` : ''}</span>}
           <span>{run.results} results · {run.claims} claims</span>
-          {(run.listUsd > 0 || run.paidUsd > 0) && <span>{usd(run.listUsd)} list · {usd(run.paidUsd)} paid</span>}
+          <span>subscription {money(run.subscriptionUsd ?? run.listUsd)} at API prices · API {money(run.apiUsd)} · sandbox {money(run.sandboxUsd)}</span>
         </span>
         {run.purpose && <span className="ov-running-purpose">{run.purpose}</span>}
         {run.lead && <Lead lead={run.lead} />}
@@ -95,8 +97,9 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
         )}
       </span>
       <span className={`ov-week-num ${play.lostHours >= 10 ? 'is-warn' : ''}`} data-label="lost">{play.lostHours ? hours(play.lostHours) : '—'}</span>
-      <span className="ov-week-num" data-label="list">{play.listUsd ? usd(play.listUsd) : '—'}</span>
-      <span className="ov-week-num" data-label="paid">{play.paidUsd ? usd(play.paidUsd) : '—'}</span>
+      <span className="ov-week-num" data-label="subscription">{money(play.subscriptionUsd ?? play.listUsd)}</span>
+      <span className="ov-week-num" data-label="API">{money(play.apiUsd)}</span>
+      <span className="ov-week-num" data-label="sandbox">{money(play.sandboxUsd)}</span>
       <span className="ov-week-num ov-week-ago" data-label="last run">{ago(play.lastStartedAt)}</span>
     </li>
   )
@@ -131,6 +134,8 @@ export function OverviewPage({ api }: { api: string }) {
   const history = d.fleet.history
   const seats = [...d.seats.now].sort((a, b) => (b.d7 ?? -1) - (a.d7 ?? -1))
   const stood = state.standdown
+  const cost = d.money.costByDay
+  const costRuns = d.money.costRuns
   const running = d.now ?? []
   const attention = d.attention ?? []
   const week = d.week ?? []
@@ -190,14 +195,15 @@ export function OverviewPage({ api }: { api: string }) {
           {week.length ? (
             <ol>
               <li className="ov-week-head" aria-hidden="true">
-                <span>play</span><span>runs, newest first</span><span>what it found</span><span>lost</span><span>list</span><span>paid</span><span>last run</span>
+                <span>play</span><span>runs, newest first</span><span>what it found</span><span>lost</span><span>subscription</span><span>API</span><span>sandbox</span><span>last run</span>
               </li>
               {week.slice(0, weekShown).map((play) => <WeekRow key={play.play} play={play} />)}
               <li className="ov-week-total">
                 <span>{week.length} plays</span><span>{weekRuns} runs</span><span>{weekResults} results · {weekClaims} claims</span>
                 <span className="ov-week-num">{hours(sumOf(week.map((p) => p.lostHours)))}</span>
-                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.listUsd)))}</span>
-                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.paidUsd)))}</span>
+                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.subscriptionUsd ?? p.listUsd)))}</span>
+                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.apiUsd ?? 0)))}</span>
+                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.sandboxUsd ?? 0)))}</span>
                 <span />
               </li>
             </ol>
@@ -207,7 +213,7 @@ export function OverviewPage({ api }: { api: string }) {
           {week.length > weekShown && (
             <button type="button" className="filter-chip ov-week-all" onClick={() => setWeekShown(week.length)}>Show all {week.length} plays</button>
           )}
-          <p className="ov-note">Each chip is a run in its end state, hollow when the outcome is not known; smoke and archived runs are left out. List price is subscription use at API prices; paid is sandbox compute.</p>
+          <p className="ov-note">Each chip is a run in its end state, hollow when the outcome is not known; smoke and archived runs are left out. Subscription is seat use priced at API rates and never billed; API is model spend billed through Router; sandbox is compute billed to the runs' keys; ? is not recorded, — is none.</p>
         </div>
       </section>
 
@@ -264,9 +270,9 @@ export function OverviewPage({ api }: { api: string }) {
         <ChartCard title="Usage recorded, by harness" note={`${measured} of ${agents} agents (${pct(agents ? measured / agents : null)}) recorded token usage; the rest are unmeasured, not zero.`}>
           <HBars rows={tokens.harness.map((h) => ({ label: h.harness, value: h.agents, note: `${h.measured} measured · ${usd(h.list)} list` }))} format={(v) => `${v} agents`} color={SERIES[4]} />
         </ChartCard>
-        <ChartCard title="Plays by output tokens" wide note="30 days. List price is subscription use at API prices; paid is sandbox compute.">
+        <ChartCard title="Plays by output tokens" wide note="30 days. Subscription is seat use at API prices (not billed); API and sandbox are billed.">
           <HBars
-            rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · ${usd(p.list)} list · ${usd(p.paid)} paid · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
+            rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · subscription ${usd(p.subscription ?? p.list)} at API prices · API ${usd(p.api ?? 0)} · sandbox ${usd(p.sandbox ?? 0)} · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
             color={SERIES[1]}
             limit={12}
           />
@@ -274,11 +280,19 @@ export function OverviewPage({ api }: { api: string }) {
       </Section>
 
       <Section id="money" title="Money" tone="tone-warn">
-        <ChartCard title="List price per day" note="Subscription use priced at API list; never billed.">
-          <DayBars days={days} series={[{ name: 'list price', color: SERIES[0], values: cut(d.money.listByDay) }]} format={usd} />
+        <ChartCard title={`Cost by kind, ${range} days`} note={costRuns ? `Of ${costRuns.counted} runs in 30 days: API recorded for ${costRuns.api}, sandbox compute for ${costRuns.sandbox}; the rest are unrecorded, not zero.` : undefined}>
+          <dl className="ov-costs">
+            <div><dt>Billed: model API (Router)</dt><dd>{usd(sumOf(cut(cost?.api)))}</dd></div>
+            <div><dt>Billed: sandbox compute</dt><dd>{usd(sumOf(cut(cost?.sandbox)))}</dd></div>
+            <div><dt>Not billed: subscription use at API prices</dt><dd>{usd(sumOf(cut(cost?.subscription ?? d.money.listByDay)))}</dd></div>
+            {sumOf(cost?.otherList) > 0 && <div><dt>API-key agents at list price</dt><dd>{usd(sumOf(cut(cost?.otherList)))}</dd></div>}
+          </dl>
         </ChartCard>
-        <ChartCard title="Paid per day" note="Sandbox compute charged to the runs' keys.">
-          <DayBars days={days} series={[{ name: 'paid', color: SERIES[1], values: cut(d.money.paidByDay) }]} format={usd} />
+        <ChartCard title="Billed per day" legend={[{ name: 'model API', color: SERIES[3] }, { name: 'sandbox compute', color: SERIES[1] }]} note="What was charged: model calls through Router and sandbox compute on the runs' keys.">
+          <DayBars days={days} series={[{ name: 'model API', color: SERIES[3], values: cut(cost?.api) }, { name: 'sandbox compute', color: SERIES[1], values: cut(cost?.sandbox ?? d.money.paidByDay) }]} format={usd} />
+        </ChartCard>
+        <ChartCard title="Subscription use at API prices, per day" note="Seat use (Claude, Codex, Kimi, Gemini) priced at API list rates; covered by the seats, never billed.">
+          <DayBars days={days} series={[{ name: 'subscription at API prices', color: SERIES[0], values: cut(cost?.subscription ?? d.money.listByDay) }]} format={usd} />
         </ChartCard>
         <ChartCard title="List price per run">
           <Histogram bins={d.money.runListHistogram} unit="list $ per run" format={usd} />
