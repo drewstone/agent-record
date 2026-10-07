@@ -3,6 +3,7 @@ import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, 
 import { stateClass, stateLabel, when } from './data.js'
 import type { Comparison } from './profile-compare.js'
 import { primaryDiff, primaryParent, profileLabel } from './profile-graph.js'
+import { EditEvidence, ProfileScorecards } from './RoleScorecards.js'
 
 const RELATION_LABEL: Record<ProfileParent['relation'], string> = { authored: 'authored', revision: 'revision', treatment: 'treatment' }
 const shortDigest = (digest: string) => digest.replace(/^sha256:/, '').slice(0, 12)
@@ -23,7 +24,7 @@ export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: Pr
       {heading && (
         <header className="profile-detail-head">
           <h3>{node.name ?? node.label ?? node.short}</h3>
-          <span className="chip">{node.kind === 'root' ? 'registered' : 'authored at runtime'}</span>
+          <span className="chip">{node.kind === 'root' ? 'registered' : node.kind === 'proposal' ? 'proposed version' : node.kind === 'proposed' ? 'optimizer version' : 'authored at runtime'}</span>
           <code className="faint" title={node.digest}>{node.short}</code>
           <button type="button" className="ui-button profile-close" onClick={() => onSelect(null)}>Close</button>
         </header>
@@ -42,7 +43,9 @@ export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: Pr
           {node.author.kind === 'operator' ? (
             <>operator{node.author.registration && <> · <span className="mono">{node.author.registration}</span></>}</>
           ) : node.author.kind === 'proposer' ? (
-            <>version-chain proposer <span className="mono">{node.author.name}</span>{node.author.source && <> · <span className="mono faint">{node.author.source}</span></>}</>
+            <>proposer <span className="mono">{node.author.name}</span>{node.author.source && <> · <span className="mono faint">{node.author.source}</span></>}</>
+          ) : node.author.kind === 'readout' ? (
+            <>the readout of <a className="mono" href={runHref(node.author.runId)}>{node.author.runId}</a> · <span className="mono faint">{node.author.source}</span></>
           ) : (
             <>
               <span className="mono">{node.author.nodeId}</span>
@@ -58,7 +61,10 @@ export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: Pr
       </div>
 
       <h4>Runs</h4>
-      {node.runs.length ? <ProfileRuns runs={node.runs} /> : <p className="profile-empty faint">Registered, not run yet.</p>}
+      {node.runs.length ? <ProfileRuns runs={node.runs} /> : <p className="profile-empty faint">{node.kind === 'proposal' ? 'Proposed, not run yet.' : 'Registered, not run yet.'}</p>}
+
+      <ProfileScorecards doc={doc} node={node} />
+      {node.edit && <EditEvidence edit={node.edit} />}
 
       <h4>Parents</h4>
       {node.parents.length ? (
