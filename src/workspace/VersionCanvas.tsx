@@ -218,9 +218,9 @@ function VersionInspector({ api, play, version }: { api: string; play: PlayDocum
       </header>
       {run.purpose && <p>{run.purpose}</p>}
       <p className="faint">
-        Started {when(run.startedAt)} · {duration(run.durationMs)} · {run.nodes ?? 'unknown'} agents · paid {money(run.spend.paidUsd)}
-        {run.spend.paidKnown ? '' : '+'} · list price {money(run.spend.listUsd)}
-        {run.spend.listKnown === false ? '+' : ''}
+        Started {when(run.startedAt)} · {duration(run.durationMs)} · {run.nodes ?? 'unknown'} agents
+        {' · '}subscription use {money(run.spend.subscriptionUsd)} at API prices, not billed{!run.spend.subscriptionKnown && run.spend.subscriptionUsd !== null ? ' (partial)' : ''}
+        {' · '}model API {money(run.spend.apiUsd)} billed · sandbox compute {money(run.spend.sandboxUsd)} billed
       </p>
       <a className="inspector-link" href={runHref(run.id)}>Open the run page</a>
       <section>
