@@ -190,7 +190,8 @@ function CanvasPane({
     // Too wide to read whole: open at a readable size with the focus's parent column at the left edge.
     const k = 0.85
     const left = PAD + Math.max(0, node!.x - (node!.parent ? COL_W : 0))
-    setRawView({ k, x: 24 - left * k, y: size.h / 2 - (PAD + node!.y + NODE_H / 2) * k })
+    // The canvas usually opens below the run's header, so the focus sits in its upper part, where the screen shows it.
+    setRawView({ k, x: 24 - left * k, y: Math.min(size.h / 2, 260) - (PAD + node!.y + NODE_H / 2) * k })
   }, [size, fitView, centred, model.focus, selectedId])
 
   // A selection made outside the canvas (a link in the inspector, the URL) is brought into view.
