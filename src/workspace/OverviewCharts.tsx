@@ -126,6 +126,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
   const plotH = height - bottom - 8
   const slot = days.length ? plotW / days.length : 0
   const bar = Math.max(3, slot * 0.72)
+  const labelEvery = Math.max(1, Math.ceil(days.length / Math.max(1, Math.floor(plotW / (4.5 * em)))))
   const y = (v: number) => 8 + plotH - (v / top) * plotH
   return (
     <div ref={ref} className="ov-plot" onMouseLeave={() => setTip(null)}>
@@ -151,7 +152,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                   // A 2 px surface gap between stacked segments; a segment shorter than the gap still shows 1 px.
                   return <rect key={s.name} x={x} y={y1} width={bar} height={Math.max(2, y0 - y1 - 2)} rx={2} fill={s.color} />
                 })}
-                {i % Math.max(1, Math.ceil(days.length / 7)) === 0 && (
+                {(i % labelEvery === 0 || i === days.length - 1) && (
                   <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{day.slice(5)}</text>
                 )}
                 <rect
@@ -164,7 +165,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                     setTip({
                       x: Math.min(left + i * slot + slot + 8, width - em * 14),
                       y: 8,
-                      title: `${day} · ${format(totals[i] ?? 0)}`,
+                      title: `${day} · ${series.every((s) => s.values[i] === null) ? 'no rate' : format(totals[i] ?? 0)}`,
                       lines: series.map((s) => ({ label: s.name, value: s.values[i] === null ? 'No runs started' : format(s.values[i] ?? 0), color: s.color })),
                     })
                   }
