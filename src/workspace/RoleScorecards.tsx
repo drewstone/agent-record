@@ -1,6 +1,6 @@
 import type { ProfileGraphDocument, ProfileNode, RoleCard, RoleEdit, RunRoleCard } from '../workspace.js'
 import { when } from './data.js'
-import { classCounts, costText, expectationsText, minutes, replayText, severityText } from './role-scorecards.js'
+import { classCounts, costText, expectationsText, minutes, replayText, severityText, weakText } from './role-scorecards.js'
 
 const runHref = (runId: string) => `/run/${encodeURIComponent(runId)}`
 
@@ -65,6 +65,7 @@ export function RunRoles({ roles }: { roles: RunRoleCard }) {
             <li key={edit.operationId} data-role-edit={edit.operationId}>
               <b>{edit.role}</b> <code>{edit.digest}</code> {edit.markers.map((marker) => <span key={marker} className="chip mono">{marker}</span>)} delivered {when(edit.deliveredAt)} ({edit.effect});{' '}
               {edit.adopted ? <>adopted by <span className="mono">{edit.adopted.label ?? edit.adopted.nodeId}</span> {when(edit.adopted.at)}</> : 'not adopted yet'}
+              {edit.measured && <> · <span className="chip">weak evidence</span> {weakText(edit.measured)}</>}
             </li>
           ))}
         </ul>

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { profileGraphDocumentSchema, versionGraphDocumentSchema } from '../dist/workspace.js'
-import { classCounts, costText, expectationsText, replayText, severityText } from '../src/workspace/role-scorecards.ts'
+import { classCounts, costText, expectationsText, replayText, severityText, weakText } from '../src/workspace/role-scorecards.ts'
+import { proposedVersions, runOfProfile } from '../src/workspace/profile-graph.ts'
 import { sampleProfileGraph } from './fixtures/profile-graph.mjs'
 
 const role = {
@@ -18,7 +19,8 @@ const role = {
 }
 const runCard = { available: true, runId: 'run', builtAt: '2026-10-07T09:00:00Z', best: { tag: 'rc4' }, classes: { 'stale-render': 7 },
   regressions: [{ tag: 'rc3', from: 'rc2', checks: ['model-reproduces'], infrastructure: true, shares: {} }],
-  edits: [{ operationId: 'role-improve:run:report-editor:576e139b6ee8', role: 'report-editor', digest: '576e139b6ee8', markers: ['stale-render'], deliveredAt: '2026-10-07T10:00:00Z', effect: 'delivered', adopted: { nodeId: 'run:s41', label: 'editor-M8', at: '2026-10-07T11:00:00Z' } }],
+  edits: [{ operationId: 'role-improve:run:report-editor:576e139b6ee8', role: 'report-editor', digest: '576e139b6ee8', markers: ['stale-render'], deliveredAt: '2026-10-07T10:00:00Z', effect: 'delivered', adopted: { nodeId: 'run:s41', label: 'editor-M8', at: '2026-10-07T11:00:00Z' },
+    measured: { label: 'weak', before: { critiques: 6, blockers: 7, perCritique: 1.167 }, after: { critiques: 0, blockers: 0, perCritique: null }, note: 'one run, no control' } }],
   roles: [role] }
 
 test('a profile graph with role scorecards, a role version and its edit evidence satisfies the served schema', () => {
@@ -38,6 +40,9 @@ test('a profile graph with role scorecards, a role version and its edit evidence
   assert.equal(parsed.nodes.at(-2).edit.rules[0].evidence[0].blocker, 'C6-6')
   assert.equal(parsed.nodes[0].scorecards[0].role, 'report-editor')
   assert.equal(parsed.scorecards.run.roles[0].blockers.items[0].class, 'stale-render')
+  // A proposed version is reached from its parent and shown under its nearest ancestor's run.
+  assert.deepEqual(proposedVersions(parsed, parsed.nodes[0]).map((node) => node.short), ['777777777777'])
+  assert.equal(runOfProfile(parsed, parsed.nodes.at(-2)), base.createdIn)
 })
 
 test('the run versions document carries the run\'s role scorecard', () => {
@@ -56,4 +61,5 @@ test('scorecard text: heaviest classes first with other last, unmeasured cost sa
   assert.match(replayText(null), /weak evidence/u)
   assert.equal(replayText({ decision: 'ship', lift: 0.21, liftInterval: { low: 0.05, high: 0.37 }, checksFell: [], library: 'eligible', tieBreak: null }), 'ship lift +0.210 [0.050, 0.370] · joins the template library')
   assert.match(replayText({ decision: 'hold', lift: 0.02, liftInterval: { low: -0.1, high: 0.14 }, tieBreak: 'spans zero' }), /tie: Drew grades/u)
+  assert.equal(weakText(runCard.edits[0].measured), 'before 7 in 6 critiques, after no critique yet')
 })

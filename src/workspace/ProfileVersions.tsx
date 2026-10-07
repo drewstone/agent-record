@@ -2,8 +2,9 @@ import { useMemo } from 'react'
 import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, ProfileParent, ProfileRun } from '../workspace.js'
 import { stateClass, stateLabel, when } from './data.js'
 import type { Comparison } from './profile-compare.js'
-import { primaryDiff, primaryParent, profileLabel } from './profile-graph.js'
+import { primaryDiff, primaryParent, profileLabel, proposedVersions } from './profile-graph.js'
 import { EditEvidence, ProfileScorecards } from './RoleScorecards.js'
+import { replayText } from './role-scorecards.js'
 
 const RELATION_LABEL: Record<ProfileParent['relation'], string> = { authored: 'authored', revision: 'revision', treatment: 'treatment' }
 const shortDigest = (digest: string) => digest.replace(/^sha256:/, '').slice(0, 12)
@@ -65,6 +66,25 @@ export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: Pr
 
       <ProfileScorecards doc={doc} node={node} />
       {node.edit && <EditEvidence edit={node.edit} />}
+      {proposedVersions(doc, node).length > 0 && (
+        <>
+          <h4>Proposed next versions</h4>
+          <ul className="profile-parents">
+            {proposedVersions(doc, node).map((child) => (
+              <li key={child.digest} data-proposed={child.short}>
+                <button type="button" className="link-button mono" onClick={() => onSelect(child.short)}>{child.short}</button>{' '}
+                {child.edit ? (
+                  <>
+                    {child.edit.rules.map((rule) => <span key={rule.id} className="chip mono">{rule.id}</span>)} <span className="faint">{replayText(child.edit.replay)}</span>
+                  </>
+                ) : (
+                  <span className="faint">proposed by {child.author.kind === 'readout' ? `the readout of ${child.author.runId}` : child.author.kind}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h4>Parents</h4>
       {node.parents.length ? (

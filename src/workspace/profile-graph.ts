@@ -78,6 +78,27 @@ export function findProfile(graph: ProfileGraph, ref: string | null | undefined)
   return hits.length === 1 ? hits[0]! : null
 }
 
+/**
+ * The run a version is shown under: the run it was created in, else (a proposed version, which no run created) the
+ * nearest primary ancestor's run.
+ */
+export function runOfProfile(doc: ProfileGraphDocument, node: ProfileNode): string | null {
+  const byDigest = new Map(doc.nodes.map((item) => [item.digest, item]))
+  const seen = new Set<string>()
+  for (let at: ProfileNode | undefined = node; at && !seen.has(at.digest); at = byDigest.get(primaryParent(at)?.digest ?? '')) {
+    seen.add(at.digest)
+    if (at.createdIn) return at.createdIn
+  }
+  return null
+}
+
+/** Versions proposed as revisions of a node: the role loop's and the readouts' proposals, newest first. */
+export function proposedVersions(doc: ProfileGraphDocument, node: ProfileNode): ProfileNode[] {
+  return doc.nodes
+    .filter((item) => item.kind === 'proposal' && item.parents.some((edge) => edge.digest === node.digest && edge.relation === 'revision'))
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
+}
+
 export const diffKey = (from: string, to: string) => `${from}..${to}`
 
 /** The diff a node shows: against its primary parent, when the document carries one. */

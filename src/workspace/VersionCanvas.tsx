@@ -7,6 +7,7 @@ import { OutputChanges } from './Outputs.js'
 import { GradeControl, ScoresTable } from './Scores.js'
 import { headlineScore, scoreRows } from './scores.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
+import { runOfProfile } from './profile-graph.js'
 import type { GraphModel, GraphNode, GraphTone } from './version-graph.js'
 import { VersionGraph } from './VersionGraph.js'
 
@@ -173,7 +174,7 @@ export function Inspector({
       <div className="inspector" data-inspector={node.short}>
         <header className="inspector-head">
           <h2>{node.name ?? node.label ?? node.short}</h2>
-          <span className="chip">written at runtime</span>
+          <span className="chip">{node.kind === 'proposal' ? 'proposed version' : 'written at runtime'}</span>
           <code className="faint">{node.short}</code>
         </header>
         <section>
@@ -191,7 +192,8 @@ export function Inspector({
         </section>
         <ProfileDetail doc={graph} node={node} heading={false} onSelect={(short) => {
           const other = short ? graph.nodes.find((item) => item.short === short || item.digest.slice(7).startsWith(short)) : null
-          if (other?.createdIn) onSelect(other.kind === 'root' ? { kind: 'version', runId: other.createdIn } : { kind: 'profile', runId: other.createdIn, digest: other.digest })
+          const otherRun = other ? runOfProfile(graph, other) : null
+          if (other && otherRun) onSelect(other.kind === 'root' ? { kind: 'version', runId: otherRun } : { kind: 'profile', runId: otherRun, digest: other.digest })
         }} />
       </div>
     )

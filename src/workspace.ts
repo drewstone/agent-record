@@ -751,6 +751,16 @@ export const runRoleCardSchema = z
             deliveredAt: z.string().nullable(),
             effect: z.string(),
             adopted: z.object({ nodeId: z.string(), label: z.string().nullable(), at: z.string().nullable() }).catchall(z.unknown()).nullable(),
+            /** Weak evidence: the role's blockers of the edit's classes per critique, before and after adoption. */
+            measured: z
+              .object({
+                label: z.string(),
+                before: z.object({ critiques: z.number(), blockers: z.number(), perCritique: z.number().nullable() }),
+                after: z.object({ critiques: z.number(), blockers: z.number(), perCritique: z.number().nullable() }),
+              })
+              .catchall(z.unknown())
+              .nullable()
+              .optional(),
           })
           .catchall(z.unknown()),
       )
