@@ -2673,3 +2673,6 @@
 @media (prefers-reduced-motion: reduce) {
   .ar-ws .pc-edge, .ar-ws .pc-node, .ar-ws .pc-edge-label { transition: none; }
 }
+/* On the run page the section tab bar sticks above the canvas too. */
+.ar-ws .run-profiles .pc-layout { height: calc(100vh - var(--ar-sticky-top, 8px) - 104px); }
+@media (max-width: 1100px) { .ar-ws .run-profiles .pc-layout { height: auto; } }
