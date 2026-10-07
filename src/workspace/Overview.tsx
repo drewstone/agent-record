@@ -138,7 +138,7 @@ export function OverviewPage({ api }: { api: string }) {
   const costRuns = d.money.costRuns
   const infra = d.money.infra
   const infraDay = new Map(infra?.byDay?.map((row) => [row.date, row]))
-  const infraValues = (field: 'hostUsd' | 'volumeUsd' | 'snapshotUsd' | 'r2Usd' | 'r2ListUsd' | 'egressBytes' | 'egressUsd') =>
+  const infraValues = (field: 'hostUsd' | 'volumeUsd' | 'snapshotUsd' | 'r2Usd' | 'r2ListUsd' | 'r2StorageListUsd' | 'r2OperationsListUsd' | 'egressBytes' | 'egressUsd') =>
     days.map((day) => infraDay.get(day)?.[field] ?? null)
   const running = d.now ?? []
   const attention = d.attention ?? []
@@ -299,8 +299,9 @@ export function OverviewPage({ api }: { api: string }) {
             <div><dt>Snapshots and backups</dt><dd>{money(infra?.totals.snapshotUsd)}</dd></div>
             <div><dt>Cloudflare R2</dt><dd>{money(infra?.totals.r2Usd)}</dd></div>
             <div><dt>Egress charges</dt><dd>{money(infra?.totals.egressUsd)}</dd></div>
+            <div><dt>R2 egress</dt><dd>{infra?.totals.r2EgressUsd === 0 ? '$0 (free)' : money(infra?.totals.r2EgressUsd)}</dd></div>
           </dl>
-          {infra?.totals.r2ListUsd != null ? <p className="ov-note">R2 storage at list rates: {usd(infra.totals.r2ListUsd)}; the billed allocation is unknown.</p> : null}
+          {infra?.totals.r2ListUsd != null ? <p className="ov-note">R2 storage and operations at list rates: {usd(infra.totals.r2ListUsd)}; the billed allocation is unknown.</p> : null}
           {infra?.totals.r2DownloadBytesLowerBound != null ? <p className="ov-note">R2 download lower bound: {bytes(infra.totals.r2DownloadBytesLowerBound)}; R2 egress itself is free.</p> : null}
           {infra?.gaps?.length ? <p className="ov-note">Unmeasured: {infra.gaps.map((gap) => gap.detail).join(' · ')}</p> : null}
         </ChartCard>
@@ -322,8 +323,8 @@ export function OverviewPage({ api }: { api: string }) {
         <ChartCard title="Storage charge per day" legend={[{ name: 'volumes', color: SERIES[1] }, { name: 'snapshots', color: SERIES[2] }, { name: 'R2', color: SERIES[4] }]} note="Billed storage categories; missing provider readings are unknown.">
           <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="R2 storage at list rates per day" note="Direct Discovery bucket. Before the account free tier, operation charges and invoice rounding; not a billed amount.">
-          <DayBars days={days} series={[{ name: 'R2 list rate', color: SERIES[4], values: infraValues('r2ListUsd') }]} format={usd} missing="No reading" />
+        <ChartCard title="R2 at list rates per day" legend={[{ name: 'storage', color: SERIES[4] }, { name: 'operations', color: SERIES[2] }]} note="Direct Discovery bucket. Before the account free tier, retrieval charges and invoice rounding; not a billed amount.">
+          <DayBars days={days} series={[{ name: 'storage', color: SERIES[4], values: infraValues('r2StorageListUsd') }, { name: 'operations', color: SERIES[2], values: infraValues('r2OperationsListUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
         <ChartCard title="Egress bytes per day" note="Outbound traffic attributed to Discovery where a source records it.">
           <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" />

@@ -1155,8 +1155,8 @@ export interface OverviewDocument {
     costRuns?: { counted: number; snapshots: number; subscription: number; otherList: number; api: number; sandbox: number }
     infra?: {
       schema: 'discovery-infra-cost.v1'; generatedAt: string; window: { from: string | null; to: string; basis?: string }
-      totals: { hostUsd: number | null; volumeUsd: number | null; snapshotUsd: number | null; r2Usd: number | null; r2ListUsd?: number | null; egressBytes: number | null; egressUsd: number | null; r2DownloadBytesLowerBound?: number | null }
-      byDay: { date: string; hostUsd: number | null; volumeUsd: number | null; snapshotUsd: number | null; r2Usd: number | null; r2ListUsd?: number | null; egressBytes: number | null; egressUsd: number | null; r2DownloadBytesLowerBound?: number | null }[]
+      totals: { hostUsd: number | null; volumeUsd: number | null; snapshotUsd: number | null; r2Usd: number | null; r2ListUsd?: number | null; r2StorageListUsd?: number | null; r2OperationsListUsd?: number | null; r2EgressUsd?: number | null; egressBytes: number | null; egressUsd: number | null; r2DownloadBytesLowerBound?: number | null }
+      byDay: { date: string; hostUsd: number | null; volumeUsd: number | null; snapshotUsd: number | null; r2Usd: number | null; r2ListUsd?: number | null; r2StorageListUsd?: number | null; r2OperationsListUsd?: number | null; r2ClassARequests?: number | null; r2ClassBRequests?: number | null; r2EgressUsd?: number | null; egressBytes: number | null; egressUsd: number | null; r2DownloadBytesLowerBound?: number | null }[]
       hosts: { id: number | string; name: string | null; monthlyUsd: number | null; discoverySidecars?: number; discoveryShare: number | null; discoveryUsd: number | null; outgoingBytes: number | null; includedTrafficBytes?: number | null; egressUsd: number | null }[]
       storage: { volumes: unknown[]; hetznerSnapshots: unknown[]; r2Buckets: unknown[]; traces: { path: string; usedBytes: number | null; usd: number | null } | null }
       runs: { runId: string; hostUsd: number | null; storageUsd: number | null; egressBytes: number | null; egressUsd: number | null }[]
