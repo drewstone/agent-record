@@ -87,12 +87,12 @@ function Tooltip({ tip }: { tip: Tip | null }) {
   )
 }
 
-export function Legend({ items }: { items: { name: string; color: string }[] }) {
+export function Legend({ items }: { items: { name: string; color: string; hollow?: boolean }[] }) {
   return (
     <div className="ov-legend">
       {items.map((item) => (
         <span key={item.name}>
-          <i style={{ background: item.color }} />
+          <i style={item.hollow ? { boxShadow: `inset 0 0 0 2px ${item.color}` } : { background: item.color }} />
           {item.name}
         </span>
       ))}
