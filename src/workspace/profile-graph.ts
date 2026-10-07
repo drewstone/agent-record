@@ -17,8 +17,8 @@ export interface ProfileGraph {
   authored: Map<string, number>
 }
 
-/** Branches before the line they leave: a treatment, then the next revision, then what the profile authored. */
-const RELATION_RANK = { treatment: 0, revision: 1, authored: 2 } as const
+/** Branches before the line they leave: a treatment, then the next revision, a restarted worker, then what the profile authored. */
+const RELATION_RANK = { treatment: 0, revision: 1, replaced: 2, authored: 3 } as const
 const relationRank = (node: ProfileNode) => RELATION_RANK[primaryParent(node)?.relation ?? 'revision']
 const order = (a: ProfileNode, b: ProfileNode) =>
   (a.kind === b.kind ? 0 : a.kind === 'root' ? -1 : 1) ||

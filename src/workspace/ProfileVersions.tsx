@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, ProfileParent, ProfileRun } from '../workspace.js'
 import { stateClass, stateLabel, when } from './data.js'
 import type { Comparison } from './profile-compare.js'
@@ -6,12 +7,25 @@ import { primaryDiff, primaryParent, profileLabel, proposedVersions } from './pr
 import { EditEvidence, ProfileScorecards } from './RoleScorecards.js'
 import { replayText } from './role-scorecards.js'
 
-const RELATION_LABEL: Record<ProfileParent['relation'], string> = { authored: 'authored', revision: 'revision', treatment: 'treatment' }
+const RELATION_LABEL: Record<ProfileParent['relation'], string> = { authored: 'authored', replaced: 'restarted', revision: 'revision', treatment: 'treatment' }
 const shortDigest = (digest: string) => digest.replace(/^sha256:/, '').slice(0, 12)
 const runHref = (runId: string) => `/run/${encodeURIComponent(runId)}`
 
 /** One profile in full: where it came from, the runs that used it with their scores, what changed, and its content. */
-export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: ProfileGraphDocument; node: ProfileNode; onSelect: (short: string | null) => void; heading?: boolean }) {
+export function ProfileDetail({
+  doc,
+  node,
+  onSelect,
+  heading = true,
+  runCost,
+}: {
+  doc: ProfileGraphDocument
+  node: ProfileNode
+  onSelect: (short: string | null) => void
+  heading?: boolean
+  /** What the profile cost in a run; with it the runs table gains a cost column. */
+  runCost?: (runId: string) => ReactNode
+}) {
   const byDigest = useMemo(() => new Map(doc.nodes.map((item) => [item.digest, item])), [doc])
   const parent = primaryParent(node)
   const diff = primaryDiff(doc, node)
@@ -62,7 +76,7 @@ export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: Pr
       </div>
 
       <h4>Runs</h4>
-      {node.runs.length ? <ProfileRuns runs={node.runs} /> : <p className="profile-empty faint">{node.kind === 'proposal' ? 'Proposed, not run yet.' : 'Registered, not run yet.'}</p>}
+      {node.runs.length ? <ProfileRuns runs={node.runs} cost={runCost} /> : <p className="profile-empty faint">{node.kind === 'proposal' ? 'Proposed, not run yet.' : 'Registered, not run yet.'}</p>}
 
       <ProfileScorecards doc={doc} node={node} />
       {node.edit && <EditEvidence edit={node.edit} />}
@@ -153,7 +167,7 @@ export function ProfileDetail({ doc, node, onSelect, heading = true }: { doc: Pr
   )
 }
 
-function ProfileRuns({ runs }: { runs: ProfileRun[] }) {
+function ProfileRuns({ runs, cost }: { runs: ProfileRun[]; cost?: (runId: string) => ReactNode }) {
   return (
     <div className="table-scroll">
       <table className="data-table profile-runs">
@@ -163,6 +177,7 @@ function ProfileRuns({ runs }: { runs: ProfileRun[] }) {
             <th>Agent outcome</th>
             <th>Run state</th>
             <th title="The readout scores the whole run, so every profile in a run shows that run's score">Run score</th>
+            {cost && <th>Cost</th>}
           </tr>
         </thead>
         <tbody>
@@ -178,6 +193,7 @@ function ProfileRuns({ runs }: { runs: ProfileRun[] }) {
                 {run.run.reason && <small className="faint"> {run.run.reason}</small>}
               </td>
               <td className="profile-score"><Score score={run.score} /></td>
+              {cost && <td className="profile-cost">{cost(run.runId)}</td>}
             </tr>
           ))}
         </tbody>
