@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 // Categorical slots in the Tangle palette (lavender first), validated together on the workspace's dark surface
 // (#16181f): lightness band, chroma, adjacent CVD separation (worst 13.5) and the normal-vision floor (worst 20.9),
@@ -41,17 +41,17 @@ export const pct = (value: number | null | undefined) => (value === null || valu
 /** The rendered width and font size of an element, so an SVG chart draws at its real size and its geometry follows
  * the page's type. */
 function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
+  // A callback ref: a chart that first renders its empty message (no element) starts measuring when its plot mounts.
+  const [element, ref] = useState<T | null>(null)
   const [size, setSize] = useState({ width: 0, em: 16 })
   useEffect(() => {
-    const element = ref.current
     if (!element) return
     const observer = new ResizeObserver(([entry]) =>
       setSize({ width: Math.floor(entry!.contentRect.width), em: parseFloat(getComputedStyle(element).fontSize) || 16 }),
     )
     observer.observe(element)
     return () => observer.disconnect()
-  }, [])
+  }, [element])
   return [ref, size.width, size.em] as const
 }
 

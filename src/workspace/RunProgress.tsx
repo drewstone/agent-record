@@ -45,16 +45,18 @@ export function RunProgressView({ doc }: { doc: RunDocument }) {
         {doc.finalOutput?.readout?.charts?.length ? ' The readout charts are under Readout.' : ''}
       </p>
     )
+  // The agents Runtime observed, as the brief's own chart draws them; agents only the spawn journal names are left out.
   const rows = progress.agents
-    .flatMap((agent) => (agent.startedAt ? [{ label: agent.label, start: Date.parse(agent.startedAt), end: Date.parse(agent.endedAt ?? agent.startedAt), state: agent.status, note: agent.model ?? undefined }] : []))
+    .flatMap((agent) => (agent.startedAt && agent.observed !== false ? [{ label: agent.label, start: Date.parse(agent.startedAt), end: Date.parse(agent.endedAt ?? agent.startedAt), state: agent.status, note: agent.model ?? undefined }] : []))
     .sort((a, b) => a.start - b.start)
-  const start = progress.startedAt ? Date.parse(progress.startedAt) : Math.min(...rows.map((row) => row.start))
+  const first = [progress.startedAt, rows[0] ? new Date(rows[0].start).toISOString() : null, progress.samples[0]?.at, progress.generatedAt].find(Boolean)!
+  const start = Date.parse(first)
   const states = [...new Set(rows.map((row) => row.state))]
   const priced = progress.agents
-    .filter((agent) => agent.usd !== null && agent.usd > 0)
+    .filter((agent) => agent.observed !== false && agent.usd !== null && agent.usd > 0)
     .sort((a, b) => (b.usd ?? 0) - (a.usd ?? 0))
     .map((agent) => ({ label: agent.label, value: agent.usd ?? 0, note: agent.usdEstimated ? 'estimated' : undefined, color: AGENT_COLOR[agent.status] ?? AGENT_COLOR.unknown }))
-  const unpriced = progress.agents.length - priced.length
+  const unpriced = progress.agents.filter((agent) => agent.observed !== false).length - priced.length
   const spend = series(progress, (row) => row.runUsd)
   const files = series(progress, (row) => row.files)
   const since = (t: number) => `${clock(t)} · ${hours(t - start)} in`

@@ -398,6 +398,9 @@ export const runProgressSchema = z
           status: z.string(),
           parent: z.string().nullable().optional(),
           depth: z.number().int().nullable().optional(),
+          /** False for an agent only the spawn journal names; the charts draw the agents Runtime observed. */
+          observed: z.boolean().optional(),
+          lastActiveAt: time.nullable().optional(),
           /** Null for an agent with no record yet. */
           startedAt: time.nullable(),
           endedAt: time.nullable(),
