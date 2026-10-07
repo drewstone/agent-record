@@ -2537,6 +2537,8 @@
 .ar-ws .ov-costs dt { color: var(--ar-fg-muted); }
 .ar-ws .ov-costs dd { margin: 0; font: 650 1.5em/1.1 var(--ar-font-body); font-variant-numeric: tabular-nums; color: var(--ar-fg); }
 @media (max-width: 760px) {
+  .ar-ws .ov-page, .ar-ws .ov-section { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .ov-card { overflow-wrap: anywhere; }
   .ar-ws .ov-week ol { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .8em; }
   .ar-ws .ov-week .ov-week-head { display: none; }
   .ar-ws .ov-week-play, .ar-ws .ov-week-runs, .ar-ws .ov-week-found { grid-column: 1 / -1; }
