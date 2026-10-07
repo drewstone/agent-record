@@ -243,7 +243,7 @@ export function RunAssessments({
                       row.measure.count !== undefined ? `${row.measure.count} events` : null,
                       row.measure.ms === null ? 'time not measured' : row.measure.ms !== undefined ? duration(row.measure.ms) : null,
                       row.measure.tokens !== undefined ? `${row.measure.tokens} tokens` : null,
-                      row.measure.listUsd !== undefined ? `${money(row.measure.listUsd)} list` : null,
+                      row.measure.listUsd !== undefined ? `${money(row.measure.listUsd)} at API prices` : null,
                     ].filter(Boolean).join(' · ')}
                   </p>
                 )}

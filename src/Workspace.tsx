@@ -32,7 +32,7 @@ import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
+import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -595,7 +595,7 @@ function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (r
         <>
           <h3>Unknown spend</h3>
           <ul className="gap-list">
-            {play.spend.gaps.map((gap, i) => <li key={i}><code>{gap.code}</code> {gap.runId && <span className="mono">{shortRun(play.id, gap.runId)}</span>} {gap.detail}</li>)}
+            {play.spend.gaps.map((gap, i) => <li key={i}><code title={gap.code}>{spendGapLabel(gap.code)}</code> {gap.runId && <span className="mono">{shortRun(play.id, gap.runId)}</span>} {gap.detail}</li>)}
           </ul>
         </>
       )}
@@ -917,7 +917,7 @@ function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
         </table>
       )}
       {doc.spend.gaps.length > 0 && (
-        <ul className="gap-list">{doc.spend.gaps.map((gap, i) => <li key={i}><code>{gap.code}</code> {gap.detail}</li>)}</ul>
+        <ul className="gap-list">{doc.spend.gaps.map((gap, i) => <li key={i}><code title={gap.code}>{spendGapLabel(gap.code)}</code> {gap.detail}</li>)}</ul>
       )}
       {doc.input && <InputView input={doc.input} api={api} />}
     </>

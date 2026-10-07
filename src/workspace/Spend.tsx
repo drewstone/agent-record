@@ -6,6 +6,7 @@ const seatWeekValue = (value: number | null | undefined) =>
 
 const seatLabel = (seat: string) => `seat ${seat.slice(0, 12)}`
 const segmentTime = (value: string | null | undefined) => value ? `${new Date(value).toISOString().slice(0, 16).replace('T', ' ')} UTC` : 'end unmeasured'
+export const spendGapLabel = (code: string) => code === 'list-partial' ? 'usage at API prices incomplete' : code
 
 /** Weekly allowance use comes from subscription history; it is not paid spend or list price. */
 export function SeatWeeksPanel({ spend }: { spend: Spend }) {
@@ -210,7 +211,7 @@ export function NodeSpendPanel({ spend, listFromRecord }: { spend: NodeSpend | u
       )}
       {spend.gaps.length > 0 && (
         <ul className="gap-list">
-          {spend.gaps.map((gap, i) => <li key={i}><code>{gap.code}</code> {gap.detail}</li>)}
+          {spend.gaps.map((gap, i) => <li key={i}><code title={gap.code}>{spendGapLabel(gap.code)}</code> {gap.detail}</li>)}
         </ul>
       )}
     </div>

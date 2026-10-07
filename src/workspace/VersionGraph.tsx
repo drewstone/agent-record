@@ -337,8 +337,8 @@ function CommitInspector({
           <dd>{when(commit.at)}</dd>
           {commit.spendUsd !== null && (
             <>
-              <dt>Worker spend so far</dt>
-              <dd>{money(commit.spendUsd)} (list price)</dd>
+              <dt>Worker usage so far</dt>
+              <dd>{money(commit.spendUsd)} at API prices, not billed</dd>
             </>
           )}
         </dl>
