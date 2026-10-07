@@ -140,6 +140,7 @@ export function OverviewPage({ api }: { api: string }) {
   const infraDay = new Map(infra?.byDay?.map((row) => [row.date, row]))
   const infraValues = (field: 'hostUsd' | 'volumeUsd' | 'snapshotUsd' | 'r2Usd' | 'r2ListUsd' | 'r2StorageListUsd' | 'r2OperationsListUsd' | 'egressBytes' | 'egressUsd') =>
     days.map((day) => infraDay.get(day)?.[field] ?? null)
+  const hasInfra = (field: Parameters<typeof infraValues>[0]) => infraValues(field).some((value) => value !== null)
   const running = d.now ?? []
   const attention = d.attention ?? []
   const week = d.week ?? []
@@ -318,19 +319,19 @@ export function OverviewPage({ api }: { api: string }) {
           </dl>
         </ChartCard>
         <ChartCard title="Host allocation per day" note="Measured Discovery share of host fixed cost. A missing day has no allocation.">
-          <DayBars days={days} series={[{ name: 'host', color: SERIES[2], values: infraValues('hostUsd') }]} format={usd} missing="No reading" />
+          {hasInfra('hostUsd') ? <DayBars days={days} series={[{ name: 'host', color: SERIES[2], values: infraValues('hostUsd') }]} format={usd} missing="No reading" /> : <p className="ov-empty">No attributed host reading.</p>}
         </ChartCard>
         <ChartCard title="Storage charge per day" legend={[{ name: 'volumes', color: SERIES[1] }, { name: 'snapshots', color: SERIES[2] }, { name: 'R2', color: SERIES[4] }]} note="Billed storage categories; missing provider readings are unknown.">
-          <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" />
+          {hasInfra('volumeUsd') || hasInfra('snapshotUsd') || hasInfra('r2Usd') ? <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" /> : <p className="ov-empty">No attributed billed storage reading.</p>}
         </ChartCard>
         <ChartCard title="R2 at list rates per day" legend={[{ name: 'storage', color: SERIES[4] }, { name: 'operations', color: SERIES[2] }]} note="Direct Discovery bucket. Before the account free tier, retrieval charges and invoice rounding; not a billed amount.">
           <DayBars days={days} series={[{ name: 'storage', color: SERIES[4], values: infraValues('r2StorageListUsd') }, { name: 'operations', color: SERIES[2], values: infraValues('r2OperationsListUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
         <ChartCard title="Egress bytes per day" note="Outbound traffic attributed to Discovery where a source records it.">
-          <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" />
+          {hasInfra('egressBytes') ? <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" /> : <p className="ov-empty">No attributed outbound-byte reading.</p>}
         </ChartCard>
         <ChartCard title="Egress charges per day" note={`Measured outbound charges: ${bytes(infra?.totals.egressBytes)} total bytes. Bytes without a tariff have unknown cost.`}>
-          <DayBars days={days} series={[{ name: 'egress', color: SERIES[3], values: infraValues('egressUsd') }]} format={usd} missing="No reading" />
+          {hasInfra('egressUsd') ? <DayBars days={days} series={[{ name: 'egress', color: SERIES[3], values: infraValues('egressUsd') }]} format={usd} missing="No reading" /> : <p className="ov-empty">No attributed egress charge reading.</p>}
         </ChartCard>
         <ChartCard title="Billed per day" legend={[{ name: 'model API', color: SERIES[3] }, { name: 'sandbox compute', color: SERIES[1] }]} note="What was charged: model calls through Router and sandbox compute on the runs' keys.">
           <DayBars days={days} series={[{ name: 'model API', color: SERIES[3], values: cut(cost?.api) }, { name: 'sandbox compute', color: SERIES[1], values: cut(cost?.sandbox ?? d.money.paidByDay) }]} format={usd} missing="No reading" />
