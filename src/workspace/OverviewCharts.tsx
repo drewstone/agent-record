@@ -4,14 +4,17 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 // (#16181f): lightness band, chroma, adjacent CVD separation (worst 13.5) and the normal-vision floor (worst 20.9),
 // contrast >= 3:1. Assigned in this order, never cycled; a chart needing more series folds the rest into "other".
 export const SERIES = ['#8b7cf6', '#0ea5a0', '#c98500', '#e2508f', '#4a90e2'] as const
-// Run end states are status, not identity: they wear the status tokens and always carry a label.
+// Run states are labelled status categories. This order passed the categorical validator on the Discovery dark
+// surface (#16181f): adjacent CVD separation >= 13.5, normal-vision separation >= 20.9, contrast >= 3:1.
+// Keeping failed blue and driver-failed red also separates the two outcomes when they dominate a day.
 export const STATE_COLOR: Record<string, string> = {
-  winner: 'var(--ar-c-ok)',
-  'no-winner': 'var(--ar-c-run)',
-  'driver-failed': 'var(--ar-c-fail)',
-  failed: 'color-mix(in srgb, var(--ar-c-fail) 60%, var(--ar-fg-faint))',
-  running: 'var(--ws-accent)',
-  unknown: 'var(--ar-fg-faint)',
+  'driver-failed': '#e26868',
+  running: '#8b7cf6',
+  winner: '#0ea5a0',
+  'no-winner': '#c98500',
+  'no-record': '#e2508f',
+  failed: '#4a90e2',
+  unknown: '#b97637',
 }
 
 export const compact = (value: number | null | undefined) =>
@@ -111,7 +114,7 @@ export function ChartCard({ title, note, legend, wide, children }: { title: stri
 }
 
 /** Bars per day, stacked by series, on one axis; hovering a day lists every series' value for it. */
-export function DayBars({ days, series, format = compact, rows = 13 }: { days: string[]; series: { name: string; color: string; values: number[] }[]; format?: (v: number) => string; rows?: number }) {
+export function DayBars({ days, series, format = compact, rows = 13 }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number }) {
   const [ref, width, em] = useWidth<HTMLDivElement>()
   const height = Math.round(rows * em)
   const [tip, setTip] = useState<Tip | null>(null)
@@ -123,6 +126,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
   const plotH = height - bottom - 8
   const slot = days.length ? plotW / days.length : 0
   const bar = Math.max(3, slot * 0.72)
+  const labelEvery = Math.max(1, Math.ceil(days.length / Math.max(1, Math.floor(plotW / (4.5 * em)))))
   const y = (v: number) => 8 + plotH - (v / top) * plotH
   return (
     <div ref={ref} className="ov-plot" onMouseLeave={() => setTip(null)}>
@@ -148,7 +152,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                   // A 2 px surface gap between stacked segments; a segment shorter than the gap still shows 1 px.
                   return <rect key={s.name} x={x} y={y1} width={bar} height={Math.max(2, y0 - y1 - 2)} rx={2} fill={s.color} />
                 })}
-                {i % Math.max(1, Math.ceil(days.length / 7)) === 0 && (
+                {(i % labelEvery === 0 || i === days.length - 1) && (
                   <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{day.slice(5)}</text>
                 )}
                 <rect
@@ -161,8 +165,8 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                     setTip({
                       x: Math.min(left + i * slot + slot + 8, width - em * 14),
                       y: 8,
-                      title: `${day} · ${format(totals[i] ?? 0)}`,
-                      lines: series.map((s) => ({ label: s.name, value: format(s.values[i] ?? 0), color: s.color })),
+                      title: `${day} · ${series.every((s) => s.values[i] === null) ? 'no rate' : format(totals[i] ?? 0)}`,
+                      lines: series.map((s) => ({ label: s.name, value: s.values[i] === null ? 'No runs started' : format(s.values[i] ?? 0), color: s.color })),
                     })
                   }
                 />

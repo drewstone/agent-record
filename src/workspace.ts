@@ -1121,7 +1121,7 @@ export interface OverviewDocument {
   composedAt: string
   days: string[]
   state: { standdown: { reason?: string; by?: string; at?: string } | null; lastResearchStart: string | null; running: number; queued: number; sandboxesRunning: number | null; sandboxesByKind: Record<string, number>; boxesUnreleased: number | null; censusAt: string | null }
-  runs: { byDay: Record<string, number[]>; total: number; causes: [string, number][]; depth: [string, number][]; agentsHistogram: Bin[]; lostHoursHistogram: Bin[]; lostHours: number }
+  runs: { byDay: Record<string, number[]>; total: number; causes: [string, number][]; depth: [string, number][]; agentsHistogram: Bin[]; lostHoursHistogram: Bin[]; lostHours: number; lostByDay?: Record<string, number[]>; scope?: string }
   findings: { byDay: Record<string, number[]>; runsWithFindings: number; claims: number }
   tokens: {
     byDay: { input: number[]; output: number[]; cacheRead: number[]; cacheWrite: number[] }

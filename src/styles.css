@@ -2484,6 +2484,7 @@
 /* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
    four never leaves one card beside two empty slots. */
 .ar-ws .ov-grid { display: flex; flex-wrap: wrap; gap: 1em; }
+.ar-ws .ov-run-trends { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26em), 1fr)); gap: 1em; min-width: 0; }
 .ar-ws .ov-card { flex: 1 1 min(100%, 30em); margin: 0; display: grid; gap: .7em; align-content: start; padding: 1em 1.2em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; box-sizing: border-box; }
 .ar-ws .ov-card.wide { flex-basis: 100%; }
 /* Title, then the legend on its own line, so every card's plot starts at the same depth. */
