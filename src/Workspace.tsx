@@ -29,6 +29,7 @@ import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
+import { RunProgressView } from './workspace/RunProgress.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -689,21 +690,26 @@ function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; ru
   )
 }
 
-/** The run page's sections, in one tab bar under the header: what the run found first, then its agents and the rest. */
-type RunSection = 'findings' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
+/**
+ * The run page's sections, in one tab bar under the header: what the run found first, then how it progressed, its
+ * agents and the rest. The first six are tabs; the others sit behind More, which names the one open.
+ */
+type RunSection = 'findings' | 'progress' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
 const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
   ['findings', 'Findings'],
+  ['progress', 'Progress'],
   ['agents', 'Agents'],
+  ['spend', 'Spend'],
+  ['readout', 'Readout'],
+  ['outputs', 'Outputs'],
   ['graph', 'Graph'],
   ['versions', 'Versions'],
   ['profiles', 'Profiles'],
-  ['readout', 'Readout'],
-  ['outputs', 'Outputs'],
-  ['spend', 'Spend'],
   ['assessments', 'Assessments'],
   ['input', 'Input'],
   ['coverage', 'Coverage'],
 ]
+const RUN_TABS = 6
 /** Sections that draw from the selected agent's record part (every node, that agent's events). */
 const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'spend', 'assessments', 'coverage'])
 
@@ -778,22 +784,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
       <RunHeader doc={doc} />
-      <AnswerStrip doc={doc} onOpen={() => open('readout')} onOutputs={() => open('outputs')} />
-      <nav className="run-tabs" aria-label="Run sections">
-        {RUN_SECTIONS.map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={`run-tab ${section === value ? 'on' : ''}`}
-            aria-current={section === value ? 'page' : undefined}
-            data-section-tab={value}
-            onClick={() => open(value)}
-          >
-            {label}
-            {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
-          </button>
-        ))}
-      </nav>
+      <AnswerStrip doc={doc} onOpen={() => open('readout')} onOutputs={() => open('outputs')} onFindings={() => open('findings')} onProgress={() => open('progress')} />
+      <RunTabs section={section} counts={counts} onOpen={open} />
+      {section === 'progress' && <RunProgressView doc={doc} />}
       {section === 'findings' &&
         (doc.findings?.total ? (
           <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
@@ -913,6 +906,39 @@ function RunPage({ api, id }: { api: string; id: string }) {
         </div>
       )}
     </div>
+  )
+}
+
+/** The run's section tabs: the first RUN_TABS as tabs, the rest in a More menu that names the section open in it. */
+function RunTabs({ section, counts, onOpen }: { section: RunSection; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void }) {
+  const more = useRef<HTMLDetailsElement>(null)
+  const tab = ([value, label]: readonly [RunSection, string], inMenu = false) => (
+    <button
+      key={value}
+      type="button"
+      className={`run-tab ${section === value ? 'on' : ''}`}
+      aria-current={section === value ? 'page' : undefined}
+      data-section-tab={value}
+      role={inMenu ? 'menuitem' : undefined}
+      onClick={() => {
+        if (more.current) more.current.open = false
+        onOpen(value)
+      }}
+    >
+      {label}
+      {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
+    </button>
+  )
+  const hidden = RUN_SECTIONS.slice(RUN_TABS)
+  const current = hidden.find(([value]) => value === section)
+  return (
+    <nav className="run-tabs" aria-label="Run sections">
+      {RUN_SECTIONS.slice(0, RUN_TABS).map((entry) => tab(entry))}
+      <details className="run-tab-more" ref={more}>
+        <summary className={`run-tab ${current ? 'on' : ''}`} data-section-tab="more">{current ? `More: ${current[1]}` : 'More'}</summary>
+        <div className="run-tab-menu" role="menu">{hidden.map((entry) => tab(entry, true))}</div>
+      </details>
+    </nav>
   )
 }
 

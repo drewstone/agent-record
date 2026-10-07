@@ -23,19 +23,30 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 
 const utcTime = (value: string | null | undefined) => (value ? `${value.slice(11, 16)} UTC` : 'time unknown')
 
+/** One fact of the answer strip: a label and its value on one line; it opens the section that holds the detail. */
+interface Fact {
+  key: string
+  label: string
+  value: string
+  note?: string
+  tone?: string
+  title?: string
+  open: () => void
+}
+
 /**
- * The run's answer in one strip: how it ended, what it delivered, what the hypotheses came to, what the judges
- * say, what it cost, and the observer's latest brief when there is one. The deliverables cell opens the run's outputs;
- * the others open the full readout. A number nobody measured says so.
+ * The run's answer in one line of facts, then the observer's latest brief. Only what is known is shown: a running run
+ * leads with its agents working, spend so far, files written and findings so far, and a fact with nothing to say
+ * (no deliverable declared, no hypothesis judged, no judge run) is left out rather than shown as unknown. Live figures
+ * come from the run's progress document (the brief's own numbers), else from the latest brief.
  */
-export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOpen: () => void; onOutputs: () => void }) {
+export function AnswerStrip({ doc, onOpen, onOutputs, onFindings, onProgress }: { doc: RunDocument; onOpen: () => void; onOutputs: () => void; onFindings: () => void; onProgress: () => void }) {
   const run = doc.run
   const readout = doc.finalOutput?.readout
   const finished = readout && readout.status !== 'pending' ? readout : null
   const outcome = finished?.settle ? `${finished.settle.kind.replaceAll('-', ' ')}${finished.settle.reason && finished.settle.reason !== finished.settle.kind ? ` · ${finished.settle.reason.replaceAll('-', ' ')}` : ''}` : `${run.state.replaceAll('-', ' ')}${run.reason && run.reason !== run.state ? ` · ${run.reason.replaceAll('-', ' ')}` : ''}`
   const deliverables = finished?.deliverables ?? []
   const present = deliverables.filter((item) => item.present === true).length
-  const report = finished?.links.report ?? null
   const verdicts = finished?.verdicts ?? []
   const verdictCounts = new Map<string, number>()
   for (const verdict of verdicts) verdictCounts.set(verdict.verdict, (verdictCounts.get(verdict.verdict) ?? 0) + 1)
@@ -43,95 +54,90 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
   const headline = headlineScore(scoreRows(finished, final?.panel, final?.grades?.latest, { kind: 'run', id: run.id }))
   const yours = final?.grades?.latest.filter((grade) => grade.target.kind === 'run' && grade.category === 'overall').at(-1) ?? null
   const spend = doc.spend
-  const brief = doc.finalOutput?.brief ?? null
-  const fallback = doc.finalOutput?.fallback ?? null
+  const brief = final?.brief ?? null
+  const fallback = final?.fallback ?? null
   const fallbackLink = externalHref(fallback?.url)
-  const files = doc.finalOutput?.files.length ?? 0
-  const claims = doc.findings?.items.filter((item) => item.kind === 'result' || item.kind === 'claim').length ?? 0
+  const report = externalHref(finished?.links.report ?? null)
+  const progress = doc.progress ?? null
+  const sample = progress?.samples.at(-1) ?? null
+  const running = run.state === 'running'
+  const items = doc.findings?.items ?? []
+  const results = items.filter((item) => item.kind === 'result').length
+  const claims = items.filter((item) => item.kind === 'claim').length
+
+  const facts: Fact[] = [{ key: 'outcome', label: running ? 'State' : 'Outcome', value: outcome, note: duration(run.durationMs), tone: stateClass(finished?.settle?.kind ?? run.state), open: onOpen }]
+  // Agents: those working now and all the run started, from the progress document, else the brief's team.
+  const team = progress?.agents.length ?? brief?.team.length ?? run.nodes ?? null
+  const working = sample?.working ?? (brief ? brief.team.filter((member) => member.state === 'running').length : null)
+  if (team !== null)
+    facts.push({ key: 'agents', label: 'Agents', value: running && working !== null ? `${working} working` : String(team), note: running && working !== null ? `of ${team}` : undefined, open: onProgress })
+  // Spend so far: the brief's API-equivalent figure (every token at list price, whoever paid), then what was billed.
+  const spent = progress?.spend.runUsd ?? brief?.spend?.runUsd ?? null
+  if (spent !== null)
+    facts.push({ key: 'spent', label: running ? 'Spend so far' : 'Spend', value: money(spent), note: 'API-equivalent', title: progress?.spend.provenance ?? brief?.spend?.provenance ?? undefined, open: onProgress })
+  const billed = [spend.apiUsd !== null ? `API ${money(spend.apiUsd)}` : null, spend.sandboxUsd !== null ? `sandbox ${money(spend.sandboxUsd)}` : null].filter(Boolean)
+  if (billed.length) facts.push({ key: 'billed', label: 'Billed', value: billed.join(' · '), open: onOpen })
+  if (spend.subscriptionUsd !== null)
+    facts.push({ key: 'subscription', label: 'Subscription use', value: money(spend.subscriptionUsd), note: `at API prices, not billed${spend.subscriptionKnown ? '' : ', partial'}`, open: onOpen })
+  const files = progress?.files ?? sample?.files ?? null
+  if (files !== null) facts.push({ key: 'files', label: running ? 'Files written' : 'Files', value: String(files), open: onOutputs })
+  if (doc.findings)
+    facts.push({ key: 'findings', label: running ? 'Findings so far' : 'Findings', value: results || claims ? [results ? plural(results, 'result') : null, claims ? plural(claims, 'claim') : null].filter(Boolean).join(' · ') : 'none yet', open: onFindings })
+  if (deliverables.length || (final?.status && final.status !== 'none-declared' && final.status !== 'unknown'))
+    facts.push({ key: 'deliverables', label: 'Deliverables', value: deliverables.length ? `${present} of ${deliverables.length} present` : (final?.status ?? '').replaceAll('-', ' '), open: onOutputs })
+  if (verdicts.length) facts.push({ key: 'hypotheses', label: 'Hypotheses', value: [...verdictCounts].map(([verdict, count]) => `${count} ${verdict.replaceAll('-', ' ')}`).join(' · '), open: onOpen })
+  if (headline)
+    facts.push({ key: 'score', label: 'Score', value: `${headline.score} of 100`, note: `${headline.source === 'judges' ? 'AI judges' : `${headline.n} AI personas, advisory`}${yours ? ` · ${yours.by.split('@')[0]}: ${yours.score}` : ''}`, open: onOpen })
+
   return (
-    <div className={`answer-strip ${brief ? 'with-brief' : ''}`} role="group" aria-label="The run's answer" data-answer-strip>
-      <button type="button" className="answer-cell" onClick={onOpen}>
-        <span className="answer-label">Outcome</span>
-        <span className={`answer-value ${stateClass(finished?.settle?.kind ?? run.state)}`}>{outcome}</span>
-        <span className="faint">{duration(run.durationMs)}</span>
-      </button>
-      <button type="button" className="answer-cell" onClick={onOutputs} data-answer-outputs>
-        <span className="answer-label">Deliverables</span>
-        <span className="answer-value">
-          {deliverables.length ? `${present} of ${deliverables.length} present` : doc.finalOutput?.status === 'none-declared' ? 'none declared' : (doc.finalOutput?.status ?? 'unknown').replaceAll('-', ' ')}
-        </span>
-        <span className="faint">
-          {files ? `Open the ${files} ${files === 1 ? 'file' : 'files'}` : 'no file listed'}
-          {report ? (
-            <>
-              {' · '}
-              <a className="answer-link" href={report} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>
-                Report ↗
-              </a>
-            </>
-          ) : readout?.status === 'pending' ? ' · readout pending' : ''}
-        </span>
-        {fallback && (
-          <span className="answer-fallback">
-            Ended undelivered: read brief {fallback.sequence}
-            {fallbackLink && (
-              <>
-                {' '}
-                <a className="answer-link" href={fallbackLink} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>↗</a>
-              </>
-            )}
-          </span>
+    <div className="answer-strip" role="group" aria-label="The run's answer" data-answer-strip>
+      <div className="answer-facts">
+        {facts.map((fact) => (
+          <button key={fact.key} type="button" className="answer-fact" onClick={fact.open} title={fact.title} data-fact={fact.key}>
+            <span className="answer-label">{fact.label}</span>
+            <span className={`answer-value ${fact.tone ?? ''}`}>{fact.value}</span>
+            {fact.note && <span className="faint">{fact.note}</span>}
+          </button>
+        ))}
+        {report && (
+          <a className="answer-fact answer-link" href={report} target="_blank" rel="noopener noreferrer">Report ↗</a>
         )}
-      </button>
-      <button type="button" className="answer-cell" onClick={onOpen}>
-        <span className="answer-label">Hypotheses</span>
-        <span className="answer-value">
-          {verdicts.length ? [...verdictCounts].map(([verdict, count]) => `${count} ${verdict.replaceAll('-', ' ')}`).join(' · ') : claims ? `${claims} written by agents` : 'none recorded'}
-        </span>
-        {!verdicts.length && claims > 0 && <span className="faint">results and claims, not yet judged</span>}
-      </button>
-      <button type="button" className="answer-cell" onClick={onOpen}>
-        <span className="answer-label">Score, 0–100 vs world class</span>
-        <span className="answer-value">{headline ? `${headline.score} of 100` : 'no absolute score yet'}</span>
-        <span className="faint">
-          {headline
-            ? headline.source === 'judges'
-              ? `median of the AI judges`
-              : `median of ${headline.n} AI personas, advisory`
-            : finished?.judges.length
-              ? 'the judges used the retired relative scale'
-              : 'no judges ran'}
-          {yours ? ` · ${yours.by.split('@')[0]}: ${yours.score}` : ''}
-        </span>
-      </button>
-      <button type="button" className="answer-cell" onClick={onOpen}>
-        <span className="answer-label">Cost</span>
-        <span className="answer-value">API {money(spend.apiUsd)} · sandbox {money(spend.sandboxUsd)}</span>
-        <span className="faint">subscription use {money(spend.subscriptionUsd)} at API prices · not billed{!spend.subscriptionKnown && spend.subscriptionUsd !== null ? ' · partial' : ''}</span>
-      </button>
-      {brief && <BriefCell brief={brief} />}
+        {readout?.status === 'pending' && !running && <span className="answer-fact faint">readout pending</span>}
+      </div>
+      {fallback && (
+        <p className="answer-fallback">
+          Ended undelivered: brief {fallback.sequence} is its readable result
+          {fallbackLink && (
+            <>
+              {' '}
+              <a className="answer-link" href={fallbackLink} target="_blank" rel="noopener noreferrer">↗</a>
+            </>
+          )}
+        </p>
+      )}
+      {brief && <BriefLine brief={brief} />}
     </div>
   )
 }
 
 const SEVERITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 }
 
-/** The observer's latest brief: its headline, when it was written, the gravest risk it names, and the brief itself. */
-function BriefCell({ brief }: { brief: ProgressBrief }) {
+/** The observer's latest brief on one line: which and when, its headline, the gravest risk it names, and a link. */
+function BriefLine({ brief }: { brief: ProgressBrief }) {
   const link = externalHref(brief.links.latest ?? brief.links.brief)
   const risk = [...brief.risks].sort((a, b) => (SEVERITY_RANK[a.severity ?? ''] ?? 3) - (SEVERITY_RANK[b.severity ?? ''] ?? 3))[0]
   return (
-    <div className="answer-cell answer-brief" data-answer-brief={brief.sequence}>
+    <div className="answer-brief" data-answer-brief={brief.sequence}>
       <span className="answer-label">
-        {brief.final ? 'Final brief' : 'Latest brief'} · {brief.sequence} · {utcTime(brief.generatedAt)}
+        {brief.final ? 'Final brief' : 'Latest brief'} {brief.sequence} · {utcTime(brief.generatedAt)}
       </span>
-      <span className="answer-value answer-headline" title={brief.headline ?? undefined}>{brief.headline ?? 'no headline'}</span>
+      <span className="answer-headline" title={brief.headline ?? undefined}>{brief.headline ?? 'no headline'}</span>
       {risk && (
         <span className={`answer-risk ${risk.severity === 'high' ? 'risk-high' : ''}`} title={risk.evidence ?? undefined}>
           {risk.severity ?? 'unrated'} risk: {risk.risk}
         </span>
       )}
-      {link && <a className="answer-link" href={link} target="_blank" rel="noopener noreferrer">Read the brief ↗</a>}
+      {link && <a className="answer-link" href={link} target="_blank" rel="noopener noreferrer">Read ↗</a>}
     </div>
   )
 }

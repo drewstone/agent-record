@@ -341,6 +341,48 @@ export const progressBriefSchema = z
       z.object({ severity: z.string().nullable(), kind: z.string().nullable(), risk: z.string(), evidence: z.string().nullable(), source: z.string().nullable() }).catchall(z.unknown()),
     ),
     links: z.object({ latest: z.string().nullable(), brief: z.string().nullable(), gist: z.string().nullable() }).catchall(z.unknown()),
+    spend: z
+      .object({ runUsd: usd, provenance: z.string().nullable(), clause: z.string().nullable().optional(), harnessListUsd: usd.optional(), sinceLastBriefUsd: usd.optional() })
+      .catchall(z.unknown())
+      .optional(),
+  })
+  .catchall(z.unknown())
+
+/**
+ * The run's progress as data (discovery-lab `runner/run-progress.mjs`, `discovery.run-progress`): who worked when, each
+ * agent's API-equivalent dollars, and the run's spend and files written over time. The briefs draw their record charts
+ * from this same document, and the records watcher rewrites it every few minutes while the run runs, so the page and the
+ * brief at a checkpoint show the same numbers. Unmeasured values are null, never 0.
+ */
+export const runProgressSchema = z
+  .object({
+    schema: z.literal('discovery.run-progress'),
+    runId: z.string(),
+    generatedAt: time,
+    phase: z.string(),
+    final: z.boolean(),
+    startedAt: time.nullable(),
+    /** API-equivalent dollars (every token at list price, whoever paid), as the brief states them, with their basis. */
+    spend: z.object({ runUsd: usd, provenance: z.string().nullable() }).catchall(z.unknown()),
+    files: z.number().int().nonnegative(),
+    agents: z.array(
+      z
+        .object({
+          node: z.string(),
+          label: z.string(),
+          status: z.string(),
+          startedAt: time,
+          endedAt: time,
+          usd: usd,
+          usdEstimated: z.boolean(),
+          model: z.string().nullable(),
+        })
+        .catchall(z.unknown()),
+    ),
+    /** Each brief's figures when it was written. */
+    briefs: z.array(z.object({ sequence: z.number().int(), at: time, runUsd: usd, files: z.number().int().nullable(), final: z.boolean() }).catchall(z.unknown())),
+    /** The figures at each refresh, oldest first; a brief's own refresh is one of them. */
+    samples: z.array(z.object({ at: time, runUsd: usd, files: z.number().int().nonnegative(), working: z.number().int().nonnegative() }).catchall(z.unknown())),
   })
   .catchall(z.unknown())
 
@@ -587,6 +629,7 @@ export const runDocumentSchema = z
     live: z.object({ mirrorAt: time.nullable(), polling: z.boolean() }),
     finalOutput: finalOutputSchema.nullable().optional(),
     findings: findingsSchema.nullable().optional(),
+    progress: runProgressSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -1219,6 +1262,7 @@ export type FindingItem = z.infer<typeof findingItemSchema>
 export type Readout = z.infer<typeof readoutSchema>
 export type OutputFile = z.infer<typeof outputFile>
 export type ProgressBrief = z.infer<typeof progressBriefSchema>
+export type RunProgress = z.infer<typeof runProgressSchema>
 export type HumanGrade = z.infer<typeof humanGradeSchema>
 export type PanelReview = z.infer<typeof panelReviewSchema>
 export type ReadoutChart = NonNullable<Readout['charts']>[number]

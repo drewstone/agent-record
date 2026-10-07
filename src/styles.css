@@ -1931,13 +1931,26 @@
 .ar-ws .runs-table .run-purpose-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .run-purpose-line { color: var(--ar-fg-muted); }
 /* ---- The run page: the answer strip, the agents tree-table, the drawer. */
-.ar-ws .answer-strip { display: grid; grid-template-columns: 1.3fr 1.1fr 1.2fr 1.5fr 1.1fr; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
-.ar-ws .answer-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 10px 18px; border: 0; border-right: 1px solid var(--ar-border); background: transparent; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; }
-.ar-ws .answer-cell:last-child { border-right: 0; }
-.ar-ws .answer-cell:hover, .ar-ws .answer-cell:focus-visible { background: var(--ar-hover, var(--ws-raised)); }
-.ar-ws .answer-cell:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
+/* One line of facts, each a label and its value on one line; the brief is the line under it. */
+.ar-ws .answer-strip { display: grid; gap: 0; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
+.ar-ws .answer-facts { display: flex; flex-wrap: wrap; align-items: stretch; }
+.ar-ws .answer-fact { display: flex; align-items: baseline; gap: .45em; min-width: 0; padding: 8px 16px; border: 0; border-right: 1px solid var(--ar-border); background: transparent; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; white-space: nowrap; text-decoration: none; }
+.ar-ws .answer-fact:hover, .ar-ws .answer-fact:focus-visible { background: var(--ar-hover, var(--ws-raised)); }
+.ar-ws .answer-fact:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
+.ar-ws .answer-fact .faint { font-size: var(--ar-text-s); }
 .ar-ws .answer-label { color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
-.ar-ws .answer-value { font-weight: 650; overflow-wrap: anywhere; }
+.ar-ws .answer-value { font-weight: 650; }
+.ar-ws .answer-brief { display: flex; align-items: baseline; gap: .4em 1em; min-width: 0; padding: 8px 16px; border-top: 1px solid var(--ar-border); }
+.ar-ws .answer-brief .answer-label { white-space: nowrap; }
+.ar-ws .answer-headline { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .answer-risk { font-size: var(--ar-text-s); color: var(--ar-fg-muted); min-width: 0; flex: 1 1 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .answer-brief .answer-link { white-space: nowrap; margin-left: auto; }
+.ar-ws .answer-fallback { margin: 0; padding: 6px 16px; border-top: 1px solid var(--ar-border); font-size: var(--ar-text-s); color: var(--ar-c-run); }
+@media (max-width: 700px) {
+  .ar-ws .answer-fact { flex: 1 1 100%; border-right: 0; border-bottom: 1px solid var(--ar-border); white-space: normal; }
+  .ar-ws .answer-brief { flex-wrap: wrap; }
+  .ar-ws .answer-headline, .ar-ws .answer-risk { white-space: normal; }
+}
 .ar-ws .answer-link { font-size: var(--ar-text-s); }
 .ar-ws .run-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
 .ar-ws .run-layout.with-drawer { grid-template-columns: minmax(0, 1fr) minmax(520px, 46%); }
@@ -1983,21 +1996,13 @@
 .ar-ws .run-layout.with-drawer .agent-row > :nth-child(7),
 .ar-ws .run-layout.with-drawer .agent-row > :nth-child(8) { display: none; }
 @media (max-width: 1100px) {
-  .ar-ws .answer-strip { grid-template-columns: 1fr 1fr; position: static; }
-  .ar-ws .answer-cell { border-right: 0; border-bottom: 1px solid var(--ar-border); }
   .ar-ws .run-layout.with-drawer { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .run-drawer, .ar-ws .run-agents { position: static; max-height: none; }
   .ar-ws .agent-row, .ar-ws .run-layout.with-drawer .agent-row { grid-template-columns: minmax(0, 1fr) 130px 84px; }
   .ar-ws .agent-row > :nth-child(3), .ar-ws .agent-row > :nth-child(4), .ar-ws .agent-row > :nth-child(5), .ar-ws .agent-row > :nth-child(7), .ar-ws .agent-row > :nth-child(8) { display: none; }
 }
 /* ---- The run's outputs (drawer `view=outputs`) and the observer's brief. */
-.ar-ws .answer-strip.with-brief { grid-template-columns: 1.2fr 1.1fr 1.1fr 1.3fr 1fr 1.7fr; }
-.ar-ws .answer-brief { cursor: default; }
-.ar-ws .answer-brief:hover { background: transparent; }
-.ar-ws .answer-headline { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.ar-ws .answer-risk { font-size: var(--ar-text-s); color: var(--ar-fg-muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .answer-risk.risk-high { color: var(--ar-c-fail); }
-.ar-ws .answer-fallback { font-size: var(--ar-text-s); color: var(--ar-c-run); }
 .ar-ws .agent-doing { grid-column: 1 / -1; color: var(--ar-fg-muted); font-size: var(--ar-text-s); padding: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ar-ws .outputs-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
 .ar-ws .outputs-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 14px 16px 20px; }
@@ -2303,8 +2308,18 @@
 
 /* ---- The run page's sections: one tab bar under the header, then the section full width. */
 .ar-ws .ws-run { --run-tabs-h: 52px; }
-.ar-ws .run-tabs { position: sticky; top: var(--ar-sticky-top, 8px); z-index: 7; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; min-height: var(--run-tabs-h); box-sizing: border-box; padding: 6px; background: var(--ar-background, var(--ar-bg)); border: 1px solid var(--ar-border); border-radius: 10px; box-shadow: 0 8px 18px -12px #000; }
+.ar-ws .run-tabs { position: sticky; top: var(--ar-sticky-top, 8px); z-index: 7; display: flex; flex-wrap: wrap; gap: 2px; min-height: var(--run-tabs-h); box-sizing: border-box; padding: 6px; background: var(--ar-background, var(--ar-bg)); border: 1px solid var(--ar-border); border-radius: 10px; box-shadow: 0 8px 18px -12px #000; }
 .ar-ws .run-tabs::-webkit-scrollbar { display: none; }
+/* More: the sections past the first six, in a menu under its tab; the summary names the section open in it. */
+.ar-ws .run-tab-more { position: relative; }
+.ar-ws .run-tab-more > summary { list-style: none; cursor: pointer; }
+.ar-ws .run-tab-more > summary::-webkit-details-marker { display: none; }
+.ar-ws .run-tab-more > summary::after { content: '▾'; font-size: .85em; }
+.ar-ws .run-tab-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 8; display: grid; min-width: 12rem; padding: 6px; background: var(--ar-raised, var(--ws-panel)); border: 1px solid var(--ar-border); border-radius: 8px; box-shadow: 0 12px 28px -12px #000; }
+.ar-ws .run-tab-menu .run-tab { justify-content: flex-start; width: 100%; }
+.ar-ws .run-progress { display: grid; gap: 12px; }
+.ar-ws .run-progress-note { margin: 0; }
+.ar-ws .ov-gantt-label { font-size: .85em; }
 .ar-ws .run-tab { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--ar-fg-muted); font: 600 var(--ar-text-s)/1.2 var(--ar-font-body); white-space: nowrap; }
 .agent-record.ar-ws .run-tab.on, .agent-record.ar-ws .run-tab.on:hover { background: var(--ar-selected, var(--ar-bg-alt)); color: var(--ar-fg); box-shadow: inset 0 -2px 0 var(--ws-frame); }
 .ar-ws .run-tab-count { padding: 0 6px; border-radius: 6px; font: 600 13px/1.5 var(--ar-font-mono); background: color-mix(in srgb, currentColor 14%, transparent); }
