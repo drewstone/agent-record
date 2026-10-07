@@ -1121,11 +1121,14 @@ export interface OverviewLead { title: string | null; kind: 'result' | 'claim'; 
 export interface OverviewRun {
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
   results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
+  /** Subscription use priced at API list (not billed), model API billed through Router, sandbox compute billed. */
+  subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null
   play: string; title: string; purpose: string | null; supersedes?: string | null
 }
 export interface OverviewPlayWeek {
   play: string; title: string; running: number; runs: { runId: string; state: string; startedAt: string | null; lostHours: number }[]; runCount: number
   results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
+  subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null; costUnknownRuns?: number
 }
 export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string }
 
@@ -1144,9 +1147,13 @@ export interface OverviewDocument {
     byDay: { input: number[]; output: number[]; cacheRead: number[]; cacheWrite: number[] }
     harness: { harness: string; agents: number; measured: number; output: number; list: number }[]
     agentOutputHistogram: Bin[]
-    topPlays: { play: string; output: number; input: number; cacheRead: number; list: number; paid: number; runs: number; claims: number }[]
+    topPlays: { play: string; output: number; input: number; cacheRead: number; list: number; paid: number; subscription?: number; api?: number; sandbox?: number; runs: number; claims: number }[]
   }
-  money: { listByDay: number[]; paidByDay: number[]; listTotal: number; paidTotal: number; runListHistogram: Bin[]; runPaidHistogram: Bin[]; fleetKey: { cap: number | null; spent: number | null; debits48h: number | null } }
+  money: {
+    costByDay?: { subscription: number[]; otherList: number[]; api: number[]; sandbox: number[] }
+    costTotals?: { subscription: number; otherList: number; api: number; sandbox: number }
+    costRuns?: { counted: number; subscription: number; otherList: number; api: number; sandbox: number }
+    listByDay: number[]; paidByDay: number[]; listTotal: number; paidTotal: number; runListHistogram: Bin[]; runPaidHistogram: Bin[]; fleetKey: { cap: number | null; spent: number | null; debits48h: number | null } }
   fleet: {
     hosts: { name: string; type: string; active: number; parked: number; capacity: number; cpu: number | null; memory: number | null; monthlyUsd: number | null; autoScaled: boolean; draining: boolean }[]
     utilization: Record<string, number>
