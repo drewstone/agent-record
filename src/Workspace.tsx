@@ -31,7 +31,7 @@ import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { BreakdownTable, byModel, NodeSpendPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
+import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -579,6 +579,7 @@ function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (r
           <SpendBars rows={byModel(play.spend)} />
         </>
       )}
+      <SeatWeeksPanel spend={play.spend} />
       <div className="breakdown-grid">
         <BreakdownTable title="By activity" rows={(play.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
         <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
@@ -1265,6 +1266,7 @@ function RunPanels({
           <SpendBars rows={byModel(doc.spend)} />
         </>
       )}
+      <SeatWeeksPanel spend={doc.spend} />
       <div className="breakdown-grid">
         <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
         <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
@@ -1429,4 +1431,3 @@ function EventDetail({
     </aside>
   )
 }
-

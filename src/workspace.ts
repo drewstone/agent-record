@@ -26,6 +26,19 @@ const measureRow = z.object({
   listUsd: usd,
 })
 
+/** A fraction of a subscription seat's observed seven-day allowance, never a dollar amount. */
+const seatWeeks = z.number().nonnegative().nullable()
+const seatSegment = z.object({
+  seat: z.string(),
+  provider: z.string().nullable(),
+  model: z.string().nullable(),
+  startedAt: time,
+  endedAt: time.nullable().optional(),
+  reason: z.string().nullable().optional(),
+  seatWeeks,
+  seatWeeksKnown: z.boolean(),
+}).catchall(z.unknown())
+
 export const spendSchema = z
   .object({
     paidUsd: usd,
@@ -43,6 +56,12 @@ export const spendSchema = z
       })
       .nullable(),
     sandboxHours: z.number().nonnegative().nullable(),
+    seatWeeks: seatWeeks.optional(),
+    seatWeeksKnown: z.boolean().optional(),
+    bySeat: z.array(z.object({
+      seat: z.string(), provider: z.string().nullable(), model: z.string().nullable(),
+      seatWeeks, known: z.boolean(),
+    }).catchall(z.unknown())).optional(),
     paidKnown: z.boolean(),
     /** False when some agent's usage is unknown: `listUsd` then covers only the agents whose usage is known. */
     listKnown: z.boolean().optional(),
@@ -249,6 +268,7 @@ export const playDocumentSchema = z
   .catchall(z.unknown())
 
 const nodeSpend = spendSchema.extend({
+  segments: z.array(seatSegment).optional(),
   sandboxes: z.array(
     z
       .object({ id: z.string(), usd, costBasisUsd: usd, hours: z.number().nonnegative().nullable() })

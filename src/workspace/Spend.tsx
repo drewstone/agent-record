@@ -1,6 +1,33 @@
 import type { NodeSpend, Spend } from '../workspace.js'
 import { duration, money, tokens } from './data.js'
 
+const seatWeekValue = (value: number | null | undefined) =>
+  value == null ? '—' : value > 0 && value < 0.000001 ? value.toExponential(2) : value.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 6 })
+
+const seatLabel = (seat: string) => `seat ${seat.slice(0, 12)}`
+const segmentTime = (value: string | null | undefined) => value ? `${new Date(value).toISOString().slice(0, 16).replace('T', ' ')} UTC` : 'end unmeasured'
+
+/** Weekly allowance use comes from subscription history; it is not paid spend or list price. */
+export function SeatWeeksPanel({ spend }: { spend: Spend }) {
+  const seats = spend.bySeat ?? []
+  if (!seats.length) return null
+  return (
+    <section className="seat-weeks" aria-label="Subscription seat usage">
+      <h3>Subscription seats</h3>
+      <p className="seat-weeks-total"><strong>{seatWeekValue(spend.seatWeeks)}</strong> seat-weeks{spend.seatWeeksKnown === false && spend.seatWeeks != null ? ' · partial' : ''}</p>
+      <p className="seat-weeks-note">Observed share of each seat's seven-day allowance; not billed cost.</p>
+      <div className="seat-weeks-list">
+        {seats.map((row) => (
+          <div className="seat-week-row" key={`${row.seat}:${row.provider}:${row.model}`}>
+            <span><code title={row.seat}>{seatLabel(row.seat)}</code> · {[row.provider, row.model].filter(Boolean).join(' · ') || 'model unmeasured'}</span>
+            <span>{seatWeekValue(row.seatWeeks)} seat-weeks{!row.known && row.seatWeeks !== null ? ' · partial' : ''}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /** Paid dollars, list price and unknown, never merged. */
 export function SpendSummary({ spend, compact = false }: { spend: Spend | null | undefined; compact?: boolean }) {
   if (!spend) return <span className="spend-chip unknown">spend unknown</span>
@@ -157,6 +184,7 @@ export function NodeSpendPanel({ spend, listFromRecord }: { spend: NodeSpend | u
           </div>
         )}
         {spend.sandboxHours !== null && <div><dt>Sandbox time</dt><dd>{spend.sandboxHours.toFixed(2)} h</dd></div>}
+        {!!spend.segments?.length && <div><dt>Seat-weeks</dt><dd>{seatWeekValue(spend.seatWeeks)}{spend.seatWeeksKnown === false && spend.seatWeeks != null ? ' · partial' : ''}</dd></div>}
       </dl>
       {spend.sandboxes.length > 0 && (
         <table className="data-table">
@@ -174,6 +202,18 @@ export function NodeSpendPanel({ spend, listFromRecord }: { spend: NodeSpend | u
             ))}
           </tbody>
         </table>
+      )}
+      {!!spend.segments?.length && (
+        <section className="seat-segments" aria-label="Agent seat segments">
+          <h4>Seat segments</h4>
+          {spend.segments.map((segment, index) => (
+            <div className="seat-segment" key={`${segment.seat}:${segment.startedAt}:${index}`}>
+              <div><code title={segment.seat}>{seatLabel(segment.seat)}</code> · {[segment.provider, segment.model].filter(Boolean).join(' · ') || 'model unmeasured'}</div>
+              <div className="seat-segment-time">{segmentTime(segment.startedAt)} → {segmentTime(segment.endedAt)}</div>
+              <div>{seatWeekValue(segment.seatWeeks)} seat-weeks{!segment.seatWeeksKnown && segment.seatWeeks !== null ? ' · partial' : ''}{segment.reason ? ` · ${segment.reason}` : ''}</div>
+            </div>
+          ))}
+        </section>
       )}
       {spend.gaps.length > 0 && (
         <ul className="gap-list">
