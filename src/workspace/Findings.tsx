@@ -246,6 +246,7 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
   const pageHref = (item: FindingItem) => `${runUrl}/page/${item.sha256}`
   const shown = all || hiddenOpen ? groups.lead : groups.lead.slice(0, SHOWN)
   const agentsWithLead = new Set(groups.lead.map((item) => item.agent).filter(Boolean)).size
+  const retainedPageAuthors = new Set(findings.items.map((item) => item.agent).filter(Boolean)).size
   const notSettled = doc.run.state !== 'winner' && doc.run.state !== 'running'
   return (
     <section className="run-findings" aria-label="What this run found" data-findings={findings.total}>
@@ -265,6 +266,9 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
               ? `${plural(groups.lead.length, 'result or claim')} written by ${plural(agentsWithLead, 'agent')}.`
               : 'No result or claim pages recorded.'}
           </p>
+        )}
+        {!groups.lead.length && doc.run.nodes !== null && findings.items.length > 0 && (
+          <p className="faint card-note">This run has {plural(doc.run.nodes, 'agent node')}; {plural(retainedPageAuthors, 'agent')} wrote its {plural(findings.items.length, 'retained page')}.</p>
         )}
         {notSettled && groups.lead.length > 0 && (
           <p className="findings-caution">
