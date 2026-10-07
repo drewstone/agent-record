@@ -127,6 +127,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
   const slot = days.length ? plotW / days.length : 0
   const bar = Math.max(3, slot * 0.72)
   const labelEvery = Math.max(1, Math.ceil(days.length / Math.max(1, Math.floor(plotW / (4.5 * em)))))
+  const labelGap = Math.ceil((4.5 * em) / Math.max(slot, 1))
   const y = (v: number) => 8 + plotH - (v / top) * plotH
   return (
     <div ref={ref} className="ov-plot" onMouseLeave={() => setTip(null)}>
@@ -152,7 +153,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                   // A 2 px surface gap between stacked segments; a segment shorter than the gap still shows 1 px.
                   return <rect key={s.name} x={x} y={y1} width={bar} height={Math.max(2, y0 - y1 - 2)} rx={2} fill={s.color} />
                 })}
-                {(i % labelEvery === 0 || i === days.length - 1) && (
+                {(i === days.length - 1 || (i % labelEvery === 0 && i + labelGap <= days.length - 1)) && (
                   <text x={x + bar / 2} y={height - em * 0.35} className="ov-axis" textAnchor="middle">{day.slice(5)}</text>
                 )}
                 <rect
