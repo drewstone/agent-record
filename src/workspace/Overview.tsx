@@ -16,6 +16,13 @@ const ago = (value: string | null | undefined) => {
 // A running run with no activity this long reads as needing a look (the composer's STUCK_AFTER_S).
 const STALE_MS = 2 * 3_600_000
 const label = (value: string) => value.replaceAll('-', ' ')
+// Runs whose outcome is not known draw hollow, so they never pass for a near hue with a known outcome
+// (unknown beside no winner, no record beside driver failed).
+const HOLLOW = new Set(['unknown', 'no-record'])
+const chipStyle = (state: string) => {
+  const color = STATE_COLOR[state] ?? STATE_COLOR.unknown!
+  return HOLLOW.has(state) || !STATE_COLOR[state] ? { boxShadow: `inset 0 0 0 2px ${color}` } : { background: color }
+}
 const sumOf = (values: number[] | undefined) => (values ?? []).reduce((a, b) => a + b, 0)
 
 function Section({ id, title, tone, aside, children }: { id?: string; title: string; tone: string; aside?: ReactNode; children: ReactNode }) {
@@ -71,7 +78,7 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
       </a>
       <span className="ov-week-runs">
         {play.runs.map((run) => (
-          <a key={run.runId} className="ov-chip" href={`/run/${encodeURIComponent(run.runId)}`} style={{ background: STATE_COLOR[run.state] ?? STATE_COLOR.unknown }}
+          <a key={run.runId} className="ov-chip" href={`/run/${encodeURIComponent(run.runId)}`} style={chipStyle(run.state)}
             title={`${label(run.state)} · started ${run.startedAt?.slice(0, 16).replace('T', ' ') ?? 'unknown'} UTC${run.lostHours ? ` · ${hours(run.lostHours)} lost` : ''}`}
             aria-label={`run ${run.runId}, ${label(run.state)}`} />
         ))}
@@ -178,7 +185,7 @@ export function OverviewPage({ api }: { api: string }) {
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
           <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims</span>
         </div>
-        <Legend items={Object.keys(STATE_COLOR).filter((s) => s !== 'running' || running.length).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))} />
+        <Legend items={Object.keys(STATE_COLOR).filter((s) => s !== 'running' || running.length).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, hollow: HOLLOW.has(s) }))} />
         <div className="ov-card ov-week">
           {week.length ? (
             <ol>
@@ -200,7 +207,7 @@ export function OverviewPage({ api }: { api: string }) {
           {week.length > weekShown && (
             <button type="button" className="filter-chip ov-week-all" onClick={() => setWeekShown(week.length)}>Show all {week.length} plays</button>
           )}
-          <p className="ov-note">Each chip is a run in its end state; smoke and archived runs are left out. List price is subscription use at API prices; paid is sandbox compute.</p>
+          <p className="ov-note">Each chip is a run in its end state, hollow when the outcome is not known; smoke and archived runs are left out. List price is subscription use at API prices; paid is sandbox compute.</p>
         </div>
       </section>
 
