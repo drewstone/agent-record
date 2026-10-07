@@ -114,7 +114,7 @@ export function ChartCard({ title, note, legend, wide, children }: { title: stri
 }
 
 /** Bars per day, stacked by series, on one axis; hovering a day lists every series' value for it. */
-export function DayBars({ days, series, format = compact, rows = 13 }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number }) {
+export function DayBars({ days, series, format = compact, rows = 13, missing = 'No runs started' }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number; missing?: string }) {
   const [ref, width, em] = useWidth<HTMLDivElement>()
   const height = Math.round(rows * em)
   const [tip, setTip] = useState<Tip | null>(null)
@@ -166,8 +166,8 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                     setTip({
                       x: Math.min(left + i * slot + slot + 8, width - em * 14),
                       y: 8,
-                      title: `${day} · ${series.every((s) => s.values[i] === null) ? 'no rate' : format(totals[i] ?? 0)}`,
-                      lines: series.map((s) => ({ label: s.name, value: s.values[i] === null ? 'No runs started' : format(s.values[i] ?? 0), color: s.color })),
+                      title: `${day} · ${series.every((s) => s.values[i] === null) ? missing : format(totals[i] ?? 0)}`,
+                      lines: series.map((s) => ({ label: s.name, value: s.values[i] === null ? missing : format(s.values[i] ?? 0), color: s.color })),
                     })
                   }
                 />

@@ -1150,9 +1150,19 @@ export interface OverviewDocument {
     topPlays: { play: string; output: number; input: number; cacheRead: number; list: number; paid: number; subscription?: number; api?: number; sandbox?: number; runs: number; claims: number }[]
   }
   money: {
-    costByDay?: { subscription: number[]; otherList: number[]; api: number[]; sandbox: number[] }
+    costByDay?: { subscription: (number | null)[]; otherList: (number | null)[]; api: (number | null)[]; sandbox: (number | null)[] }
     costTotals?: { subscription: number; otherList: number; api: number; sandbox: number }
-    costRuns?: { counted: number; subscription: number; otherList: number; api: number; sandbox: number }
+    costRuns?: { counted: number; snapshots: number; subscription: number; otherList: number; api: number; sandbox: number }
+    infra?: {
+      schema: 'discovery-infra-cost.v1'; generatedAt: string; window: { from: string; to: string; basis?: string }
+      totals: { hostUsd: number | null; volumeUsd: number | null; snapshotUsd: number | null; r2Usd: number | null; r2ListUsd?: number | null; egressBytes: number | null; egressUsd: number | null; r2DownloadBytesLowerBound?: number | null }
+      byDay: { date: string; hostUsd: number | null; volumeUsd: number | null; snapshotUsd: number | null; r2Usd: number | null; r2ListUsd?: number | null; egressBytes: number | null; egressUsd: number | null; r2DownloadBytesLowerBound?: number | null }[]
+      hosts: { id: number | string; name: string; monthlyUsd: number | null; discoverySidecars?: number; discoveryShare: number | null; discoveryUsd: number | null; outgoingBytes: number | null; includedTrafficBytes?: number | null; egressUsd: number | null }[]
+      storage: { volumes: unknown[]; hetznerSnapshots: unknown[]; r2Buckets: unknown[]; traces: { bytes: number | null; usd: number | null } | null }
+      runs: { runId: string; hostUsd: number | null; storageUsd: number | null; egressBytes: number | null; egressUsd: number | null }[]
+      gaps: { code: string; detail: string }[]
+      sources?: Record<string, unknown>
+    }
     listByDay: number[]; paidByDay: number[]; listTotal: number; paidTotal: number; runListHistogram: Bin[]; runPaidHistogram: Bin[]; fleetKey: { cap: number | null; spent: number | null; debits48h: number | null } }
   fleet: {
     hosts: { name: string; type: string; active: number; parked: number; capacity: number; cpu: number | null; memory: number | null; monthlyUsd: number | null; autoScaled: boolean; draining: boolean }[]
