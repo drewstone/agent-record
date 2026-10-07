@@ -2677,3 +2677,5 @@
 /* On the run page the section tab bar sticks above the canvas too. */
 .ar-ws .run-profiles .pc-layout { height: calc(100vh - var(--ar-sticky-top, 8px) - 104px); }
 @media (max-width: 1100px) { .ar-ws .run-profiles .pc-layout { height: auto; } }
+.ar-ws .pc-inspector .profile-runs td:first-child { min-width: 15em; overflow-wrap: normal; word-break: break-word; }
+.ar-ws .pc-inspector .profile-runs .profile-cost, .ar-ws .pc-inspector .profile-runs .profile-score { min-width: 12em; }
