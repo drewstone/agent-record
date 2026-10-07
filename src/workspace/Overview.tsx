@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { OverviewDocument } from '../workspace.js'
 import { useDocument } from './data.js'
 import { bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
@@ -37,15 +37,22 @@ function Section({ title, tone, children }: { title: string; tone: string; child
  */
 export function OverviewPage({ api }: { api: string }) {
   const doc = useDocument<OverviewDocument>(`${api}/overview`, 60_000, true)
+  // The day charts and the totals above them follow this range; histograms and causes are the composed 30 days.
+  const [range, setRange] = useState(14)
   if (doc.error && !doc.data) return <p className="ws-status" role="alert">The overview is unavailable: {doc.error}</p>
   if (!doc.data) return <p className="ws-status" role="status">Composing the overview…</p>
   const d = doc.data
-  const days = d.days
+  const cut = (values: number[] | undefined) => (values ?? []).slice(-range)
+  const days = d.days.slice(-range)
+  const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
+  const findingsByDay = Object.fromEntries(Object.entries(d.findings.byDay).map(([k, v]) => [k, cut(v)]))
+  const tokensByDay = { input: cut(d.tokens.byDay.input), output: cut(d.tokens.byDay.output), cacheRead: cut(d.tokens.byDay.cacheRead), cacheWrite: cut(d.tokens.byDay.cacheWrite) }
+  const runsInRange = Object.values(runsByDay).reduce((a, v) => a + sumOf(v), 0)
   const state = d.state
   const tokens = d.tokens
   const measured = tokens.harness.reduce((a, h) => a + h.measured, 0)
   const agents = tokens.harness.reduce((a, h) => a + h.agents, 0)
-  const findingsTotal = sumOf(d.findings.byDay.result) + sumOf(d.findings.byDay.claim)
+  const findingsTotal = sumOf(findingsByDay.result) + sumOf(findingsByDay.claim)
   const hosts = d.fleet.hosts
   const history = d.fleet.history
   const seats = [...d.seats.now].sort((a, b) => (b.d7 ?? -1) - (a.d7 ?? -1))
@@ -72,14 +79,22 @@ export function OverviewPage({ api }: { api: string }) {
         </div>
       </header>
 
+      <div className="ov-toolbar" role="group" aria-label="Range">
+        {[7, 14, 30].map((value) => (
+          <button key={value} type="button" className={`filter-chip ${range === value ? 'on' : ''}`} aria-pressed={range === value} onClick={() => setRange(value)}>
+            {value} days
+          </button>
+        ))}
+      </div>
+
       <div className="ov-kpis">
-        <Kpi title="Runs started, 30 d" value={compact(d.runs.total)} sub={`${sumOf(d.runs.byDay.winner)} winners · ${sumOf(d.runs.byDay['driver-failed'])} driver failed`} />
-        <Kpi title="Results and claims, 30 d" value={compact(findingsTotal)} sub={`from ${d.findings.runsWithFindings} runs · outside acceptance unassessed`} />
-        <Kpi title="Output tokens, 30 d" value={compact(sumOf(tokens.byDay.output))} sub={`${compact(sumOf(tokens.byDay.cacheRead))} cache reads`} />
-        <Kpi title="List price, 30 d" value={usd(d.money.listTotal)} sub="subscription use, not billed" />
-        <Kpi title="Paid, 30 d" value={usd(d.money.paidTotal)} sub="sandbox compute on run keys" />
-        <Kpi title="Agent-hours lost" value={compact(d.runs.lostHours)} sub="to limits, outages and retries" tone={d.runs.lostHours > 100 ? 'warn' : undefined} />
-        <Kpi title="Usage measured" value={pct(agents ? measured / agents : null)} sub={`${measured} of ${agents} agents recorded tokens`} tone={agents && measured / agents < 0.8 ? 'warn' : undefined} />
+        <Kpi title={`Runs started, ${range} d`} value={compact(runsInRange)} sub={`${sumOf(runsByDay.winner)} winners · ${sumOf(runsByDay['driver-failed'])} driver failed`} />
+        <Kpi title={`Results and claims, ${range} d`} value={compact(findingsTotal)} sub="written by the agents, not yet reviewed" />
+        <Kpi title={`Output tokens, ${range} d`} value={compact(sumOf(tokensByDay.output))} sub={`${compact(sumOf(tokensByDay.cacheRead))} cache reads`} />
+        <Kpi title={`List price, ${range} d`} value={usd(sumOf(cut(d.money.listByDay)))} sub="subscription use, not billed" />
+        <Kpi title={`Paid, ${range} d`} value={usd(sumOf(cut(d.money.paidByDay)))} sub="sandbox compute on run keys" />
+        <Kpi title="Agent-hours lost, 30 d" value={compact(d.runs.lostHours)} sub="to limits, outages and retries" tone={d.runs.lostHours > 100 ? 'warn' : undefined} />
+        <Kpi title="Usage measured, 30 d" value={pct(agents ? measured / agents : null)} sub={`${measured} of ${agents} agents recorded tokens`} tone={agents && measured / agents < 0.8 ? 'warn' : undefined} />
       </div>
 
       <Section title="Outcomes" tone="tone-finding">
@@ -88,10 +103,10 @@ export function OverviewPage({ api }: { api: string }) {
           legend={[{ name: 'results', color: SERIES[0] }, { name: 'claims', color: SERIES[2] }, { name: 'checks', color: SERIES[3] }]}
           note="Knowledge pages the agents wrote, by the day they wrote them (runs whose findings are derived)."
         >
-          <DayBars days={days} series={[{ name: 'results', color: SERIES[0], values: d.findings.byDay.result ?? [] }, { name: 'claims', color: SERIES[2], values: d.findings.byDay.claim ?? [] }, { name: 'checks', color: SERIES[3], values: d.findings.byDay.check ?? [] }]} />
+          <DayBars days={days} series={[{ name: 'results', color: SERIES[0], values: findingsByDay.result ?? [] }, { name: 'claims', color: SERIES[2], values: findingsByDay.claim ?? [] }, { name: 'checks', color: SERIES[3], values: findingsByDay.check ?? [] }]} />
         </ChartCard>
-        <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(d.runs.byDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
-          <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(d.runs.byDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: d.runs.byDay[s] ?? [] }))} />
+        <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
+          <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
         </ChartCard>
         <ChartCard title="Why runs failed" note="Root cause of each driver-failed or failed run, 30 days.">
           <HBars rows={d.runs.causes.map(([cause, n]) => ({ label: label(cause), value: n }))} color="var(--ar-c-fail)" />
@@ -103,10 +118,10 @@ export function OverviewPage({ api }: { api: string }) {
 
       <Section title="Model work" tone="tone-info">
         <ChartCard title="Input and output tokens per day" legend={[{ name: 'output', color: SERIES[1] }, { name: 'input', color: SERIES[0] }]} note="By the day each run started. Input excludes cache reads and writes.">
-          <DayBars days={days} series={[{ name: 'output', color: SERIES[1], values: tokens.byDay.output }, { name: 'input', color: SERIES[0], values: tokens.byDay.input }]} />
+          <DayBars days={days} series={[{ name: 'output', color: SERIES[1], values: tokensByDay.output }, { name: 'input', color: SERIES[0], values: tokensByDay.input }]} />
         </ChartCard>
         <ChartCard title="Cache reads and writes per day" legend={[{ name: 'cache reads', color: SERIES[3] }, { name: 'cache writes', color: SERIES[2] }]} note="The same context re-read each turn: most of the tokens, a fraction of the price.">
-          <DayBars days={days} series={[{ name: 'cache reads', color: SERIES[3], values: tokens.byDay.cacheRead }, { name: 'cache writes', color: SERIES[2], values: tokens.byDay.cacheWrite }]} />
+          <DayBars days={days} series={[{ name: 'cache reads', color: SERIES[3], values: tokensByDay.cacheRead }, { name: 'cache writes', color: SERIES[2], values: tokensByDay.cacheWrite }]} />
         </ChartCard>
         <ChartCard title="Output tokens per agent" note="How much each measured agent wrote, on a log scale.">
           <Histogram bins={tokens.agentOutputHistogram} unit="output tokens" color={SERIES[1]} />
@@ -118,16 +133,17 @@ export function OverviewPage({ api }: { api: string }) {
           <HBars
             rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · ${usd(p.list)} list · ${usd(p.paid)} paid · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
             color={SERIES[1]}
+            limit={12}
           />
         </ChartCard>
       </Section>
 
       <Section title="Money" tone="tone-warn">
         <ChartCard title="List price per day" note="Subscription use priced at API list; never billed.">
-          <DayBars days={days} series={[{ name: 'list price', color: SERIES[0], values: d.money.listByDay }]} format={usd} />
+          <DayBars days={days} series={[{ name: 'list price', color: SERIES[0], values: cut(d.money.listByDay) }]} format={usd} />
         </ChartCard>
         <ChartCard title="Paid per day" note="Sandbox compute charged to the runs' keys.">
-          <DayBars days={days} series={[{ name: 'paid', color: SERIES[1], values: d.money.paidByDay }]} format={usd} />
+          <DayBars days={days} series={[{ name: 'paid', color: SERIES[1], values: cut(d.money.paidByDay) }]} format={usd} />
         </ChartCard>
         <ChartCard title="List price per run">
           <Histogram bins={d.money.runListHistogram} unit="list $ per run" format={usd} />
