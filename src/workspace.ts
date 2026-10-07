@@ -533,6 +533,35 @@ export const findingsSchema = z
   })
   .catchall(z.unknown())
 
+/** What Discovery found across runs, newest first (`agent-workspace.findings-feed.v1`, served at `findings`). */
+export const findingsFeedSchema = z
+  .object({
+    schema: z.literal('agent-workspace.findings-feed.v1'),
+    builtAt: z.string(),
+    since: z.string(),
+    runs: z.object({ considered: z.number().int(), withFindings: z.number().int(), results: z.number().int(), claims: z.number().int() }).catchall(z.unknown()),
+    items: z.array(
+      z
+        .object({
+          runId: z.string(),
+          play: z.string(),
+          program: z.string().nullable(),
+          state: z.string().nullable(),
+          startedAt: z.string().nullable(),
+          at: z.string().nullable(),
+          agentLabel: z.string().nullable(),
+          kind: z.string(),
+          title: z.string().nullable(),
+          text: z.string(),
+          class: z.string().nullable(),
+          ledger: z.boolean(),
+          sha256: z.string(),
+        })
+        .catchall(z.unknown()),
+    ),
+  })
+  .catchall(z.unknown())
+
 export const runDocumentSchema = z
   .object({
     schema: z.literal('agent-workspace.run.v1'),
@@ -912,6 +941,36 @@ export type RunDocument = z.infer<typeof runDocumentSchema>
 export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type Findings = z.infer<typeof findingsSchema>
+export type FindingsFeedDocument = z.infer<typeof findingsFeedSchema>
+
+type Bin = { lo: number; hi: number; n: number }
+/** The Discovery overview (`agent-workspace.overview.v1`, served at `overview`): runs, findings, tokens, money, the
+ * sandbox fleet, storage and subscription seats over its `days`. Every series is aligned to `days`. */
+export interface OverviewDocument {
+  schema: 'agent-workspace.overview.v1'
+  composedAt: string
+  days: string[]
+  state: { standdown: { reason?: string; by?: string; at?: string } | null; lastResearchStart: string | null; running: number; queued: number; sandboxesRunning: number | null; sandboxesByKind: Record<string, number>; boxesUnreleased: number | null; censusAt: string | null }
+  runs: { byDay: Record<string, number[]>; total: number; causes: [string, number][]; depth: [string, number][]; agentsHistogram: Bin[]; lostHoursHistogram: Bin[]; lostHours: number }
+  findings: { byDay: Record<string, number[]>; runsWithFindings: number; claims: number }
+  tokens: {
+    byDay: { input: number[]; output: number[]; cacheRead: number[]; cacheWrite: number[] }
+    harness: { harness: string; agents: number; measured: number; output: number; list: number }[]
+    agentOutputHistogram: Bin[]
+    topPlays: { play: string; output: number; input: number; cacheRead: number; list: number; paid: number; runs: number; claims: number }[]
+  }
+  money: { listByDay: number[]; paidByDay: number[]; listTotal: number; paidTotal: number; runListHistogram: Bin[]; runPaidHistogram: Bin[]; fleetKey: { cap: number | null; spent: number | null; debits48h: number | null } }
+  fleet: {
+    hosts: { name: string; type: string; active: number; parked: number; capacity: number; cpu: number | null; memory: number | null; monthlyUsd: number | null; autoScaled: boolean; draining: boolean }[]
+    utilization: Record<string, number>
+    totals: Record<string, number | null>
+    waste: { label: string; boxes: number; hours: number | null; waste: boolean }[]
+    reaper: Record<string, number>
+    history: [number, number, number, number, number][]
+  }
+  storage: { volume: { path: string; total: number; used: number; free: number } | null; recordsBytes: number | null; byProgram: [string, number][]; runSizeHistogram: Bin[] }
+  seats: { now: { tool: string; email: string; status: string; h5: number | null; d7: number | null }[]; history: Record<string, [number, number][]> }
+}
 export type FindingItem = z.infer<typeof findingItemSchema>
 export type Readout = z.infer<typeof readoutSchema>
 export type OutputFile = z.infer<typeof outputFile>

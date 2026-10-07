@@ -4,6 +4,8 @@ import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
+import { FindingsFeed } from './workspace/FindingsFeed.js'
+import { OverviewPage } from './workspace/Overview.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
@@ -34,7 +36,7 @@ import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, Spe
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
-  mode: 'plays' | 'play' | 'run'
+  mode: 'plays' | 'play' | 'run' | 'overview'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -43,7 +45,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
+      {mode === 'overview' ? <OverviewPage api={api} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
@@ -165,9 +167,29 @@ function PlaysPage({ api }: { api: string }) {
       )
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
+  // The Discovery home opens on what the runs found; the plays index is the second tab.
+  const home = params.get('view') === 'plays' ? 'plays' : 'findings'
+  const homeTabs = (
+    <nav className="run-tabs" aria-label="Discovery">
+      {([['findings', 'Findings'], ['plays', 'Plays']] as const).map(([value, label]) => (
+        <button key={value} type="button" className={`run-tab ${home === value ? 'on' : ''}`} aria-current={home === value ? 'page' : undefined} data-home-tab={value}
+          onClick={() => update({ view: value === 'findings' ? undefined : value })}>
+          {label}
+        </button>
+      ))}
+    </nav>
+  )
+  if (home === 'findings')
+    return (
+      <div className="ws-page ws-plays" data-plays-home="findings">
+        {homeTabs}
+        <FindingsFeed api={api} />
+      </div>
+    )
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
+        {homeTabs}
         <header className="ws-head">
           <div className="ws-title-row">
             <h1>Plays</h1>

@@ -2427,3 +2427,79 @@
   .ar-ws .data-table { display: block; max-width: 100%; overflow-x: auto; }
   .ar-ws .run-panel { padding-left: 0; padding-right: 0; }
 }
+
+/* ---- The Discovery home: what the runs found, newest first. */
+.ar-ws .findings-feed { display: grid; gap: 14px; min-width: 0; }
+.ar-ws .feed-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
+.ar-ws .feed-head p { margin: 6px 0 0; max-width: 90ch; font-size: var(--ar-text-s); }
+.ar-ws .feed-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ar-ws .feed-filters select { width: auto; min-width: 170px; }
+.ar-ws .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.ar-ws .filter-chip { padding: 4px 12px; border: 1px solid var(--ar-border-strong); border-radius: 999px; background: transparent; color: var(--ar-fg-muted); font: 600 14px/1.4 var(--ar-font-body); }
+.agent-record.ar-ws .filter-chip.on, .agent-record.ar-ws .filter-chip.on:hover { border-color: var(--ws-accent); background: color-mix(in srgb, var(--ws-accent) 14%, transparent); color: var(--ar-fg); }
+.ar-ws .feed-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 14px; }
+.ar-ws .feed-card { display: grid; gap: 8px; height: 100%; box-sizing: border-box; padding: 14px 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; color: var(--ar-fg); text-decoration: none; transition: border-color .12s ease, background .12s ease; }
+.ar-ws .feed-card:hover, .ar-ws .feed-card:focus-visible { text-decoration: none; border-color: var(--ar-fg-faint); background: var(--ar-raised, var(--ar-bg-alt)); }
+.ar-ws .feed-card:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 2px; }
+.ar-ws .feed-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: var(--ar-fg-faint); min-width: 0; }
+.ar-ws .feed-title { font-weight: 650; overflow-wrap: anywhere; }
+.ar-ws .feed-text { align-self: start; color: var(--ar-fg-muted); font-size: var(--ar-text-s); line-height: 1.5; max-height: 4.5em; overflow-wrap: anywhere; }
+.ar-ws .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ar-ws .feed-tags { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; }
+
+/* ---- The Discovery overview: a banner with the fleet's state, KPI tiles, then sections of charts. */
+.ar-ws .ov-page { gap: 18px; }
+.ar-ws .ov-banner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; align-items: center; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-left: 4px solid var(--ar-c-ok); border-radius: 10px; }
+.ar-ws .ov-banner.tone-warn { border-left-color: var(--ar-c-run); color: inherit; }
+.ar-ws .ov-banner h1 { font-size: var(--ar-text-l); }
+.ar-ws .ov-banner p { margin: 4px 0 0; color: var(--ar-fg-muted); max-width: 90ch; }
+.ar-ws .ov-banner-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
+.ar-ws .ov-banner-facts b { color: var(--ar-fg); font-size: var(--ar-text-m); margin-right: 4px; }
+.ar-ws .ov-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; }
+.ar-ws .ov-kpi { display: grid; gap: 2px; padding: 12px 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; color: inherit; }
+.ar-ws .ov-kpi-title { font-size: 14px; color: var(--ar-fg-muted); }
+.ar-ws .ov-kpi-value { font: 650 28px/1.15 var(--ar-font-body); font-variant-numeric: tabular-nums; }
+.ar-ws .ov-kpi.tone-warn .ov-kpi-value { color: var(--ar-c-run); }
+.ar-ws .ov-kpi-sub { font-size: 13px; color: var(--ar-fg-faint); }
+.ar-ws .ov-section { display: grid; gap: 10px; }
+.ar-ws .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 14px; }
+.ar-ws .ov-card { margin: 0; display: grid; gap: 10px; align-content: start; padding: 14px 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; }
+.ar-ws .ov-card.wide { grid-column: 1 / -1; }
+.ar-ws .ov-card figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; align-items: baseline; }
+.ar-ws .ov-card-title { font-weight: 650; }
+.ar-ws .ov-note { margin: 0; font-size: 13px; color: var(--ar-fg-faint); }
+.ar-ws .ov-empty { margin: 0; color: var(--ar-fg-faint); font-size: var(--ar-text-s); }
+.ar-ws .ov-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--ar-fg-muted); }
+.ar-ws .ov-legend i, .ar-ws .ov-tip-line i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.ar-ws .ov-plot { position: relative; min-width: 0; }
+.ar-ws .ov-plot svg { display: block; overflow: visible; }
+.ar-ws line.ov-gridline { stroke: color-mix(in srgb, var(--ar-border) 80%, transparent); stroke-width: 1; }
+.ar-ws .ov-axis { fill: var(--ar-fg-faint); font: 12px var(--ar-font-mono); }
+.ar-ws .ov-crosshair { stroke: var(--ar-fg-faint); stroke-dasharray: 3 3; }
+.ar-ws .ov-tip { position: absolute; z-index: 4; display: grid; gap: 3px; min-width: 170px; max-width: 260px; padding: 8px 10px; background: var(--ar-raised, var(--ar-bg-alt)); border: 1px solid var(--ar-border-strong); border-radius: 8px; box-shadow: 0 10px 24px -12px #000; font-size: 13px; pointer-events: none; }
+.ar-ws .ov-tip-line { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; color: var(--ar-fg-muted); }
+.ar-ws .ov-tip-line b { color: var(--ar-fg); font-variant-numeric: tabular-nums; }
+.ar-ws .ov-hbars { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ar-ws .ov-hbars li > a, .ar-ws .ov-hbars li > div { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) auto; gap: 2px 10px; align-items: center; padding: 4px 6px; border-radius: 6px; color: inherit; text-decoration: none; }
+.ar-ws .ov-hbars li > a:hover, .ar-ws .ov-hbars li > div:hover { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
+.ar-ws .ov-hbar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.ar-ws .ov-hbar-track { height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--ar-fg-faint) 14%, transparent); overflow: hidden; }
+.ar-ws .ov-hbar-track > span { display: block; height: 100%; border-radius: 3px; }
+.ar-ws .ov-hbar-value { font: 13px var(--ar-font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.ar-ws .ov-hbar-note { grid-column: 1 / -1; font-size: 12px; color: var(--ar-fg-faint); }
+.ar-ws .ov-meter { display: grid; gap: 4px; min-width: 0; }
+.ar-ws .ov-meter-track { display: block; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--ar-fg-faint) 14%, transparent); overflow: hidden; }
+.ar-ws .ov-meter-track > span { display: block; height: 100%; border-radius: 3px; }
+.ar-ws .ov-meter-text { font: 13px var(--ar-font-mono); color: var(--ar-fg-muted); }
+.ar-ws .ov-hosts { display: grid; gap: 10px; }
+.ar-ws .ov-host { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr) minmax(120px, 1fr) minmax(120px, 1fr) auto; gap: 10px 16px; align-items: center; font-size: 13px; color: var(--ar-fg-muted); }
+.ar-ws .ov-host-name { color: var(--ar-fg); font-family: var(--ar-font-mono); }
+.ar-ws .ov-host-price { font-family: var(--ar-font-mono); }
+.ar-ws .ov-seats { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ar-ws .ov-seats li { display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(120px, 1fr) minmax(120px, 1fr) 120px; gap: 8px 16px; align-items: center; font-size: 13px; color: var(--ar-fg-muted); }
+.ar-ws .ov-seat-name { color: var(--ar-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .ov-spark-empty { font-size: 12px; color: var(--ar-fg-faint); }
+.ar-ws .ov-composed { font-size: 13px; }
+@media (max-width: 700px) {
+  .ar-ws .ov-host, .ar-ws .ov-seats li { grid-template-columns: minmax(0, 1fr); }
+}
