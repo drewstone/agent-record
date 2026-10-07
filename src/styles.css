@@ -2312,12 +2312,13 @@
 .ar-ws .run-tabs::-webkit-scrollbar { display: none; }
 /* More: the sections past the first six, in a menu under its tab; the summary names the section open in it. */
 .ar-ws .run-tab-more { position: relative; }
-.ar-ws .run-tab-more > summary { list-style: none; cursor: pointer; }
+.agent-record.ar-ws .run-tab-more > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 7px 14px; border: 0; font: 600 var(--ar-text-s)/1.2 var(--ar-font-body); }
+.agent-record.ar-ws .run-tab-more > summary::before, .agent-record.ar-ws .run-tab-more[open] > summary::before { content: none; display: none; }
 .ar-ws .run-tab-more > summary::-webkit-details-marker { display: none; }
 .ar-ws .run-tab-more > summary::after { content: '▾'; font-size: .85em; }
 .ar-ws .run-tab-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 8; display: grid; min-width: 12rem; padding: 6px; background: var(--ar-raised, var(--ws-panel)); border: 1px solid var(--ar-border); border-radius: 8px; box-shadow: 0 12px 28px -12px #000; }
 .ar-ws .run-tab-menu .run-tab { justify-content: flex-start; width: 100%; }
-.ar-ws .run-progress { display: grid; gap: 12px; }
+.ar-ws .run-progress { display: grid; gap: 12px; padding: 14px 16px; }
 .ar-ws .run-progress-note { margin: 0; }
 .ar-ws .ov-gantt-label { font-size: .85em; }
 .ar-ws .run-tab { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--ar-fg-muted); font: 600 var(--ar-text-s)/1.2 var(--ar-font-body); white-space: nowrap; }
