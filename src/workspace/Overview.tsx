@@ -236,6 +236,11 @@ export function OverviewPage({ api }: { api: string }) {
           </div>
         }
       >
+        <div className="ov-loss-total" aria-label="Agent-hours lost in 30 days">
+          <span className="ov-loss-total-label">Agent-hours lost · 30 days</span>
+          <strong>{hours(d.runs.lostHours)}</strong>
+          <span className="ov-loss-total-scope">{d.runs.scope ?? 'All indexed and current live runs started in the last 30 UTC days'}</span>
+        </div>
         <div className="ov-run-trends">
           <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
             <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
