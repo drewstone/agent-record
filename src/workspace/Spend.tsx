@@ -101,6 +101,11 @@ export function BreakdownTable({
 }) {
   if (!rows.length) return null
   const max = Math.max(1, ...rows.map((row) => row.ms ?? 0))
+  const unmeasured = [
+    rows.some((row) => row.ms === null) && 'time',
+    rows.some((row) => row.tokens === null) && 'tokens',
+    rows.some((row) => row.listUsd === null) && 'list price',
+  ].filter(Boolean).join(', ')
   return (
     <section className="breakdown">
       <h4>{title}</h4>
@@ -113,11 +118,12 @@ export function BreakdownTable({
             </span>
             <span className="breakdown-track">{row.ms === null ? <i className="unknown" style={{ width: '100%' }} /> : <i style={{ width: `${(row.ms / max) * 100}%` }} />}</span>
             <span className="breakdown-value">
-              {row.ms === null ? 'time unknown' : duration(row.ms)} · {tokens(row.tokens)} tokens · {money(row.listUsd)} list
+              {row.ms === null ? '—' : duration(row.ms)} · {row.tokens === null ? '—' : tokens(row.tokens)} tokens · {row.listUsd === null ? '—' : money(row.listUsd)} list
             </span>
           </div>
         ))}
       </div>
+      {unmeasured && <p><small>— marks unmeasured {unmeasured}.</small></p>}
     </section>
   )
 }
