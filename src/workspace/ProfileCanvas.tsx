@@ -446,15 +446,17 @@ function NodeCard({
   }
   const profile = node.node!
   const state = profileState(profile)
-  const name = profile.name ?? profile.label ?? profile.short
+  const full = profile.name ?? profile.label ?? profile.short
+  // A registered profile is named after its run; the play is the page's, so the card shows the run's own part.
+  const name = node.play && full.startsWith(`${node.play}-`) ? full.slice(node.play.length + 1) : full
   return (
     <button
       {...common}
       className={`${classes} kind-${profile.kind}`}
       data-profile-node={profile.short}
       aria-pressed={on}
-      aria-label={`${name}, ${KIND_LABEL[profile.kind] ?? profile.kind} profile ${profile.short}${node.foreign && node.play ? `, from play ${node.play}` : ''}`}
-      title={profile.description ?? undefined}
+      aria-label={`${full}, ${KIND_LABEL[profile.kind] ?? profile.kind} profile ${profile.short}${node.foreign && node.play ? `, from play ${node.play}` : ''}`}
+      title={[full, profile.description].filter(Boolean).join('\n')}
     >
       {node.foreign && node.play && <span className="pc-play mono">{node.play}</span>}
       <span className="pc-title">

@@ -294,6 +294,11 @@ export function canvasModel(doc: ProfileGraphDocument, scope: CanvasScope, expan
   const nodes = order.map((id) => placed.get(id)!).sort((a, b) => a.depth - b.depth || a.y - b.y)
   const shownIds = new Set(placed.keys())
   // Every parent edge between two drawn profiles; an edge into a collapsed profile is drawn to its cluster once.
+  const homeAncestors = (digest: string) => {
+    const seen = new Set<string>()
+    for (let at = homeOf.get(digest); at && !seen.has(at.digest); at = homeOf.get(at.digest)) seen.add(at.digest)
+    return seen
+  }
   const edges: CanvasEdge[] = []
   const seenEdges = new Set<string>()
   const clusterOf = new Map<string, string>()
@@ -306,6 +311,8 @@ export function canvasModel(doc: ProfileGraphDocument, scope: CanvasScope, expan
       const to = shownIds.has(digest) ? digest : clusterOf.get(digest)
       if (!from || !to || from === to) continue
       const home = homeOf.get(digest) === edge
+      // A runtime author already on the child's home path (the director of a restarted worker) adds only noise.
+      if (!home && edge.relation === 'authored' && homeAncestors(digest).has(edge.digest)) continue
       const id = `${from}->${to}`
       if (seenEdges.has(id)) continue
       if (!home && clusterOf.has(digest) && clusterOf.has(edge.digest)) continue
