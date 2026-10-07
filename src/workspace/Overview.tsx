@@ -60,7 +60,7 @@ function RunningRow({ run }: { run: OverviewRun }) {
           <span>started {ago(run.startedAt)}</span>
           <span className={stale ? 'is-stale' : undefined}>active {ago(run.activeAt)}</span>
           {run.agents !== null && <span>{run.agents} agents{run.depth !== null ? `, depth ${run.depth}` : ''}</span>}
-          <span>{run.results} results · {run.claims} claims</span>
+          <span>{run.findingsPending ? 'findings not available yet' : `${run.results} results · ${run.claims} claims`}</span>
           <span>subscription {money(run.subscriptionUsd ?? run.listUsd)} at API prices · API {money(run.apiUsd)} · sandbox {money(run.sandboxUsd)}</span>
         </span>
         {run.purpose && <span className="ov-running-purpose">{run.purpose}</span>}
@@ -93,7 +93,7 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
             <span className="ov-week-counts">{play.results} results · {play.claims} claims</span>
           </>
         ) : (
-          <span className="ov-week-none">no result or claim yet</span>
+          <span className="ov-week-none">{play.findingsPending ? `${play.findingsPending} run${play.findingsPending === 1 ? '' : 's'} without findings data` : 'no result or claim yet'}</span>
         )}
       </span>
       <span className={`ov-week-num ${play.lostHours >= 10 ? 'is-warn' : ''}`} data-label="lost">{play.lostHours ? hours(play.lostHours) : '—'}</span>
@@ -170,8 +170,8 @@ export function OverviewPage({ api }: { api: string }) {
     .map(([at, spent]) => [at * 1000, d.money.fleetKey.cap ? spent / d.money.fleetKey.cap : 0] as [number, number])
   const strip = [
     { name: 'Runs started · 14 d', value: String(sumOf(stripStarts)), points: points(stripStarts) },
-    { name: 'Runs with findings · 14 d', value: d.findings.runsByDay ? String(sumOf(d.findings.runsByDay.slice(-14))) : 'not recorded', points: points(d.findings.runsByDay) },
-    { name: 'Results + claims · 14 d', value: String(sumOf(resultClaim)), points: points(resultClaim) },
+    { name: 'Runs with findings · 14 d', value: d.findings.runsByDay ? `${d.findings.pending ? '≥' : ''}${sumOf(d.findings.runsByDay.slice(-14))}` : 'not recorded', points: points(d.findings.runsByDay) },
+    { name: 'Results + claims · 14 d', value: `${d.findings.pending ? '≥' : ''}${sumOf(resultClaim)}`, points: points(resultClaim) },
     { name: 'Agent-hours lost · 14 d', value: hours(sumOf(lost)), points: points(lost) },
     costMetric('Subscription at API prices · 14 d', d.money.costByDay?.subscription),
     costMetric('Billed API · 14 d', d.money.costByDay?.api),
@@ -232,7 +232,7 @@ export function OverviewPage({ api }: { api: string }) {
       <section className="ov-section" aria-label={`Last ${weekDays} days by play`}>
         <div className="ov-section-head">
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
-          <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims</span>
+          <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims{week.some((play) => play.findingsPending) ? ' · findings incomplete' : ''}</span>
         </div>
         <Legend items={Object.keys(STATE_COLOR).filter((s) => s !== 'running' || running.length).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, hollow: HOLLOW.has(s) }))} />
         <div className="ov-card ov-week">

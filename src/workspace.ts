@@ -1135,14 +1135,14 @@ type Bin = { lo: number; hi: number; n: number }
 export interface OverviewLead { title: string | null; kind: 'result' | 'claim'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string }
 export interface OverviewRun {
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
-  results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
+  results: number; claims: number; findingsPending?: boolean; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
   /** Subscription use priced at API list (not billed), model API billed through Router, sandbox compute billed. */
   subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null
   play: string; title: string; purpose: string | null; supersedes?: string | null
 }
 export interface OverviewPlayWeek {
   play: string; title: string; running: number; runs: { runId: string; state: string; startedAt: string | null; lostHours: number }[]; runCount: number
-  results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
+  results: number; claims: number; findingsPending?: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
   subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null; costUnknownRuns?: number
 }
 export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
@@ -1157,7 +1157,7 @@ export interface OverviewDocument {
   days: string[]
   state: { standdown: { reason?: string; by?: string; at?: string } | null; lastRunStart: string | null; running: number; queued: number; sandboxesRunning: number | null; sandboxesByKind: Record<string, number>; boxesUnreleased: number | null; censusAt: string | null }
   runs: { byDay: Record<string, number[]>; total: number; causes: [string, number][]; depth: [string, number][]; agentsHistogram: Bin[]; lostHoursHistogram: Bin[]; lostHours: number; lostByDay?: Record<string, number[]>; scope?: string }
-  findings: { byDay: Record<string, number[]>; runsByDay?: number[]; runsWithFindings: number; claims: number }
+  findings: { byDay: Record<string, number[]>; runsByDay?: number[]; runsWithFindings: number; claims: number; pending?: number; pendingByDay?: number[] }
   tokens: {
     byDay: { input: number[]; output: number[]; cacheRead: number[]; cacheWrite: number[] }
     harness: { harness: string; agents: number; measured: number; output: number; list: number }[]
