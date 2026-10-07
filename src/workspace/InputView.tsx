@@ -113,8 +113,8 @@ export function InputView({ input, api, changed }: { input: PlayInput | null; ap
               {bounds && (
                 <dl className="kv bounds" data-sandbox-bounds>
                   <div><dt>Per sandbox</dt><dd>{String(bounds.cpu ?? '?')} vCPU / {bounds.memoryMb ? `${Math.round(Number(bounds.memoryMb) / 1024)} GB` : '?'}{bounds.diskMb ? ` / ${Math.round(Number(bounds.diskMb) / 1024)} GB disk` : ''}</dd></div>
-                  {bounds.perPlayMaximumSandboxes !== undefined && <div><dt>Per play</dt><dd>{String(bounds.perPlayMaximumSandboxes)} boxes · {String(bounds.perPlayCpu ?? '?')} vCPU</dd></div>}
-                  {bounds.cohortMaximumSandboxes !== undefined && <div><dt>Cohort</dt><dd>{String(bounds.cohortMaximumSandboxes)} boxes · {String(bounds.cohortCpu ?? '?')} vCPU</dd></div>}
+                  {bounds.perPlayMaximumSandboxes !== undefined && <div><dt>Per play</dt><dd>{String(bounds.perPlayMaximumSandboxes)} sandboxes · {String(bounds.perPlayCpu ?? '?')} vCPU</dd></div>}
+                  {bounds.cohortMaximumSandboxes !== undefined && <div><dt>Cohort</dt><dd>{String(bounds.cohortMaximumSandboxes)} sandboxes · {String(bounds.cohortCpu ?? '?')} vCPU</dd></div>}
                   {bounds.capacityGuaranteed !== undefined && <div><dt>Capacity guaranteed</dt><dd>{String(bounds.capacityGuaranteed)}</dd></div>}
                 </dl>
               )}
@@ -151,10 +151,12 @@ export function InputView({ input, api, changed }: { input: PlayInput | null; ap
               <h4>Profile</h4>
               <dl className="kv">
                 {profile.name && <div><dt>Name</dt><dd className="mono">{profile.name}</dd></div>}
+                <div><dt>Version</dt><dd className="mono">{profile.version ?? 'not recorded'}</dd></div>
+                <div><dt>Digest</dt><dd className="mono" title={profile.digest ?? undefined}>{profile.digest ? profile.digest.slice(0, 23) : 'not recorded'}</dd></div>
                 <div><dt>Harness</dt><dd>{profile.harness ?? 'not set'}</dd></div>
-                <div><dt>Model</dt><dd className="mono">{profile.model ?? 'not set'}{profile.provider ? ` · ${profile.provider}` : ''}</dd></div>
+                <div><dt>Model</dt><dd className="mono">{profile.model ?? 'not set'}</dd></div>
                 <div><dt>Reasoning effort</dt><dd>{profile.reasoningEffort ?? 'not set'}</dd></div>
-                <div><dt>Credential source</dt><dd>{profile.credentialSource ?? 'not set'}</dd></div>
+                <div><dt>Credential</dt><dd>{profile.credentialSource ?? 'not recorded'}</dd></div>
                 {profile.systemPromptSha256 && <div><dt>System prompt</dt><dd className="mono">sha256 {profile.systemPromptSha256.slice(0, 16)}</dd></div>}
               </dl>
               {profile.tools.length > 0 && (

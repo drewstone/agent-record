@@ -105,13 +105,9 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
         </span>
       </button>
       <button type="button" className="answer-cell" onClick={onOpen}>
-        <span className="answer-label">Paid · list price</span>
-        <span className="answer-value">
-          {money(spend.paidUsd)}
-          {!spend.paidKnown && spend.paidUsd !== null ? '+' : ''} · {money(spend.listUsd)}
-          {spend.listKnown === false && spend.listUsd !== null ? '+' : ''}
-        </span>
-        <span className="faint">{spend.listUsd !== null ? 'list price is not billed' : 'usage not recorded'}</span>
+        <span className="answer-label">Cost</span>
+        <span className="answer-value">API {money(spend.apiUsd)} · sandbox {money(spend.sandboxUsd)}</span>
+        <span className="faint">subscription use {money(spend.subscriptionUsd)} at API prices · not billed{!spend.subscriptionKnown && spend.subscriptionUsd !== null ? ' · partial' : ''}</span>
       </button>
       {brief && <BriefCell brief={brief} />}
     </div>
@@ -223,7 +219,7 @@ export function AgentTable({
         </span>
         <span role="columnheader" className="num">Time</span>
         <span role="columnheader" className="num">Tokens</span>
-        <span role="columnheader" className="num">List price</span>
+        <span role="columnheader" className="num" title="Model usage at API prices; this column is not a bill">Usage at API prices</span>
         <span role="columnheader">Conversation</span>
         <span role="columnheader">Flags</span>
       </div>
@@ -279,9 +275,9 @@ export function AgentTable({
         )
       })}
       <p className="faint agent-table-note">
-        Bars: when each agent ran, coloured by how it ended. Tokens and list price are what the record measured; an agent marked
-        unmeasured recorded no usage.{doing.size ? ` The line under an agent is the observer's brief ${doc.finalOutput?.brief?.sequence}, not the agent's own words.` : ''} Paid money is on the run's ledger: {money(doc.spend.paidUsd)}
-        {doc.spend.paidKnown ? '' : '+'} for the whole run.
+        Bars: when each agent ran, coloured by how it ended. Tokens and usage at API prices are what the record measured; an agent marked
+        unmeasured recorded no usage.{doing.size ? ` The line under an agent is the observer's brief ${doc.finalOutput?.brief?.sequence}, not the agent's own words.` : ''}
+        {' '}Billed model API {money(doc.spend.apiUsd)} · billed sandbox compute {money(doc.spend.sandboxUsd)} for the whole run.
       </p>
     </div>
   )

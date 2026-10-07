@@ -1498,8 +1498,8 @@
 .ar-ws .spend-summary { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
 .ar-ws .spend-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--ar-border); color: var(--ar-fg-muted); }
 .ar-ws .spend-chip b { font: 650 var(--ar-text-m) var(--ar-font-mono); color: var(--ar-fg); }
-.ar-ws .spend-chip.paid { border-color: color-mix(in srgb, var(--ws-accent) 50%, var(--ar-border)); }
-.ar-ws .spend-chip.list { border-style: dashed; }
+.ar-ws .spend-chip.api, .ar-ws .spend-chip.sandbox { border-color: color-mix(in srgb, var(--ws-accent) 50%, var(--ar-border)); }
+.ar-ws .spend-chip.subscription { border-style: dashed; }
 .ar-ws .spend-chip.unknown { background: transparent; box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
 .ar-ws .spend-chip.unknown b { color: var(--ar-fg-muted); }
 .ar-ws .not-known { font: 600 var(--ar-text-s) var(--ar-font-mono); color: var(--ar-c-run); font-style: normal; }
@@ -1511,10 +1511,11 @@
 .ar-ws .spend-label { font-family: var(--ar-font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ar-ws .spend-track { display: flex; gap: 2px; height: 12px; align-items: stretch; }
 .ar-ws .spend-track .bar { display: block; height: 100%; border-radius: 2px; min-width: 2px; }
-.ar-ws .spend-track .bar.paid { background: var(--ws-accent); }
-.ar-ws .spend-track .bar.list { background: color-mix(in srgb, var(--ws-accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ws-accent) 70%, transparent); }
+.ar-ws .spend-track .bar.api { background: var(--ws-accent); }
+.ar-ws .spend-track .bar.sandbox { background: color-mix(in srgb, var(--ws-accent) 65%, var(--ar-border)); }
+.ar-ws .spend-track .bar.subscription { background: color-mix(in srgb, var(--ws-accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ws-accent) 70%, transparent); }
 .ar-ws .spend-track .bar.unknown { background: var(--ws-hatch); box-shadow: inset 0 0 0 1px var(--ar-border); }
-.ar-ws .spend-value { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg); text-align: right; white-space: nowrap; }
+.ar-ws .spend-value { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg); text-align: right; }
 .ar-ws .spend-value small { color: var(--ar-fg-muted); }
 .ar-ws .breakdown-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 18px; margin-top: 14px; }
 .ar-ws .breakdown-rows { display: grid; gap: 4px; }
