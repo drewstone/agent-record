@@ -31,6 +31,7 @@ import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
+import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
 
@@ -300,13 +301,13 @@ function PlaysPage({ api }: { api: string }) {
 // ---------------------------------------------------------------------------------------------------------
 // /play/<id>
 // ---------------------------------------------------------------------------------------------------------
-type PlayTab = 'versions' | 'input' | 'runs' | 'spend' | 'assessments'
+type PlayTab = 'versions' | 'profiles' | 'input' | 'runs' | 'spend' | 'assessments'
 
 function PlayPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
   const play = useDocument<PlayDocument>(`${api}/plays/${encodeURIComponent(id)}`)
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
-  const tab = (['versions', 'input', 'runs', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'versions'
+  const tab = (['versions', 'profiles', 'input', 'runs', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'versions'
   const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(id)}/profiles`)
   const graph = profiles.data ?? null
   const selectedRun = params.get('run')
@@ -344,6 +345,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   const select = (next: Selection) =>
     update(next.kind === 'version' ? { v: next.runId, profile: undefined } : { v: next.runId, profile: graph?.nodes.find((node) => node.digest === next.digest)?.short })
   const latestDigest = doc?.input?.digest ?? null
+  // The profiles canvas draws every run of the play, the ones the default filter hides included: lineage needs them.
+  const playScope = useMemo(() => ({ kind: 'play' as const, play: id, runs: (doc?.runs ?? []).map((run) => run.id) }), [id, doc])
   const runDoc = useDocument<RunDocument>(tab === 'input' && selectedRun && selectedRun !== doc?.input?.runId ? `${api}/runs/${encodeURIComponent(selectedRun)}` : null)
   const input: PlayInput | null = selectedRun && selectedRun !== doc?.input?.runId ? (runDoc.data?.input ?? null) : (doc?.input ?? null)
   const open = (runId: string, dimension?: string) =>
@@ -381,7 +384,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             label="Play"
             value={tab}
             onChange={(next) => update({ tab: next === 'versions' ? undefined : next })}
-            tabs={[['versions', 'Versions'], ['runs', 'Runs'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
+            tabs={[['versions', 'Versions'], ['profiles', 'Profiles'], ['runs', 'Runs'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
           />
           <div className="ws-content" role="tabpanel">
             {tab === 'versions' && (
@@ -403,6 +406,21 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 </div>
                 <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
               </>
+            )}
+            {tab === 'profiles' && (
+              <section className="ws-section" data-section="profiles" aria-label="Profiles">
+                {graph ? (
+                  <ProfileCanvas
+                    api={api}
+                    doc={graph}
+                    scope={playScope}
+                    selected={params.get('profile')}
+                    onSelect={(short) => update({ profile: short ?? undefined })}
+                  />
+                ) : (
+                  <p className="ws-status" role={profiles.error ? 'alert' : 'status'}>{profiles.error ? `Profile versions are unavailable: ${profiles.error}` : 'Loading profile versions…'}</p>
+                )}
+              </section>
             )}
             {tab === 'runs' && (
               <>
@@ -631,13 +649,31 @@ function useRecordPart(url: string | null) {
   return { ...parsed, loading: doc.loading, fetchError: doc.error, pending: !!url && doc.data === undefined && !doc.error }
 }
 
+/** The run's profiles on the lineage canvas, read from its play's profile index (which carries every ancestor, in any play). */
+function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; runId: string; play: string; selected: string | null; onSelect: (short: string | null) => void }) {
+  const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(play)}/profiles`)
+  const scope = useMemo(() => ({ kind: 'run' as const, runId, play }), [runId, play])
+  if (!profiles.data)
+    return (
+      <p className="ws-status run-panel" role={profiles.error ? 'alert' : 'status'}>
+        {profiles.error ? `This run's profiles are unavailable: ${profiles.error}` : 'Loading profile versions…'}
+      </p>
+    )
+  return (
+    <section className="run-panel run-profiles" aria-label="Profiles" data-section="profiles">
+      <ProfileCanvas api={api} doc={profiles.data} scope={scope} selected={selected} onSelect={onSelect} />
+    </section>
+  )
+}
+
 /** The run page's sections, in one tab bar under the header: what the run found first, then its agents and the rest. */
-type RunSection = 'findings' | 'agents' | 'graph' | 'versions' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
+type RunSection = 'findings' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
 const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
   ['findings', 'Findings'],
   ['agents', 'Agents'],
   ['graph', 'Graph'],
   ['versions', 'Versions'],
+  ['profiles', 'Profiles'],
   ['readout', 'Readout'],
   ['outputs', 'Outputs'],
   ['spend', 'Spend'],
@@ -749,6 +785,15 @@ function RunPage({ api, id }: { api: string; id: string }) {
           selected={params.get('commit')}
           onSelect={(commit) => update({ section: 'versions', commit })}
           onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
+        />
+      )}
+      {section === 'profiles' && (
+        <RunProfiles
+          api={api}
+          runId={summary.id}
+          play={summary.play}
+          selected={params.get('profile')}
+          onSelect={(short) => update({ section: 'profiles', profile: short ?? undefined })}
         />
       )}
       {section === 'readout' && (

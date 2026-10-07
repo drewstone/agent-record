@@ -591,9 +591,10 @@ export const runDocumentSchema = z
 const profileDigest = z.string().regex(/^sha256:[0-9a-f]{64}$/)
 const contentRef = z.object({ bytes: z.number().int().nonnegative(), sha256: z.string() }).catchall(z.unknown())
 
-/** How a profile came from its parent. `authored`: written at runtime by an agent running the parent; `revision`: a
- * later version of the parent; `treatment`: the parent is its control arm and this one adds the manipulated change. */
-export const profileRelations = ['authored', 'revision', 'treatment'] as const
+/** How a profile came from its parent. `authored`: written at runtime by an agent running the parent; `replaced`: a
+ * worker restarted in place of the parent's worker; `revision`: a later version of the parent; `treatment`: the parent is
+ * its control arm and this one adds the manipulated change. */
+export const profileRelations = ['authored', 'replaced', 'revision', 'treatment'] as const
 /** `recorded`: written at creation by the system that created the profile; `inferred`: reconstructed afterwards from
  * records that prove it. */
 export const profileBases = ['recorded', 'inferred'] as const
@@ -818,6 +819,23 @@ export const roleEditSchema = z
   })
   .catchall(z.unknown())
 
+/** One record behind a parent edge (discovery-lab docs/profiles.md `Event`). */
+const profileEdgeEventSchema = z
+  .object({
+    kind: z.string(),
+    at: z.string().nullable().optional(),
+    runId: z.string().nullable().optional(),
+    nodeId: z.string().nullable().optional(),
+    label: z.string().nullable().optional(),
+    /** A spawned or restarted agent's settlement; `metered` false means Runtime recorded no cost, so it is unknown. */
+    outcome: z
+      .object({ status: z.string().nullable().optional(), usd: z.number().nullable().optional(), metered: z.boolean().optional() })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
+  })
+  .catchall(z.unknown())
+
 export const profileNodeSchema = z
   .object({
     digest: profileDigest,
@@ -858,6 +876,11 @@ export const profileNodeSchema = z
           basis: z.enum(profileBases),
           primary: z.boolean(),
           evidence: z.array(z.object({ source: z.string(), note: z.string() }).catchall(z.unknown())),
+          /** `within-run` for `authored` and `replaced`, `across-run` for `revision` and `treatment`. */
+          level: z.enum(['within-run', 'across-run']).optional(),
+          /** The records that made the edge: a spawn or restart in a run (with that agent's outcome and cost), or the
+           * run that registered, proposed or searched the version. */
+          events: z.array(profileEdgeEventSchema).optional(),
         })
         .catchall(z.unknown()),
     ),
@@ -1200,6 +1223,7 @@ export type ProfileGraphDocument = z.infer<typeof profileGraphDocumentSchema>
 export type ProfileNode = z.infer<typeof profileNodeSchema>
 export type ProfileParent = ProfileNode['parents'][number]
 export type ProfileRun = ProfileNode['runs'][number]
+export type ProfileEdgeEvent = z.infer<typeof profileEdgeEventSchema>
 export type ProfileScore = z.infer<typeof profileScoreSchema>
 export type ProfileDiff = z.infer<typeof profileDiffSchema>
 export type ProfileDiffField = z.infer<typeof profileDiffFieldSchema>
