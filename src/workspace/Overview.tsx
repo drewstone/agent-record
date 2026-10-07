@@ -51,7 +51,7 @@ function Lead({ lead }: { lead: OverviewLead }) {
   return (
     <span className="ov-lead" title={lead.text || undefined}>
       <span className={`ov-lead-kind kind-${lead.kind}`}>{lead.kind}</span>
-      <span className="ov-lead-title">{lead.title || 'untitled page'}</span>
+      <span className="ov-lead-title">{lead.text || lead.title || 'No answer recorded'}</span>
     </span>
   )
 }
@@ -68,7 +68,7 @@ function RunningRow({ run }: { run: OverviewRun }) {
           <span>started {ago(run.startedAt)}</span>
           <span className={stale ? 'is-stale' : undefined}>active {ago(run.activeAt)}</span>
           {run.agents !== null && <span>{run.agents} agents{run.depth !== null ? `, depth ${run.depth}` : ''}</span>}
-          <span>{run.results} results · {run.claims} claims</span>
+          <span>{run.findingsPending ? 'findings not available yet' : `${run.results} results · ${run.claims} claims`}</span>
           <span>subscription {money(run.subscriptionUsd ?? run.listUsd)} at API prices · API {money(run.apiUsd)} · sandbox {money(run.sandboxUsd)}</span>
         </span>
         {run.purpose && <span className="ov-running-purpose">{run.purpose}</span>}
@@ -101,7 +101,7 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
             <span className="ov-week-counts">{play.results} results · {play.claims} claims</span>
           </>
         ) : (
-          <span className="ov-week-none">no result or claim yet</span>
+          <span className="ov-week-none">{play.findingsPending ? `${play.findingsPending} run${play.findingsPending === 1 ? '' : 's'} without findings data` : 'no result or claim yet'}</span>
         )}
       </span>
       <span className={`ov-week-num ${play.lostHours >= 10 ? 'is-warn' : ''}`} data-label="lost">{play.lostHours ? hours(play.lostHours) : '—'}</span>
@@ -131,7 +131,6 @@ export function OverviewPage({ api }: { api: string }) {
   const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
   const lostByDay = Object.entries(d.runs.lostByDay ?? {}).map(([cause, values], i) => ({ name: label(cause), color: LOSS_COLOR[i] ?? LOSS_COLOR.at(-1)!, values: cut(values) }))
   const startsByDay = days.map((_, i) => Object.values(runsByDay).reduce((sum, values) => sum + (values[i] ?? 0), 0))
-  const lostPerRun = days.map((_, i) => startsByDay[i] ? lostByDay.reduce((sum, cause) => sum + (cause.values[i] ?? 0), 0) / startsByDay[i]! : null)
   const findingsByDay = Object.fromEntries(Object.entries(d.findings.byDay).map(([k, v]) => [k, cut(v)]))
   const tokensByDay = { input: cut(d.tokens.byDay.input), output: cut(d.tokens.byDay.output), cacheRead: cut(d.tokens.byDay.cacheRead), cacheWrite: cut(d.tokens.byDay.cacheWrite) }
   const state = d.state
@@ -156,6 +155,38 @@ export function OverviewPage({ api }: { api: string }) {
   const weekRuns = sumOf(week.map((p) => p.runCount))
   const weekResults = sumOf(week.map((p) => p.results))
   const weekClaims = sumOf(week.map((p) => p.claims))
+  const stripDays = d.days.slice(-14)
+  const stripStarts = stripDays.map((_, index) => Object.values(d.runs.byDay).reduce((sum, values) => sum + (values.slice(-14)[index] ?? 0), 0))
+  const points = (values: (number | null)[] | undefined) => (values ?? []).slice(-14).flatMap((value, index) =>
+    value === null ? [] : [[Date.parse(`${stripDays[index]}T12:00:00Z`), value] as [number, number]])
+  const total = (values: (number | null)[] | undefined) => {
+    const last = (values ?? []).slice(-14)
+    return last.some((value) => value !== null) ? { value: sumOf(last), partial: last.some((value) => value === null) } : null
+  }
+  const costMetric = (name: string, values: (number | null)[] | undefined) => {
+    const read = total(values)
+    return { name, value: read ? `${read.partial ? 'known subtotal ' : ''}${usd(read.value)}` : 'not recorded', points: points(values) }
+  }
+  const resultClaim = stripDays.map((_, index) => (d.findings.byDay.result?.slice(-14)[index] ?? 0) + (d.findings.byDay.claim?.slice(-14)[index] ?? 0))
+  const lost = stripDays.map((_, index) => Object.values(d.runs.lostByDay ?? {}).reduce((sum, values) => sum + (values.slice(-14)[index] ?? 0), 0))
+  const seatsByDay = stripDays.map((day) => {
+    const from = Date.parse(`${day}T00:00:00Z`), to = from + 86400_000
+    const seen = Object.values(d.seats.history).map((history) => history.filter(([at]) => at >= from && at < to).at(-1)?.[1])
+    return seen.some((value) => value !== undefined) ? seen.filter((value) => value !== undefined && value >= .95).length : null
+  })
+  const fleetPoints = (d.money.fleetKey.history ?? []).filter(([at]) => at * 1000 >= Date.now() - 14 * 86400_000)
+    .map(([at, spent]) => [at * 1000, d.money.fleetKey.cap ? spent / d.money.fleetKey.cap : 0] as [number, number])
+  const strip = [
+    { name: 'Runs started · 14 d', value: String(sumOf(stripStarts)), points: points(stripStarts) },
+    { name: 'Runs with findings · 14 d', value: d.findings.runsByDay ? `${d.findings.pending ? '≥' : ''}${sumOf(d.findings.runsByDay.slice(-14))}` : 'not recorded', points: points(d.findings.runsByDay) },
+    { name: 'Results + claims · 14 d', value: `${d.findings.pending ? '≥' : ''}${sumOf(resultClaim)}`, points: points(resultClaim) },
+    { name: 'Agent-hours lost · 14 d', value: hours(sumOf(lost)), points: points(lost) },
+    costMetric('Subscription at API prices · 14 d', d.money.costByDay?.subscription),
+    costMetric('Billed API · 14 d', d.money.costByDay?.api),
+    costMetric('Billed sandbox · 14 d', d.money.costByDay?.sandbox),
+    { name: 'Seats at limit · now', value: `${seats.filter((seat) => (seat.d7 ?? 0) >= .95).length} of ${seats.length}`, points: points(seatsByDay) },
+    { name: 'Fleet key used · now', value: d.money.fleetKey.cap && d.money.fleetKey.spent !== null ? pct(d.money.fleetKey.spent / d.money.fleetKey.cap) : 'not recorded', points: fleetPoints },
+  ]
   return (
     <div className="ws-page ov-page" data-overview>
       <div className="ov-now">
@@ -163,7 +194,7 @@ export function OverviewPage({ api }: { api: string }) {
           <figcaption>
             <span className="ov-card-title">Running now</span>
             <span className="ov-card-sub">
-              {state.running} running · {state.queued} queued · {state.sandboxesRunning ?? '—'} sandboxes ({state.sandboxesByKind.discovery ?? 0} Discovery)
+              {running.length} running · {state.queued} queued · {state.sandboxesRunning ?? '—'} sandboxes ({state.sandboxesByKind.discovery ?? 'unknown'} Discovery)
             </span>
           </figcaption>
           {running.length ? (
@@ -173,7 +204,7 @@ export function OverviewPage({ api }: { api: string }) {
               Nothing is running.{' '}
               {stood
                 ? `Research is stood down${stood.reason ? `: ${stood.reason}` : ''}.`
-                : `The last research run started ${state.lastResearchStart ? `${state.lastResearchStart.slice(0, 16).replace('T', ' ')} UTC, ${ago(state.lastResearchStart)}` : 'never'}.`}
+                : `The last Discovery run started ${state.lastRunStart ? `${state.lastRunStart.slice(0, 16).replace('T', ' ')} UTC, ${ago(state.lastRunStart)}` : 'never'}.`}
             </p>
           )}
         </figure>
@@ -185,7 +216,8 @@ export function OverviewPage({ api }: { api: string }) {
                 const body = (
                   <>
                     <span className={`ov-light tone-${item.tone === 'crit' ? 'fail' : item.tone === 'warn' ? 'warn' : 'info'}`} aria-hidden="true" />
-                    <span className="ov-attention-text">{item.text}{item.detail ? <small>{item.detail}</small> : null}</span>
+                    <span className="ov-attention-text">{item.text}{item.detail ? <small>{item.detail}</small> : null}
+                      <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
                   </>
                 )
                 // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
@@ -198,10 +230,17 @@ export function OverviewPage({ api }: { api: string }) {
         </figure>
       </div>
 
+      <section className="ov-consumption" aria-label="Consumption and capacity">
+        {strip.map((item) => <div key={item.name} className="ov-consumption-item">
+          <span>{item.name}</span><strong>{item.value}</strong>
+          <Spark points={item.points} max={Math.max(1, ...item.points.map(([, value]) => value))} />
+        </div>)}
+      </section>
+
       <section className="ov-section" aria-label={`Last ${weekDays} days by play`}>
         <div className="ov-section-head">
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
-          <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims</span>
+          <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims{week.some((play) => play.findingsPending) ? ' · findings incomplete' : ''}</span>
         </div>
         <Legend items={Object.keys(STATE_COLOR).filter((s) => s !== 'running' || running.length).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, hollow: HOLLOW.has(s) }))} />
         <div className="ov-card ov-week">
@@ -253,11 +292,8 @@ export function OverviewPage({ api }: { api: string }) {
           <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
             <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
           </ChartCard>
-          <ChartCard title="Agent-hours lost per day, by cause" legend={lostByDay.map(({ name, color }) => ({ name, color }))} note="Top five causes over 30 days, plus other. Grouped by the day each run started.">
+          <ChartCard title="Agent-hours lost per day, by cause" legend={lostByDay.map(({ name, color }) => ({ name, color }))} note={`Top five causes over ${range} days, plus other. Grouped by the day each run started.`}>
             {lostByDay.length ? <DayBars days={days} series={lostByDay} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
-          </ChartCard>
-          <ChartCard title="Lost hours per run started" note="Daily lost hours divided by all catalog runs started that day. A day without a start has no rate.">
-            {lostByDay.length ? <DayBars days={days} series={[{ name: 'lost hours per run', color: SERIES[0], values: lostPerRun }]} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
           </ChartCard>
         </div>
         <ChartCard
