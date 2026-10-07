@@ -25,7 +25,7 @@ const chipStyle = (state: string) => {
   const color = STATE_COLOR[state] ?? STATE_COLOR.unknown!
   return HOLLOW.has(state) || !STATE_COLOR[state] ? { boxShadow: `inset 0 0 0 2px ${color}` } : { background: color }
 }
-const sumOf = (values: number[] | undefined) => (values ?? []).reduce((a, b) => a + b, 0)
+const sumOf = (values: (number | null)[] | undefined) => (values ?? []).reduce<number>((a, b) => a + (b ?? 0), 0)
 
 function Section({ id, title, tone, aside, children }: { id?: string; title: string; tone: string; aside?: ReactNode; children: ReactNode }) {
   return (
@@ -118,7 +118,7 @@ export function OverviewPage({ api }: { api: string }) {
   if (doc.error && !doc.data) return <p className="ws-status" role="alert">The overview is unavailable: {doc.error}</p>
   if (!doc.data) return <p className="ws-status" role="status">Composing the overview…</p>
   const d = doc.data
-  const cut = (values: number[] | undefined) => (values ?? []).slice(-range)
+  const cut = (values: (number | null)[] | undefined) => (values ?? []).slice(-range)
   const days = d.days.slice(-range)
   const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
   const lostByDay = Object.entries(d.runs.lostByDay ?? {}).map(([cause, values], i) => ({ name: label(cause), color: LOSS_COLOR[i] ?? LOSS_COLOR.at(-1)!, values: cut(values) }))
@@ -136,6 +136,10 @@ export function OverviewPage({ api }: { api: string }) {
   const stood = state.standdown
   const cost = d.money.costByDay
   const costRuns = d.money.costRuns
+  const infra = d.money.infra
+  const infraDay = new Map(infra?.byDay?.map((row) => [row.date, row]))
+  const infraValues = (field: 'hostUsd' | 'volumeUsd' | 'snapshotUsd' | 'r2Usd' | 'r2ListUsd' | 'egressBytes' | 'egressUsd') =>
+    days.map((day) => infraDay.get(day)?.[field] ?? null)
   const running = d.now ?? []
   const attention = d.attention ?? []
   const week = d.week ?? []
@@ -280,19 +284,58 @@ export function OverviewPage({ api }: { api: string }) {
       </Section>
 
       <Section id="money" title="Money" tone="tone-warn">
-        <ChartCard title={`Cost by kind, ${range} days`} note={costRuns ? `Of ${costRuns.counted} runs in 30 days: API recorded for ${costRuns.api}, sandbox compute for ${costRuns.sandbox}; the rest are unrecorded, not zero.` : undefined}>
+        <ChartCard title={`Cost by kind, ${range} days`} note={costRuns ? `${costRuns.counted} catalog runs in 30 days; ${costRuns.snapshots} spend snapshots. Router recorded for ${costRuns.api}, sandbox compute for ${costRuns.sandbox}; other amounts are unknown, not zero.` : undefined}>
           <dl className="ov-costs">
-            <div><dt>Billed: model API (Router)</dt><dd>{usd(sumOf(cut(cost?.api)))}</dd></div>
-            <div><dt>Billed: sandbox compute</dt><dd>{usd(sumOf(cut(cost?.sandbox)))}</dd></div>
-            <div><dt>Not billed: subscription use at API prices</dt><dd>{usd(sumOf(cut(cost?.subscription ?? d.money.listByDay)))}</dd></div>
+            <div><dt>Billed: model API (Router), measured subtotal</dt><dd>{costRuns?.api ? usd(sumOf(cut(cost?.api))) : '?'}</dd></div>
+            <div><dt>Billed: sandbox compute, measured subtotal</dt><dd>{costRuns?.sandbox ? usd(sumOf(cut(cost?.sandbox))) : '?'}</dd></div>
+            <div><dt>Not billed: subscription use at API prices</dt><dd>{costRuns?.subscription ? usd(sumOf(cut(cost?.subscription))) : '?'}</dd></div>
             {sumOf(cost?.otherList) > 0 && <div><dt>API-key agents at list price</dt><dd>{usd(sumOf(cut(cost?.otherList)))}</dd></div>}
           </dl>
         </ChartCard>
+        <ChartCard title="Infrastructure billed to Discovery" note={infra ? `${infra.window.from?.slice(0, 10) ?? 'unknown start'}–${infra.window.to.slice(0, 10)} · measured ${ago(infra.generatedAt)}. Missing sources remain unknown.` : 'Infrastructure cost readings have not arrived.'}>
+          <dl className="ov-costs">
+            <div><dt>Hosts</dt><dd>{money(infra?.totals.hostUsd)}</dd></div>
+            <div><dt>Hetzner volumes, including traces</dt><dd>{money(infra?.totals.volumeUsd)}</dd></div>
+            <div><dt>Snapshots and backups</dt><dd>{money(infra?.totals.snapshotUsd)}</dd></div>
+            <div><dt>Cloudflare R2</dt><dd>{money(infra?.totals.r2Usd)}</dd></div>
+            <div><dt>Egress charges</dt><dd>{money(infra?.totals.egressUsd)}</dd></div>
+          </dl>
+          {infra?.totals.r2ListUsd != null ? <p className="ov-note">R2 storage at list rates: {usd(infra.totals.r2ListUsd)}; the billed allocation is unknown.</p> : null}
+          {infra?.totals.r2DownloadBytesLowerBound != null ? <p className="ov-note">R2 download lower bound: {bytes(infra.totals.r2DownloadBytesLowerBound)}; R2 egress itself is free.</p> : null}
+          {infra?.gaps?.length ? <p className="ov-note">Unmeasured: {infra.gaps.map((gap) => gap.detail).join(' · ')}</p> : null}
+        </ChartCard>
+        <ChartCard title="Provider bill reconciliation" note={infra?.reconciliation?.reason ?? 'No same-period provider bill is available.'}>
+          <dl className="ov-costs">
+            <div><dt>Discovery billed allocation, {infra?.reconciliation?.period ?? 'current period'}</dt><dd>{money(infra?.reconciliation?.billedUsd)}</dd></div>
+            <div><dt>Prior bill evidence</dt><dd>{infra?.reconciliation?.priorBillEvidence?.length ?? 0} lines</dd></div>
+          </dl>
+          {infra?.reconciliation?.priorBillEvidence?.map((bill, i) => <p className="ov-note" key={`${bill.vendor}:${bill.item}:${i}`}>{bill.vendor}: {money(bill.monthlyUsd)}/month · {bill.asOf} · {bill.item}</p>)}
+        </ChartCard>
+        <ChartCard title="Hosts with Discovery sidecars" note="Provider list price and outbound counters are host-wide; Discovery share and egress charges are unknown.">
+          <dl className="ov-costs">
+            {(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => <div key={host.id}><dt>{host.name ?? host.id} · {host.discoverySidecars} sidecars · {bytes(host.outgoingBytes)} outbound</dt><dd>{money(host.monthlyUsd)}/mo</dd></div>)}
+          </dl>
+        </ChartCard>
+        <ChartCard title="Host allocation per day" note="Measured Discovery share of host fixed cost. A missing day has no allocation.">
+          <DayBars days={days} series={[{ name: 'host', color: SERIES[2], values: infraValues('hostUsd') }]} format={usd} missing="No reading" />
+        </ChartCard>
+        <ChartCard title="Storage charge per day" legend={[{ name: 'volumes', color: SERIES[1] }, { name: 'snapshots', color: SERIES[2] }, { name: 'R2', color: SERIES[4] }]} note="Billed storage categories; missing provider readings are unknown.">
+          <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" />
+        </ChartCard>
+        <ChartCard title="R2 storage at list rates per day" note="Direct Discovery bucket. Before the account free tier, operation charges and invoice rounding; not a billed amount.">
+          <DayBars days={days} series={[{ name: 'R2 list rate', color: SERIES[4], values: infraValues('r2ListUsd') }]} format={usd} missing="No reading" />
+        </ChartCard>
+        <ChartCard title="Egress bytes per day" note="Outbound traffic attributed to Discovery where a source records it.">
+          <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" />
+        </ChartCard>
+        <ChartCard title="Egress charges per day" note={`Measured outbound charges: ${bytes(infra?.totals.egressBytes)} total bytes. Bytes without a tariff have unknown cost.`}>
+          <DayBars days={days} series={[{ name: 'egress', color: SERIES[3], values: infraValues('egressUsd') }]} format={usd} missing="No reading" />
+        </ChartCard>
         <ChartCard title="Billed per day" legend={[{ name: 'model API', color: SERIES[3] }, { name: 'sandbox compute', color: SERIES[1] }]} note="What was charged: model calls through Router and sandbox compute on the runs' keys.">
-          <DayBars days={days} series={[{ name: 'model API', color: SERIES[3], values: cut(cost?.api) }, { name: 'sandbox compute', color: SERIES[1], values: cut(cost?.sandbox ?? d.money.paidByDay) }]} format={usd} />
+          <DayBars days={days} series={[{ name: 'model API', color: SERIES[3], values: cut(cost?.api) }, { name: 'sandbox compute', color: SERIES[1], values: cut(cost?.sandbox ?? d.money.paidByDay) }]} format={usd} missing="No reading" />
         </ChartCard>
         <ChartCard title="Subscription use at API prices, per day" note="Seat use (Claude, Codex, Kimi, Gemini) priced at API list rates; covered by the seats, never billed.">
-          <DayBars days={days} series={[{ name: 'subscription at API prices', color: SERIES[0], values: cut(cost?.subscription ?? d.money.listByDay) }]} format={usd} />
+          <DayBars days={days} series={[{ name: 'subscription at API prices', color: SERIES[0], values: cut(cost?.subscription ?? d.money.listByDay) }]} format={usd} missing="No reading" />
         </ChartCard>
         <ChartCard title="Subscription use at API prices, per run" note="30 days; not billed.">
           <Histogram bins={d.money.runListHistogram} unit="at API prices per run" format={usd} />
