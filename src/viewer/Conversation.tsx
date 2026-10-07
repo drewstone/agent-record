@@ -468,7 +468,7 @@ export function Conversation({
               {user ? '↳' : finding ? '◇' : failed ? '!' : standalone ? '↵' : '·'}
             </span>
             <strong>{title}</strong>
-            {user && typeof event.detail.promptSender === 'string' && <span className="prompt-sender">from {event.detail.promptSender}</span>}
+            {user && typeof event.detail.promptSender === 'string' && <span className="prompt-sender" title={`Sent by ${event.detail.promptSender}`}>{event.detail.promptSender}</span>}
             <time dateTime={event.at}>{utcTime(event.at)}</time>
             {flagMarks(event)}
             {sourceButton(event)}

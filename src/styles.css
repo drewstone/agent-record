@@ -1729,6 +1729,14 @@
 .ar-ws .message-heading { padding-bottom: 6px; }
 .ar-ws .prompt-sender { color: var(--ar-fg-muted); font-size: var(--ar-text-s); overflow-wrap: anywhere; }
 .ar-ws .assignment-message { min-width: 0; background: color-mix(in srgb, var(--ar-bg-alt) 36%, var(--ar-bg)); }
+@media (max-width: 700px) {
+  .ar-ws .assignment-message .message-heading { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 2px 8px; align-items: baseline; }
+  .ar-ws .assignment-message .message-mark { grid-column: 1; grid-row: 1; }
+  .ar-ws .assignment-message .message-heading strong { grid-column: 2; grid-row: 1; }
+  .ar-ws .assignment-message .message-heading time { grid-column: 3; grid-row: 1; }
+  .ar-ws .assignment-message .prompt-sender { grid-column: 2; grid-row: 2; }
+  .ar-ws .assignment-message .message-source { grid-column: 3; grid-row: 2; }
+}
 .ar-ws .chat-message.tool-turn { padding: 3px 18px; border-bottom: 0; }
 .ar-ws .chat-message.tool-turn .tool-stack { margin: 0; }
 .ar-ws .tool-execution > summary { min-height: 32px; }
