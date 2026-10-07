@@ -441,6 +441,72 @@ export const finalOutputSchema = z
   })
   .catchall(z.unknown())
 
+/** One knowledge page an agent wrote, as the run's findings list it: its last version, classified by file name. */
+export const findingItemSchema = z
+  .object({
+    path: z.string(),
+    agent: z.string().nullable(),
+    agentLabel: z.string().nullable(),
+    at: z.string().nullable(),
+    /** result, claim, check, sources, plan, evidence or process. */
+    kind: z.string(),
+    title: z.string(),
+    summary: z.string(),
+    /** A result page's stated answer (the section under an "Answer" heading, or an `Answer:` label); absent otherwise. */
+    answer: z.string().nullable().optional(),
+    /** The page's own class line (NEW-INTERNAL, CONJECTURE…), when it states one. */
+    class: z.string().nullable(),
+    /** A check page's first verdict word (CORRECT, NO ERROR, INCORRECT…). */
+    verdict: z.string().nullable(),
+    versions: z.number().int(),
+    /** Written after the record's capture stopped: known from the run directory only. */
+    uncaptured: z.boolean(),
+    bytes: z.number().int(),
+    sha256: z.string(),
+  })
+  .catchall(z.unknown())
+
+/** What a run found, from the knowledge pages its agents wrote (`agent-workspace.findings.v1`), with the sources
+ * they read or cited and how the run stopped. Absent on documents built before the field existed. */
+export const findingsSchema = z
+  .object({
+    schema: z.literal('agent-workspace.findings.v1'),
+    items: z.array(findingItemSchema),
+    total: z.number().int(),
+    agents: z.array(
+      z
+        .object({
+          agent: z.string().nullable(),
+          label: z.string().nullable(),
+          pages: z.number().int(),
+          bytes: z.number().int(),
+          kinds: z.record(z.string(), z.number()),
+          lastWords: z.object({ at: z.string().nullable(), text: z.string() }).optional(),
+        })
+        .catchall(z.unknown()),
+    ),
+    sources: z
+      .object({
+        citations: z.array(z.object({ kind: z.string(), id: z.string(), mentions: z.number().int(), agents: z.array(z.string()), pages: z.number().int() }).catchall(z.unknown())),
+        webSearches: z.array(z.object({ at: z.string().nullable(), agent: z.string().nullable(), label: z.string().nullable(), query: z.string() }).catchall(z.unknown())),
+        webFetches: z.array(z.object({ at: z.string().nullable(), agent: z.string().nullable(), label: z.string().nullable(), url: z.string() }).catchall(z.unknown())),
+        knowledgeReads: z.number().int(),
+        knowledgeSearches: z.number().int(),
+      })
+      .catchall(z.unknown()),
+    stop: z
+      .object({
+        kind: z.string().nullable(),
+        reason: z.string().nullable(),
+        attempts: z.number().int().nullable(),
+        firstFailure: z.string().nullable(),
+        lastCause: z.string().nullable(),
+        limits: z.array(z.object({ at: z.string().nullable(), agent: z.string().nullable(), label: z.string().nullable(), limit: z.string(), text: z.string() }).catchall(z.unknown())),
+      })
+      .catchall(z.unknown()),
+  })
+  .catchall(z.unknown())
+
 export const runDocumentSchema = z
   .object({
     schema: z.literal('agent-workspace.run.v1'),
@@ -450,6 +516,7 @@ export const runDocumentSchema = z
     versions: z.array(runSummarySchema),
     live: z.object({ mirrorAt: time.nullable(), polling: z.boolean() }),
     finalOutput: finalOutputSchema.nullable().optional(),
+    findings: findingsSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -722,6 +789,8 @@ export type PlayDocument = z.infer<typeof playDocumentSchema>
 export type RunDocument = z.infer<typeof runDocumentSchema>
 export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
+export type Findings = z.infer<typeof findingsSchema>
+export type FindingItem = z.infer<typeof findingItemSchema>
 export type Readout = z.infer<typeof readoutSchema>
 export type OutputFile = z.infer<typeof outputFile>
 export type ProgressBrief = z.infer<typeof progressBriefSchema>

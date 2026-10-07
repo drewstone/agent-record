@@ -68,6 +68,23 @@ export function callStatus(state: CallState, live: boolean): string {
   }
 }
 
+/**
+ * A turn that holds only withheld thinking is shown when it produced at least this many output tokens: Claude Code
+ * writes one line per content block, so most such turns are a few hundred tokens of glue before a tool call, while the
+ * turns where the work happens (a 13-minute, 80K-token plan) are rare. Hidden turns stay in the usage charts.
+ */
+export const THINKING_SHOWN_TOKENS = 2000
+/** The output tokens a turn recorded, or null when its usage was not recorded. */
+export function outputTokens(detail: RecordEvent['detail']): number | null {
+  const usage = detail.usage as { output?: unknown } | undefined
+  return typeof usage?.output === 'number' && Number.isFinite(usage.output) ? usage.output : null
+}
+/** A withheld-thinking turn is quiet glue when it recorded fewer output tokens than THINKING_SHOWN_TOKENS. */
+export function quietThinking(detail: RecordEvent['detail']): boolean {
+  const output = outputTokens(detail)
+  return output !== null && output < THINKING_SHOWN_TOKENS
+}
+
 /** Thinking whose text the record lacks, said as what happened. Never a reconstruction of the text. */
 export function thinkingMarkers(detail: RecordEvent['detail']): string[] {
   const count = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0)

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
+import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
 import type { EventFlag } from './viewer/Conversation.js'
@@ -612,6 +613,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
   // A saved grade changes the run's document; asking under a new query fetches it again (the host ignores the query).
   const [revision, setRevision] = useState(0)
+  // The finding open in the run's findings; an agent's list below the table opens one there too.
+  const [finding, setFinding] = useState<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
@@ -647,6 +650,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   return (
     <div className="ws-page ws-run" data-run={summary.id}>
       <RunHeader doc={run.data!} />
+      <RunFindings doc={run.data!} runUrl={runUrl} open={finding} onOpen={setFinding} />
       <AnswerStrip doc={run.data!} onOpen={() => update({ view: 'readout', drawer: undefined, file: undefined })} onOutputs={openOutputs} />
       {index ? (
         <div className={`run-layout ${drawer ? 'with-drawer' : ''}`}>
@@ -660,6 +664,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
               selected={drawer === 'agent' ? actor : null}
               onSelect={(node) => update({ node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
             />
+            {drawer === 'agent' && actor && (
+              <AgentFindings doc={run.data!} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={setFinding} />
+            )}
           </section>
           {drawer === 'readout' && (
             <aside className="run-drawer" aria-label="Readout" data-drawer="readout">
@@ -746,7 +753,7 @@ function RunHeader({ doc }: { doc: RunDocument }) {
         </h1>
         {run.kind !== 'run' && <span className="chip">{run.kind}</span>}
         <span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>
-        {run.reason && <span className="faint">{run.reason}</span>}
+        {run.reason && run.reason !== run.state && <span className="faint">{run.reason.replaceAll('-', ' ')}</span>}
       </div>
       {run.purpose && <p className="ws-charter run-purpose-line">{run.purpose}</p>}
       <div className="ws-facts">
