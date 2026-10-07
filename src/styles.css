@@ -2538,7 +2538,9 @@
   .ar-ws .ov-running-row { padding: .45em .6em; }
   .ar-ws .ov-attention ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .4em; }
   .ar-ws .ov-attention li > a, .ar-ws .ov-attention li > div { padding: .25em .35em; }
-  .ar-ws .ov-attention-text { min-width: 0; overflow-wrap: anywhere; }
+  .ar-ws .ov-attention-text { display: block; min-width: 0; overflow-wrap: anywhere; font-size: .92em; line-height: 1.2; }
+  .ar-ws .ov-attention-text small { display: block; margin-top: .12em; line-height: 1.2; }
+  .ar-ws .ov-attention-text small:first-of-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ar-ws .ov-consumption-item { padding: .3em .45em; grid-template-rows: auto auto 1.25em; }
   .ar-ws .ov-consumption-item .ov-spark { height: 1.25em; }
   .ar-ws .ov-week li { padding-block: .25em; }
