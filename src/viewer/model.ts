@@ -149,6 +149,7 @@ export function eventMatches(
 ) {
   const categoryMatches =
     category === 'all' ||
+    (category === 'prompts' && (event.detail.promptKind === 'initial' || event.detail.promptKind === 'steering')) ||
     event.category === category ||
     (category === 'findings' &&
       (event.kind === 'finding-record' ||

@@ -6,6 +6,8 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AgentRecord, parseRecord } from '../dist/index.js'
+import { withPrompts } from '../src/viewer/prompts.ts'
+import { eventMatches, indexRecord } from '../src/viewer/model.ts'
 import {
   anchorOf,
   anchorsOf,
@@ -118,6 +120,24 @@ test('the rendered conversation shows the collapsed polls, absent captures and w
   assert.match(html, /Expand all thinking/)
   // Thinking text stays collapsed until asked for.
   assert.doesNotMatch(html, /<details[^>]*class="reasoning-body"[^>]*open/)
+})
+
+test('native opening input and a child without a transcript both begin with one prompt', () => {
+  const record = parseRecord(fixture())
+  record.nodes.push({ id: 'run-live:s0', label: 'worker', parent: 'run-live', kind: 'agent', assignment: 'Compute the bounds.', start: '2026-10-05T06:00:03.000Z' })
+  record.events.push({ id: 'steer:1', node: 'run-live:s0', at: '2026-10-05T06:00:10.000Z', kind: 'message', category: 'other', label: 'Steering', source: null,
+    detail: { role: 'user', publicText: 'Use exact arithmetic.', promptKind: 'steering', promptSender: 'Parent agent' } })
+  const index = indexRecord(withPrompts(record))
+  const root = index.byActor.get('run-live')
+  const child = index.byActor.get('run-live:s0')
+  assert.equal(root.filter((event) => event.detail.promptKind === 'initial').length, 1)
+  assert.equal(root.find((event) => event.detail.promptKind === 'initial').detail.publicText, 'Estimate the unsubsidised cost of synthetic methane.')
+  assert.deepEqual(child.map((event) => [event.detail.promptKind, event.detail.publicText]), [
+    ['initial', 'Compute the bounds.'], ['steering', 'Use exact arithmetic.'],
+  ])
+  assert.equal(child[0].detail.promptSender, 'Parent agent')
+  assert.equal(child.filter((event) => eventMatches(event, index, '', 'prompts')).length, 2)
+  assert.equal(root.filter((event) => eventMatches(event, index, '', 'prompts')).length, 1)
 })
 
 test('final output sizes and links never invent a value', () => {

@@ -908,6 +908,7 @@
   padding: 0;
   font: var(--ar-text-m)/1.4 var(--ar-font-body);
   color: var(--ar-fg-muted);
+  overflow-wrap: anywhere;
 }
 .agent-record .prompt-body > summary::before {
   display: none;
@@ -1726,6 +1727,8 @@
 .ar-ws .chat-message { padding: 14px 18px; }
 .ar-ws .conversation-toolbar { padding: 4px 16px; border-bottom: 0; }
 .ar-ws .message-heading { padding-bottom: 6px; }
+.ar-ws .prompt-sender { color: var(--ar-fg-muted); font-size: var(--ar-text-s); overflow-wrap: anywhere; }
+.ar-ws .assignment-message { min-width: 0; background: color-mix(in srgb, var(--ar-bg-alt) 36%, var(--ar-bg)); }
 .ar-ws .chat-message.tool-turn { padding: 3px 18px; border-bottom: 0; }
 .ar-ws .chat-message.tool-turn .tool-stack { margin: 0; }
 .ar-ws .tool-execution > summary { min-height: 32px; }
