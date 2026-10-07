@@ -2216,6 +2216,9 @@
 .ar-ws .agent-drawer .ws-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
 .ar-ws .agent-drawer .ws-tabs button { flex: none; }
 @media (max-width: 700px) {
+  .ar-ws .agent-drawer .agent-head { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .agent-drawer .agent-identity { width: 100%; flex-basis: auto; }
+  .ar-ws .agent-drawer .agent-capture { justify-content: flex-start; margin-left: 0; min-width: 0; overflow-wrap: anywhere; }
   /* On a phone the graph is a list: versions, then the selected version's authored profiles; the lines are dropped. */
   .ar-ws .version-host { width: auto !important; height: auto !important; display: grid; gap: 10px; padding: 12px; }
   .ar-ws .version-lines { display: none; }
