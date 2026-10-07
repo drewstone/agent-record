@@ -168,13 +168,29 @@ function PlaysPage({ api }: { api: string }) {
       )
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
-  // The Discovery home opens on what the runs found; the plays index is the second tab.
-  const home = params.get('view') === 'plays' ? 'plays' : 'findings'
+  const home = (['plays', 'findings', 'runs'] as const).find((value) => value === params.get('view')) ?? 'plays'
+  const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters">
+    <input type="search" aria-label="Search research" placeholder="Search research" value={draft}
+      onChange={(event) => { setDraft(event.target.value); update({ q: event.target.value || undefined }, true) }} />
+    <select aria-label="Program" value={program} onChange={(event) => update({ program: event.target.value || undefined })}>
+      <option value="">All programs</option>
+      {programs.map((item) => <option key={item} value={item}>{item}</option>)}
+    </select>
+  </div>
+  const frontiers = <section className="research-frontiers" aria-label="Best known frontiers">
+    <h2 className="kicker tone-finding">Best known</h2>
+    <div className="research-frontier-list">{(plays.data?.frontiers ?? []).map((item) =>
+      <a key={item.id} href={`/plays?view=plays&q=${encodeURIComponent(item.id)}`} className="research-frontier">
+        <strong>{item.id.replaceAll('-', ' ')}</strong><span>{item.statement || 'No statement recorded'}</span>
+        <small>{item.asOf || 'date unknown'} · {item.banked} banked · {item.next} next</small>
+      </a>)}</div>
+    {!plays.data?.frontiers?.length && <p className="faint">No frontier statement recorded.</p>}
+  </section>
   const homeTabs = (
-    <nav className="run-tabs" aria-label="Discovery">
-      {([['findings', 'Findings'], ['plays', 'Plays']] as const).map(([value, label]) => (
+    <nav className="run-tabs" aria-label="Research views">
+      {([['plays', 'Plays'], ['findings', 'Findings'], ['runs', 'Runs']] as const).map(([value, label]) => (
         <button key={value} type="button" className={`run-tab ${home === value ? 'on' : ''}`} aria-current={home === value ? 'page' : undefined} data-home-tab={value}
-          onClick={() => update({ view: value === 'findings' ? undefined : value })}>
+          onClick={() => update({ view: value === 'plays' ? undefined : value })}>
           {label}
         </button>
       ))}
@@ -183,33 +199,40 @@ function PlaysPage({ api }: { api: string }) {
   if (home === 'findings')
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
-        {homeTabs}
-        <FindingsFeed api={api} />
+        {frontiers}{homeTabs}{sharedFilters}
+        <FindingsFeed api={api} query={query} program={program} />
       </div>
     )
+  if (home === 'runs') {
+    const cutoff = Date.now() - 30 * 86400_000
+    const all = plays.data?.runs ?? []
+    const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
+      && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
+    return <div className="ws-page ws-plays" data-plays-home="runs">
+      {frontiers}{homeTabs}{sharedFilters}
+      <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.</p>
+      <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
+        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
+          <th className="num">Subscription at API prices</th><th className="num">Billed API</th><th className="num">Billed sandbox</th></tr></thead>
+        <tbody>{shown.map((run) => <tr key={run.id}>
+          <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono"> {run.id}</small></td>
+          <td><span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span></td>
+          <td>{when(run.startedAt)}</td><td>{when(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
+          <td className="num">{money(run.subscriptionUsd)}</td><td className="num">{money(run.apiUsd)}</td><td className="num">{money(run.sandboxUsd)}</td>
+        </tr>)}</tbody>
+      </table></div>
+      {!shown.length && <p className="chat-empty">No runs match.</p>}
+    </div>
+  }
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
-        {homeTabs}
+        {frontiers}{homeTabs}{sharedFilters}
         <header className="ws-head">
           <div className="ws-title-row">
             <h1>Plays</h1>
           </div>
           <div className="message-filters plays-filters">
-            <input
-              type="search"
-              aria-label="Find a play"
-              placeholder="Find a play"
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value)
-                update({ q: event.target.value || undefined }, true)
-              }}
-            />
-            <select aria-label="Program" value={program} onChange={(event) => update({ program: event.target.value || undefined })}>
-              <option value="">All programs</option>
-              {programs.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
             <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
               <option value="latest">Latest run first</option>
               <option value="spend">Most spend first</option>

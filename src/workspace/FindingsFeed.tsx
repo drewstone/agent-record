@@ -20,17 +20,19 @@ const plain = (text: string) => text.replace(/\*\*|__|`/g, '').replace(/^\s*(?:[
  * driver failed after an agent proved something shows here like a winner, marked by how it ended; each card opens the
  * run's findings.
  */
-export function FindingsFeed({ api }: { api: string }) {
+export function FindingsFeed({ api, query = '', program: selectedProgram }: { api: string; query?: string; program?: string }) {
   const feed = useDocument<FindingsFeedDocument>(`${api}/findings`)
   const [kind, setKind] = useState<Kind>('all')
-  const [program, setProgram] = useState('')
+  const [localProgram, setLocalProgram] = useState('')
+  const program = selectedProgram ?? localProgram
   const programs = useMemo(() => [...new Set((feed.data?.items ?? []).map((item) => item.program ?? '').filter(Boolean))].sort(), [feed.data])
   const items = useMemo(
     () =>
       (feed.data?.items ?? []).filter(
-        (item) => (!program || item.program === program) && (kind === 'all' || (kind === 'ledger' ? item.ledger : !item.ledger && item.kind === 'claim')),
+        (item) => (!program || item.program === program) && (!query || `${item.play} ${item.title} ${item.text}`.toLowerCase().includes(query.toLowerCase()))
+          && (kind === 'all' || (kind === 'ledger' ? item.ledger : !item.ledger && item.kind === 'claim')),
       ),
-    [feed.data, kind, program],
+    [feed.data, kind, program, query],
   )
   if (feed.error && !feed.data) return <p className="ws-status" role="alert">Findings are unavailable: {feed.error}</p>
   if (!feed.data) return <p className="ws-status" role="status">Gathering what the runs found…</p>
@@ -53,10 +55,10 @@ export function FindingsFeed({ api }: { api: string }) {
               </button>
             ))}
           </div>
-          <select aria-label="Program" value={program} onChange={(event) => setProgram(event.target.value)}>
+          {selectedProgram === undefined && <select aria-label="Program" value={program} onChange={(event) => setLocalProgram(event.target.value)}>
             <option value="">All programs</option>
             {programs.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
+          </select>}
         </div>
       </div>
       {items.length === 0 ? (

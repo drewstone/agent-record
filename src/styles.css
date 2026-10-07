@@ -2476,6 +2476,14 @@
    wall), so the same layout reads from across the room there and at laptop size elsewhere; charts read the same em
    (useWidth), so plot height, margins and marks follow the type. */
 .ar-ws .ov-page { font-size: 16px; gap: 1.3em; }
+.ar-ws .research-frontiers { display: grid; gap: .6em; padding: .8em 0; }
+.ar-ws .research-frontier-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22em), 1fr)); gap: .55em; }
+.ar-ws .research-frontier { display: grid; gap: .25em; min-width: 0; padding: .65em .85em; border: 1px solid var(--ar-border); border-radius: 7px;
+  color: var(--ar-fg); background: var(--ws-panel); text-decoration: none; }
+.ar-ws .research-frontier:hover, .ar-ws .research-frontier:focus-visible { border-color: var(--ws-accent); text-decoration: none; }
+.ar-ws .research-frontier strong { text-transform: capitalize; }
+.ar-ws .research-frontier span { line-height: 1.35; }
+.ar-ws .research-frontier small { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
 .ar-ws .ov-page .kicker { font-size: .82em; gap: .55em; }
 .ar-ws .ov-page .kicker::before { width: .6em; height: .6em; }
 .ar-ws .ov-toolbar { display: flex; flex-wrap: wrap; gap: .5em; }
@@ -2490,6 +2498,14 @@
 .ar-ws .ov-light.tone-info { background: var(--ar-fg-muted); }
 /* Now: the running runs beside what needs a person. */
 .ar-ws .ov-now { display: flex; flex-wrap: wrap; gap: 1em; align-items: stretch; }
+.ar-ws .ov-consumption { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: .45em; }
+.ar-ws .ov-consumption-item { display: grid; grid-template-rows: auto auto 2em; gap: .2em; min-width: 0; padding: .55em .65em;
+  border: 1px solid var(--ar-border); border-radius: 7px; background: var(--ws-panel); }
+.ar-ws .ov-consumption-item > span { color: var(--ar-fg-muted); font-size: .72em; line-height: 1.2; }
+.ar-ws .ov-consumption-item > strong { font: 650 1.05em var(--ar-font-mono); color: var(--ar-fg); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ar-ws .ov-consumption-item .ov-spark { width: 100%; height: 2em; }
+@media (max-width: 1400px) { .ar-ws .ov-consumption { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .ar-ws .ov-consumption { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ar-ws .ov-now-runs { flex: 3 1 min(100%, 36em); }
 .ar-ws .ov-attention { flex: 2 1 min(100%, 24em); }
 .ar-ws .ov-running { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
@@ -2512,7 +2528,7 @@
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
 .ar-ws .ov-week { gap: .6em; }
 .ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1.1fr) minmax(6em, .8fr) minmax(0, 2.4fr) repeat(5, max-content); column-gap: 1.1em; }
-.ar-ws .ov-week li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; row-gap: .3em; padding: .55em .5em; border-top: 1px solid var(--ar-border); border-radius: 0; }
+.ar-ws .ov-week li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; row-gap: .15em; padding: .38em .5em; border-top: 1px solid var(--ar-border); border-radius: 0; }
 .ar-ws .ov-week li:hover { background: var(--ar-hover, var(--ar-bg-alt)); }
 .ar-ws .ov-week li.is-running { background: color-mix(in srgb, var(--ws-accent) 8%, transparent); }
 .ar-ws .ov-week .ov-week-head { border-top: 0; padding-block: .2em .4em; font-size: .75em; letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg-faint); }
@@ -2526,7 +2542,8 @@
 .ar-ws .ov-chip { display: inline-block; width: .95em; height: .95em; border-radius: 3px; }
 .ar-ws .ov-chip:hover, .ar-ws .ov-chip:focus-visible { outline: 2px solid var(--ar-fg); outline-offset: 1px; }
 .ar-ws .ov-week-more { font-size: .8em; color: var(--ar-fg-faint); }
-.ar-ws .ov-week-found { display: grid; gap: .15em; min-width: 0; }
+.ar-ws .ov-week-found { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35em; min-width: 0; align-items: baseline; }
+.ar-ws .ov-week-found .ov-lead { min-width: 0; }
 .ar-ws .ov-week-counts, .ar-ws .ov-week-none { font-size: .8em; color: var(--ar-fg-faint); }
 .ar-ws .ov-week-num { font: .92em var(--ar-font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--ar-fg); white-space: nowrap; }
 .ar-ws .ov-week-num.is-warn { color: var(--ar-c-run); }

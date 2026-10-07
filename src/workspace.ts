@@ -225,6 +225,11 @@ export const playsDocumentSchema = z
         })
         .catchall(z.unknown()),
     ),
+    frontiers: z.array(z.object({ id: z.string(), asOf: z.string().nullable(), statement: z.string().nullable(),
+      banked: z.number(), next: z.number() })).optional(),
+    runs: z.array(z.object({ id: z.string(), play: z.string(), program: z.string().nullable(), state: z.string(),
+      startedAt: time.nullable(), activeAt: time.nullable(), reason: z.string().nullable(), stopCause: z.string().nullable(),
+      hidden: hiddenReason.nullable(), subscriptionUsd: usd, apiUsd: usd, sandboxUsd: usd })).optional(),
   })
   .catchall(z.unknown())
 
@@ -1140,7 +1145,7 @@ export interface OverviewPlayWeek {
   results: number; claims: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
   subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null; costUnknownRuns?: number
 }
-export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string }
+export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
 
 export interface OverviewDocument {
   schema: 'agent-workspace.overview.v1'
@@ -1150,9 +1155,9 @@ export interface OverviewDocument {
   attention?: OverviewAttention[]
   composedAt: string
   days: string[]
-  state: { standdown: { reason?: string; by?: string; at?: string } | null; lastResearchStart: string | null; running: number; queued: number; sandboxesRunning: number | null; sandboxesByKind: Record<string, number>; boxesUnreleased: number | null; censusAt: string | null }
+  state: { standdown: { reason?: string; by?: string; at?: string } | null; lastRunStart: string | null; running: number; queued: number; sandboxesRunning: number | null; sandboxesByKind: Record<string, number>; boxesUnreleased: number | null; censusAt: string | null }
   runs: { byDay: Record<string, number[]>; total: number; causes: [string, number][]; depth: [string, number][]; agentsHistogram: Bin[]; lostHoursHistogram: Bin[]; lostHours: number; lostByDay?: Record<string, number[]>; scope?: string }
-  findings: { byDay: Record<string, number[]>; runsWithFindings: number; claims: number }
+  findings: { byDay: Record<string, number[]>; runsByDay?: number[]; runsWithFindings: number; claims: number }
   tokens: {
     byDay: { input: number[]; output: number[]; cacheRead: number[]; cacheWrite: number[] }
     harness: { harness: string; agents: number; measured: number; output: number; list: number }[]
@@ -1174,7 +1179,7 @@ export interface OverviewDocument {
       reconciliation?: { status: string; period: string; billedUsd: number | null; estimatedUsd: number | null; reason: string; priorBillEvidence: { vendor: string; item: string; monthlyUsd: number; asOf: string }[] }
       sources?: Record<string, unknown>
     }
-    listByDay: number[]; paidByDay: number[]; listTotal: number; paidTotal: number; runListHistogram: Bin[]; runPaidHistogram: Bin[]; fleetKey: { cap: number | null; spent: number | null; debits48h: number | null } }
+    listByDay: number[]; paidByDay: number[]; listTotal: number; paidTotal: number; runListHistogram: Bin[]; runPaidHistogram: Bin[]; fleetKey: { cap: number | null; spent: number | null; debits48h: number | null; history?: [number, number][] } }
   fleet: {
     hosts: { name: string; type: string; active: number; parked: number; capacity: number; cpu: number | null; memory: number | null; monthlyUsd: number | null; autoScaled: boolean; draining: boolean }[]
     utilization: Record<string, number>
