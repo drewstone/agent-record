@@ -18,6 +18,14 @@ const STALE_MS = 2 * 3_600_000
 const label = (value: string) => value.replaceAll('-', ' ')
 // Cost never mixes kinds: subscription use priced at API rates is not a bill; model API (Router) and sandbox compute are.
 const money = (value: number | null | undefined) => (value === null || value === undefined ? '?' : value ? usd(value) : '—')
+const coveredMoney = (value: number | null | undefined, known: number | undefined, runs: number) =>
+  known === 0 || value == null ? '?' : `${money(value)}${known !== undefined && known < runs ? '+' : ''}`
+const costNote = (kind: string, value: number | null | undefined, known: number | undefined, runs: number) =>
+  !known || value == null ? `${kind} not recorded` : `${kind} ${usd(value)}${known < runs ? ` known in ${known}/${runs} runs` : ''}`
+const measuredTotal = (values: (number | null | undefined)[], incomplete: boolean) => {
+  const known = values.filter((value): value is number => typeof value === 'number')
+  return known.length ? `${usd(known.reduce((sum, value) => sum + value, 0))}${incomplete ? '+' : ''}` : 'not recorded'
+}
 // Runs whose outcome is not known draw hollow, so they never pass for a near hue with a known outcome
 // (unknown beside no winner, no record beside driver failed).
 const HOLLOW = new Set(['unknown', 'no-record'])
@@ -98,8 +106,8 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
       </span>
       <span className={`ov-week-num ${play.lostHours >= 10 ? 'is-warn' : ''}`} data-label="lost">{play.lostHours ? hours(play.lostHours) : '—'}</span>
       <span className="ov-week-num" data-label="subscription">{money(play.subscriptionUsd ?? play.listUsd)}</span>
-      <span className="ov-week-num" data-label="API">{money(play.apiUsd)}</span>
-      <span className="ov-week-num" data-label="sandbox">{money(play.sandboxUsd)}</span>
+      <span className="ov-week-num" data-label="API" title="Known billed subtotal; + means some runs have no reading">{coveredMoney(play.apiUsd, play.apiKnownRuns, play.runCount)}</span>
+      <span className="ov-week-num" data-label="sandbox" title="Known billed subtotal; + means some runs have no reading">{coveredMoney(play.sandboxUsd, play.sandboxKnownRuns, play.runCount)}</span>
       <span className="ov-week-num ov-week-ago" data-label="last run">{ago(play.lastStartedAt)}</span>
     </li>
   )
@@ -207,8 +215,8 @@ export function OverviewPage({ api }: { api: string }) {
                 <span>{week.length} plays</span><span>{weekRuns} runs</span><span>{weekResults} results · {weekClaims} claims</span>
                 <span className="ov-week-num">{hours(sumOf(week.map((p) => p.lostHours)))}</span>
                 <span className="ov-week-num">{usd(sumOf(week.map((p) => p.subscriptionUsd ?? p.listUsd)))}</span>
-                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.apiUsd ?? 0)))}</span>
-                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.sandboxUsd ?? 0)))}</span>
+                <span className="ov-week-num" title="Known billed subtotal; + means some runs have no reading">{measuredTotal(week.map((p) => p.apiUsd), week.some((p) => (p.apiKnownRuns ?? 0) < p.runCount))}</span>
+                <span className="ov-week-num" title="Known billed subtotal; + means some runs have no reading">{measuredTotal(week.map((p) => p.sandboxUsd), week.some((p) => (p.sandboxKnownRuns ?? 0) < p.runCount))}</span>
                 <span />
               </li>
             </ol>
@@ -282,7 +290,7 @@ export function OverviewPage({ api }: { api: string }) {
         </ChartCard>
         <ChartCard title="Plays by output tokens" wide note="30 days. Subscription is seat use at API prices (not billed); API and sandbox are billed.">
           <HBars
-            rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · subscription ${usd(p.subscription ?? p.list)} at API prices · API ${usd(p.api ?? 0)} · sandbox ${usd(p.sandbox ?? 0)} · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
+            rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · subscription ${usd(p.subscription ?? p.list)} at API prices · ${costNote('API', p.api, p.apiKnown, p.runs)} · ${costNote('sandbox', p.sandbox, p.sandboxKnown, p.runs)} · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
             color={SERIES[1]}
             limit={12}
           />
