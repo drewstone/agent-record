@@ -176,13 +176,14 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
   )
 }
 
-/** Ranked horizontal bars with the value and an optional note on each row. */
-export function HBars({ rows, format = compact, color = SERIES[0], max }: { rows: { label: string; value: number; note?: string; color?: string; href?: string }[]; format?: (v: number) => string; color?: string; max?: number }) {
+/** Ranked horizontal bars with the value and an optional note on each row; past `limit` rows the rest are counted. */
+export function HBars({ rows, format = compact, color = SERIES[0], max, limit = 8 }: { rows: { label: string; value: number; note?: string; color?: string; href?: string }[]; format?: (v: number) => string; color?: string; max?: number; limit?: number }) {
   const top = max ?? Math.max(1, ...rows.map((row) => row.value))
   if (!rows.length) return <p className="ov-empty">Nothing recorded.</p>
+  const rest = rows.slice(limit)
   return (
     <ol className="ov-hbars">
-      {rows.map((row) => {
+      {rows.slice(0, limit).map((row) => {
         const content = (
           <>
             <span className="ov-hbar-label" title={row.label}>{row.label}</span>
@@ -195,6 +196,7 @@ export function HBars({ rows, format = compact, color = SERIES[0], max }: { rows
         )
         return <li key={row.label}>{row.href ? <a href={row.href}>{content}</a> : <div>{content}</div>}</li>
       })}
+      {rest.length > 0 && <li className="ov-hbars-more">+{rest.length} more · {format(rest.reduce((a, row) => a + row.value, 0))}</li>}
     </ol>
   )
 }

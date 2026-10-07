@@ -2481,7 +2481,8 @@
 .ar-ws .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 30em), 1fr)); gap: 1em; }
 .ar-ws .ov-card { margin: 0; display: grid; gap: .7em; align-content: start; padding: 1em 1.2em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; }
 .ar-ws .ov-card.wide { grid-column: 1 / -1; }
-.ar-ws .ov-card figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4em 1em; align-items: baseline; }
+/* Title, then the legend on its own line, so every card's plot starts at the same depth. */
+.ar-ws .ov-card figcaption { display: grid; gap: .35em; }
 .ar-ws .ov-card-title { font-size: 1.1em; font-weight: 650; color: var(--ar-fg); }
 .ar-ws .ov-note { margin: 0; font-size: .82em; line-height: 1.4; color: var(--ar-fg-faint); }
 .ar-ws .ov-empty { margin: 0; color: var(--ar-fg-faint); font-size: .9em; }
@@ -2490,13 +2491,17 @@
 .ar-ws .ov-plot { position: relative; min-width: 0; }
 .ar-ws .ov-plot svg { display: block; overflow: visible; }
 .ar-ws line.ov-gridline { stroke: color-mix(in srgb, var(--ar-fg-faint) 22%, transparent); stroke-width: 1; }
-.ar-ws .ov-axis { fill: var(--ar-fg-muted); font: .78em var(--ar-font-mono); font-variant-numeric: tabular-nums; }
+.ar-ws .ov-axis { fill: var(--ar-fg-muted); font: .8em var(--ar-font-mono); font-variant-numeric: tabular-nums; }
 .ar-ws .ov-crosshair { stroke: var(--ar-fg-faint); stroke-dasharray: 3 3; }
 .ar-ws .ov-tip { position: absolute; z-index: 4; display: grid; gap: .25em; min-width: 12em; max-width: 18em; padding: .6em .75em; background: var(--ar-raised, var(--ar-bg-alt)); border: 1px solid var(--ar-border-strong); border-radius: 8px; box-shadow: 0 10px 24px -12px #000; font-size: .85em; pointer-events: none; }
 .ar-ws .ov-tip-line { display: grid; grid-template-columns: auto 1fr auto; gap: .6em; align-items: center; color: var(--ar-fg-muted); }
 .ar-ws .ov-tip-line b { color: var(--ar-fg); font-variant-numeric: tabular-nums; }
-.ar-ws .ov-hbars { list-style: none; margin: 0; padding: 0; display: grid; gap: .25em; }
-.ar-ws .ov-hbars li > a, .ar-ws .ov-hbars li > div { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) auto; gap: .15em .7em; align-items: center; padding: .3em .4em; border-radius: 6px; color: inherit; text-decoration: none; }
+/* Rows share one set of columns (subgrid), so every bar starts at the same x: the label column is as wide as the
+   longest label up to what leaves the bars a third of the card. */
+.ar-ws .ov-hbars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, max-content) minmax(33%, 1fr) max-content; gap: .25em .7em; }
+.ar-ws .ov-hbars li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+.ar-ws .ov-hbars li > a, .ar-ws .ov-hbars li > div { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; row-gap: .15em; align-items: center; padding: .3em .4em; border-radius: 6px; color: inherit; text-decoration: none; }
+.ar-ws .ov-hbars-more { grid-column: 1 / -1; padding: .1em .4em; font-size: .8em; color: var(--ar-fg-faint); }
 .ar-ws .ov-hbars li > a:hover, .ar-ws .ov-hbars li > div:hover { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
 .ar-ws .ov-hbar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .95em; color: var(--ar-fg); }
 .ar-ws .ov-hbar-track { height: .7em; border-radius: 3px; background: color-mix(in srgb, var(--ar-fg-faint) 14%, transparent); overflow: hidden; }

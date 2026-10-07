@@ -89,7 +89,7 @@ export function OverviewPage({ api }: { api: string }) {
 
       <div className="ov-kpis">
         <Kpi title={`Runs started, ${range} d`} value={compact(runsInRange)} sub={`${sumOf(runsByDay.winner)} winners · ${sumOf(runsByDay['driver-failed'])} driver failed`} />
-        <Kpi title={`Results and claims, ${range} d`} value={compact(findingsTotal)} sub="the agents' own work · outside acceptance unassessed" />
+        <Kpi title={`Results and claims, ${range} d`} value={compact(findingsTotal)} sub="written by the agents, not yet reviewed" />
         <Kpi title={`Output tokens, ${range} d`} value={compact(sumOf(tokensByDay.output))} sub={`${compact(sumOf(tokensByDay.cacheRead))} cache reads`} />
         <Kpi title={`List price, ${range} d`} value={usd(sumOf(cut(d.money.listByDay)))} sub="subscription use, not billed" />
         <Kpi title={`Paid, ${range} d`} value={usd(sumOf(cut(d.money.paidByDay)))} sub="sandbox compute on run keys" />
@@ -133,6 +133,7 @@ export function OverviewPage({ api }: { api: string }) {
           <HBars
             rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · ${usd(p.list)} list · ${usd(p.paid)} paid · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
             color={SERIES[1]}
+            limit={12}
           />
         </ChartCard>
       </Section>
