@@ -2478,10 +2478,11 @@
 .ar-ws .ov-kpi.tone-warn .ov-kpi-value { color: var(--ar-c-run); }
 .ar-ws .ov-kpi-sub { font-size: .8em; line-height: 1.35; color: var(--ar-fg-faint); }
 .ar-ws .ov-section { display: grid; gap: .7em; }
-/* Three columns on the wall, two on a laptop, one on a phone. */
-.ar-ws .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 30em), 1fr)); gap: 1em; }
-.ar-ws .ov-card { margin: 0; display: grid; gap: .7em; align-content: start; padding: 1em 1.2em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; }
-.ar-ws .ov-card.wide { grid-column: 1 / -1; }
+/* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
+   four never leaves one card beside two empty slots. */
+.ar-ws .ov-grid { display: flex; flex-wrap: wrap; gap: 1em; }
+.ar-ws .ov-card { flex: 1 1 min(100%, 30em); margin: 0; display: grid; gap: .7em; align-content: start; padding: 1em 1.2em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; box-sizing: border-box; }
+.ar-ws .ov-card.wide { flex-basis: 100%; }
 /* Title, then the legend on its own line, so every card's plot starts at the same depth. */
 .ar-ws .ov-card figcaption { display: grid; gap: .35em; }
 .ar-ws .ov-card-title { font-size: 1.1em; font-weight: 650; color: var(--ar-fg); }
