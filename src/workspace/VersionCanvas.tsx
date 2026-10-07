@@ -1,53 +1,106 @@
 import { useMemo, useState } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunDocument } from '../workspace.js'
 import { duration, money, stateClass, stateLabel, useDocument, when } from './data.js'
-import { absoluteJudges, authoredTree, changeSummary, compareProfiles, judgeShort, judgeSummary, judgesOf, sameNamed } from './profile-compare.js'
-import type { Comparison, Judge, Version } from './profile-compare.js'
+import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sameNamed } from './profile-compare.js'
+import type { Comparison, Version } from './profile-compare.js'
 import { OutputChanges } from './Outputs.js'
 import { GradeControl, ScoresTable } from './Scores.js'
 import { headlineScore, scoreRows } from './scores.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
+import type { GraphModel, GraphNode, GraphTone } from './version-graph.js'
+import { VersionGraph } from './VersionGraph.js'
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
 const runHref = (runId: string) => `/run/${encodeURIComponent(runId)}`
 
-// Geometry of the canvas, in CSS pixels at the workspace's type scale.
-const PAD = 24
-const PRED_W = 200
-const VER_X = PAD + PRED_W + 40
-const VER_W = 300
-const VER_H = 150
-const VER_GAP = 16
-const AUTH_X = VER_X + VER_W + 48
-const AUTH_W = 250
-const AUTH_H = 70
-const AUTH_GAP = 10
-const AUTH_STEP = AUTH_W + 40
-
 export type Selection = { kind: 'version'; runId: string } | { kind: 'profile'; runId: string; digest: string }
 
-/** The absolute-scale judges as mini bars: height is the score out of 100, a filled bar a calibrated judge, an
- * outlined one advisory. A judge on the retired relative scale draws nothing. */
-function JudgeBars({ judges }: { judges: readonly Judge[] }) {
-  const absolute = absoluteJudges(judges)
-  if (!absolute.length) return null
-  return (
-    <span className="judge-bars" aria-hidden="true">
-      {absolute.map((judge) => (
-        <i
-          key={judge.category}
-          className={`${judge.calibrated ? 'calibrated' : 'advisory'} ${!judge.score ? 'zero' : ''}`}
-          style={{ height: `${Math.max(3, ((judge.score ?? 0) / 100) * 26)}px` }}
-        />
-      ))}
-    </span>
-  )
+/** The node id a play's version or a written profile is drawn under, and back. */
+const versionNodeId = (runId: string) => `run:${runId}`
+const profileNodeId = (digest: string) => `profile:${digest}`
+
+const stateTone = (state: string | null | undefined): GraphTone => {
+  const css = stateClass(state)
+  return css === 'state-ok' ? 'ok' : css === 'state-fail' ? 'fail' : css === 'state-run' ? 'run' : css === 'state-warn' ? 'warn' : 'muted'
 }
 
 /**
- * The play's version graph, left to right: what it supersedes, each run as a registered version with its judges and
- * what changed from the version before it, then the profiles the selected version's agents wrote. Selecting a node
- * shows it in the inspector beside the graph.
+ * A play's versions as the model: each run's registered profile on the `versions` lane, its parent the version before it;
+ * what the versions supersede or continue outside the play as ghosts; and the profiles the selected version's agents wrote,
+ * one lane per spawn depth, each under the profile that wrote it.
+ */
+function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, versions: readonly Version[], selectedRun: string | null): GraphModel {
+  const shown = [...versions].reverse()
+  const runIds = new Set(play.runs.map((run) => run.id))
+  const ghosts = new Map<string, { kind: string; state: string }>()
+  const ghostParents = new Map<string, string[]>()
+  for (const edge of play.lineage.edges) {
+    if (runIds.has(edge.to) || !shown.some((version) => version.run.id === edge.from)) continue
+    const node = play.lineage.nodes.find((item) => item.runId === edge.to)
+    if (!ghosts.has(edge.to)) ghosts.set(edge.to, { kind: edge.kind, state: node?.state ?? 'unknown' })
+    ghostParents.set(edge.from, [...(ghostParents.get(edge.from) ?? []), `ghost:${edge.to}`])
+  }
+  const authored = selectedRun ? authoredTree(graph, selectedRun) : []
+  const root = selectedRun ? (graph?.nodes ?? []).find((node) => node.kind === 'root' && node.createdIn === selectedRun) : undefined
+  const depthLanes = [...new Set(authored.map((entry) => entry.depth))].sort((a, b) => a - b)
+  const nodes: GraphNode[] = []
+  for (const version of shown) {
+    if (version.run.id === selectedRun) {
+      for (const entry of [...authored].reverse()) {
+        const outcome = entry.node.runs.find((item) => item.runId === selectedRun)?.outcome ?? null
+        nodes.push({
+          id: profileNodeId(entry.node.digest),
+          parents: [entry.parent && entry.parent !== root?.digest ? profileNodeId(entry.parent) : versionNodeId(selectedRun)],
+          lane: `authored-${entry.depth}`,
+          at: entry.node.createdAt,
+          title: entry.node.name ?? entry.node.label ?? entry.node.short,
+          detail: `${outcome ? stateLabel(outcome) : 'outcome not recorded'} · ${entry.node.model.id ?? 'model unknown'}`,
+          kind: 'authored',
+          chips: [{ label: entry.node.short, tone: 'muted' }],
+        })
+      }
+    }
+    const scores = judgesOf(version.root, version.run.id)
+    nodes.push({
+      id: versionNodeId(version.run.id),
+      parents: [...(version.previous ? [versionNodeId(version.previous.run.id)] : []), ...(ghostParents.get(version.run.id) ?? [])],
+      lane: 'versions',
+      at: version.run.startedAt ?? null,
+      title: shortRun(play.id, version.run.id),
+      detail: version.run.purpose ?? version.root?.description ?? (version.root ? version.root.name : 'no registered profile on this host'),
+      kind: 'version',
+      chips: [
+        { label: stateLabel(version.run.state), tone: stateTone(version.run.state) },
+        { label: scores ? judgeShort(scores.judges) : 'no readout', tone: 'muted' },
+        { label: version.root ? `Δ ${changeSummary(version.comparison)}` : 'profile not indexed', tone: 'accent' },
+      ],
+    })
+  }
+  for (const [id, ghost] of ghosts) {
+    nodes.push({
+      id: `ghost:${id}`,
+      parents: [],
+      lane: 'outside',
+      at: null,
+      title: shortRun(play.id, id),
+      detail: `${ghost.kind === 'supersedes' ? 'superseded by these versions' : ghost.kind === 'continues' ? 'continued by these versions' : ghost.kind}${ghost.state === 'unknown' ? ' · not on this host' : ` · ${stateLabel(ghost.state)}`}`,
+      kind: 'ghost',
+    })
+  }
+  return {
+    lanes: [
+      { id: 'versions', label: 'registered versions' },
+      ...depthLanes.map((depth) => ({ id: `authored-${depth}`, label: depth === 0 ? 'written by the root' : `written at depth ${depth + 1}` })),
+      { id: 'outside', label: 'outside this play' },
+    ],
+    nodes,
+  }
+}
+
+/**
+ * The play's versions, drawn by the same graph as a run's deliverables: each run's registered profile on one lane with
+ * its state, judges and what changed from the version before it; what the versions supersede outside the play; and the
+ * profiles the selected version's agents wrote, one lane per spawn depth. Selecting a node shows it in the inspector.
  */
 export function VersionCanvas({
   play,
@@ -62,134 +115,30 @@ export function VersionCanvas({
   selection: Selection | null
   onSelect: (selection: Selection) => void
 }) {
-  // Newest first, top to bottom.
-  const shown = useMemo(() => [...versions].reverse(), [versions])
-  const selectedRun = selection?.runId ?? shown[0]?.run.id ?? null
-  const authored = useMemo(() => (selectedRun ? authoredTree(graph, selectedRun) : []), [graph, selectedRun])
-  const runIds = new Set(play.runs.map((run) => run.id))
-  // What the versions continue or supersede outside this play: drawn as ghosts on the left.
-  const predecessors = useMemo(() => {
-    const out = new Map<string, { id: string; kind: string; state: string }>()
-    for (const edge of play.lineage.edges)
-      if (!runIds.has(edge.to) && shown.some((version) => version.run.id === edge.from)) {
-        const node = play.lineage.nodes.find((item) => item.runId === edge.to)
-        if (!out.has(edge.to)) out.set(edge.to, { id: edge.to, kind: edge.kind, state: node?.state ?? 'unknown' })
-      }
-    return [...out.values()]
-  }, [play, shown]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const versionY = new Map(shown.map((version, i) => [version.run.id, PAD + i * (VER_H + VER_GAP)]))
-  const versionsBottom = PAD + shown.length * (VER_H + VER_GAP)
-  const predY = (i: number) => {
-    const mid = shown.length ? (PAD + versionsBottom - VER_GAP) / 2 : PAD + 60
-    return Math.max(PAD, mid - (predecessors.length * 130) / 2 + i * 130)
-  }
-  const authoredY = authored.map((_, i) => PAD + i * (AUTH_H + AUTH_GAP))
-  const maxDepth = Math.max(-1, ...authored.map((entry) => entry.depth))
-  const width = AUTH_X + (maxDepth + 1) * AUTH_STEP + PAD
-  const height = Math.max(versionsBottom, PAD + authored.length * (AUTH_H + AUTH_GAP), predecessors.length * 130 + PAD) + PAD
-  const elbow = (x1: number, y1: number, x2: number, y2: number) => {
-    const xm = Math.round(x1 + (x2 - x1) / 2)
-    return `M${x1},${y1} H${xm} V${y2} H${x2}`
-  }
-  const position = new Map(authored.map((entry, i) => [entry.node.digest, { x: AUTH_X + entry.depth * AUTH_STEP, y: authoredY[i]! }]))
-  const selectedY = selectedRun ? versionY.get(selectedRun) : undefined
-
+  const selectedRun = selection?.runId ?? versions.at(-1)?.run.id ?? null
+  const model = useMemo(() => playGraphModel(play, graph, versions, selectedRun), [play, graph, versions, selectedRun])
+  const selected = selection?.kind === 'profile' ? profileNodeId(selection.digest) : selectedRun ? versionNodeId(selectedRun) : null
+  const authoredCount = model.nodes.filter((node) => node.kind === 'authored').length
   return (
     <div className="version-canvas" data-version-canvas={play.id}>
-      <div className="version-host" style={{ width, height }}>
-        <svg className="version-lines" width={width} height={height} aria-hidden="true">
-          {predecessors.map((pred, i) =>
-            shown.map((version) => (
-              <path key={`${pred.id}>${version.run.id}`} d={elbow(PAD + PRED_W, predY(i) + 55, VER_X, versionY.get(version.run.id)! + VER_H / 2)} />
-            )),
-          )}
-          {selectedY !== undefined &&
-            authored.map((entry) => {
-              const at = position.get(entry.node.digest)!
-              const from = entry.parent ? position.get(entry.parent) : undefined
-              const x1 = from ? from.x + AUTH_W : VER_X + VER_W
-              const y1 = from ? from.y + AUTH_H / 2 : selectedY + VER_H / 2
-              return <path key={entry.node.digest} className={selection?.kind === 'profile' && selection.digest === entry.node.digest ? 'hot' : ''} d={elbow(x1, y1, at.x, at.y + AUTH_H / 2)} />
-            })}
-        </svg>
-        {predecessors.map((pred, i) => (
-          <div key={pred.id} className="canvas-node ghost" style={{ left: PAD, top: predY(i), width: PRED_W }}>
-            <span className="b clip mono">{shortRun(play.id, pred.id)}</span>
-            <span className="node-sub">
-              {pred.kind === 'supersedes' ? 'superseded by these versions' : pred.kind === 'continues' ? 'continued by these versions' : pred.kind}
-              {pred.state === 'unknown' ? ' · not on this host' : ` · ${stateLabel(pred.state)}`}
-            </span>
-          </div>
-        ))}
-        {shown.map((version) => {
-          const scores = judgesOf(version.root, version.run.id)
-          const on = selection?.kind === 'version' ? selection.runId === version.run.id : !selection && version.run.id === selectedRun
-          const top = versionY.get(version.run.id)!
-          return (
-            <button
-              key={version.run.id}
-              type="button"
-              className={`canvas-node version ${on ? 'on' : ''} ${selectedRun === version.run.id ? 'open' : ''}`}
-              style={{ left: VER_X, top, width: VER_W, height: VER_H }}
-              aria-pressed={on}
-              data-version={version.run.id}
-              onClick={() => onSelect({ kind: 'version', runId: version.run.id })}
-            >
-              <span className="node-title">
-                <b className="mono">{shortRun(play.id, version.run.id)}</b>
-                <span className={`state-pill ${stateClass(version.run.state)}`}>{stateLabel(version.run.state)}</span>
-              </span>
-              <span className="node-sub clip" title={version.run.purpose ?? version.root?.description ?? undefined}>
-                {version.run.purpose ?? version.root?.description ?? (version.root ? version.root.name : 'no registered profile on this host')}
-              </span>
-              <span className="judge-line" title={scores ? judgeSummary(scores.judges) : 'no readout'}>
-                {scores?.judges.length ? <JudgeBars judges={scores.judges} /> : null}
-                <span className="node-sub clip">{scores ? judgeShort(scores.judges) : 'no readout'}</span>
-              </span>
-              <span className="node-sub delta clip">
-                {version.root ? `Δ ${changeSummary(version.comparison)}${version.previous ? ` vs ${shortRun(play.id, version.previous.run.id)}` : ''}` : 'profile not indexed'}
-              </span>
-            </button>
-          )
-        })}
-        {authored.map((entry) => {
-          const at = position.get(entry.node.digest)!
-          const run = entry.node.runs.find((item) => item.runId === selectedRun)
-          const outcome = run?.outcome ?? null
-          const on = selection?.kind === 'profile' && selection.digest === entry.node.digest
-          return (
-            <button
-              key={entry.node.digest}
-              type="button"
-              className={`canvas-node authored ${on ? 'on' : ''}`}
-              style={{ left: at.x, top: at.y, width: AUTH_W, height: AUTH_H }}
-              aria-pressed={on}
-              data-profile={entry.node.short}
-              onClick={() => onSelect({ kind: 'profile', runId: selectedRun!, digest: entry.node.digest })}
-            >
-              <span className="node-title">
-                <i className={`dot ${stateClass(outcome)}`} aria-hidden="true" />
-                <b className="clip">{entry.node.name ?? entry.node.label ?? entry.node.short}</b>
-              </span>
-              <span className="node-sub clip">
-                {outcome ? stateLabel(outcome) : 'outcome not recorded'} · {entry.node.model.id ?? 'model unknown'}
-              </span>
-            </button>
-          )
-        })}
-        {selectedRun && !authored.length && (
-          <div className="canvas-node ghost" style={{ left: AUTH_X, top: PAD, width: AUTH_W + 60 }}>
-            <span className="faint">
-              {!graph
-                ? 'Profile versions are not indexed for this play.'
-                : graph.nodes.some((node) => node.kind === 'proposed' && node.createdIn === selectedRun)
-                  ? `${graph.nodes.filter((node) => node.kind === 'proposed' && node.createdIn === selectedRun).length} versions an optimizer search proposed: see the search below.`
-                  : 'No profile written at runtime is indexed for this version.'}
-            </span>
-          </div>
-        )}
-      </div>
+      <VersionGraph
+        model={model}
+        selected={selected}
+        label="Play versions"
+        onSelect={(id) => {
+          if (id.startsWith('run:')) onSelect({ kind: 'version', runId: id.slice(4) })
+          else if (id.startsWith('profile:') && selectedRun) onSelect({ kind: 'profile', runId: selectedRun, digest: id.slice(8) })
+        }}
+      />
+      {selectedRun && authoredCount === 0 && (
+        <p className="faint">
+          {!graph
+            ? 'Profile versions are not indexed for this play.'
+            : graph.nodes.some((node) => node.kind === 'proposed' && node.createdIn === selectedRun)
+              ? `${graph.nodes.filter((node) => node.kind === 'proposed' && node.createdIn === selectedRun).length} versions an optimizer search proposed: see the search below.`
+              : 'No profile written at runtime is indexed for this version.'}
+        </p>
+      )}
     </div>
   )
 }

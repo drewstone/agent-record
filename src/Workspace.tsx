@@ -4,6 +4,7 @@ import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
+import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
 import type { EventFlag } from './viewer/Conversation.js'
@@ -363,9 +364,9 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 <div className="lineage-layout" data-section="versions">
                   <section className="lineage-pane" aria-label="Version graph">
                     <p className="faint lineage-key">
-                      Left to right: what the versions supersede, each run's registered profile with its judges (bars: absolute 0–100 vs world class,
-                      outlined advisory; none for the retired relative scale) and what changed from the version before it, then the profiles the selected
-                      version's agents wrote.
+                      Newest first, in the same graph as a run's versions: each run's registered profile with its state, its judges and what changed from the
+                      version before it, what the versions supersede outside this play, and the profiles the selected version's agents wrote, one lane per
+                      spawn depth. A run's own pages and profiles, version by version, are on its run page under Versions.
                     </p>
                     {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
                     <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />
@@ -601,11 +602,12 @@ function useRecordPart(url: string | null) {
 }
 
 /** The run page's sections, in one tab bar under the header: what the run found first, then its agents and the rest. */
-type RunSection = 'findings' | 'agents' | 'graph' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
+type RunSection = 'findings' | 'agents' | 'graph' | 'versions' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
 const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
   ['findings', 'Findings'],
   ['agents', 'Agents'],
   ['graph', 'Graph'],
+  ['versions', 'Versions'],
   ['readout', 'Readout'],
   ['outputs', 'Outputs'],
   ['spend', 'Spend'],
@@ -710,6 +712,15 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <p className="ws-status run-panel">No knowledge pages were recorded for this run. Its agents are under Agents.</p>
         ))}
       {section === 'graph' && <WorkGraph doc={doc} runUrl={runUrl} onOpen={openFinding} />}
+      {section === 'versions' && (
+        <RunVersions
+          runUrl={runUrl}
+          poll={doc.live.polling ? 15_000 : undefined}
+          selected={params.get('commit')}
+          onSelect={(commit) => update({ section: 'versions', commit })}
+          onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
+        />
+      )}
       {section === 'readout' && (
         <section className="run-panel" aria-label="Readout" data-drawer="readout">
           <FinalOutputPanel output={doc.finalOutput} grading={grading} />
