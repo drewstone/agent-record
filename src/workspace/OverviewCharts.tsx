@@ -4,14 +4,17 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 // (#16181f): lightness band, chroma, adjacent CVD separation (worst 13.5) and the normal-vision floor (worst 20.9),
 // contrast >= 3:1. Assigned in this order, never cycled; a chart needing more series folds the rest into "other".
 export const SERIES = ['#8b7cf6', '#0ea5a0', '#c98500', '#e2508f', '#4a90e2'] as const
-// Run end states are status, not identity: they wear the status tokens and always carry a label.
+// Run states are labelled status categories. This order passed the categorical validator on the Discovery dark
+// surface (#16181f): adjacent CVD separation >= 13.5, normal-vision separation >= 20.9, contrast >= 3:1.
+// Keeping failed blue and driver-failed red also separates the two outcomes when they dominate a day.
 export const STATE_COLOR: Record<string, string> = {
-  winner: 'var(--ar-c-ok)',
-  'no-winner': 'var(--ar-c-run)',
-  'driver-failed': 'var(--ar-c-fail)',
-  failed: 'color-mix(in srgb, var(--ar-c-fail) 60%, var(--ar-fg-faint))',
-  running: 'var(--ws-accent)',
-  unknown: 'var(--ar-fg-faint)',
+  'driver-failed': '#e26868',
+  running: '#8b7cf6',
+  winner: '#0ea5a0',
+  'no-winner': '#c98500',
+  'no-record': '#e2508f',
+  failed: '#4a90e2',
+  unknown: '#b97637',
 }
 
 export const compact = (value: number | null | undefined) =>
@@ -111,7 +114,7 @@ export function ChartCard({ title, note, legend, wide, children }: { title: stri
 }
 
 /** Bars per day, stacked by series, on one axis; hovering a day lists every series' value for it. */
-export function DayBars({ days, series, format = compact, rows = 13 }: { days: string[]; series: { name: string; color: string; values: number[] }[]; format?: (v: number) => string; rows?: number }) {
+export function DayBars({ days, series, format = compact, rows = 13 }: { days: string[]; series: { name: string; color: string; values: (number | null)[] }[]; format?: (v: number) => string; rows?: number }) {
   const [ref, width, em] = useWidth<HTMLDivElement>()
   const height = Math.round(rows * em)
   const [tip, setTip] = useState<Tip | null>(null)
@@ -162,7 +165,7 @@ export function DayBars({ days, series, format = compact, rows = 13 }: { days: s
                       x: Math.min(left + i * slot + slot + 8, width - em * 14),
                       y: 8,
                       title: `${day} · ${format(totals[i] ?? 0)}`,
-                      lines: series.map((s) => ({ label: s.name, value: format(s.values[i] ?? 0), color: s.color })),
+                      lines: series.map((s) => ({ label: s.name, value: s.values[i] === null ? 'No runs started' : format(s.values[i] ?? 0), color: s.color })),
                     })
                   }
                 />

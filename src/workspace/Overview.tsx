@@ -3,6 +3,10 @@ import type { OverviewDocument } from '../workspace.js'
 import { useDocument } from './data.js'
 import { bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
 
+// Five ranked causes plus "other". The six fixed slots passed the categorical validator on #16181f.
+const LOSS_COLOR = [...SERIES, '#b97637']
+const hours = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value)} h`
+
 const ago = (value: string | null | undefined) => {
   if (!value) return 'never'
   const hours = (Date.now() - Date.parse(value)) / 3_600_000
@@ -45,6 +49,9 @@ export function OverviewPage({ api }: { api: string }) {
   const cut = (values: number[] | undefined) => (values ?? []).slice(-range)
   const days = d.days.slice(-range)
   const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
+  const lostByDay = Object.entries(d.runs.lostByDay ?? {}).map(([cause, values], i) => ({ name: label(cause), color: LOSS_COLOR[i] ?? LOSS_COLOR.at(-1)!, values: cut(values) }))
+  const startsByDay = days.map((_, i) => Object.values(runsByDay).reduce((sum, values) => sum + (values[i] ?? 0), 0))
+  const lostPerRun = days.map((_, i) => startsByDay[i] ? lostByDay.reduce((sum, cause) => sum + (cause.values[i] ?? 0), 0) / startsByDay[i]! : null)
   const findingsByDay = Object.fromEntries(Object.entries(d.findings.byDay).map(([k, v]) => [k, cut(v)]))
   const tokensByDay = { input: cut(d.tokens.byDay.input), output: cut(d.tokens.byDay.output), cacheRead: cut(d.tokens.byDay.cacheRead), cacheWrite: cut(d.tokens.byDay.cacheWrite) }
   const runsInRange = Object.values(runsByDay).reduce((a, v) => a + sumOf(v), 0)
@@ -93,20 +100,28 @@ export function OverviewPage({ api }: { api: string }) {
         <Kpi title={`Output tokens, ${range} d`} value={compact(sumOf(tokensByDay.output))} sub={`${compact(sumOf(tokensByDay.cacheRead))} cache reads`} />
         <Kpi title={`List price, ${range} d`} value={usd(sumOf(cut(d.money.listByDay)))} sub="subscription use, not billed" />
         <Kpi title={`Paid, ${range} d`} value={usd(sumOf(cut(d.money.paidByDay)))} sub="sandbox compute on run keys" />
-        <Kpi title="Agent-hours lost, 30 d" value={compact(d.runs.lostHours)} sub="to limits, outages and retries" tone={d.runs.lostHours > 100 ? 'warn' : undefined} />
+        <Kpi title="Agent-hours lost, 30 d" value={hours(d.runs.lostHours)} sub={d.runs.scope ?? 'All catalog runs started in the last 30 UTC days'} tone={d.runs.lostHours > 100 ? 'warn' : undefined} />
         <Kpi title="Usage measured, 30 d" value={pct(agents ? measured / agents : null)} sub={`${measured} of ${agents} agents recorded tokens`} tone={agents && measured / agents < 0.8 ? 'warn' : undefined} />
       </div>
 
       <Section title="Outcomes" tone="tone-finding">
+        <div className="ov-run-trends">
+          <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
+            <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
+          </ChartCard>
+          <ChartCard title="Agent-hours lost per day, by cause" legend={lostByDay.map(({ name, color }) => ({ name, color }))} note="Top five causes over 30 days, plus other. Grouped by the day each run started.">
+            {lostByDay.length ? <DayBars days={days} series={lostByDay} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
+          </ChartCard>
+          <ChartCard title="Lost hours per run started" note="Daily lost hours divided by all catalog runs started that day. A day without a start has no rate.">
+            {lostByDay.length ? <DayBars days={days} series={[{ name: 'lost hours per run', color: SERIES[0], values: lostPerRun }]} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
+          </ChartCard>
+        </div>
         <ChartCard
           title="Findings written per day"
           legend={[{ name: 'results', color: SERIES[0] }, { name: 'claims', color: SERIES[2] }, { name: 'checks', color: SERIES[3] }]}
           note="Knowledge pages the agents wrote, by the day they wrote them (runs whose findings are derived)."
         >
           <DayBars days={days} series={[{ name: 'results', color: SERIES[0], values: findingsByDay.result ?? [] }, { name: 'claims', color: SERIES[2], values: findingsByDay.claim ?? [] }, { name: 'checks', color: SERIES[3], values: findingsByDay.check ?? [] }]} />
-        </ChartCard>
-        <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
-          <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
         </ChartCard>
         <ChartCard title="Why runs failed" note="Root cause of each driver-failed or failed run, 30 days.">
           <HBars rows={d.runs.causes.map(([cause, n]) => ({ label: label(cause), value: n }))} color="var(--ar-c-fail)" />
