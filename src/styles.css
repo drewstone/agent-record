@@ -2557,6 +2557,10 @@
 .ar-ws .ov-week .ov-week-total { font-weight: 650; color: var(--ar-fg-muted); border-top: 1px solid var(--ar-border-strong); }
 .ar-ws .ov-week-play { display: flex; flex-wrap: wrap; gap: .3em .5em; align-items: center; min-width: 0; color: var(--ar-fg); font-weight: 600; overflow-wrap: anywhere; text-decoration: none; }
 .ar-ws .ov-week-play:hover { text-decoration: underline; }
+@media (min-width: 761px) {
+  .ar-ws .ov-week-play { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ar-ws .ov-week-play .ov-badge { margin-left: .5em; }
+}
 .ar-ws .ov-badge { padding: .2em .45em; border-radius: 4px; font: 600 .68em/1.2 var(--ar-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg); background: color-mix(in srgb, var(--ws-accent) 24%, transparent); }
 .ar-ws .ov-week-runs { display: flex; flex-wrap: wrap; gap: .3em; align-items: center; }
 .ar-ws .ov-chip { display: inline-block; width: .95em; height: .95em; border-radius: 3px; }
