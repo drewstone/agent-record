@@ -2536,12 +2536,15 @@
   .ar-ws .ov-now { gap: .65em; }
   .ar-ws .ov-now > .ov-card { padding: .65em .8em; gap: .35em; }
   .ar-ws .ov-running-row { padding: .45em .6em; }
+  .ar-ws .ov-running-purpose { -webkit-line-clamp: 1; }
   .ar-ws .ov-attention ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .4em; }
   .ar-ws .ov-attention li > a, .ar-ws .ov-attention li > div { padding: .25em .35em; }
-  .ar-ws .ov-attention-text { min-width: 0; overflow-wrap: anywhere; }
+  .ar-ws .ov-attention-text { display: block; min-width: 0; overflow-wrap: anywhere; font-size: .92em; line-height: 1.2; }
+  .ar-ws .ov-attention-text small { display: block; margin-top: .12em; line-height: 1.2; }
+  .ar-ws .ov-attention-text small:first-of-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ar-ws .ov-consumption-item { padding: .3em .45em; grid-template-rows: auto auto 1.25em; }
   .ar-ws .ov-consumption-item .ov-spark { height: 1.25em; }
-  .ar-ws .ov-week li { padding-block: .25em; }
+  .ar-ws .ov-week li { padding-block: .08em; }
 }
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
 .ar-ws .ov-week { gap: .6em; }
@@ -2555,6 +2558,10 @@
 .ar-ws .ov-week .ov-week-total { font-weight: 650; color: var(--ar-fg-muted); border-top: 1px solid var(--ar-border-strong); }
 .ar-ws .ov-week-play { display: flex; flex-wrap: wrap; gap: .3em .5em; align-items: center; min-width: 0; color: var(--ar-fg); font-weight: 600; overflow-wrap: anywhere; text-decoration: none; }
 .ar-ws .ov-week-play:hover { text-decoration: underline; }
+@media (min-width: 761px) {
+  .ar-ws .ov-week-play { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ar-ws .ov-week-play .ov-badge { margin-left: .5em; }
+}
 .ar-ws .ov-badge { padding: .2em .45em; border-radius: 4px; font: 600 .68em/1.2 var(--ar-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg); background: color-mix(in srgb, var(--ws-accent) 24%, transparent); }
 .ar-ws .ov-week-runs { display: flex; flex-wrap: wrap; gap: .3em; align-items: center; }
 .ar-ws .ov-chip { display: inline-block; width: .95em; height: .95em; border-radius: 3px; }
