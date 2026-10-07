@@ -2535,7 +2535,7 @@
   .ar-ws .ov-week ol { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .8em; }
   .ar-ws .ov-week .ov-week-head { display: none; }
   .ar-ws .ov-week-play, .ar-ws .ov-week-runs, .ar-ws .ov-week-found { grid-column: 1 / -1; }
-  .ar-ws .ov-week-num { text-align: left; font-size: .85em; }
+  .ar-ws .ov-week-num { text-align: left; font-size: .85em; white-space: normal; }
   .ar-ws .ov-week li:not(.ov-week-total) .ov-week-num::before { content: attr(data-label); display: block; font: .78em var(--ar-font-body); color: var(--ar-fg-faint); }
 }
 .ar-ws .ov-section { display: grid; gap: .7em; }

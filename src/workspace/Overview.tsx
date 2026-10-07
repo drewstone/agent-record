@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
 import { useDocument } from './data.js'
-import { bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
+import { bytes, ChartCard, compact, DayBars, Histogram, HBars, Legend, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
 
 // Five ranked causes plus "other". The six fixed slots passed the categorical validator on #16181f.
 const LOSS_COLOR = [...SERIES, '#b97637']
@@ -78,8 +78,14 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
         {play.runCount > play.runs.length && <span className="ov-week-more">+{play.runCount - play.runs.length}</span>}
       </span>
       <span className="ov-week-found">
-        {play.lead ? <Lead lead={play.lead} /> : <span className="ov-week-none">no result or claim yet</span>}
-        <span className="ov-week-counts">{play.results} results · {play.claims} claims</span>
+        {play.lead ? (
+          <>
+            <Lead lead={play.lead} />
+            <span className="ov-week-counts">{play.results} results · {play.claims} claims</span>
+          </>
+        ) : (
+          <span className="ov-week-none">no result or claim yet</span>
+        )}
       </span>
       <span className={`ov-week-num ${play.lostHours >= 10 ? 'is-warn' : ''}`} data-label="lost">{play.lostHours ? hours(play.lostHours) : '—'}</span>
       <span className="ov-week-num" data-label="list">{play.listUsd ? usd(play.listUsd) : '—'}</span>
@@ -172,6 +178,7 @@ export function OverviewPage({ api }: { api: string }) {
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
           <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims</span>
         </div>
+        <Legend items={Object.keys(STATE_COLOR).filter((s) => s !== 'running' || running.length).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))} />
         <div className="ov-card ov-week">
           {week.length ? (
             <ol>
@@ -193,7 +200,7 @@ export function OverviewPage({ api }: { api: string }) {
           {week.length > weekShown && (
             <button type="button" className="filter-chip ov-week-all" onClick={() => setWeekShown(week.length)}>Show all {week.length} plays</button>
           )}
-          <p className="ov-note">Chips are runs in their end state ({Object.keys(STATE_COLOR).map(label).join(', ')}); smoke and archived runs are left out. List price is subscription use at API prices; paid is sandbox compute.</p>
+          <p className="ov-note">Each chip is a run in its end state; smoke and archived runs are left out. List price is subscription use at API prices; paid is sandbox compute.</p>
         </div>
       </section>
 
