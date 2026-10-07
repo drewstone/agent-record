@@ -69,7 +69,6 @@ function RunningRow({ run }: { run: OverviewRun }) {
           <span className={stale ? 'is-stale' : undefined}>active {ago(run.activeAt)}</span>
           {run.agents !== null && <span>{run.agents} agents{run.depth !== null ? `, depth ${run.depth}` : ''}</span>}
           <span>{run.findingsPending ? 'findings not available yet' : `${run.results} results · ${run.claims} claims`}</span>
-          <span>subscription {money(run.subscriptionUsd ?? run.listUsd)} at API prices · API {money(run.apiUsd)} · sandbox {money(run.sandboxUsd)}</span>
         </span>
         {run.purpose && <span className="ov-running-purpose">{run.purpose}</span>}
         {run.lead && <Lead lead={run.lead} />}
