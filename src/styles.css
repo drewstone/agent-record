@@ -2482,7 +2482,7 @@
   color: var(--ar-fg); background: var(--ws-panel); text-decoration: none; }
 .ar-ws .research-frontier:hover, .ar-ws .research-frontier:focus-visible { border-color: var(--ws-accent); text-decoration: none; }
 .ar-ws .research-frontier strong { text-transform: capitalize; }
-.ar-ws .research-frontier span { line-height: 1.35; }
+.ar-ws .research-frontier span { line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .research-frontier small { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
 .ar-ws .ov-page .kicker { font-size: .82em; gap: .55em; }
 .ar-ws .ov-page .kicker::before { width: .6em; height: .6em; }
@@ -2509,6 +2509,8 @@
 .ar-ws .ov-now-runs { flex: 3 1 min(100%, 36em); }
 .ar-ws .ov-attention { flex: 2 1 min(100%, 24em); }
 @media (max-width: 700px) {
+  .ar-ws .ov-page > *, .ar-ws .ov-now, .ar-ws .ov-grid { min-width: 0; width: 100%; max-width: 100%; }
+  .ar-ws .ov-page .ov-card { max-width: 100%; }
   .ar-ws .ov-now > .ov-card { flex: 1 1 100%; width: 100%; min-width: 0; }
   .ar-ws .ov-attention-text { min-width: 0; overflow-wrap: anywhere; }
 }
