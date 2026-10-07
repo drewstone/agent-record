@@ -24,7 +24,7 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 const utcTime = (value: string | null | undefined) => (value ? `${value.slice(11, 16)} UTC` : 'time unknown')
 
 /**
- * The run's answer in one pinned strip: how it ended, what it delivered, what the hypotheses came to, what the judges
+ * The run's answer in one strip: how it ended, what it delivered, what the hypotheses came to, what the judges
  * say, what it cost, and the observer's latest brief when there is one. The deliverables cell opens the run's outputs;
  * the others open the full readout. A number nobody measured says so.
  */
@@ -32,7 +32,7 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
   const run = doc.run
   const readout = doc.finalOutput?.readout
   const finished = readout && readout.status !== 'pending' ? readout : null
-  const outcome = finished?.settle ? `${finished.settle.kind.replaceAll('-', ' ')}${finished.settle.reason ? ` · ${finished.settle.reason.replaceAll('-', ' ')}` : ''}` : `${run.state.replaceAll('-', ' ')}${run.reason ? ` · ${run.reason.replaceAll('-', ' ')}` : ''}`
+  const outcome = finished?.settle ? `${finished.settle.kind.replaceAll('-', ' ')}${finished.settle.reason && finished.settle.reason !== finished.settle.kind ? ` · ${finished.settle.reason.replaceAll('-', ' ')}` : ''}` : `${run.state.replaceAll('-', ' ')}${run.reason && run.reason !== run.state ? ` · ${run.reason.replaceAll('-', ' ')}` : ''}`
   const deliverables = finished?.deliverables ?? []
   const present = deliverables.filter((item) => item.present === true).length
   const report = finished?.links.report ?? null
@@ -47,6 +47,7 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
   const fallback = doc.finalOutput?.fallback ?? null
   const fallbackLink = externalHref(fallback?.url)
   const files = doc.finalOutput?.files.length ?? 0
+  const claims = doc.findings?.items.filter((item) => item.kind === 'result' || item.kind === 'claim').length ?? 0
   return (
     <div className={`answer-strip ${brief ? 'with-brief' : ''}`} role="group" aria-label="The run's answer" data-answer-strip>
       <button type="button" className="answer-cell" onClick={onOpen}>
@@ -85,8 +86,9 @@ export function AnswerStrip({ doc, onOpen, onOutputs }: { doc: RunDocument; onOp
       <button type="button" className="answer-cell" onClick={onOpen}>
         <span className="answer-label">Hypotheses</span>
         <span className="answer-value">
-          {verdicts.length ? [...verdictCounts].map(([verdict, count]) => `${count} ${verdict.replaceAll('-', ' ')}`).join(' · ') : 'none recorded'}
+          {verdicts.length ? [...verdictCounts].map(([verdict, count]) => `${count} ${verdict.replaceAll('-', ' ')}`).join(' · ') : claims ? `${claims} written by agents` : 'none recorded'}
         </span>
+        {!verdicts.length && claims > 0 && <span className="faint">results and claims, not yet judged</span>}
       </button>
       <button type="button" className="answer-cell" onClick={onOpen}>
         <span className="answer-label">Score, 0–100 vs world class</span>

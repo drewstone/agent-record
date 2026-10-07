@@ -14,8 +14,18 @@ import {
   utcTime,
 } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
-import { anchorsOf, answeredBy, argsLabel, callStatus, collapsePolls, pollSummary, thinkingMarkers } from './conversation-rows.js'
+import { anchorsOf, answeredBy, argsLabel, callStatus, collapsePolls, outputTokens, pollSummary, quietThinking, thinkingMarkers } from './conversation-rows.js'
 import type { CallState, ConversationRow } from './conversation-rows.js'
+
+/** A withheld-thinking bar is full at this many output tokens; larger turns stay full. */
+const THINKING_FULL_TOKENS = 80_000
+const tokenLabel = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+const spanLabel = (value: number) => {
+  const seconds = Math.round(value / 1000)
+  if (seconds < 60) return `${seconds} s`
+  const minutes = Math.floor(seconds / 60)
+  return minutes < 60 ? `${minutes} m ${seconds % 60} s` : `${Math.floor(minutes / 60)} h ${minutes % 60} m`
+}
 
 function ToolIcon({ name }: { name: string }) {
   const lower = name.toLowerCase()
@@ -176,8 +186,9 @@ export function Conversation({
           calls.length
         ))
           return false
-        // An empty assistant turn stays hidden unless it records thinking the provider withheld; its usage stays in the charts.
-        if (event.detail.role === 'assistant' && !textOf(event) && !event.detail.reasoning && !calls.length && event.detail.responseStatus !== 'error' && !event.detail.contentOmitted && !thinkingMarkers(event.detail).length)
+        // An empty assistant turn stays hidden unless it records substantial thinking the provider withheld; its usage
+        // stays in the charts.
+        if (event.detail.role === 'assistant' && !textOf(event) && !event.detail.reasoning && !calls.length && event.detail.responseStatus !== 'error' && !event.detail.contentOmitted && (!thinkingMarkers(event.detail).length || quietThinking(event.detail)))
           return false
         if (eventMatches(event, index, query, category)) return true
         return calls.some((call) => {
@@ -203,6 +214,17 @@ export function Conversation({
       }),
     [items, index, anchor],
   )
+  // How long each withheld-thinking turn took: the time since this agent's previous event.
+  const thinkingSpan = useMemo(() => {
+    const spans = new Map<string, number>()
+    let previous: number | null = null
+    for (const event of index.byActor.get(actor) ?? []) {
+      const at = ms(event.at)
+      if (previous !== null && Number.isFinite(at) && thinkingMarkers(event.detail).length) spans.set(event.id, Math.max(0, at - previous))
+      if (Number.isFinite(at)) previous = at
+    }
+    return spans
+  }, [index, actor])
   // The row that shows each event: a poll is drawn inside its collapsed group.
   const rowOf = useMemo(() => {
     const map = new Map<string, string>()
@@ -395,21 +417,34 @@ export function Conversation({
     const promptKey = `prompt:${at}`
     const reasoningKey = `reasoning:${at}`
     const clip = clipOf(event.detail.clip)
-    // A turn that holds only withheld thinking is one quiet line.
-    if (withheld.length && !message && !reasoning && !calls.length && !failed && !event.detail.contentOmitted)
+    // A turn that holds only withheld thinking is one line sized by the work it recorded: its output tokens and the
+    // time since the agent's previous event. The provider withheld the text; the size is what the record measured.
+    if (withheld.length && !message && !reasoning && !calls.length && !failed && !event.detail.contentOmitted) {
+      const output = outputTokens(event.detail)
+      const span = thinkingSpan.get(event.id)
       return (
         <article
-          className={`thinking-note ${selected === event.id ? 'selected' : ''}`}
+          className={`thinking-note ${selected === event.id ? 'selected' : ''} ${output !== null ? 'thinking-sized' : ''}`}
           data-entry={event.id}
           data-message={event.id}
           data-thinking-withheld
+          title={withheld.join(' · ')}
         >
           <time dateTime={event.at}>{utcTime(event.at)}</time>
-          <span>{withheld.join(' · ')}</span>
+          <span className="thinking-label">
+            {output !== null ? `Thought ${span !== undefined && span >= 1000 ? `for ${spanLabel(span)} ` : ''}· ${tokenLabel(output)} output tokens` : withheld.join(' · ')}
+          </span>
+          {output !== null && (
+            <span className="thinking-bar" aria-hidden="true">
+              <span style={{ width: `${Math.max(3, Math.min(100, (output / THINKING_FULL_TOKENS) * 100))}%` }} />
+            </span>
+          )}
+          {output !== null && <span className="thinking-why">text withheld by the provider</span>}
           {flagMarks(event)}
           {sourceButton(event)}
         </article>
       )
+    }
     return (
       <article
         className={[
