@@ -71,7 +71,7 @@ test('a profile reused from another play hangs under the agent that spawned it h
   assert.equal(model.edges.find((edge) => edge.home && edge.to === worker.id).crossPlay, true, 'its reuse here crosses into this play')
   assert.equal(originText(first, (run) => run), 'spawned in glm2-b-20260913a')
   assert.deepEqual(model.foreignPlays, ['glm2-b'])
-  assert.deepEqual(profileRunCost(worker.node, 'fourier-e-20260914b'), { usd: 1.25, agents: 2, unmetered: 1 }, 'an unmetered agent is counted, never priced at zero')
+  assert.deepEqual(profileRunCost(worker.node, 'fourier-e-20260914b'), { usd: 1.25, agents: 2, unmetered: 1, unsettled: 0 }, 'an unmetered agent is counted, never priced at zero')
   assert.equal(profileRunCost(model.byId.get(model.focus).node, 'fourier-e-20260914b'), null)
   // Hovering the worker lights both directors.
   const lit = lineageOf(model, worker.id)

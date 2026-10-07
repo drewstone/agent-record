@@ -113,7 +113,7 @@ export function edgeOrigin(edge: ProfileParent, child: ProfileNode): { run: stri
 
 /** What the agents running this profile in one run cost, from the Runtime settlements on its spawn edges. Null when no
  * spawn of it in that run is recorded (a registered profile: the run's own spend covers it). */
-export function profileRunCost(node: ProfileNode, runId: string): { usd: number; agents: number; unmetered: number } | null {
+export function profileRunCost(node: ProfileNode, runId: string): { usd: number; agents: number; unmetered: number; unsettled: number } | null {
   const seen = new Map<string, ProfileEdgeEvent>()
   for (const edge of node.parents)
     for (const event of eventsOf(edge))
@@ -121,12 +121,15 @@ export function profileRunCost(node: ProfileNode, runId: string): { usd: number;
   if (!seen.size) return null
   let usd = 0
   let unmetered = 0
+  let unsettled = 0
   for (const event of seen.values()) {
     const outcome = event.outcome
-    if (outcome && outcome.metered !== false && typeof outcome.usd === 'number') usd += outcome.usd
+    // No settlement recorded and not metered are different unknowns; neither is priced at zero.
+    if (!outcome) unsettled++
+    else if (outcome.metered !== false && typeof outcome.usd === 'number') usd += outcome.usd
     else unmetered++
   }
-  return { usd, agents: seen.size, unmetered }
+  return { usd, agents: seen.size, unmetered, unsettled }
 }
 
 const by = (a: ProfileNode, b: ProfileNode) =>

@@ -51,20 +51,13 @@ export function ProfileCanvas({
     const play = playOf(runId) ?? scopePlay
     return play && runId.startsWith(`${play}-`) && play === scopePlay ? runId.slice(play.length + 1) : runId
   }, [playOf, scopePlay])
-  const shownId = selectedNode ? (model.byId.has(selectedNode.digest) ? selectedNode.digest : null) : null
-  const [inspected, setInspected] = useState<string | null>(null)
-  const inspectorId = shownId ?? (inspected && model.byId.has(inspected) ? inspected : null)
+  const inspectorId = selectedNode && model.byId.has(selectedNode.digest) ? selectedNode.digest : null
 
   const expand = (parent: string) => setExpanded((current) => new Set([...current, parent]))
   const choose = (id: string) => {
     const node = model.byId.get(id)
     if (!node) return
-    if (node.cluster) {
-      expand(node.cluster.parent)
-      setInspected(id)
-      return
-    }
-    setInspected(null)
+    if (node.cluster) return expand(node.cluster.parent)
     onSelect(node.node!.short)
   }
   if (!model.nodes.length)
@@ -181,8 +174,11 @@ function CanvasPane({
   )
 
   // The opening view: the whole canvas when it reads at half size or more, else the focus at a readable size.
+  const opening = useRef({ fitView, centred, model, selectedId })
+  opening.current = { fitView, centred, model, selectedId }
   useEffect(() => {
     if (touched.current || !size) return
+    const { fitView, model, selectedId } = opening.current
     const fit = fitView()
     const start = selectedId ?? model.focus
     const node = start ? model.byId.get(start) : undefined
@@ -192,7 +188,7 @@ function CanvasPane({
     const left = PAD + Math.max(0, node!.x - (node!.parent ? COL_W : 0))
     // The canvas usually opens below the run's header, so the focus sits in its upper part, where the screen shows it.
     setRawView({ k, x: 24 - left * k, y: Math.min(size.h / 2, 260) - (PAD + node!.y + NODE_H / 2) * k })
-  }, [size, fitView, centred, model.focus, selectedId])
+  }, [size])
 
   // A selection made outside the canvas (a link in the inspector, the URL) is brought into view.
   useEffect(() => {
@@ -274,6 +270,8 @@ function CanvasPane({
   }
   const onPointerUp = (event: ReactPointerEvent) => {
     pointers.current.delete(event.pointerId)
+    // The click that ends a drag fires after this; any later click (a key, assistive tech) must go through.
+    if (dragged.current) window.setTimeout(() => (dragged.current = false), 0)
     if (pointers.current.size) startGesture()
     else gesture.current = null
   }
@@ -285,6 +283,7 @@ function CanvasPane({
     buttons.current.get(current)?.focus({ preventScroll: true })
   }, [current])
   const onKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return
     const key = event.key
     if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown') {
       event.preventDefault()
@@ -339,7 +338,7 @@ function CanvasPane({
             </button>
           )}
           <button type="button" className="ui-button" onClick={() => zoomCentre(0.8)} aria-label="Zoom out">−</button>
-          <span className="pc-zoom mono" aria-live="polite">{Math.round(k * 100)}%</span>
+          <span className="pc-zoom mono">{Math.round(k * 100)}%</span>
           <button type="button" className="ui-button" onClick={() => zoomCentre(1.25)} aria-label="Zoom in">+</button>
           <button type="button" className="ui-button" onClick={() => setView(fitView())}>Fit</button>
           {selectedId && <button type="button" className="ui-button" onClick={() => setView(centred(selectedId, Math.max(k, 0.85)))}>Selected</button>}
@@ -394,7 +393,10 @@ function CanvasPane({
               onHover={setHover}
               onChoose={(id) => {
                 if (dragged.current) return
-                setActive(id)
+                const first = model.byId.get(id)?.cluster?.members[0]?.digest
+                // An expanded cluster's card unmounts; its first profile takes the focus.
+                if (first) keyboard.current = true
+                setActive(first ?? id)
                 onChoose(id)
               }}
             />
@@ -544,7 +546,16 @@ function useRunSummaries(api: string, plays: readonly string[]): ReadonlyMap<str
     const loads = plays.map((play) => {
       const url = `${api}/plays/${encodeURIComponent(play)}`
       if (!playCache.has(url))
-        playCache.set(url, fetch(url, { credentials: 'same-origin' }).then((response) => (response.ok ? (response.json() as Promise<PlayDocument>) : null)).catch(() => null))
+        playCache.set(
+          url,
+          fetch(url, { credentials: 'same-origin' })
+            .then((response) => (response.ok ? (response.json() as Promise<PlayDocument>) : null))
+            .catch(() => null)
+            .then((doc) => {
+              if (!doc) playCache.delete(url)
+              return doc
+            }),
+        )
       return playCache.get(url)!
     })
     void Promise.all(loads).then((docs) => {
@@ -586,26 +597,6 @@ function CanvasInspector({
     [scopePlay, runIds.join('\n'), playOf], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const summaries = useRunSummaries(api, plays)
-  if (at.cluster) {
-    const cluster = at.cluster
-    const parent = model.byId.get(cluster.parent)
-    return (
-      <div className="inspector" data-inspector-cluster={cluster.members.length}>
-        <header className="inspector-head">
-          <h2>{cluster.members.length} profiles written at runtime</h2>
-        </header>
-        <p className="faint">Written by agents running {parent?.node ? (parent.node.name ?? parent.node.short) : 'their parent'}; expanded on the canvas.</p>
-        <ul className="pc-members">
-          {cluster.members.map((member) => (
-            <li key={member.digest}>
-              <button type="button" className="link-button" onClick={() => onSelectShort(member.short)}>{member.name ?? member.label ?? member.short}</button>{' '}
-              <code className="faint">{member.short}</code> <span className="faint">{member.model.id ?? ''}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )
-  }
   const node = at.node!
   const chain = originChain(model, id)
   const first = chain.at(-1)!.node
@@ -618,11 +609,12 @@ function CanvasInspector({
           <span>
             {own.agents} {own.agents === 1 ? 'agent' : 'agents'}: {money(own.usd)} at API prices
             {own.unmetered ? <span className="faint"> · {own.unmetered} not metered, cost unknown</span> : null}
+            {own.unsettled ? <span className="faint"> · {own.unsettled} with no settlement recorded</span> : null}
           </span>
         )}
         {run ? (
           <span className={own ? 'faint' : undefined}>
-            run: model API {money(run.spend.apiUsd)} · sandbox {money(run.spend.sandboxUsd)} billed · subscription {money(run.spend.subscriptionUsd)} at API prices
+            run: model API {money(run.spend.apiUsd)} billed · sandbox compute {money(run.spend.sandboxUsd)} billed · subscription use {money(run.spend.subscriptionUsd)} at API prices, not billed
           </span>
         ) : (
           !own && <span className="faint">not recorded here</span>
