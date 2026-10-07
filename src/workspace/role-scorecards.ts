@@ -39,3 +39,10 @@ export function replayText(replay: RoleEdit['replay']): string {
   const library = replay.library === 'eligible' ? ' · joins the template library' : ''
   return `${replay.decision}${lift}${fell}${library}${replay.tieBreak ? ' · tie: Drew grades' : ''}`
 }
+
+type Side = { critiques: number; blockers: number; perCritique: number | null }
+/** An adopted edit's in-run measure: the role's blockers of the edit's classes per critique, before and after adoption. */
+export function weakText(measured: { before: Side; after: Side }): string {
+  const side = (value: Side) => (value.perCritique === null ? `no critique yet` : `${value.blockers} in ${value.critiques} critiques`)
+  return `before ${side(measured.before)}, after ${side(measured.after)}`
+}

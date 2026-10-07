@@ -25,7 +25,7 @@ import { ReliabilityPanel } from './workspace/Reliability.js'
 import { Searches } from './workspace/SearchView.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
 import type { HiddenReason } from './workspace/plays-filter.js'
-import { profileGraph, findProfile } from './workspace/profile-graph.js'
+import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
 import type { NodeStats } from './workspace/RunTable.js'
@@ -333,7 +333,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   const selection = useMemo((): Selection | null => {
     const short = params.get('profile')
     const node = short && graph ? findProfile(profileGraph(graph), short) : null
-    if (node?.createdIn) return node.kind === 'root' ? { kind: 'version', runId: node.createdIn } : { kind: 'profile', runId: node.createdIn, digest: node.digest }
+    const nodeRun = node && graph ? runOfProfile(graph, node) : null
+    if (node && nodeRun) return node.kind === 'root' ? { kind: 'version', runId: nodeRun } : { kind: 'profile', runId: nodeRun, digest: node.digest }
     const runId = params.get('v')
     return runId && versions.some((version) => version.run.id === runId) ? { kind: 'version', runId } : null
   }, [params, graph, versions])
