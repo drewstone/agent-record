@@ -292,7 +292,7 @@ export function OverviewPage({ api }: { api: string }) {
             {sumOf(cost?.otherList) > 0 && <div><dt>API-key agents at list price</dt><dd>{usd(sumOf(cut(cost?.otherList)))}</dd></div>}
           </dl>
         </ChartCard>
-        <ChartCard title="Infrastructure billed to Discovery" note={infra ? `${infra.window.from.slice(0, 10)}–${infra.window.to.slice(0, 10)} · measured ${ago(infra.generatedAt)}. Missing sources remain unknown.` : 'Infrastructure cost readings have not arrived.'}>
+        <ChartCard title="Infrastructure billed to Discovery" note={infra ? `${infra.window.from?.slice(0, 10) ?? 'unknown start'}–${infra.window.to.slice(0, 10)} · measured ${ago(infra.generatedAt)}. Missing sources remain unknown.` : 'Infrastructure cost readings have not arrived.'}>
           <dl className="ov-costs">
             <div><dt>Hosts</dt><dd>{money(infra?.totals.hostUsd)}</dd></div>
             <div><dt>Hetzner volumes, including traces</dt><dd>{money(infra?.totals.volumeUsd)}</dd></div>
@@ -304,11 +304,26 @@ export function OverviewPage({ api }: { api: string }) {
           {infra?.totals.r2DownloadBytesLowerBound != null ? <p className="ov-note">R2 download lower bound: {bytes(infra.totals.r2DownloadBytesLowerBound)}; R2 egress itself is free.</p> : null}
           {infra?.gaps?.length ? <p className="ov-note">Unmeasured: {infra.gaps.map((gap) => gap.detail).join(' · ')}</p> : null}
         </ChartCard>
+        <ChartCard title="Provider bill reconciliation" note={infra?.reconciliation?.reason ?? 'No same-period provider bill is available.'}>
+          <dl className="ov-costs">
+            <div><dt>Discovery billed allocation, {infra?.reconciliation?.period ?? 'current period'}</dt><dd>{money(infra?.reconciliation?.billedUsd)}</dd></div>
+            <div><dt>Prior bill evidence</dt><dd>{infra?.reconciliation?.priorBillEvidence?.length ?? 0} lines</dd></div>
+          </dl>
+          {infra?.reconciliation?.priorBillEvidence?.map((bill, i) => <p className="ov-note" key={`${bill.vendor}:${bill.item}:${i}`}>{bill.vendor}: {money(bill.monthlyUsd)}/month · {bill.asOf} · {bill.item}</p>)}
+        </ChartCard>
+        <ChartCard title="Hosts with Discovery sidecars" note="Provider list price and outbound counters are host-wide; Discovery share and egress charges are unknown.">
+          <dl className="ov-costs">
+            {(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => <div key={host.id}><dt>{host.name ?? host.id} · {host.discoverySidecars} sidecars · {bytes(host.outgoingBytes)} outbound</dt><dd>{money(host.monthlyUsd)}/mo</dd></div>)}
+          </dl>
+        </ChartCard>
         <ChartCard title="Host allocation per day" note="Measured Discovery share of host fixed cost. A missing day has no allocation.">
           <DayBars days={days} series={[{ name: 'host', color: SERIES[2], values: infraValues('hostUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
         <ChartCard title="Storage charge per day" legend={[{ name: 'volumes', color: SERIES[1] }, { name: 'snapshots', color: SERIES[2] }, { name: 'R2', color: SERIES[4] }]} note="Billed storage categories; missing provider readings are unknown.">
           <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" />
+        </ChartCard>
+        <ChartCard title="R2 storage at list rates per day" note="Direct Discovery bucket. Before the account free tier, operation charges and invoice rounding; not a billed amount.">
+          <DayBars days={days} series={[{ name: 'R2 list rate', color: SERIES[4], values: infraValues('r2ListUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
         <ChartCard title="Egress bytes per day" note="Outbound traffic attributed to Discovery where a source records it.">
           <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" />
