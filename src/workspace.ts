@@ -785,6 +785,102 @@ export const profileGraphDocumentSchema = z
   })
   .catchall(z.unknown())
 
+/** One check a release evaluator ran on a tagged candidate. */
+const releaseResultSchema = z
+  .object({
+    id: z.string(),
+    tier: z.string(),
+    pass: z.boolean(),
+    value: z.unknown().optional(),
+    evidence: z.string().optional(),
+    error: z.string().optional(),
+  })
+  .catchall(z.unknown())
+
+/** A run's versioned artifacts (`runs/<id>/versions`, discovery-lab `runner/version-graph.mjs`): every commit of its
+ * `deliverables.git` with the lane (branch) that made it and the worker and trace that wrote it, deliverable writes and
+ * spawned profiles in one graph, and every release tag with its latest score, rank and flags. */
+export const versionGraphDocumentSchema = z
+  .object({
+    kind: z.literal('agent-workspace.version-graph'),
+    runId: z.string(),
+    available: z.boolean(),
+    reason: z.string().optional(),
+    refsDigest: z.string().nullable().optional(),
+    builtAt: z.string().optional(),
+    rule: z.string().optional(),
+    lanes: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            label: z.string(),
+            kind: z.string(),
+            head: z.string(),
+            director: z.string().nullable(),
+            commits: z.number(),
+          })
+          .catchall(z.unknown()),
+      )
+      .default([]),
+    commits: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            parents: z.array(z.string()),
+            at: z.string(),
+            subject: z.string(),
+            lane: z.string(),
+            kind: z.string(),
+            files: z.array(z.object({ status: z.string(), path: z.string() })),
+            author: z.object({ id: z.string().nullable(), label: z.string(), name: z.string() }).catchall(z.unknown()),
+            director: z.string().nullable(),
+            model: z.string().nullable(),
+            spendUsd: z.number().nullable(),
+            trace: z.object({ node: z.string().nullable(), trace: z.string().nullable(), session: z.string().nullable() }).nullable(),
+            spawned: z.string().optional(),
+            profileDigest: z.string().optional(),
+            body: z.string(),
+          })
+          .catchall(z.unknown()),
+      )
+      .default([]),
+    tags: z
+      .array(
+        z
+          .object({
+            name: z.string(),
+            commit: z.string(),
+            at: z.string().nullable(),
+            by: z.string().nullable(),
+            message: z.string(),
+            attempts: z.number(),
+            score: z
+              .object({
+                complete: z.boolean(),
+                scoredAt: z.string().nullable(),
+                set: z.object({ source: z.string().nullable(), digest: z.string().nullable() }).catchall(z.unknown()).nullable(),
+                vector: z.object({
+                  exact: z.tuple([z.number(), z.number()]),
+                  heldOut: z.tuple([z.number(), z.number()]),
+                  blockers: z.number().nullable(),
+                  judge: z.number().nullable(),
+                }),
+                results: z.array(releaseResultSchema),
+              })
+              .nullable(),
+            best: z.boolean(),
+            flags: z.array(z.object({ kind: z.string(), tag: z.string(), from: z.string(), checks: z.array(z.string()) }).catchall(z.unknown())),
+          })
+          .catchall(z.unknown()),
+      )
+      .default([]),
+    best: z.string().nullable().optional(),
+    flags: z.array(z.object({ kind: z.string(), tag: z.string(), from: z.string(), checks: z.array(z.string()) }).catchall(z.unknown())).default([]),
+  })
+  .catchall(z.unknown())
+
 export type Gap = z.infer<typeof gapSchema>
 export type Spend = z.infer<typeof spendSchema>
 export type RecordStatus = z.infer<typeof recordStatusSchema>
@@ -803,6 +899,9 @@ export type ProgressBrief = z.infer<typeof progressBriefSchema>
 export type HumanGrade = z.infer<typeof humanGradeSchema>
 export type PanelReview = z.infer<typeof panelReviewSchema>
 export type ReadoutChart = NonNullable<Readout['charts']>[number]
+export type VersionGraphDocument = z.infer<typeof versionGraphDocumentSchema>
+export type VersionCommit = VersionGraphDocument['commits'][number]
+export type VersionTag = VersionGraphDocument['tags'][number]
 export type ProfileGraphDocument = z.infer<typeof profileGraphDocumentSchema>
 export type ProfileNode = z.infer<typeof profileNodeSchema>
 export type ProfileParent = ProfileNode['parents'][number]
