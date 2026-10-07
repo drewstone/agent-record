@@ -56,7 +56,7 @@ function usePage(href: string | null) {
   return state
 }
 
-function PageReader({ href }: { href: string }) {
+export function PageReader({ href }: { href: string }) {
   const page = usePage(href)
   if (page.error) return <p className="ws-status" role="alert">This page is unavailable: {page.error}</p>
   if (page.text === undefined) return <p className="ws-status" role="status">Loading the page…</p>

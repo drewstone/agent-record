@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
+import { WorkGraph } from './workspace/WorkGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
 import type { EventFlag } from './viewer/Conversation.js'
@@ -575,15 +576,12 @@ function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (r
 // /run/<id>
 // ---------------------------------------------------------------------------------------------------------
 const SPEEDS = [1, 4, 16, 64, 256, 1024, 4096]
-type RunTab = 'messages' | 'timeline' | 'usage' | 'spend' | 'assessments' | 'input' | 'coverage'
-const RUN_TABS = [
+/** The selected agent's own views; the run's spend, assessments, input and coverage are sections of the run page. */
+type AgentTab = 'messages' | 'timeline' | 'usage'
+const AGENT_TABS = [
   ['messages', 'Messages'],
   ['timeline', 'Timeline'],
   ['usage', 'Usage'],
-  ['spend', 'Spend'],
-  ['assessments', 'Assessments'],
-  ['input', 'Input'],
-  ['coverage', 'Coverage'],
 ] as const
 
 /** A record part (agent-record.v1) read for drawing; `nodeStats` only on the `nodes` part. */
@@ -602,10 +600,41 @@ function useRecordPart(url: string | null) {
   return { ...parsed, loading: doc.loading, fetchError: doc.error, pending: !!url && doc.data === undefined && !doc.error }
 }
 
+/** The run page's sections, in one tab bar under the header: what the run found first, then its agents and the rest. */
+type RunSection = 'findings' | 'agents' | 'graph' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
+const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
+  ['findings', 'Findings'],
+  ['agents', 'Agents'],
+  ['graph', 'Graph'],
+  ['readout', 'Readout'],
+  ['outputs', 'Outputs'],
+  ['spend', 'Spend'],
+  ['assessments', 'Assessments'],
+  ['input', 'Input'],
+  ['coverage', 'Coverage'],
+]
+/** Sections that draw from the selected agent's record part (every node, that agent's events). */
+const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'spend', 'assessments', 'coverage'])
+
+/** The section a URL asks for; links from before the sections existed (`view`, `tab`, `node`) still land right. */
+function sectionOf(params: URLSearchParams, hasFindings: boolean): RunSection {
+  const asked = params.get('section')
+  const known = RUN_SECTIONS.find(([value]) => value === asked)?.[0]
+  if (known) return known
+  const view = params.get('view')
+  if (view === 'readout' || view === 'outputs') return view
+  const tab = params.get('tab')
+  if (tab === 'spend' || tab === 'assessments' || tab === 'input' || tab === 'coverage') return tab
+  if (params.get('node') || params.get('event') || tab) return 'agents'
+  return hasFindings ? 'findings' : 'agents'
+}
+
 /**
- * The run page: its answer in a pinned strip, its agents as a tree-table on one time axis, and the selected agent's
- * conversation (or the full readout) in a drawer beside them. The page draws from the record's node list; an agent's
- * events load only when that agent is opened, so a run with a 5 MB record opens as fast as a small one.
+ * The run page: a header, the run's answer in one strip, and one tab bar. Findings (what the agents wrote) open first;
+ * Agents is a rail of the run's agents beside the selected agent's conversation; the other sections are the run's
+ * graph, readout, outputs, spend, assessments, input and coverage, each full width. The page draws from the record's
+ * node list; an agent's events load only when a section needs them, so a run with a 5 MB record opens as fast as a
+ * small one.
  */
 function RunPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
@@ -613,7 +642,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
   // A saved grade changes the run's document; asking under a new query fetches it again (the host ignores the query).
   const [revision, setRevision] = useState(0)
-  // The finding open in the run's findings; an agent's list below the table opens one there too.
+  // The finding open in the run's findings; the agent rail and the graph open one there too.
   const [finding, setFinding] = useState<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
@@ -625,93 +654,131 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const assessments = useDocument<AssessmentsDocument>(`${runUrl}/assessments${digest ? `?digest=${digest}` : ''}`, undefined, true)
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const catalogue = useMemo(() => dimensionMap(dimensions.data), [dimensions.data])
-  const view = params.get('view')
+  const section = sectionOf(params, !!run.data?.findings?.total)
   const requested = params.get('node')
   const index = nodes.index
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
-  const drawer = view === 'readout' ? 'readout' : view === 'outputs' ? 'outputs' : params.get('drawer') === 'closed' ? null : actor ? 'agent' : null
-  const agent = useRecordPart(drawer === 'agent' && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
+  const agent = useRecordPart(AGENT_PART_SECTIONS.has(section) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
   const summary = run.data?.run
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
-  const closeDrawer = () => update({ view: undefined, drawer: 'closed', node: undefined, event: undefined, tab: undefined, t: undefined, file: undefined })
-  const openOutputs = () => update({ view: 'outputs', drawer: undefined, file: undefined })
+  const doc = run.data!
+  // One URL key per section: the section, plus what that section shows (the agent, its tab, the file).
+  const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
+  const openFinding = (sha: string) => {
+    setFinding(sha)
+    open('findings')
+  }
+  const selectAgent = (node: string) => update({ section: 'agents', node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })
   const grading = { api, runId: summary.id, onSaved: () => setRevision((value) => value + 1) }
-  const outputs = (
-    <OutputsView
-      doc={run.data!}
-      grading={grading}
-      selected={params.get('file')}
-      onSelect={(file) => update({ view: 'outputs', file: file ?? undefined })}
-      onClose={closeDrawer}
-    />
+  const loadingAgent = (
+    <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>
+      {agent.fetchError || agent.error
+        ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}`
+        : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
+    </p>
   )
+  const counts: Partial<Record<RunSection, number>> = {
+    findings: doc.findings?.items.filter((item) => item.kind === 'result' || item.kind === 'claim').length,
+    agents: index?.actors.filter((node) => node.kind !== 'finding').length,
+    outputs: doc.finalOutput?.files.length,
+  }
   return (
-    <div className="ws-page ws-run" data-run={summary.id}>
-      <RunHeader doc={run.data!} />
-      <RunFindings doc={run.data!} runUrl={runUrl} open={finding} onOpen={setFinding} />
-      <AnswerStrip doc={run.data!} onOpen={() => update({ view: 'readout', drawer: undefined, file: undefined })} onOutputs={openOutputs} />
-      {index ? (
-        <div className={`run-layout ${drawer ? 'with-drawer' : ''}`}>
-          <section className="run-agents" aria-label="Agents">
+    <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
+      <RunHeader doc={doc} />
+      <AnswerStrip doc={doc} onOpen={() => open('readout')} onOutputs={() => open('outputs')} />
+      <nav className="run-tabs" aria-label="Run sections">
+        {RUN_SECTIONS.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={`run-tab ${section === value ? 'on' : ''}`}
+            aria-current={section === value ? 'page' : undefined}
+            data-section-tab={value}
+            onClick={() => open(value)}
+          >
+            {label}
+            {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
+          </button>
+        ))}
+      </nav>
+      {section === 'findings' &&
+        (doc.findings?.total ? (
+          <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
+        ) : (
+          <p className="ws-status run-panel">No knowledge pages were recorded for this run. Its agents are under Agents.</p>
+        ))}
+      {section === 'graph' && <WorkGraph doc={doc} runUrl={runUrl} onOpen={openFinding} />}
+      {section === 'readout' && (
+        <section className="run-panel" aria-label="Readout" data-drawer="readout">
+          <FinalOutputPanel output={doc.finalOutput} grading={grading} />
+        </section>
+      )}
+      {section === 'outputs' && (
+        <section className="run-panel" aria-label="Outputs" data-drawer="outputs">
+          <OutputsView doc={doc} grading={grading} selected={params.get('file')} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} />
+        </section>
+      )}
+      {section === 'input' && (
+        <section className="run-panel" aria-label="Input">
+          <InputView input={doc.input} api={api} />
+        </section>
+      )}
+      {index && section === 'agents' && actor && (
+        <div className="agents-layout">
+          <aside className="agent-rail" aria-label="Agents">
             <AgentTable
               index={index}
               stats={nodes.stats}
-              doc={run.data!}
+              doc={doc}
               assessments={assessments.data?.rows ?? []}
               dimensions={catalogue}
-              selected={drawer === 'agent' ? actor : null}
-              onSelect={(node) => update({ node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
+              selected={actor}
+              onSelect={selectAgent}
             />
-            {drawer === 'agent' && actor && (
-              <AgentFindings doc={run.data!} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={setFinding} />
+            <AgentFindings doc={doc} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={openFinding} />
+          </aside>
+          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent">
+            {agent.index ? (
+              <RunBody
+                key={actor}
+                api={api}
+                doc={doc}
+                index={agent.index}
+                actor={actor}
+                params={params}
+                update={update}
+                assessments={assessments.data}
+                dimensions={dimensions.data}
+              />
+            ) : (
+              loadingAgent
             )}
           </section>
-          {drawer === 'readout' && (
-            <aside className="run-drawer" aria-label="Readout" data-drawer="readout">
-              <div className="drawer-head">
-                <h2>Readout</h2>
-                <button type="button" className="ui-button" onClick={closeDrawer}>Close</button>
-              </div>
-              <FinalOutputPanel output={run.data!.finalOutput} grading={grading} />
-            </aside>
-          )}
-          {drawer === 'outputs' && (
-            <aside className="run-drawer" aria-label="Outputs" data-drawer="outputs">
-              {outputs}
-            </aside>
-          )}
-          {drawer === 'agent' && actor && (
-            <aside className="run-drawer" aria-label="Selected agent" data-drawer="agent">
-              {agent.index ? (
-                <RunBody
-                  key={actor}
-                  api={api}
-                  doc={run.data!}
-                  index={agent.index}
-                  actor={actor}
-                  params={params}
-                  update={update}
-                  assessments={assessments.data}
-                  dimensions={dimensions.data}
-                  gaps={nodes.record?.coverage.gaps ?? []}
-                  onClose={closeDrawer}
-                />
-              ) : (
-                <div className="drawer-head">
-                  <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>
-                    {agent.fetchError || agent.error
-                      ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}`
-                      : `Loading ${index.nodes.get(actor)?.label ?? 'the agent'}'s conversation…`}
-                  </p>
-                  <button type="button" className="ui-button" onClick={closeDrawer}>Close</button>
-                </div>
-              )}
-            </aside>
-          )}
         </div>
-      ) : (
+      )}
+      {index && (section === 'spend' || section === 'assessments' || section === 'coverage') && actor && (
+        <section className="run-panel" aria-label={section}>
+          {agent.index ? (
+            <RunPanels
+              section={section}
+              doc={doc}
+              index={agent.index}
+              actor={actor}
+              params={params}
+              update={update}
+              assessments={assessments.data}
+              dimensions={dimensions.data}
+              gaps={nodes.record?.coverage.gaps ?? []}
+              onSelectAgent={selectAgent}
+            />
+          ) : (
+            loadingAgent
+          )}
+        </section>
+      )}
+      {!index && AGENT_PART_SECTIONS.has(section) && (
         <div className="ws-section">
           {/* The record's request starts after the run document names it ready: until it answers, it is loading, not missing. */}
           {nodes.loading || (recordReady && nodes.pending) ? (
@@ -731,8 +798,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
                 {nodes.error ? ` ${nodes.error}` : ''}
                 {nodes.fetchError && !summary.record.reason ? ` ${nodes.fetchError}` : ''}
               </p>
-              <RunExtras api={api} doc={run.data!} />
-              {view === 'outputs' && <div className="run-drawer outputs-standalone">{outputs}</div>}
+              <RunExtras api={api} doc={doc} />
             </div>
           )}
         </div>
@@ -817,7 +883,7 @@ function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
   )
 }
 
-/** The selected agent in the run page's drawer: its record part (every node, this agent's events) and tabs. */
+/** The selected agent beside the agent rail: its record part (every node, this agent's events), replay and views. */
 function RunBody({
   api,
   doc,
@@ -827,8 +893,6 @@ function RunBody({
   update,
   assessments,
   dimensions,
-  gaps,
-  onClose,
 }: {
   api: string
   doc: RunDocument
@@ -838,11 +902,9 @@ function RunBody({
   update: (patch: Record<string, string | undefined | null>, replace?: boolean) => void
   assessments: AssessmentsDocument | undefined
   dimensions: DimensionsDocument | undefined
-  gaps: RecordGap[]
-  onClose: () => void
 }) {
   const runId = doc.run.id
-  const tab = (RUN_TABS.map(([value]) => value) as RunTab[]).find((value) => value === params.get('tab')) ?? 'messages'
+  const tab = (AGENT_TABS.map(([value]) => value) as AgentTab[]).find((value) => value === params.get('tab')) ?? 'messages'
   const node = index.nodes.get(actor)
   const at = params.get('t')
   const cutoff = at && Number.isFinite(ms(at)) ? Math.max(index.start, Math.min(index.end, ms(at))) : index.end
@@ -877,14 +939,6 @@ function RunBody({
     setTooltip(null)
     if (source) setDetail({ event })
     select({ node: index.canonical(event.node), event: event.id, ...(ms(event.at) > cutoff ? { t: undefined } : {}) })
-  }
-  const cite = (eventId: string) => {
-    // A cited event of another agent is in that agent's part: open the agent it names (event ids start with the node id).
-    const event = index.byEvent.get(eventId)
-    const owner = event ? index.canonical(event.node) : index.canonical(eventId.split('#')[0] ?? '')
-    if (!index.nodes.has(owner)) return
-    setPlaying(false)
-    select({ node: owner, event: eventId, tab: undefined, t: undefined })
   }
   const loadSource = useCallback(
     async (sha: string) => {
@@ -975,7 +1029,6 @@ function RunBody({
             </span>
             <span className="faint mono">{nodeCapture?.channel}{nodeCapture?.reason ? ` · ${nodeCapture.reason}` : ''}</span>
           </div>
-          <button type="button" className="ui-button drawer-close" onClick={onClose} aria-label="Close the agent drawer">Close</button>
         </div>
         <div className="replay" data-replay>
           <button
@@ -1020,7 +1073,7 @@ function RunBody({
             <StructuredContent text={node.assignment} />
           </details>
         )}
-        <Tabs label="Run record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={RUN_TABS} />
+        <Tabs label="Agent record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={AGENT_TABS} />
         <div className="ws-panel-body" role="tabpanel">
           {tab === 'messages' && empty && <EmptyAgent index={index} actor={actor} onSelect={selectNode} />}
           {tab === 'messages' && !empty && (
@@ -1051,7 +1104,7 @@ function RunBody({
                 flags={flags}
                 lifecycle={lifecycle}
                 live={live}
-                onFlag={(flag: EventFlag) => select({ tab: 'assessments', dim: flag.dimension })}
+                onFlag={(flag: EventFlag) => select({ section: 'assessments', tab: undefined, dim: flag.dimension })}
               />
             </>
           )}
@@ -1098,36 +1151,6 @@ function RunBody({
               {listFromRecord !== null && <p className="small">Recorded usage prices at {money(listFromRecord)} list, not billed.</p>}
             </div>
           )}
-          {tab === 'spend' && (
-            <div className="spend-tab">
-              <NodeSpendPanel spend={doc.spend.nodes[actor]} listFromRecord={listFromRecord} />
-              <h3>Agents in this run</h3>
-              <SpendBars
-                rows={index.actors
-                  .filter((item) => item.kind !== 'finding')
-                  .map((item) => {
-                    const spend = doc.spend.nodes[item.id]
-                    return { label: item.label, paid: spend?.paidUsd ?? null, list: spend?.listUsd ?? null, paidKnown: spend?.paidKnown, listKnown: spend?.listKnown, href: item.id }
-                  })}
-                onOpen={(row) => row.href && selectNode(row.href)}
-              />
-              {byModel(doc.spend).length > 0 && (
-                <>
-                  <h3>By model</h3>
-                  <SpendBars rows={byModel(doc.spend)} />
-                </>
-              )}
-              <div className="breakdown-grid">
-                <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-                <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
-              </div>
-            </div>
-          )}
-          {tab === 'assessments' && (
-            <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => select({ dim: dimension }, true)} onCite={cite} />
-          )}
-          {tab === 'input' && <InputView input={doc.input} api={api} />}
-          {tab === 'coverage' && <Coverage index={index} doc={doc} gaps={gaps} onSelect={selectNode} />}
         </div>
       </section>
       {detail && (
@@ -1146,6 +1169,75 @@ function RunBody({
           {tooltip.lines.map((line, i) => <p key={i}>{line}</p>)}
         </div>
       )}
+    </div>
+  )
+}
+
+/** The run's spend, assessments and coverage, full width under the tab bar; they read the selected agent's record part. */
+function RunPanels({
+  section,
+  doc,
+  index,
+  actor,
+  params,
+  update,
+  assessments,
+  dimensions,
+  gaps,
+  onSelectAgent,
+}: {
+  section: 'spend' | 'assessments' | 'coverage'
+  doc: RunDocument
+  index: RecordIndex
+  actor: string
+  params: URLSearchParams
+  update: (patch: Record<string, string | undefined | null>, replace?: boolean) => void
+  assessments: AssessmentsDocument | undefined
+  dimensions: DimensionsDocument | undefined
+  gaps: RecordGap[]
+  onSelectAgent: (id: string) => void
+}) {
+  const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
+  const listFromRecord = useMemo(() => {
+    let total: number | null = null
+    for (const event of index.byActor.get(actor) ?? [])
+      if (typeof event.detail.costListUsd === 'number') total = (total ?? 0) + event.detail.costListUsd
+    return total
+  }, [index, actor])
+  // A cited event of another agent is in that agent's part: open the agent it names (event ids start with the node id).
+  const cite = (eventId: string) => {
+    const event = index.byEvent.get(eventId)
+    const owner = event ? index.canonical(event.node) : index.canonical(eventId.split('#')[0] ?? '')
+    if (!index.nodes.has(owner)) return
+    update({ section: 'agents', node: owner, event: eventId, tab: undefined, t: undefined })
+  }
+  if (section === 'assessments')
+    return <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => update({ dim: dimension }, true)} onCite={cite} />
+  if (section === 'coverage') return <Coverage index={index} doc={doc} gaps={gaps} onSelect={onSelectAgent} />
+  return (
+    <div className="spend-tab">
+      <h3>Agents in this run</h3>
+      <SpendBars
+        rows={index.actors
+          .filter((item) => item.kind !== 'finding')
+          .map((item) => {
+            const spend = doc.spend.nodes[item.id]
+            return { label: item.label, paid: spend?.paidUsd ?? null, list: spend?.listUsd ?? null, paidKnown: spend?.paidKnown, listKnown: spend?.listKnown, href: item.id }
+          })}
+        onOpen={(row) => row.href && onSelectAgent(row.href)}
+      />
+      {byModel(doc.spend).length > 0 && (
+        <>
+          <h3>By model</h3>
+          <SpendBars rows={byModel(doc.spend)} />
+        </>
+      )}
+      <div className="breakdown-grid">
+        <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
+        <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
+      </div>
+      <h3>Selected agent: {index.nodes.get(actor)?.label ?? actor}</h3>
+      <NodeSpendPanel spend={doc.spend.nodes[actor]} listFromRecord={listFromRecord} />
     </div>
   )
 }

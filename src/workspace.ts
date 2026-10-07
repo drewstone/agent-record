@@ -473,6 +473,8 @@ export const findingsSchema = z
     schema: z.literal('agent-workspace.findings.v1'),
     items: z.array(findingItemSchema),
     total: z.number().int(),
+    /** Which listed pages name which, by sha256: the work graph's edges. Absent before findings carried them. */
+    links: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
     agents: z.array(
       z
         .object({
@@ -487,7 +489,11 @@ export const findingsSchema = z
     ),
     sources: z
       .object({
-        citations: z.array(z.object({ kind: z.string(), id: z.string(), mentions: z.number().int(), agents: z.array(z.string()), pages: z.number().int() }).catchall(z.unknown())),
+        citations: z.array(
+          z
+            .object({ kind: z.string(), id: z.string(), mentions: z.number().int(), agents: z.array(z.string()), pages: z.number().int(), citedBy: z.array(z.string()).optional() })
+            .catchall(z.unknown()),
+        ),
         webSearches: z.array(z.object({ at: z.string().nullable(), agent: z.string().nullable(), label: z.string().nullable(), query: z.string() }).catchall(z.unknown())),
         webFetches: z.array(z.object({ at: z.string().nullable(), agent: z.string().nullable(), label: z.string().nullable(), url: z.string() }).catchall(z.unknown())),
         knowledgeReads: z.number().int(),
