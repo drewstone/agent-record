@@ -66,7 +66,7 @@ export function RunOverview({ api, doc, nodes, stats, open }: { api: string; doc
   const best = bestOf(releases)
   const usage = useMemo(() => lineageUsage(segments, story?.series ?? []), [segments, story])
   const stalled = stall(releases, usage, now)
-  const clock = clockView(story?.clock ?? null, doc.run.startedAt, doc.run.settledAt, now)
+  const clock = clockView(story?.clock ?? null, doc.run.startedAt, doc.run.settledAt, now, live, doc.run.durationMs)
   const stop = doc.findings?.stop as { kind?: string; reason?: string; attempts?: number; limits?: { label?: string; limit?: string }[] } | undefined
   const stopWords = stopReason(doc.run.state, doc.run.reason, stop)
   const risk = riskOf(doc.run.state, clock, best, stalled, stopWords)
@@ -143,7 +143,7 @@ export function RunOverview({ api, doc, nodes, stats, open }: { api: string; doc
             )}
           </Tile>
           <Tile label="Still missing" tone={missing.length ? 'warn' : 'ok'} data="missing">
-            {releases ? (
+            {releases && best?.vector ? (
               <>
                 <b className="rs-big">{missingSummary(missing).head}</b>
                 {missingSummary(missing).rest && <span>{missingSummary(missing).rest}</span>}
@@ -151,11 +151,11 @@ export function RunOverview({ api, doc, nodes, stats, open }: { api: string; doc
                 <span>{live ? `${working} of ${cards.length} agents working` : `${cards.length} agents ran`}</span>
               </>
             ) : (
-              <b className="rs-big">No bar registered</b>
+              <b className="rs-big">{releases ? 'No version scored yet' : 'No bar registered'}</b>
             )}
           </Tile>
           <Tile label={live ? 'Cost so far' : 'Cost'} tone="plain" data="cost">
-            <b className="rs-big">{cost.apiUsd !== null ? `${money(cost.apiUsd)} at API prices` : cost.tokens !== null ? `${cost.tokensFloor ? '≥ ' : ''}${tokensText(cost.tokens)} tokens` : 'Nothing metered yet'}</b>
+            <b className="rs-big">{cost.apiUsd !== null ? `${cost.apiBasis === 'partial' ? '≥ ' : ''}${money(cost.apiUsd)} at API prices` : cost.tokens !== null ? `${cost.tokensFloor ? '≥ ' : ''}${tokensText(cost.tokens)} tokens` : 'Nothing metered yet'}</b>
             {cost.apiUsd !== null && cost.tokens !== null && <span>{tokensText(cost.tokens)} tokens</span>}
             {cost.apiMissing && cost.tokens !== null && <span title="API-equivalent dollars price every token at list price, whoever paid">{cost.apiMissing}</span>}
             <span>Billed: {cost.billedUsd !== null ? money(cost.billedUsd) : cost.billedNote}</span>
@@ -167,7 +167,7 @@ export function RunOverview({ api, doc, nodes, stats, open }: { api: string; doc
 
       {story?.receipt && <Deliverable doc={doc} releases={releases} best={best} play={play} />}
 
-      {releases && (
+      {releases && best?.vector && (
         <Section title="What’s left" note={missing.length ? `${missing.length} check${missing.length === 1 ? '' : 's'} the best version fails, must-pass first` : 'The best version passes every check'} data="missing">
           <MissingList rows={missing} />
           <p className="rs-more">

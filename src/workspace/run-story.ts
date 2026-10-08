@@ -13,8 +13,8 @@
  */
 
 export type Vector = { exact: [number, number] | null; heldOut: [number, number] | null; blockers: number | null; judge: number | null }
-/** One check of a tag: id, tier, pass, value. */
-export type Result = [string, string | null, boolean, number | null]
+/** One check of a tag: id, tier, pass (null when its evaluator errored: not measured), value. */
+export type Result = [string, string | null, boolean | null, number | null]
 export interface StoryTag {
   name: string
   commit: string | null
@@ -103,11 +103,17 @@ export const t = (value: string | null | undefined) => (value ? Date.parse(value
 export const hoursText = (ms: number) =>
   ms >= 48 * HOUR ? `${(ms / 24 / HOUR).toFixed(1)} days` : ms >= HOUR ? `${(ms / HOUR).toFixed(1)} h` : `${Math.max(1, Math.round(ms / 60_000))} min`
 export const agoText = (ms: number) => (ms < 90_000 ? 'just now' : `${hoursText(ms)} ago`)
-export const utcClock = (value: string | null | undefined) => (value ? `${new Date(value).toISOString().slice(11, 16)} UTC` : '')
+const isoOf = (value: string | null | undefined) => {
+  const time = t(value)
+  return Number.isFinite(time) ? new Date(time).toISOString() : null
+}
+export const utcClock = (value: string | null | undefined) => {
+  const iso = isoOf(value)
+  return iso ? `${iso.slice(11, 16)} UTC` : ''
+}
 export const utcDay = (value: string | null | undefined) => {
-  if (!value) return ''
-  const iso = new Date(value).toISOString()
-  return `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC`
+  const iso = isoOf(value)
+  return iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC` : ''
 }
 export const tokensText = (value: number) =>
   value >= 1e9 ? `${(value / 1e9).toFixed(1)} B` : value >= 1e6 ? `${(value / 1e6).toFixed(1)} M` : value >= 1e3 ? `${Math.round(value / 1e3)} K` : String(Math.round(value))
@@ -144,17 +150,18 @@ export interface ClockView {
 }
 
 /** Time used and left. The window is the deadline's span (a fork inherits its source's deadline, so its window began
- * before the fork), else the run's own start to its deadline. A settled run's clock stops at its settle. */
-export function clockView(clock: Clock | null, startedAt: string | null, settledAt: string | null, now: number): ClockView {
+ * before the fork), else the run's own start to its deadline. A settled run's clock stops at its settle (or, without a
+ * settle time, at its recorded duration); only a running run's clock reads `now`. */
+export function clockView(clock: Clock | null, startedAt: string | null, settledAt: string | null, now: number, running = !settledAt, durationMs: number | null = null): ClockView {
   const start = t(startedAt)
-  const end = settledAt ? t(settledAt) : now
-  const elapsedMs = Number.isFinite(start) ? Math.max(0, end - start) : 0
+  const end = running ? now : settledAt ? t(settledAt) : Number.isFinite(start) && durationMs !== null ? start + durationMs : Number.NaN
+  const elapsedMs = Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : (durationMs ?? 0)
   const deadline = t(clock?.deadlineAt)
   if (!Number.isFinite(deadline)) return { elapsedMs, leftMs: null, spanMs: null, used: null, deadlineAt: null }
   const span = clock?.spanMs ?? (Number.isFinite(start) ? deadline - start : null)
   const windowStart = span ? deadline - span : start
-  const leftMs = settledAt ? 0 : Math.max(0, deadline - now)
-  const used = span ? Math.min(1, Math.max(0, (end - windowStart) / span)) : null
+  const leftMs = running ? Math.max(0, deadline - now) : 0
+  const used = span && Number.isFinite(end) ? Math.min(1, Math.max(0, (end - windowStart) / span)) : null
   return { elapsedMs, leftMs, spanMs: span, used, deadlineAt: clock!.deadlineAt }
 }
 
@@ -328,7 +335,7 @@ export function missingChecks(releases: Releases | null): MissingCheck[] {
   const evidence = releases.evidence[best.name] ?? {}
   const order = ['exact', 'heldOut', 'referee', 'judge']
   return best.results
-    .filter(([, , pass]) => !pass)
+    .filter(([, , pass]) => pass === false)
     .map(([id, tier]) => {
       const track = scored.map((tag) => {
         const found = tag.results.find(([check]) => check === id)
@@ -565,7 +572,8 @@ export function lineageSegments(segments: Segment[], releases: Releases | null, 
       tags: tags.map((tag) => tag.name),
       bestTag: top,
       improved,
-      tokens: meterTotal(segment.meter),
+      // A meter whose turns carried no counts measured nothing.
+      tokens: segment.meter && (segment.meter.tokensKnown || meterTotal(segment.meter)) ? meterTotal(segment.meter) : null,
       apiUsd: segment.apiEquivalentUsd?.usd ?? null,
       billedUsd: segment.billedUsd?.usd ?? null,
     }

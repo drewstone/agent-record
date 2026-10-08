@@ -170,3 +170,17 @@ test('data quality is one line that names what the record could not measure and 
   assert.equal(quality.reasons.length, 3)
   assert.equal(dataQuality({ capture: { complete: 3, lossy: 0, absent: 0 }, agents: 3, metered: 3, priced: 3, live: false, unpricedModels: [] }), null)
 })
+
+test('review findings: unscored checks, settled clocks, bad times and unmeasured meters never read as facts', async () => {
+  const { utcDay } = await import('../src/workspace/run-story.ts')
+  assert.equal(utcDay('not a time'), '')
+  // A settled run without a settle time stops at its recorded duration, not at now.
+  const settled = clockView(null, at(0), null, Date.parse(at(10)), false, H)
+  assert.equal(settled.elapsedMs, H)
+  // An evaluator error is not a failed check.
+  const errored = { ...releases, tags: releases.tags.map((item) => (item.name === 'rc2' ? { ...item, results: [...item.results, ['monte-carlo', 'exact', null, null]] } : item)) }
+  assert.ok(!missingChecks(errored).some((row) => row.id === 'monte-carlo'))
+  const unmeasured = lineageSegments([{ runId: 'play-20261007e', state: 'unknown', startedAt: null, settledAt: null, from: null, forkedAt: null, sourceCommit: null,
+    meter: { tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, tokensKnown: false, turns: 1, usd: null, at: null }, series: [], apiEquivalentUsd: null, billedUsd: null }], null, 'x', 'play')
+  assert.equal(unmeasured[0].tokens, null)
+})
