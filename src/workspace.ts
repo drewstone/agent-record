@@ -237,6 +237,22 @@ export const playsDocumentSchema = z
 
 export const lineageEdgeKinds = ['supersedes', 'continues', 'retry', 'version'] as const
 
+/** One outside review of one precise claim on a knowledge page. A page can carry several distinct claims. */
+export const scientificReviewSchema = z.object({
+  method: z.literal('scientific'),
+  dimension: z.literal('claim-review'),
+  status: z.enum(['decided', 'unresolved', 'stale']),
+  label: z.string().nullable().optional(),
+  confidence: z.union([z.number(), z.string()]).nullable().optional(),
+  claim: z.string(),
+  subject: z.object({ pageSha256: z.string(), claimId: z.string(), pagePath: z.string().optional() }).catchall(z.unknown()),
+  rerun: z.object({ status: z.string(), command: z.string().nullable().optional(), output: z.string().nullable().optional(), description: z.string().nullable().optional() }).catchall(z.unknown()).optional(),
+  priorArt: z.object({ status: z.string(), summary: z.string().nullable().optional(), references: z.array(z.object({ title: z.string(), url: z.string(), resolvesClaim: z.string().optional() }).catchall(z.unknown())) }).catchall(z.unknown()).optional(),
+  rationale: z.string().nullable().optional(),
+  source: z.union([z.string(), z.record(z.string(), z.unknown())]).nullable().optional(),
+  sourceRef: z.string().nullable().optional(),
+}).catchall(z.unknown())
+
 /** One result or claim an agent wrote, as the findings feed and a play's results list it. */
 export const feedItemSchema = z
   .object({
@@ -253,6 +269,7 @@ export const feedItemSchema = z
     class: z.string().nullable(),
     ledger: z.boolean(),
     sha256: z.string(),
+    reviews: z.array(scientificReviewSchema).optional(),
   })
   .catchall(z.unknown())
 
@@ -575,6 +592,8 @@ export const findingItemSchema = z
     uncaptured: z.boolean(),
     bytes: z.number().int(),
     sha256: z.string(),
+    /** Independent reviews of precise claims on this page; empty or absent means no outside verdict yet. */
+    reviews: z.array(scientificReviewSchema).optional(),
   })
   .catchall(z.unknown())
 
@@ -1209,6 +1228,7 @@ export type RunDocument = z.infer<typeof runDocumentSchema>
 export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type Findings = z.infer<typeof findingsSchema>
+export type ScientificReview = z.infer<typeof scientificReviewSchema>
 export type FindingsFeedDocument = z.infer<typeof findingsFeedSchema>
 export type FeedItem = z.infer<typeof feedItemSchema>
 
