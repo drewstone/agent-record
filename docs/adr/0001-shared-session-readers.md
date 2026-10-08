@@ -1,0 +1,3 @@
+# 0001: Shared session readers and an anchored record
+
+`agent-record.v1` anchors published event IDs to original file bytes, while `@tangle-network/harness-sessions` owns native harness parsing and `@tangle-network/traces` owns span conversion, session relationships and provenance. Agent-record will keep the anchored record as its one visualization model, add optional typed claim/verdict/publication/profile fields, and project shared session and trace output into that model without parsing another native format. The current publication converter remains until shared readers expose enough source location data to reproduce every `anchor.v1` ID and the published-record verification passes; silently changing those IDs would break durable links and review overlays.
