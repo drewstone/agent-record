@@ -34,6 +34,7 @@ import { RunProgressView } from './workspace/RunProgress.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
+import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
 import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
 
@@ -837,7 +838,36 @@ function RunPage({ api, id }: { api: string; id: string }) {
         ) : (
           <p className="ws-status run-panel">No knowledge pages were recorded for this run. Its agents are under Agents.</p>
         ))}
-      {section === 'graph' && <WorkGraph doc={doc} runUrl={runUrl} onOpen={openFinding} />}
+      {section === 'graph' && (
+        <>
+          <div className="graph-modes" role="group" aria-label="Graph view">
+            {(
+              [
+                ['work', 'Work'],
+                ['provenance', 'Provenance'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`run-tab ${(params.get('graph') === 'provenance' ? 'provenance' : 'work') === value ? 'on' : ''}`}
+                aria-pressed={(params.get('graph') === 'provenance' ? 'provenance' : 'work') === value}
+                data-graph-mode={value}
+                onClick={() => update({ section: 'graph', graph: value === 'work' ? undefined : value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {params.get('graph') === 'provenance' ? (
+            <section className="run-panel run-profiles" aria-label="Provenance">
+              <ProvenanceCanvas doc={doc} onOpenPage={openFinding} />
+            </section>
+          ) : (
+            <WorkGraph doc={doc} runUrl={runUrl} onOpen={openFinding} />
+          )}
+        </>
+      )}
       {section === 'versions' && (
         <RunVersions
           runUrl={runUrl}
