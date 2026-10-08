@@ -13,7 +13,7 @@ import type { FindingItem, Findings, Publication, ScientificReview } from '../wo
  */
 
 export type ProvenanceBand = 'run' | 'review' | 'publication'
-export type ProvenanceKind = 'agent' | 'page' | 'claim' | 'reviewer' | 'publication'
+export type ProvenanceKind = 'agent' | 'page' | 'claim' | 'gap' | 'reviewer' | 'publication'
 
 export interface ProvenanceNode {
   readonly id: string
@@ -31,6 +31,8 @@ export interface ProvenanceNode {
   readonly reviewer?: ProvenanceReviewer
   readonly publication?: Publication
   readonly agent?: { readonly id: string; readonly label: string; readonly parent: string | null }
+  /** The declared results and claims no outside review names yet, folded into one node. */
+  readonly gap?: readonly FindingItem[]
 }
 
 export interface ProvenanceClaim {
@@ -95,7 +97,7 @@ const COLUMNS: readonly { kind: ProvenanceKind; band: ProvenanceBand }[] = [
   { kind: 'reviewer', band: 'review' },
   { kind: 'publication', band: 'publication' },
 ]
-/** Pages drawn without a review or a citation: what the run itself declared as findings. */
+/** What the run itself declared as findings: drawn as one gap node when no review or citation names them. */
 const DECLARED = new Set(['result', 'claim'])
 
 export const VERDICTS = ['NEW', 'REPRODUCTION', 'KNOWN', 'UNVERIFIABLE', 'WRONG'] as const
@@ -146,11 +148,12 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
       reviewers.set(who.key, entry)
     }
 
-  // Pages: the run's declared results and claims, every reviewed page, and every page a publication cites.
+  // Pages: every reviewed page and every page a publication cites. The run's other declared results and claims are the
+  // gap: counted in one node, so a run with a hundred results stays readable and the unreviewed share stays visible.
   const citedPages = new Set(publications.flatMap((publication) => publication.cites.map((cite) => cite.pageSha256)))
-  const shownPages = items.filter(
-    (item) => DECLARED.has(item.kind) || (item.reviews?.length ?? 0) > 0 || citedPages.has(item.sha256) || [...claims.values()].some((claim) => claim.pageSha256 === item.sha256),
-  )
+  const reviewedPages = new Set([...claims.values()].map((claim) => claim.pageSha256))
+  const shownPages = items.filter((item) => reviewedPages.has(item.sha256) || citedPages.has(item.sha256))
+  const gap = items.filter((item) => DECLARED.has(item.kind) && !reviewedPages.has(item.sha256) && !citedPages.has(item.sha256))
   // A cited page the run's findings do not list is still drawn, by its digest, so a citation never points nowhere.
   const missing = [...citedPages].filter((sha) => !pages.has(sha))
 
@@ -184,7 +187,7 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
   const nodes: ProvenanceNode[] = []
   const edges: ProvenanceEdge[] = []
   const add = (node: Omit<ProvenanceNode, 'x' | 'y' | 'column' | 'band'>) => {
-    const column = COLUMNS.findIndex((entry) => entry.kind === node.kind)
+    const column = COLUMNS.findIndex((entry) => entry.kind === (node.kind === 'gap' ? 'claim' : node.kind))
     nodes.push({ ...node, column, band: COLUMNS[column]!.band, x: 0, y: 0 })
   }
   for (const id of agentOrder) {
@@ -216,6 +219,14 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
     })
     edges.push({ id: `page:${claim.pageSha256}->claim:${key}`, from: `page:${claim.pageSha256}`, to: `claim:${key}`, kind: 'states', crossesBoundary: false })
   }
+  if (gap.length)
+    add({
+      id: 'gap:unreviewed',
+      kind: 'gap',
+      title: `${gap.length} declared ${gap.length === 1 ? 'result' : 'results and claims'} with no outside verdict`,
+      sub: `${new Set(gap.map((item) => item.agent)).size} agents · not reviewed outside the run`,
+      gap,
+    })
   const reviewerList = [...reviewers.values()]
   for (const reviewer of reviewerList) {
     add({ id: `reviewer:${reviewer.key}`, kind: 'reviewer', title: reviewer.label, sub: [reviewer.harness, reviewer.model].filter(Boolean).join(' · ') || reviewer.kind || 'reviewer', reviewer })

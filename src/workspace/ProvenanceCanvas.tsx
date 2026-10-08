@@ -205,7 +205,7 @@ function ProvenanceInspector({ model, node, onChoose, onOpenPage }: { model: Pro
   return (
     <div className="inspector" data-provenance-inspector={node.kind}>
       <header className="inspector-head">
-        <h2>{node.kind === 'claim' ? 'Claim' : node.title}</h2>
+        <h2>{node.kind === 'claim' ? 'Claim' : node.kind === 'gap' ? 'Not reviewed yet' : node.title}</h2>
         <span className="chip">{node.kind}</span>
         {node.disagree && <span className="chip pv-disagree-text">reviewers disagree</span>}
       </header>
@@ -257,6 +257,19 @@ function ProvenanceInspector({ model, node, onChoose, onOpenPage }: { model: Pro
         </div>
       )}
       {node.kind === 'agent' && node.agent && <p className="faint mono">{node.agent.id}</p>}
+      {node.kind === 'gap' && node.gap && (
+        <>
+          <p className="faint">The run declared these as results or claims; no review outside the run names them yet, so they carry no verdict.</p>
+          <ul className="pc-members">
+            {node.gap.map((item) => (
+              <li key={item.sha256}>
+                <button type="button" className="link-button" onClick={() => onOpenPage(item.sha256)}>{item.title ?? item.path}</button>{' '}
+                <span className="faint">{item.kind} · {item.agentLabel ?? item.agent}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {(['from', 'to'] as const).map((side) => {
         const list = linked(side)
         if (!list.length) return null

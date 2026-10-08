@@ -2775,3 +2775,5 @@
 .ar-ws .pc-edge.pv-edge-spawned { stroke-dasharray: 4 4; }
 .ar-ws .pv-review { border-left: 3px solid var(--ar-border-strong); padding: 2px 0 2px 12px; display: grid; gap: 4px; }
 .ar-ws .pv-review p { margin: 0; }
+.ar-ws .pv-gap { border-style: dashed; background: transparent; }
+.ar-ws .pv-mark-gap { background: transparent; box-shadow: inset 0 0 0 2px var(--ar-fg-faint); border-radius: 50%; }
