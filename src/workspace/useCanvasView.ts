@@ -221,7 +221,10 @@ export function useCanvasView({
     moveFocus,
     /** True while the click in flight ends a drag; a node's click handler ignores it. */
     wasDragged: () => dragged.current,
-    register: (id: string) => (element: HTMLButtonElement | null) => (element ? buttons.current.set(id, element) : buttons.current.delete(id)),
+    register: (id: string) => (element: HTMLButtonElement | null) => {
+      if (element) buttons.current.set(id, element)
+      else buttons.current.delete(id)
+    },
     zoomIn: () => zoomCentre(1.25),
     zoomOut: () => zoomCentre(0.8),
     fit: () => setView(fitView()),
