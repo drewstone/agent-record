@@ -35,6 +35,8 @@ test('bundle graph joins precise evidence by recorded identifiers only', () => {
   const graph = recordWorkGraphModel(record)
   const edges = new Set(graph.edges.map(({ from, to, kind }) => `${from}>${to}:${kind}`))
   assert.equal(graph.nodes.length, 12)
+  assert.ok(edges.has('run:run-1>node:reviewer:contains'))
+  assert.ok(!edges.has('run:run-1>node:child:contains'))
   assert.ok(edges.has('node:reviewer>node:child:parent'))
   assert.ok(edges.has(`artifact:page-a>claim:${pageA}#C1:states`))
   assert.ok(edges.has(`node:reviewer>verdict:v1:reviewed`))

@@ -127,7 +127,8 @@ export function recordWorkGraphModel(record: RunRecord): WorkGraphModel {
   }
   for (const node of record.nodes) {
     if (node.parent) link(`node:${node.parent}`, `node:${node.id}`, 'parent')
-    else if (node.kind === 'agent' && node.id === record.runId) link(`run:${record.runId}`, `node:${node.id}`, 'run')
+    // Container membership is recorded by the record itself. It does not imply a native parent session.
+    else link(`run:${record.runId}`, `node:${node.id}`, 'contains')
   }
   for (const artifact of record.artifacts ?? []) {
     add(3, `artifact:${artifact.id}`, 'artifact', artifact.title || artifact.id, artifact.kind, artifact.digest)
@@ -175,6 +176,7 @@ export function recordWorkGraphModel(record: RunRecord): WorkGraphModel {
     height: Math.max(1, ...groups.map((group) => group.length)) * LANE_H + 54,
     title: 'Record graph', summary,
     legend: [
+      { kind: 'contains', label: 'in this record' },
       { kind: 'parent', label: 'recorded parent' },
       { kind: 'states', label: 'states this claim' },
       { kind: 'reviewed', label: 'reviewed by this session' },

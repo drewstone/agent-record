@@ -2377,7 +2377,8 @@
 .ar-ws .edge-claim, .ar-ws .edge-result { stroke: var(--ws-accent); }
 .ar-ws .edge-check { stroke: var(--ar-c-ok); }
 .ar-ws .edge-source { stroke: var(--ar-info, var(--ar-c-info)); stroke-dasharray: 4 4; }
-.ar-ws .edge-parent, .ar-ws .edge-run { stroke: var(--ar-fg-muted); }
+.ar-ws .edge-parent { stroke: var(--ar-fg-muted); }
+.ar-ws .edge-contains { stroke: var(--ar-fg-faint); stroke-dasharray: 2 5; }
 .ar-ws .edge-wrote { stroke: var(--ar-info, var(--ar-c-info)); }
 .ar-ws .edge-states { stroke: var(--ws-accent); }
 .ar-ws .edge-reviewed, .ar-ws .edge-verdict { stroke: var(--ar-c-run); }
@@ -2402,6 +2403,7 @@
 .ar-ws .edge-swatch.edge-check { border-color: var(--ar-c-ok); }
 .ar-ws .edge-swatch.edge-source { border-color: var(--ar-info, var(--ar-c-info)); border-top-style: dashed; }
 .ar-ws .edge-swatch.edge-parent { border-color: var(--ar-fg-muted); }
+.ar-ws .edge-swatch.edge-contains { border-color: var(--ar-fg-faint); border-top-style: dashed; }
 .ar-ws .edge-swatch.edge-states { border-color: var(--ws-accent); }
 .ar-ws .edge-swatch.edge-reviewed, .ar-ws .edge-swatch.edge-verdict { border-color: var(--ar-c-run); }
 .ar-ws .edge-swatch.edge-cites { border-color: var(--ar-c-ok); border-top-style: dashed; }

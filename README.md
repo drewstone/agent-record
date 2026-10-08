@@ -92,7 +92,7 @@ Session projection event IDs use `shared-session.v1`, not publication `anchor.v1
 
 The Overview, run progress, and play charts use the live React renderers from `@tangle-network/charts`. Agent-record supplies the data, state colors, labels, links, and theme tokens; the shared package owns chart geometry, interaction, and CSS. The distributed `styles.css` includes the package's live chart stylesheet for hosts that load one renderer CSS file.
 
-`RecordWorkGraph` draws a validated `RunRecord` as one interactive entity and evidence graph. It shows the run, agents, sessions, artifacts, precise claims, verdicts, publications, and profile versions. Edges use only recorded parent IDs, page SHA-256 and claim IDs, reviewer session IDs, publication citations, and profile digests; absent targets remain unlinked. Events stay in the record viewer rather than becoming thousands of graph cards. The live run Work graph and this bundle graph share the profile canvas's pan, zoom, pinch, and keyboard engine.
+`RecordWorkGraph` draws a validated `RunRecord` as one interactive entity and evidence graph. It shows the run, agents, sessions, artifacts, precise claims, verdicts, publications, and profile versions. A dashed container edge attaches each root node to its record without claiming execution parentage. Other edges use only recorded parent IDs, page SHA-256 and claim IDs, reviewer session IDs, publication citations, and profile digests; absent targets remain unlinked. Events stay in the record viewer rather than becoming thousands of graph cards. The live run Work graph and this bundle graph share the profile canvas's pan, zoom, pinch, and keyboard engine.
 
 ```tsx
 import { RecordWorkGraph, type RunRecord } from '@drewstone/agent-record'
