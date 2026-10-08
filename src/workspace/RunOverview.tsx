@@ -345,6 +345,11 @@ function Deliverable({ doc, releases, best, play }: { doc: Doc; releases: Releas
         ))}
         <a className="rs-file subtle" href={receipt.href} target="_blank" rel="noopener noreferrer">Receipt</a>
       </div>
+      {best && best.name !== receipt.tag && (
+        <p className="rs-receipt-lag" role="status" data-receipt-lag>
+          {best.name} now scores better ({scoreWords(best.vector)}); its receipt is not written yet, so this is {receipt.tag}, the newest version with one.
+        </p>
+      )}
       {summary && (
         <blockquote className="rs-summary">
           {receipt.summary?.heading && <h3>{receipt.summary.heading}</h3>}
