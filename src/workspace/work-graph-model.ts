@@ -168,7 +168,7 @@ export function recordWorkGraphModel(record: RunRecord): WorkGraphModel {
   // Empty columns stay out of the view; the positions of present columns remain stable across records.
   const nodes = groups.flat()
   const last = used.at(-1)?.index ?? 0
-  const summary = `${record.nodes.filter((node) => node.kind === 'session').length} sessions · ${record.claims?.length ?? 0} claims · ${record.verdicts?.length ?? 0} verdicts · ${edges.length} recorded links`
+  const summary = `${record.nodes.filter((node) => node.kind === 'session').length} sessions · ${record.claims?.length ?? 0} claims · ${record.verdicts?.length ?? 0} verdicts · ${edges.length} links (${edges.filter((edge) => edge.kind === 'contains').length} record memberships)`
   return {
     nodes, edges, byId, laneLabels: [],
     columnLabels: used.map(({ index }) => ({ label: columns[index]!, x: LABEL_W + index * COL_W })),
