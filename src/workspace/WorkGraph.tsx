@@ -1,29 +1,12 @@
-import { useMemo, useState } from 'react'
-import type { FindingItem, RunDocument } from '../workspace.js'
+import { useCallback, useMemo, useState } from 'react'
+import type { RunRecord } from '../record.js'
+import type { RunDocument } from '../workspace.js'
 import { PageReader } from './Findings.js'
-
-const SHOWN_KINDS = new Set(['result', 'claim', 'check'])
-const PER_LANE = 14
-const LABEL_W = 156
-const COL_W = 236
-const NODE_W = 204
-const NODE_H = 62
-const LANE_H = 104
-const SOURCES_SHOWN = 10
-
-interface GraphNode {
-  id: string
-  kind: string
-  title: string
-  sub: string
-  x: number
-  y: number
-  item: FindingItem | null
-  href?: string | null
-}
-
-const clock = (value: string | null | undefined) => (value ? `${value.slice(11, 16)} UTC` : 'time unknown')
-const short = (label: string | null | undefined) => (label ? label.split(' · ')[0]! : 'agent')
+import { CanvasControls } from './ProfileCanvas.js'
+import { useCanvasView } from './useCanvasView.js'
+import type { ArrowKey } from './useCanvasView.js'
+import { LANE_H, NODE_H, NODE_W, PER_LANE, runWorkGraphModel, recordWorkGraphModel } from './work-graph-model.js'
+import type { GraphNode, WorkGraphModel } from './work-graph-model.js'
 
 /**
  * The run's work graph: each agent's results, claims and checks on its own lane in the order it wrote them, the papers
@@ -31,57 +14,58 @@ const short = (label: string | null | undefined) => (label ? label.split(' · ')
  * (citations[].citedBy). Selecting a page lights its neighbours and opens it beside the graph.
  */
 export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: string; onOpen: (sha: string) => void }) {
-  const findings = doc.findings
-  const [selected, setSelected] = useState<string | null>(null)
-  const [hovered, setHovered] = useState<string | null>(null)
-  const graph = useMemo(() => {
-    if (!findings) return null
-    const lanes = [...new Set(findings.items.filter((item) => SHOWN_KINDS.has(item.kind)).map((item) => item.agent ?? 'unknown'))]
-      // The root first: its id is the run id, which every child id extends.
-      .sort((a, b) => a.length - b.length || a.localeCompare(b))
-    const citations = (findings.sources.citations ?? []).slice(0, SOURCES_SHOWN)
-    const nodes: GraphNode[] = []
-    const top = citations.length ? 1 : 0
-    citations.forEach((citation, col) =>
-      nodes.push({
-        id: `cite:${citation.kind}:${citation.id}`,
-        kind: 'source',
-        title: citation.kind === 'arxiv' ? `arXiv ${citation.id}` : citation.id,
-        sub: `${citation.mentions} mention${citation.mentions === 1 ? '' : 's'}`,
-        x: LABEL_W + col * COL_W,
-        y: 21,
-        item: null,
-        href: citation.kind === 'arxiv' ? `https://arxiv.org/abs/${citation.id}` : citation.kind === 'iacr' ? `https://eprint.iacr.org/${citation.id}` : citation.kind === 'doi' ? `https://doi.org/${citation.id}` : null,
-      }),
-    )
-    const hidden: Record<string, number> = {}
-    const laneLabels: { label: string; y: number }[] = []
-    lanes.forEach((agent, lane) => {
-      const items = findings.items
-        .filter((item) => (item.agent ?? 'unknown') === agent && SHOWN_KINDS.has(item.kind))
-        .sort((a, b) => (a.at ?? '9').localeCompare(b.at ?? '9'))
-      const y = (lane + top) * LANE_H + 21
-      laneLabels.push({ label: short(items[0]?.agentLabel ?? agent), y })
-      if (items.length > PER_LANE) hidden[agent] = items.length - PER_LANE
-      items.slice(0, PER_LANE).forEach((item, col) =>
-        nodes.push({ id: item.sha256, kind: item.kind, title: item.title, sub: `${short(item.agentLabel)} · ${clock(item.at)}`, x: LABEL_W + col * COL_W, y, item }),
-      )
-    })
-    const byId = new Map(nodes.map((node) => [node.id, node]))
-    const edges: { from: string; to: string; kind: string }[] = []
-    for (const link of findings.links ?? []) if (byId.has(link.from) && byId.has(link.to)) edges.push({ from: link.from, to: link.to, kind: byId.get(link.to)!.kind })
-    for (const citation of citations)
-      for (const sha of (citation.citedBy as string[] | undefined) ?? [])
-        if (byId.has(sha)) edges.push({ from: `cite:${citation.kind}:${citation.id}`, to: sha, kind: 'source' })
-    const cols = Math.max(1, ...nodes.map((node) => Math.round((node.x - LABEL_W) / COL_W) + 1))
-    return { nodes, edges, byId, laneLabels, sourcesLane: !!top, hidden, width: LABEL_W + cols * COL_W + 24, height: (lanes.length + top) * LANE_H + 8 }
-  }, [findings])
-  if (!findings || !graph || !graph.nodes.length)
+  const graph = useMemo(() => doc.findings ? runWorkGraphModel(doc.findings) : null, [doc.findings])
+  if (!graph || !graph.nodes.length)
     return <p className="ws-status run-panel">No results, claims or checks were written, so there is no graph to draw.</p>
-  const focus = hovered ?? selected
+  return <WorkGraphCanvas graph={graph} runUrl={runUrl} onOpen={onOpen} />
+}
+
+/** Draw a combined multi-harness record with the same interaction engine as the live run graph. */
+export function RecordWorkGraph({ record }: { record: RunRecord }) {
+  const graph = useMemo(() => recordWorkGraphModel(record), [record])
+  return <div className="agent-record ar-ws"><WorkGraphCanvas graph={graph} /></div>
+}
+
+function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; runUrl?: string; onOpen?: (sha: string) => void }) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const selectedId = selected && graph.byId.has(selected) ? selected : null
+  const box = useCallback((id: string) => {
+    const node = graph.byId.get(id)
+    return node ? { x: node.x, y: node.y, w: NODE_W, h: NODE_H } : null
+  }, [graph])
+  const neighbour = useCallback((id: string, key: ArrowKey) => {
+    const from = graph.byId.get(id)
+    if (!from) return null
+    const horizontal = key === 'ArrowLeft' || key === 'ArrowRight'
+    const sign = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1
+    return graph.nodes
+      .filter((node) => node.id !== id && (horizontal ? (node.x - from.x) * sign > 0 : (node.y - from.y) * sign > 0))
+      .sort((a, b) => {
+        // Stay on the same lane or column when possible, then take the nearest card in that direction.
+        const score = (node: GraphNode) => horizontal
+          ? Math.abs(node.y - from.y) * 4 + Math.abs(node.x - from.x)
+          : Math.abs(node.x - from.x) * 4 + Math.abs(node.y - from.y)
+        return score(a) - score(b) || a.id.localeCompare(b.id)
+      })[0]?.id ?? null
+  }, [graph])
+  const first = graph.nodes[0]
+  const canvas = useCanvasView({
+    width: graph.width,
+    height: graph.height,
+    box,
+    focus: first?.id ?? null,
+    selectedId,
+    neighbour,
+    open: (size, fit) => {
+      if (fit.k >= 0.65 || !first) return null
+      const k = 0.85
+      return { k, x: 24 - first.x * k, y: Math.min(32, size.h / 3) - first.y * k }
+    },
+  })
+  const focus = canvas.hover ?? selectedId
   const near = new Set<string>(focus ? [focus] : [])
   if (focus) for (const edge of graph.edges) if (edge.from === focus || edge.to === focus) near.add(edge.from === focus ? edge.to : edge.from)
-  const chosen = selected ? graph.byId.get(selected) : null
+  const chosen = selectedId ? graph.byId.get(selectedId) : null
   const path = (from: GraphNode, to: GraphNode) => {
     const sameLane = from.y === to.y
     if (sameLane) {
@@ -100,16 +84,17 @@ export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: s
     return `M ${x1} ${y1} C ${x1} ${y1 + bend}, ${x2} ${y2 - bend}, ${x2} ${y2}`
   }
   return (
-    <section className="work-graph" aria-label="Work graph" data-work-graph={graph.nodes.length}>
+    <section className="work-graph" aria-label={graph.title} data-work-graph={graph.nodes.length} data-graph-kind={runUrl ? 'run' : 'record'}>
       <div className="graph-main">
         <div className="graph-head">
-          <h2 className="kicker tone-finding">Work graph</h2>
+          <h2 className="kicker tone-finding">{graph.title}</h2>
           <span className="faint">
-            {graph.nodes.filter((node) => node.item).length} pages · {graph.edges.length} links · edges are pages naming pages and pages citing papers
+            {graph.summary}
           </span>
+          <CanvasControls canvas={canvas} selectedId={selectedId} />
         </div>
-        <div className="graph-scroll">
-          <div className="graph-canvas" style={{ width: graph.width, height: graph.height }}>
+        <div {...canvas.viewportProps} className="graph-viewport pc-viewport" data-zoom={canvas.k.toFixed(2)}>
+          <div className="graph-canvas pc-world" style={canvas.worldStyle}>
             {graph.sourcesLane && <div className="graph-lane sources" style={{ top: 4, height: LANE_H - 8 }} />}
             {graph.laneLabels.map((lane, i) => (
               <div key={lane.label + i} className="graph-lane" style={{ top: lane.y - 17, height: LANE_H - 8 }} />
@@ -119,25 +104,35 @@ export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: s
                 const from = graph.byId.get(edge.from)!
                 const to = graph.byId.get(edge.to)!
                 const lit = !focus || edge.from === focus || edge.to === focus
-                return <path key={i} d={path(from, to)} className={`edge edge-${edge.kind} ${lit ? 'lit' : 'dim'}`} />
+                return <path key={i} data-graph-edge-kind={edge.kind} d={path(from, to)} className={`edge edge-${edge.kind} ${lit ? 'lit' : 'dim'}`} />
               })}
             </svg>
             {graph.sourcesLane && <span className="graph-lane-label" style={{ top: 30 }}>Sources</span>}
+            {graph.columnLabels.map((column) => <span key={column.label} className="graph-column-label" style={{ left: column.x }}>{column.label}</span>)}
             {graph.laneLabels.map((lane, i) => (
               <span key={`l${i}`} className="graph-lane-label" style={{ top: lane.y + 8 }}>{lane.label}</span>
             ))}
             {graph.nodes.map((node) => (
               <button
                 key={node.id}
+                ref={(element) => { canvas.register(node.id)(element) }}
                 type="button"
-                className={`graph-node kind-${node.kind} ${selected === node.id ? 'on' : ''} ${focus && !near.has(node.id) ? 'dim' : ''}`}
+                data-graph-node-kind={node.kind}
+                data-graph-node-id={node.id}
+                className={`graph-node kind-${node.kind} ${selectedId === node.id ? 'on' : ''} ${focus && !near.has(node.id) ? 'dim' : ''}`}
                 style={{ left: node.x, top: node.y, width: NODE_W, height: NODE_H }}
                 title={node.title}
-                onClick={() => setSelected(selected === node.id ? null : node.id)}
-                onMouseEnter={() => setHovered(node.id)}
-                onMouseLeave={() => setHovered(null)}
-                onFocus={() => setHovered(node.id)}
-                onBlur={() => setHovered(null)}
+                tabIndex={canvas.current === node.id ? 0 : -1}
+                aria-pressed={selectedId === node.id}
+                onClick={() => {
+                  if (canvas.wasDragged()) return
+                  canvas.setActive(node.id)
+                  setSelected(selected === node.id ? null : node.id)
+                }}
+                onPointerEnter={() => canvas.setHover(node.id)}
+                onPointerLeave={() => canvas.setHover(null)}
+                onFocus={() => canvas.setHover(node.id)}
+                onBlur={() => canvas.setHover(null)}
               >
                 <span className="graph-node-title">{node.title}</span>
                 <span className="graph-node-sub">{node.sub}</span>
@@ -145,18 +140,17 @@ export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: s
             ))}
           </div>
         </div>
+        <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move between cards, Enter selects · 0 fits</p>
         {Object.keys(graph.hidden).length > 0 && (
           <p className="faint card-note">
             Each lane shows its first {PER_LANE} results, claims and checks; {Object.values(graph.hidden).reduce((a, b) => a + b, 0)} more are listed under Findings.
           </p>
         )}
         <div className="graph-legend">
-          <span><i className="edge-swatch edge-claim" />names a result or claim</span>
-          <span><i className="edge-swatch edge-check" />names a check</span>
-          <span><i className="edge-swatch edge-source" />cites a paper</span>
+          {graph.legend.map((entry) => <span key={entry.kind}><i className={`edge-swatch edge-${entry.kind}`} />{entry.label}</span>)}
         </div>
       </div>
-      <aside className="graph-side finding-card" aria-label="Selected page">
+      <aside className="graph-side finding-card" aria-label="Selected card">
         {chosen ? (
           chosen.item ? (
             <>
@@ -169,22 +163,24 @@ export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: s
                 {graph.edges.filter((edge) => edge.to === chosen.id).length} named by
               </div>
               <div className="finding-actions">
-                <button type="button" className="ui-button" onClick={() => onOpen(chosen.id)}>Open in findings</button>
+                {onOpen && <button type="button" className="ui-button" onClick={() => onOpen(chosen.id)}>Open in findings</button>}
               </div>
-              <PageReader href={`${runUrl}/page/${chosen.id}`} />
+              {runUrl && <PageReader href={`${runUrl}/page/${chosen.id}`} />}
             </>
           ) : (
             <>
-              <h3 className="kicker tone-info">Source</h3>
+              <h3 className="kicker tone-info">{chosen.kind}</h3>
               <div className="graph-side-title">{chosen.title}</div>
-              <div className="faint">{chosen.sub}, cited by {graph.edges.filter((edge) => edge.from === chosen.id).length} pages shown</div>
+              <div className="faint">{chosen.sub}</div>
+              {chosen.summary && <p className="finding-summary">{chosen.summary}</p>}
+              <div className="faint">{graph.edges.filter((edge) => edge.from === chosen.id).length} links out · {graph.edges.filter((edge) => edge.to === chosen.id).length} links in</div>
               {chosen.href && (
-                <a href={chosen.href} target="_blank" rel="noopener noreferrer">Open the paper ↗</a>
+                <a href={chosen.href} target="_blank" rel="noopener noreferrer">Open source ↗</a>
               )}
             </>
           )
         ) : (
-          <p className="faint">Select a page or a paper to see what it names, what names it, and its text.</p>
+          <p className="faint">Select a card to see its recorded relationships and details.</p>
         )}
       </aside>
     </section>
