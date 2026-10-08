@@ -130,6 +130,7 @@ export function OverviewPage({ api }: { api: string }) {
   const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
   const lostByDay = Object.entries(d.runs.lostByDay ?? {}).map(([cause, values], i) => ({ name: label(cause), color: LOSS_COLOR[i] ?? LOSS_COLOR.at(-1)!, values: cut(values) }))
   const startsByDay = days.map((_, i) => Object.values(runsByDay).reduce((sum, values) => sum + (values[i] ?? 0), 0))
+  const lostPerRun = days.map((_, i) => startsByDay[i] ? lostByDay.reduce((sum, cause) => sum + (cause.values[i] ?? 0), 0) / startsByDay[i]! : null)
   const findingsByDay = Object.fromEntries(Object.entries(d.findings.byDay).map(([k, v]) => [k, cut(v)]))
   const tokensByDay = { input: cut(d.tokens.byDay.input), output: cut(d.tokens.byDay.output), cacheRead: cut(d.tokens.byDay.cacheRead), cacheWrite: cut(d.tokens.byDay.cacheWrite) }
   const state = d.state
@@ -293,6 +294,9 @@ export function OverviewPage({ api }: { api: string }) {
           </ChartCard>
           <ChartCard title="Agent-hours lost per day, by cause" legend={lostByDay.map(({ name, color }) => ({ name, color }))} note={`Top five causes over ${range} days, plus other. Grouped by the day each run started.`}>
             {lostByDay.length ? <DayBars days={days} series={lostByDay} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
+          </ChartCard>
+          <ChartCard title="Lost hours per run started" note="Daily lost hours divided by all catalog runs started that day. A day without a start has no rate.">
+            {lostByDay.length ? <DayBars days={days} series={[{ name: 'lost hours per run', color: SERIES[0], values: lostPerRun }]} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
           </ChartCard>
         </div>
         <ChartCard
