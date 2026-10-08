@@ -52,7 +52,7 @@ export function fromHarnessSessions(sessions: readonly HarnessSession[], options
   const events: RunRecord['events'] = []
   const artifacts: RecordArtifact[] = []
   const gaps: Array<{ nodeId: string; code: string; detail: string }> = []
-  const sourceFiles = new Map<string, { path: string; sha256: string; bytes: number }>()
+  const sourceFiles = new Map<string, { path: string; sha256?: string; bytes: number }>()
   for (const session of sessions) {
     const id = key(session.harness, session.nativeSessionId)
     const rel = relationship.get(id)
@@ -78,7 +78,12 @@ export function fromHarnessSessions(sessions: readonly HarnessSession[], options
       ...(parent ? { joinBasis: 'recorded-session-id', joinProof: { parentNativeSessionId: parentNativeId } } : {}),
       capture: { channel: 'harness-sessions', status: captureStatus, reason: captureStatus === 'complete' ? null : 'native-session-integrity' },
     })
-    for (const source of session.integrity.sourceFiles) sourceFiles.set(`${source.path}\0${source.sha256}`, source)
+    for (const source of session.integrity.sourceFiles) {
+      // harness-sessions uses a prefixed digest; agent-record's source contract stores bare hex.
+      const digest = /^sha256:([0-9a-f]{64})$/.exec(source.sha256)?.[1]
+      sourceFiles.set(`${source.path}\0${source.sha256}`, { path: source.path, ...(digest ? { sha256: digest } : {}), bytes: source.bytes })
+      if (!digest) gaps.push({ nodeId: id, code: 'source-digest-unavailable', detail: `No valid digest for ${source.path}` })
+    }
     for (const item of session.integrity.gaps)
       gaps.push({ nodeId: id, code: 'native-session-gap', detail: item })
     if (session.integrity.unparsedRecords)
