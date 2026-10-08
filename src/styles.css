@@ -2794,3 +2794,52 @@
 .ar-ws .pv-review p { margin: 0; }
 .ar-ws .pv-gap { border-style: dashed; background: transparent; }
 .ar-ws .pv-mark-gap { background: transparent; box-shadow: inset 0 0 0 2px var(--ar-fg-faint); border-radius: 50%; }
+
+/* ---- A play's story: the lineage canvas (shared canvas engine), the selected run's fork, the deliverable timeline. */
+.ar-ws .lineage-story { display: grid; gap: 14px; }
+.ar-ws .ln-layout { height: min(78vh, 760px); min-height: 520px; }
+.ar-ws .ln-node { grid-template-rows: auto auto auto auto auto; gap: 2px; padding: 8px 12px; }
+.ar-ws .ln-node .pc-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .ln-state { display: flex; align-items: center; gap: 8px; }
+.ar-ws .ln-edge-label { max-width: 184px; }
+.ar-ws .ln-edge-label small { max-width: 172px; }
+.ar-ws .ln-node .pc-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .ln-costs { font-size: 11.5px; }
+.ar-ws .pc-edge.ln-edge-fork { stroke: var(--ar-fg-muted); stroke-width: 2.6; }
+.ar-ws .pc-edge.ln-edge-continues, .ar-ws .pc-edge.ln-edge-retry { stroke-dasharray: 3 5; }
+.ar-ws .pc-edge.into { stroke: var(--ws-accent); }
+.ar-ws .ln-edge-label.ln-fork { color: var(--ar-fg); border-color: var(--ar-border-strong); }
+.ar-ws .ln-detail { display: grid; gap: 10px; }
+.ar-ws .ln-detail h2 { margin: 0; font-size: var(--ar-text-l); }
+.ar-ws .ln-detail h3 { margin: 6px 0 0; font-size: var(--ar-text-m); }
+.ar-ws .ln-detail p { margin: 0; }
+.ar-ws .ln-fork { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--ar-border); border-radius: 8px; background: var(--ar-raised, var(--ws-raised)); }
+.ar-ws .ln-why { margin: 0; padding: 6px 10px; border-left: 3px solid var(--ws-accent); color: var(--ar-fg); }
+.ar-ws .ln-why cite { display: block; font-style: normal; font-size: var(--ar-text-s); }
+.ar-ws .ln-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+.ar-ws .ln-facts dt { color: var(--ar-fg-muted); }
+.ar-ws .ln-facts dd { margin: 0; display: grid; gap: 2px; }
+.ar-ws .ln-profiles ul, .ar-ws .ln-paths, .ar-ws .ln-releases { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: var(--ar-text-s); }
+.ar-ws .ln-paths { list-style: none; padding-left: 0; overflow-wrap: anywhere; }
+.ar-ws .ln-status { display: inline-block; width: 1.4em; font-weight: 700; }
+.ar-ws .ln-status.ln-added { color: var(--ar-c-ok); }
+.ar-ws .ln-status.ln-deleted { color: var(--ar-c-fail); }
+.ar-ws .ln-fork-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: var(--ar-text-s); }
+.ar-ws .ln-timeline { display: grid; gap: 8px; }
+.ar-ws .ln-timeline h3 { margin: 0; }
+.ar-ws .ln-matrix th button { display: grid; justify-items: center; gap: 1px; text-decoration: none; }
+.ar-ws .ln-matrix thead th.on { background: color-mix(in srgb, var(--ws-accent) 14%, transparent); }
+.ar-ws .ln-matrix tbody th { text-align: left; white-space: nowrap; }
+.ar-ws .ln-cell { text-align: center; color: var(--ws-accent); }
+.ar-ws .ln-cell.unknown { color: var(--ar-fg-faint); }
+.ar-ws .ln-judge { color: var(--ar-fg-muted); }
+.ar-ws .ln-release-detail { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--ar-border); border-radius: 8px; }
+.ar-ws .ln-release-detail .ln-release { list-style: none; }
+.ar-ws .play-story-link { margin: 0; }
+@media (max-width: 900px) {
+  .ar-ws .ln-layout { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .ar-ws .ln-layout .pc-pane { height: 62vh; min-height: 420px; border-right: 0; border-bottom: 1px solid var(--ar-border); }
+}
+.ar-ws .ln-record summary { font-weight: 600; }
+.ar-ws .edge-fork { stroke: var(--ws-accent); stroke-width: 2.4; }
+.ar-ws .edge-swatch.edge-fork { border-color: var(--ws-accent); }

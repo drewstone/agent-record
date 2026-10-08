@@ -129,6 +129,7 @@ export const stateClass = (state: string | null | undefined) => {
     case 'missing':
       return 'state-fail'
     case 'no-winner':
+    case 'abandoned':
       return 'state-warn'
     default:
       return 'state-unknown'

@@ -48,3 +48,15 @@ test('bundle graph joins precise evidence by recorded identifiers only', () => {
   assert.ok(!edges.has(`verdict:v1>claim:${pageB}#C1:verdict`))
   assert.ok(!edges.has(`artifact:page-b>claim:${pageA}#C1:states`))
 })
+
+test('a play record draws each fork between the runs its fork receipts join, and no fork whose run it lacks', () => {
+  const run = (id) => ({ id, label: id, parent: null, kind: 'agent' })
+  const record = {
+    schema: 'agent-record.v1', runId: 'play:p', title: 'p', events: [], sources: [],
+    nodes: [run('p-d'), run('p-e'), run('p-codex1')],
+    runs: [{ nodeId: 'p-d', runId: 'p-d', recordDigest: 'abc', href: '/run/p-d' }],
+    forks: [{ from: 'p-d', to: 'p-e', basis: 'fork.json' }, { from: 'p-e', to: 'p-codex1', basis: 'fork.json' }, { from: 'p-gone', to: 'p-d', basis: 'fork.json' }],
+  }
+  const graph = recordWorkGraphModel(record)
+  assert.deepEqual(graph.edges.filter((edge) => edge.kind === 'fork').map((edge) => [edge.from, edge.to]), [['node:p-d', 'node:p-e'], ['node:p-e', 'node:p-codex1']])
+})

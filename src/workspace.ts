@@ -112,7 +112,9 @@ export const recordStatusSchema = z
   })
   .catchall(z.unknown())
 
-const runState = z.enum(['running', 'winner', 'no-winner', 'failed', 'driver-failed', 'no-record', 'unknown'])
+// `abandoned`: the run never settled and Runtime reports its coordinator gone (discovery-lab run catalog); a run whose
+// cancellation Runtime acknowledged reads `failed` with the cancellation as its reason.
+const runState = z.enum(['running', 'winner', 'no-winner', 'failed', 'driver-failed', 'abandoned', 'no-record', 'unknown'])
 const runKey = z
   .object({ id: z.string(), name: z.string(), capUsd: usd, spentUsd: usd, final: z.boolean() })
   .catchall(z.unknown())
@@ -155,6 +157,9 @@ export const runSummarySchema = z
     purposeBasis: z.string().nullable().optional(),
     /** The results and claims its agents wrote, as last derived; null when not derived yet (unknown, not none). */
     findings: z.object({ results: z.number().int(), claims: z.number().int() }).catchall(z.unknown()).nullable().optional(),
+    /** The run it was forked from (fork.json), and the agent-hours its failures cost (0 when none were lost). */
+    forkedFrom: z.string().nullable().optional(),
+    lostHours: z.number().optional(),
   })
   .catchall(z.unknown())
 
@@ -235,7 +240,8 @@ export const playsDocumentSchema = z
   })
   .catchall(z.unknown())
 
-export const lineageEdgeKinds = ['supersedes', 'continues', 'retry', 'version'] as const
+/** `fork`: the run was forked from the other (its fork.json, discovery-lab runner/fork.mjs). */
+export const lineageEdgeKinds = ['supersedes', 'continues', 'retry', 'version', 'fork'] as const
 
 /** One outside review of one precise claim on a knowledge page. A page can carry several distinct claims. */
 export const scientificReviewSchema = z.object({
@@ -281,6 +287,61 @@ export const publicationSchema = z
     /** The session that wrote it, when recorded. */
     session: z.object({ harness: z.string().nullable().optional(), model: z.string().nullable().optional(), label: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
     cites: z.array(z.object({ pageSha256: z.string(), claimId: z.string().nullable().optional(), reviewer: z.string().nullable().optional() }).catchall(z.unknown())),
+  })
+  .catchall(z.unknown())
+
+const fileChanges = z
+  .object({
+    changed: z.number().int().nullable(),
+    added: z.number().int().nullable(),
+    deleted: z.number().int().nullable(),
+    insertions: z.number().int().nullable(),
+    deletions: z.number().int().nullable(),
+    paths: z.array(z.object({ status: z.string().nullable(), path: z.string().nullable() }).catchall(z.unknown())),
+  })
+  .catchall(z.unknown())
+const rootProfile = z
+  .object({ model: z.string().nullable(), provider: z.string().nullable(), reasoningEffort: z.string().nullable(), harness: z.string().nullable(), profile: z.string().nullable(), version: z.string().nullable() })
+  .catchall(z.unknown())
+export const forkSchema = z
+  .object({
+    from: z.string(),
+    to: z.string(),
+    at: time.nullable(),
+    /** The fork's stated reason (`record`: its registration) or the source's cancellation that preceded it. */
+    why: z.object({ reason: z.string().nullable(), at: time.nullable(), source: z.string().nullable() }).catchall(z.unknown()).nullable(),
+    root: z.object({ from: rootProfile.nullable(), to: rootProfile.nullable(), moved: z.array(z.string()) }).catchall(z.unknown()),
+    knowledge: z.object({ seed: z.string().nullable(), files: z.number().int().nullable(), bytes: z.number().int().nullable(), knowledgeRunId: z.string().nullable() }).catchall(z.unknown()),
+    inheritedTags: z.array(z.string()),
+    sourceCommit: z.string().nullable(),
+    forkCommit: z.string().nullable(),
+    files: fileChanges.nullable(),
+    profiles: z.array(
+      z
+        .object({ commit: z.string().nullable(), subject: z.string().nullable(), role: z.string().nullable(), status: z.string().nullable(), parent: z.string().nullable(), digest: z.string().nullable(), reason: z.string().nullable() })
+        .catchall(z.unknown()),
+    ),
+  })
+  .catchall(z.unknown())
+export const releaseSchema = z
+  .object({
+    id: z.string(),
+    tag: z.string(),
+    at: time,
+    commit: z.string().nullable(),
+    /** The run whose repository declared it, and the agent its tagger names. */
+    run: z.string(),
+    agent: z.string().nullable(),
+    declaredBy: z.string().nullable(),
+    previous: z.object({ tag: z.string().nullable(), run: z.string().nullable(), commit: z.string().nullable() }).catchall(z.unknown()).nullable(),
+    changes: fileChanges.nullable(),
+    /** The declared deliverables the change since the previous release touches; null when that change is unknown. */
+    deliverables: z.array(z.string()).nullable(),
+    /** The declaring run's own frozen evaluators: exact checks passed of total, held-out passed of total, judge 0–100. */
+    score: z
+      .object({ exact: z.tuple([z.number(), z.number()]).nullable(), heldOut: z.tuple([z.number(), z.number()]).nullable(), judge: z.number().nullable(), blockers: z.number().nullable(), complete: z.boolean(), scoredAt: time.nullable() })
+      .catchall(z.unknown())
+      .nullable(),
   })
   .catchall(z.unknown())
 
@@ -333,6 +394,12 @@ export const playDocumentSchema = z
     lineage: z.object({
       nodes: z.array(z.object({ runId: z.string(), state: runState, record: recordStatusSchema }).catchall(z.unknown())),
       edges: z.array(z.object({ from: z.string(), to: z.string(), kind: z.enum(lineageEdgeKinds) }).catchall(z.unknown())),
+      /** Each fork from its records (discovery-lab runner/play-lineage.mjs): why, what moved, what it carried, what changed. */
+      forks: z.array(forkSchema).optional(),
+      /** Every release across the play's lines, oldest first; two lines that forked can each have the same tag. */
+      releases: z.array(releaseSchema).optional(),
+      /** The deliverables the play declares, by id and path. */
+      deliverables: z.array(z.object({ id: z.string(), kind: z.string().nullable(), path: z.string() }).catchall(z.unknown())).optional(),
     }),
     spend: spendSchema,
     assessments: z.array(
@@ -1268,6 +1335,8 @@ export type ScientificReview = z.infer<typeof scientificReviewSchema>
 export type Publication = z.infer<typeof publicationSchema>
 export type FindingsFeedDocument = z.infer<typeof findingsFeedSchema>
 export type FeedItem = z.infer<typeof feedItemSchema>
+export type Fork = z.infer<typeof forkSchema>
+export type Release = z.infer<typeof releaseSchema>
 
 type Bin = { lo: number; hi: number; n: number }
 /** The Discovery overview (`agent-workspace.overview.v1`, served at `overview`): runs, findings, tokens, money, the

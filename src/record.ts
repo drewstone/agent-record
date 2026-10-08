@@ -73,6 +73,24 @@ const profileVersion = z.object({
   title: z.string().optional(),
 }).catchall(z.unknown())
 
+/** One run forked from another, joined by the fork's own receipt (`basis`, e.g. `fork.json`), never by name or time. */
+const fork = z.object({
+  /** The node of the run that was forked from, and the node of the run the fork made. */
+  from: z.string().min(1),
+  to: z.string().min(1),
+  basis: z.string().min(1),
+  at: time.nullish(),
+  reason: z.string().nullish(),
+  source: sourceSchema.nullish(),
+}).catchall(z.unknown())
+/** A run whose own record this record joins by reference: its node here, its record's digest and where to read it. */
+const runReference = z.object({
+  nodeId: z.string().min(1),
+  runId: z.string().min(1),
+  recordDigest: z.string().nullish(),
+  href: z.string().nullish(),
+}).catchall(z.unknown())
+
 export const recordSchema = z
   .object({
     schema: z.literal('agent-record.v1'),
@@ -187,6 +205,9 @@ export const recordSchema = z
     verdicts: z.array(verdict).optional(),
     publications: z.array(publication).optional(),
     profileVersions: z.array(profileVersion).optional(),
+    /** A play's record: the runs it joins by reference, and the forks between them. */
+    runs: z.array(runReference).optional(),
+    forks: z.array(fork).optional(),
     sources: z
       .array(
         sourceSchema.extend({ bytes: z.number().nonnegative().optional() }),
