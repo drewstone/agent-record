@@ -74,7 +74,8 @@ export function useCanvasView({
   const fitView = useCallback((): View | null => {
     if (!size) return null
     const k = clampK(Math.min((size.w - 32) / width, (size.h - 32) / height, 1))
-    return { k, x: (size.w - width * k) / 2, y: Math.max(8, (size.h - height * k) / 2) }
+    // Top-aligned: a short world in a tall viewport reads from the top, where the page shows it, not mid-screen.
+    return { k, x: (size.w - width * k) / 2, y: 16 }
   }, [size, width, height])
   const centred = useCallback(
     (id: string, k: number): View | null => {
@@ -221,7 +222,10 @@ export function useCanvasView({
     moveFocus,
     /** True while the click in flight ends a drag; a node's click handler ignores it. */
     wasDragged: () => dragged.current,
-    register: (id: string) => (element: HTMLButtonElement | null) => (element ? buttons.current.set(id, element) : buttons.current.delete(id)),
+    register: (id: string) => (element: HTMLButtonElement | null) => {
+      if (element) buttons.current.set(id, element)
+      else buttons.current.delete(id)
+    },
     zoomIn: () => zoomCentre(1.25),
     zoomOut: () => zoomCentre(0.8),
     fit: () => setView(fitView()),
