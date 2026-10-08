@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@tangle-network/harness-sessions':
+        specifier: 0.1.0
+        version: 0.1.0
       katex:
         specifier: ^0.19.0
         version: 0.19.0
@@ -38,7 +41,7 @@ importers:
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
         specifier: 6.1.1
-        version: 6.1.1(vite@8.3.2(@types/node@24.19.1))
+        version: 6.1.1(vite@8.3.2(@types/node@24.19.1)(yaml@2.9.1))
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -50,7 +53,7 @@ importers:
         version: 7.0.2
       vite:
         specifier: 8.3.2
-        version: 8.3.2(@types/node@24.19.1)
+        version: 8.3.2(@types/node@24.19.1)(yaml@2.9.1)
 
 packages:
 
@@ -149,6 +152,14 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@tangle-network/agent-trace-contract@2.0.0':
+    resolution: {integrity: sha512-lq2hp3gg8FsNVA3yZAyuj3NvL57pJTsI6sUF8cYwVsUXA8QZlrO78SqRPRslWxf/sMFHxXhusOuDQ3YxVv12bw==}
+
+  '@tangle-network/harness-sessions@0.1.0':
+    resolution: {integrity: sha512-yIRqrZerxRFl4WByFsRHob9Pq5XXh6wmtQRpTHZCjw2U0GyLDUWN+n0ohhfblKQays1t4pXvbuXz/uMSa9jzhA==}
+    engines: {node: '>=22.13.0'}
+    hasBin: true
 
   '@types/debug@4.1.13':
     resolution: {integrity: sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw==}
@@ -866,6 +877,11 @@ packages:
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
 
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
@@ -922,6 +938,12 @@ snapshots:
     optional: true
 
   '@rolldown/pluginutils@1.0.1': {}
+
+  '@tangle-network/agent-trace-contract@2.0.0': {}
+
+  '@tangle-network/harness-sessions@0.1.0':
+    dependencies:
+      '@tangle-network/agent-trace-contract': 2.0.0
 
   '@types/debug@4.1.13':
     dependencies:
@@ -1023,10 +1045,10 @@ snapshots:
 
   '@ungap/structured-clone@1.4.0': {}
 
-  '@vitejs/plugin-react@6.1.1(vite@8.3.2(@types/node@24.19.1))':
+  '@vitejs/plugin-react@6.1.1(vite@8.3.2(@types/node@24.19.1)(yaml@2.9.1))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.3.2(@types/node@24.19.1)
+      vite: 8.3.2(@types/node@24.19.1)(yaml@2.9.1)
 
   bail@2.0.2: {}
 
@@ -1851,7 +1873,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@8.3.2(@types/node@24.19.1):
+  vite@8.3.2(@types/node@24.19.1)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -1861,8 +1883,12 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.19.1
       fsevents: 2.3.3
+      yaml: 2.9.1
 
   web-namespaces@2.0.1: {}
+
+  yaml@2.9.1:
+    optional: true
 
   zod@4.6.5: {}
 

@@ -13,13 +13,14 @@ export default defineConfig({
         assessment: 'src/assessment.ts',
         'research-publication': 'src/adapters/research-publication.ts',
         'agent-runtime': 'src/adapters/agent-runtime.ts',
+        'harness-sessions': 'src/adapters/harness-sessions.ts',
         publication: 'src/publication.ts',
       },
       formats: ['es'],
       fileName: (_format, name) => `${name}.js`,
     },
     rolldownOptions: {
-      external: [/^node:/, 'react', 'react-dom', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
+      external: [/^node:/, /^@tangle-network\//, 'react', 'react-dom', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
     },
   },
 })

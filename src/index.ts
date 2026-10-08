@@ -9,6 +9,11 @@ export type {
   RecordNode,
   RecordEvent,
   RecordSelection,
+  RecordArtifact,
+  RecordClaim,
+  RecordVerdict,
+  RecordPublication,
+  RecordProfileVersion,
 } from './record.js'
 
 export { parseReportOptions, type ReportOptions } from './report-options.js'

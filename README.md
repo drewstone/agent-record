@@ -76,6 +76,20 @@ It does not review, redact, or sanitize private logs.
 Each node's capture channel and every missing transcript are recorded in the output.
 See [the record format](docs/record-format.md#agent-runtime-run-directories).
 
+### Shared native sessions
+
+Use `@tangle-network/harness-sessions` to read native Claude Code, Codex, OpenCode, Pi, Kimi and Factory sessions. Pass its normalized sessions to `fromHarnessSessions` for a browser-renderable record; pass recorded relationship facts from `@tangle-network/traces` when a workflow should draw parent edges. This projection does not parse a second native format or infer joins from names or time.
+
+```ts
+import { readerFor } from '@tangle-network/harness-sessions'
+import { fromHarnessSessions } from '@drewstone/agent-record/adapters/harness-sessions'
+
+const session = await readerFor('pi').read(ref)
+const record = fromHarnessSessions([session], { recordId: 'review-1', title: 'Review' })
+```
+
+Session projection event IDs use `shared-session.v1`, not publication `anchor.v1`. Keep the existing anchored converter for published research records until the shared readers expose equivalent source locations and publication verification passes. Review raw text and paths before serving the projection publicly.
+
 ## Run workspace
 
 `dist/workspace-viewer.js` renders a play page and a run page from a same-origin run workspace API, for example the Tangle Discovery wall:

@@ -30,6 +30,49 @@ const gap = z
   })
   .catchall(z.unknown())
 
+const pageSha256 = z.string().regex(/^[0-9a-f]{64}$/)
+const profileDigest = z.string().regex(/^sha256:[0-9a-f]{64}$/)
+/** These references are recorded by producers. A missing target stays unresolved; it is never joined by text or time. */
+const claimReference = z.object({ pageSha256, claimId: z.string().min(1) }).catchall(z.unknown())
+const artifact = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  title: z.string(),
+  digest: pageSha256.optional(),
+  sessionNodeId: z.string().optional(),
+  eventId: z.string().optional(),
+  source: sourceSchema.nullish(),
+}).catchall(z.unknown())
+const claim = claimReference.extend({
+  statement: z.string(),
+  agentNodeId: z.string().optional(),
+  eventId: z.string().optional(),
+  runId: z.string().optional(),
+}).catchall(z.unknown())
+const verdict = z.object({
+  id: z.string().min(1),
+  subject: claimReference,
+  reviewerSessionNodeId: z.string().min(1),
+  judgment: z.string().min(1),
+  at: time.nullish(),
+  eventId: z.string().optional(),
+}).catchall(z.unknown())
+const publication = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  title: z.string(),
+  url: z.url().nullish(),
+  sessionNodeId: z.string().optional(),
+  cites: z.array(claimReference.extend({ verdictId: z.string().optional() })),
+}).catchall(z.unknown())
+const profileVersion = z.object({
+  digest: profileDigest,
+  parents: z.array(profileDigest),
+  runId: z.string().optional(),
+  authorNodeId: z.string().optional(),
+  title: z.string().optional(),
+}).catchall(z.unknown())
+
 export const recordSchema = z
   .object({
     schema: z.literal('agent-record.v1'),
@@ -138,6 +181,12 @@ export const recordSchema = z
         })
         .catchall(z.unknown()),
     ),
+    /** Optional to keep existing v1 publication bytes and event anchors unchanged. */
+    artifacts: z.array(artifact).optional(),
+    claims: z.array(claim).optional(),
+    verdicts: z.array(verdict).optional(),
+    publications: z.array(publication).optional(),
+    profileVersions: z.array(profileVersion).optional(),
     sources: z
       .array(
         sourceSchema.extend({ bytes: z.number().nonnegative().optional() }),
@@ -242,6 +291,42 @@ export const recordSchema = z
           message: 'Published tool call IDs must be unique within an event',
         })
     }
+    const unique = (values: readonly string[], path: string) => {
+      if (new Set(values).size !== values.length)
+        ctx.addIssue({ code: 'custom', path: [path], message: `${path} identifiers must be unique` })
+    }
+    unique((record.artifacts ?? []).map((item) => item.id), 'artifacts')
+    unique((record.claims ?? []).map((item) => `${item.pageSha256}:${item.claimId}`), 'claims')
+    unique((record.verdicts ?? []).map((item) => item.id), 'verdicts')
+    unique((record.publications ?? []).map((item) => item.id), 'publications')
+    unique((record.profileVersions ?? []).map((item) => item.digest), 'profileVersions')
+    const events = new Set(record.events.map((event) => event.id))
+    for (const [i, item] of (record.artifacts ?? []).entries()) {
+      if (item.sessionNodeId && !nodes.has(item.sessionNodeId))
+        ctx.addIssue({ code: 'custom', path: ['artifacts', i, 'sessionNodeId'], message: 'Artifact session must exist in this record' })
+      if (item.eventId && !events.has(item.eventId))
+        ctx.addIssue({ code: 'custom', path: ['artifacts', i, 'eventId'], message: 'Artifact event must exist in this record' })
+    }
+    for (const [i, item] of (record.claims ?? []).entries()) {
+      if (item.agentNodeId && !nodes.has(item.agentNodeId))
+        ctx.addIssue({ code: 'custom', path: ['claims', i, 'agentNodeId'], message: 'Claim agent must exist in this record' })
+      if (item.eventId && !events.has(item.eventId))
+        ctx.addIssue({ code: 'custom', path: ['claims', i, 'eventId'], message: 'Claim event must exist in this record' })
+    }
+    for (const [i, item] of (record.verdicts ?? []).entries()) {
+      if (nodes.get(item.reviewerSessionNodeId)?.kind !== 'session')
+        ctx.addIssue({ code: 'custom', path: ['verdicts', i, 'reviewerSessionNodeId'], message: 'Verdict reviewer must be a session in this record' })
+      if (item.eventId && !events.has(item.eventId))
+        ctx.addIssue({ code: 'custom', path: ['verdicts', i, 'eventId'], message: 'Verdict event must exist in this record' })
+    }
+    for (const [i, item] of (record.publications ?? []).entries()) {
+      if (item.sessionNodeId && nodes.get(item.sessionNodeId)?.kind !== 'session')
+        ctx.addIssue({ code: 'custom', path: ['publications', i, 'sessionNodeId'], message: 'Publication session must exist in this record' })
+    }
+    for (const [i, item] of (record.profileVersions ?? []).entries()) {
+      if (item.authorNodeId && !nodes.has(item.authorNodeId))
+        ctx.addIssue({ code: 'custom', path: ['profileVersions', i, 'authorNodeId'], message: 'Profile author must exist in this record' })
+    }
   })
 
 export type RunRecord = z.infer<typeof recordSchema>
@@ -249,6 +334,11 @@ export type RecordCapture = z.infer<typeof capture>
 export type RecordGap = z.infer<typeof gap>
 export type RecordNode = RunRecord['nodes'][number]
 export type RecordEvent = RunRecord['events'][number]
+export type RecordArtifact = NonNullable<RunRecord['artifacts']>[number]
+export type RecordClaim = NonNullable<RunRecord['claims']>[number]
+export type RecordVerdict = NonNullable<RunRecord['verdicts']>[number]
+export type RecordPublication = NonNullable<RunRecord['publications']>[number]
+export type RecordProfileVersion = NonNullable<RunRecord['profileVersions']>[number]
 export interface RecordSelection {
   runId: string
   nodeId?: string
