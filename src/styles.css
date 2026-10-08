@@ -2364,18 +2364,25 @@
 .ar-ws .work-graph { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 26%); gap: 14px; align-items: start; min-width: 0; }
 .ar-ws .graph-main { display: grid; gap: 10px; padding: 16px 18px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; }
 .ar-ws .graph-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; font-size: var(--ar-text-s); }
-.ar-ws .graph-scroll { overflow: auto; max-height: calc(100vh - var(--ar-sticky-top, 8px) - var(--run-tabs-h) - 140px); border: 1px solid var(--ar-border); border-radius: 8px; background: var(--ar-background, var(--ar-bg)); }
-.ar-ws .graph-canvas { position: relative; }
+.ar-ws .graph-viewport { height: clamp(360px, 57vh, 620px); border: 1px solid var(--ar-border); border-radius: 8px; }
+.ar-ws .graph-canvas { position: absolute; }
 .ar-ws .graph-lane { position: absolute; left: 0; right: 0; border-bottom: 1px dashed color-mix(in srgb, var(--ar-border) 80%, transparent); }
 .ar-ws .graph-lane.sources { background: color-mix(in srgb, var(--ar-info, var(--ar-c-info)) 5%, transparent); }
 .ar-ws .graph-lane-label { position: absolute; left: 14px; width: 128px; font: 600 14px/1.3 var(--ar-font-body); color: var(--ar-fg-muted); overflow-wrap: anywhere; }
+.ar-ws .graph-column-label { position: absolute; top: 12px; width: 204px; color: var(--ar-fg-muted); font: 600 13px/1.3 var(--ar-font-body); }
 .ar-ws .graph-edges { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
-.ar-ws .graph-edges .edge { fill: none; stroke-width: 1.6; transition: opacity .12s ease; }
+.ar-ws .graph-edges .edge { fill: none; stroke: var(--ar-fg-faint); stroke-width: 1.6; transition: opacity .12s ease; }
 .ar-ws .graph-edges .edge.dim { opacity: .12; }
 .ar-ws .graph-edges .edge.lit { opacity: .85; }
 .ar-ws .edge-claim, .ar-ws .edge-result { stroke: var(--ws-accent); }
 .ar-ws .edge-check { stroke: var(--ar-c-ok); }
 .ar-ws .edge-source { stroke: var(--ar-info, var(--ar-c-info)); stroke-dasharray: 4 4; }
+.ar-ws .edge-parent { stroke: var(--ar-fg-muted); }
+.ar-ws .edge-contains { stroke: var(--ar-fg-faint); stroke-dasharray: 2 5; }
+.ar-ws .edge-wrote { stroke: var(--ar-info, var(--ar-c-info)); }
+.ar-ws .edge-states { stroke: var(--ws-accent); }
+.ar-ws .edge-reviewed, .ar-ws .edge-verdict { stroke: var(--ar-c-run); }
+.ar-ws .edge-cites { stroke: var(--ar-c-ok); stroke-dasharray: 4 4; }
 .ar-ws .graph-node { position: absolute; display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 2px; box-sizing: border-box; padding: 6px 10px; border: 1px solid var(--ar-border-strong); border-radius: 8px; background: var(--ar-raised, var(--ar-bg-alt)); color: var(--ar-fg); text-align: left; font: inherit; transition: opacity .12s ease, border-color .12s ease, transform .12s ease; }
 .ar-ws .graph-node:hover { transform: translateY(-1px); border-color: var(--ar-fg-faint); }
 .ar-ws .graph-node.dim { opacity: .35; }
@@ -2384,6 +2391,10 @@
 .ar-ws .graph-node.kind-claim { border-left: 3px solid color-mix(in srgb, var(--ws-accent) 60%, transparent); }
 .ar-ws .graph-node.kind-check { border-left: 3px solid var(--ar-c-ok); }
 .ar-ws .graph-node.kind-source { border-left: 3px solid var(--ar-info, var(--ar-c-info)); }
+.ar-ws .graph-node.kind-run, .ar-ws .graph-node.kind-agent, .ar-ws .graph-node.kind-session { border-left: 3px solid var(--ar-fg-muted); }
+.ar-ws .graph-node.kind-artifact, .ar-ws .graph-node.kind-finding { border-left: 3px solid var(--ar-info, var(--ar-c-info)); }
+.ar-ws .graph-node.kind-verdict { border-left: 3px solid var(--ar-c-run); }
+.ar-ws .graph-node.kind-publication, .ar-ws .graph-node.kind-profile { border-left: 3px solid var(--ar-c-ok); }
 .ar-ws .graph-node-title { width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 14px/1.3 var(--ar-font-body); }
 .ar-ws .graph-node-sub { display: block; width: 100%; font: 12px/1.3 var(--ar-font-mono); color: var(--ar-fg-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .graph-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--ar-fg-muted); }
@@ -2391,6 +2402,11 @@
 .ar-ws .edge-swatch.edge-claim { border-color: var(--ws-accent); }
 .ar-ws .edge-swatch.edge-check { border-color: var(--ar-c-ok); }
 .ar-ws .edge-swatch.edge-source { border-color: var(--ar-info, var(--ar-c-info)); border-top-style: dashed; }
+.ar-ws .edge-swatch.edge-parent { border-color: var(--ar-fg-muted); }
+.ar-ws .edge-swatch.edge-contains { border-color: var(--ar-fg-faint); border-top-style: dashed; }
+.ar-ws .edge-swatch.edge-states { border-color: var(--ws-accent); }
+.ar-ws .edge-swatch.edge-reviewed, .ar-ws .edge-swatch.edge-verdict { border-color: var(--ar-c-run); }
+.ar-ws .edge-swatch.edge-cites { border-color: var(--ar-c-ok); border-top-style: dashed; }
 .ar-ws .graph-side { position: sticky; top: calc(var(--ar-sticky-top, 8px) + var(--run-tabs-h) + 10px); max-height: calc(100vh - var(--ar-sticky-top, 8px) - var(--run-tabs-h) - 24px); overflow: auto; }
 .ar-ws .graph-side-title { font-weight: 650; overflow-wrap: anywhere; }
 @media (max-width: 1100px) {
