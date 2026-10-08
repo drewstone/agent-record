@@ -269,6 +269,7 @@ export const feedItemSchema = z
     class: z.string().nullable(),
     ledger: z.boolean(),
     sha256: z.string(),
+    artifacts: z.array(z.object({ path: z.string(), storePath: z.string(), href: z.string() })).optional(),
     reviews: z.array(scientificReviewSchema).optional(),
   })
   .catchall(z.unknown())
@@ -592,6 +593,8 @@ export const findingItemSchema = z
     uncaptured: z.boolean(),
     bytes: z.number().int(),
     sha256: z.string(),
+    /** Files declared by this exact page, with guarded same-origin download routes. */
+    artifacts: z.array(z.object({ path: z.string(), storePath: z.string(), href: z.string() })).optional(),
     /** Independent reviews of precise claims on this page; empty or absent means no outside verdict yet. */
     reviews: z.array(scientificReviewSchema).optional(),
   })
