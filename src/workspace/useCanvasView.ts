@@ -74,7 +74,8 @@ export function useCanvasView({
   const fitView = useCallback((): View | null => {
     if (!size) return null
     const k = clampK(Math.min((size.w - 32) / width, (size.h - 32) / height, 1))
-    return { k, x: (size.w - width * k) / 2, y: Math.max(8, (size.h - height * k) / 2) }
+    // Top-aligned: a short world in a tall viewport reads from the top, where the page shows it, not mid-screen.
+    return { k, x: (size.w - width * k) / 2, y: 16 }
   }, [size, width, height])
   const centred = useCallback(
     (id: string, k: number): View | null => {
