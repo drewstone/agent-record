@@ -57,13 +57,18 @@ function usePage(href: string | null) {
   return state
 }
 
-export function PageReader({ href }: { href: string }) {
+const artifactRoute = /^\/api\/discovery\/runs\/[^/?#]+\/artifact\/[a-f0-9]{64}\/[A-Za-z0-9_-]+$/
+
+export function PageReader({ href, artifacts = [] }: { href: string; artifacts?: FindingItem['artifacts'] }) {
   const page = usePage(href)
   if (page.error) return <p className="ws-status" role="alert">This page is unavailable: {page.error}</p>
   if (page.text === undefined) return <p className="ws-status" role="status">Loading the page…</p>
   return (
     <div className="finding-page">
-      <MessageText text={page.text} />
+      <MessageText text={page.text} resolveHref={(target) => {
+        const artifact = artifacts.find((file) => file.path === target || encodeURI(file.path) === target)
+        return artifact && artifactRoute.test(artifact.href) ? artifact.href : null
+      }} />
     </div>
   )
 }
@@ -102,7 +107,7 @@ function FindingRow({ item, pageHref, open, onToggle }: { item: FindingItem; pag
               {reading ? 'Hide the page' : 'Read the page'}
             </button>
           </div>
-          {reading && <PageReader href={pageHref} />}
+          {reading && <PageReader href={pageHref} artifacts={item.artifacts} />}
         </div>
       )}
     </li>
@@ -210,7 +215,7 @@ function ChecksCard({ checks, pageHref }: { checks: FindingItem[]; pageHref: (it
               <span className="clamp-1" title={item.title}>{item.title}</span>
               <span className={`ftag tone-${verdictTone(item.verdict)}`}>{item.verdict ? item.verdict.toLowerCase() : 'no verdict word'}</span>
             </button>
-            {open === item.sha256 && <PageReader href={pageHref(item)} />}
+            {open === item.sha256 && <PageReader href={pageHref(item)} artifacts={item.artifacts} />}
           </li>
         ))}
       </ul>

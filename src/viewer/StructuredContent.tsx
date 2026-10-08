@@ -7,10 +7,15 @@ export function displayValue(text: string): unknown {
   try { return JSON.parse(text) } catch { return text }
 }
 
-export function MessageText({ text }: { text: string }) {
+export function MessageText({ text, resolveHref }: { text: string; resolveHref?: (href: string) => string | null }) {
   return <div className="activity-prose"><Markdown skipHtml remarkPlugins={[remarkGfm]}
     components={{
-      a: ({ href, children }) => /^https?:\/\//i.test(href ?? '') ? <a href={href} target="_blank" rel="noreferrer">{children}</a> : <span>{children}</span>,
+      a: ({ href, children }) => {
+        const target = /^https?:\/\//i.test(href ?? '') ? href : resolveHref?.(href ?? '')
+        return target && (/^https?:\/\//i.test(target) || /^\/(?!\/)/.test(target))
+          ? <a href={target} target="_blank" rel="noreferrer">{children}</a>
+          : <span>{children}</span>
+      },
       img: ({ alt }) => <span>{alt || 'Image omitted'}</span>,
       table: ({ children }) => <div className="rr-table-scroll"><table>{children}</table></div>,
     }}>{text}</Markdown></div>
