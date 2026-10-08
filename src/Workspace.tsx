@@ -30,8 +30,8 @@ import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/
 import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
-import { AgentTable, AnswerStrip } from './workspace/RunTable.js'
-import { RunProgressView } from './workspace/RunProgress.js'
+import { AgentTable } from './workspace/RunTable.js'
+import { RunOverview } from './workspace/RunOverview.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -746,10 +746,7 @@ function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; ru
   )
 }
 
-/**
- * The run page's sections, in one tab bar under the header: what the run found first, then how it progressed, its
- * agents and the rest. The first six are tabs; the others sit behind More, which names the one open.
- */
+/** The run page's detail views, by the `section` URL key; without one the page shows the run's overview. */
 type RunSection = 'findings' | 'progress' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
 const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
   ['findings', 'Findings'],
@@ -765,21 +762,21 @@ const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
   ['input', 'Input'],
   ['coverage', 'Coverage'],
 ]
-const RUN_TABS = 6
 /** Sections that draw from the selected agent's record part (every node, that agent's events). */
 const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'spend', 'assessments', 'coverage'])
 
-/** The section a URL asks for; links from before the sections existed (`view`, `tab`, `node`) still land right. */
-function sectionOf(params: URLSearchParams, hasFindings: boolean): RunSection {
+/** The detail view a URL asks for, or null for the run's overview; links from before the overview (`section`, `view`,
+ * `tab`, `node`) still land on the view they named. `progress` now lives in the overview. */
+function sectionOf(params: URLSearchParams): RunSection | null {
   const asked = params.get('section')
   const known = RUN_SECTIONS.find(([value]) => value === asked)?.[0]
-  if (known) return known
+  if (known) return known === 'progress' ? null : known
   const view = params.get('view')
   if (view === 'readout' || view === 'outputs') return view
   const tab = params.get('tab')
   if (tab === 'spend' || tab === 'assessments' || tab === 'input' || tab === 'coverage') return tab
   if (params.get('node') || params.get('event') || tab) return 'agents'
-  return hasFindings ? 'findings' : 'agents'
+  return null
 }
 
 /**
@@ -807,18 +804,24 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const assessments = useDocument<AssessmentsDocument>(`${runUrl}/assessments${digest ? `?digest=${digest}` : ''}`, undefined, true)
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const catalogue = useMemo(() => dimensionMap(dimensions.data), [dimensions.data])
-  const section = sectionOf(params, !!run.data?.findings?.total)
+  const section = sectionOf(params)
   const requested = params.get('node')
   const index = nodes.index
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
-  const agent = useRecordPart(AGENT_PART_SECTIONS.has(section) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
+  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
   const summary = run.data?.run
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
   const doc = run.data!
   // One URL key per section: the section, plus what that section shows (the agent, its tab, the file).
   const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
+  if (section === null)
+    return (
+      <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
+        <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
+      </div>
+    )
   const openFinding = (sha: string) => {
     setFinding(sha)
     open('findings')
@@ -839,10 +842,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   }
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
-      <RunHeader doc={doc} />
-      <AnswerStrip doc={doc} onOpen={() => open('readout')} onOutputs={() => open('outputs')} onFindings={() => open('findings')} onProgress={() => open('progress')} />
-      <RunTabs section={section} counts={counts} onOpen={open} />
-      {section === 'progress' && <RunProgressView doc={doc} />}
+      <DetailBar doc={doc} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
       {section === 'findings' &&
         (doc.findings?.total ? (
           <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
@@ -994,73 +994,55 @@ function RunPage({ api, id }: { api: string; id: string }) {
   )
 }
 
-/** The run's section tabs: the first RUN_TABS as tabs, the rest in a More menu that names the section open in it. */
-function RunTabs({ section, counts, onOpen }: { section: RunSection; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void }) {
-  const more = useRef<HTMLDetailsElement>(null)
-  const tab = ([value, label]: readonly [RunSection, string], inMenu = false) => (
-    <button
-      key={value}
-      type="button"
-      className={`run-tab ${section === value ? 'on' : ''}`}
-      aria-current={section === value ? 'page' : undefined}
-      data-section-tab={value}
-      role={inMenu ? 'menuitem' : undefined}
-      onClick={() => {
-        if (more.current) more.current.open = false
-        onOpen(value)
-      }}
-    >
-      {label}
-      {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
-    </button>
-  )
-  const hidden = RUN_SECTIONS.slice(RUN_TABS)
-  const current = hidden.find(([value]) => value === section)
+/**
+ * A detail view's bar: back to the run's overview, the run and its state, and the other detail views. The overview
+ * answers the run's questions; these are the evidence behind each answer (conversations, the commit and profile graphs,
+ * ledgers, assessments, capture and input), one click from the section that names them.
+ */
+function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument; section: RunSection; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void; onBack: () => void }) {
+  const run = doc.run
+  const views = DETAIL_VIEWS.filter(([value]) => value !== 'findings' || section === 'findings' || !!doc.findings?.total)
   return (
-    <nav className="run-tabs" aria-label="Run sections">
-      {RUN_SECTIONS.slice(0, RUN_TABS).map((entry) => tab(entry))}
-      <details className="run-tab-more" ref={more}>
-        <summary className={`run-tab ${current ? 'on' : ''}`} data-section-tab="more">{current ? `More: ${current[1]}` : 'More'}</summary>
-        <div className="run-tab-menu" role="menu">{hidden.map((entry) => tab(entry, true))}</div>
-      </details>
+    <nav className="run-tabs detail-bar" aria-label="Detail views">
+      <button type="button" className="run-tab detail-back" onClick={onBack} data-section-tab="overview">
+        ← Overview
+      </button>
+      <span className="detail-run mono" title={run.id}>
+        {shortRun(run.play, run.id)} <span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>
+      </span>
+      <span className="detail-views">
+        {views.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={`run-tab ${section === value ? 'on' : ''}`}
+            aria-current={section === value ? 'page' : undefined}
+            data-section-tab={value}
+            onClick={() => onOpen(value)}
+          >
+            {label}
+            {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
+          </button>
+        ))}
+      </span>
     </nav>
   )
 }
 
-function RunHeader({ doc }: { doc: RunDocument }) {
-  const run = doc.run
-  return (
-    <header className="ws-head">
-      <div className="ws-title-row">
-        <h1 className="mono">
-          <a className="crumb" href={`/play/${encodeURIComponent(run.play)}`}>{run.play}</a>
-          <span className="crumb-sep" aria-hidden="true"> / </span>
-          {shortRun(run.play, run.id)}
-        </h1>
-        {run.kind !== 'run' && <span className="chip">{run.kind}</span>}
-        <span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>
-        {run.reason && run.reason !== run.state && <span className="faint">{run.reason.replaceAll('-', ' ')}</span>}
-      </div>
-      {run.purpose && <p className="ws-charter run-purpose-line">{run.purpose}</p>}
-      <div className="ws-facts">
-        <span><b>Started</b> {when(run.startedAt)}</span>
-        <span><b>Settled</b> {when(run.settledAt)}</span>
-        <span><b>Duration</b> {duration(run.durationMs)}</span>
-        {run.nodes !== null && <span><b>Agents</b> {run.nodes}{run.depth !== null ? ` to depth ${run.depth}` : ''}</span>}
-        {run.models.length > 0 && <span><b>Models</b> <span className="mono">{run.models.join(', ')}</span></span>}
-        {run.harnesses.length > 0 && <span><b>Harness</b> {run.harnesses.join(', ')}</span>}
-        {run.record.capture && (
-          <span title="Conversation capture per agent: complete, lossy, absent">
-            <b>Capture</b> <CaptureBar capture={run.record.capture} />
-          </span>
-        )}
-        {doc.live.mirrorAt && <span className="live"><b>Mirror</b> {when(doc.live.mirrorAt)}{doc.live.polling ? ' · updating' : ''}</span>}
-        {run.predecessor && <span><b>Continues</b> <a className="mono" href={`/run/${encodeURIComponent(run.predecessor)}`}>{shortRun(run.play, run.predecessor)}</a></span>}
-        {run.supersedes && <span><b>Supersedes</b> <a className="mono" href={`/run/${encodeURIComponent(run.supersedes)}`}>{shortRun(run.play, run.supersedes)}</a></span>}
-      </div>
-    </header>
-  )
-}
+/** The detail views, in the order a reader reaches for evidence. */
+const DETAIL_VIEWS: readonly (readonly [RunSection, string])[] = [
+  ['agents', 'Conversations'],
+  ['versions', 'Versions'],
+  ['profiles', 'Profiles'],
+  ['outputs', 'Outputs'],
+  ['readout', 'Readout'],
+  ['spend', 'Spend ledger'],
+  ['findings', 'Findings'],
+  ['graph', 'Graph'],
+  ['assessments', 'Assessments'],
+  ['coverage', 'Capture'],
+  ['input', 'Input'],
+]
 
 /** Spend, input and gaps for a run without a record. */
 function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
@@ -1239,7 +1221,7 @@ function RunBody({
             <div>
               <h2 data-agent-title>{node?.label ?? actor}</h2>
               <p className="agent-meta">
-                {[role, model, node?.harness as string | undefined, agentState(node, measured)].filter(Boolean).join(' · ')}
+                {[role, model, node?.harness as string | undefined, agentState(node, measured, doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === actor)?.status ?? 'running') : null)].filter(Boolean).join(' · ')}
               </p>
             </div>
           </div>
@@ -1506,7 +1488,7 @@ function Coverage({ index, doc, gaps: recordGaps, onSelect }: { index: RecordInd
                 <td className="mono">{capture?.channel ?? '—'}</td>
                 <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{capture?.status ?? 'unknown'}</span></td>
                 <td className="mono faint">{capture?.reason ?? ''}</td>
-                <td>{agentState(node, measuredUsage(index, node.id))}</td>
+                <td>{agentState(node, measuredUsage(index, node.id), doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === node.id)?.status ?? 'running') : null)}</td>
               </tr>
             )
           })}

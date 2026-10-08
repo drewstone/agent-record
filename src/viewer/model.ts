@@ -133,8 +133,10 @@ export function measuredUsage(index: RecordIndex, id: string) {
   )
 }
 
-/** An agent's recorded state, qualified when nothing about it was measured or captured. */
-export function agentState(node: RecordNode | undefined, measured: boolean) {
+/** An agent's recorded state, qualified when nothing about it was measured or captured. A live agent has no terminal
+ * state yet: `live` is its state while the run runs (Runtime's progress document), and it reads as working. */
+export function agentState(node: RecordNode | undefined, measured: boolean, live?: string | null) {
+  if (!node?.status && live) return live === 'running' ? 'working' : live.replaceAll('-', ' ')
   const status = node?.status ?? 'no terminal state recorded'
   if (measured) return status
   const capture = (node?.capture as { status?: string } | undefined)?.status
