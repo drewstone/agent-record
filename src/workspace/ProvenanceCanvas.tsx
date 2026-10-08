@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { Findings, RunDocument, ScientificReview } from '../workspace.js'
 import { useDocument } from './data.js'
 import { CanvasControls } from './ProfileCanvas.js'
-import { P_NODE_H, P_NODE_W, provenanceLit, provenanceModel, provenanceNeighbour, verdictTone, VERDICTS } from './provenance.js'
+import { P_NODE_H, P_NODE_W, provenanceLit, provenanceModel, provenanceNeighbour, reviewerOf, verdictTone, VERDICTS } from './provenance.js'
 import type { ProvenanceEdge, ProvenanceModel, ProvenanceNode } from './provenance.js'
 import { useCanvasView } from './useCanvasView.js'
 import type { Box } from './useCanvasView.js'
@@ -322,7 +322,8 @@ function ReviewView({ review }: { review: ScientificReview }) {
     <div className="pv-review">
       <p>
         <span className={`pv-chip tone-${verdictTone(review.label)}`}>{review.status === 'decided' ? review.label : review.status}</span>{' '}
-        <b>{who?.identity ?? 'unattributed'}</b>
+        <b>{reviewerOf(review).label}</b>
+        {who?.identity && <code className="faint" title={who.identity}> {who.identity.length > 28 ? `${who.identity.slice(0, 28)}…` : who.identity}</code>}
         {who && (who.harness || who.model) && <span className="faint"> · {[who.harness, who.model].filter(Boolean).join(' · ')}</span>}
         {review.confidence != null && <span className="faint"> · confidence {String(review.confidence)}</span>}
       </p>
