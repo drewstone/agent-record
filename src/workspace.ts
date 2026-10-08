@@ -251,7 +251,38 @@ export const scientificReviewSchema = z.object({
   rationale: z.string().nullable().optional(),
   source: z.union([z.string(), z.record(z.string(), z.unknown())]).nullable().optional(),
   sourceRef: z.string().nullable().optional(),
+  /** Who reviewed: a stable identity (a review lane, a judge model under a harness) and what ran it. */
+  reviewer: z
+    .object({
+      identity: z.string().optional(),
+      kind: z.string().nullable().optional(),
+      lane: z.string().nullable().optional(),
+      provider: z.string().nullable().optional(),
+      harness: z.string().nullable().optional(),
+      model: z.string().nullable().optional(),
+      servedModel: z.string().nullable().optional(),
+    })
+    .catchall(z.unknown())
+    .nullable()
+    .optional(),
 }).catchall(z.unknown())
+
+/** What cites a run's claims outside the run: a proof packet, a site entry, a public repository. A citation names a
+ * page by SHA-256, and optionally a precise claim on it and the reviewer whose verdict it relies on. */
+export const publicationSchema = z
+  .object({
+    id: z.string(),
+    kind: z.string(),
+    title: z.string(),
+    url: z.string().nullable().optional(),
+    at: z.string().nullable().optional(),
+    /** `draft`, `private`, `published`. */
+    status: z.string().nullable().optional(),
+    /** The session that wrote it, when recorded. */
+    session: z.object({ harness: z.string().nullable().optional(), model: z.string().nullable().optional(), label: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+    cites: z.array(z.object({ pageSha256: z.string(), claimId: z.string().nullable().optional(), reviewer: z.string().nullable().optional() }).catchall(z.unknown())),
+  })
+  .catchall(z.unknown())
 
 /** One result or claim an agent wrote, as the findings feed and a play's results list it. */
 export const feedItemSchema = z
@@ -609,6 +640,8 @@ export const findingsSchema = z
     total: z.number().int(),
     /** Which listed pages name which, by sha256: the work graph's edges. Absent before findings carried them. */
     links: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
+    /** What outside the run cites its pages and verdicts; absent until a publication index serves them. */
+    publications: z.array(publicationSchema).optional(),
     agents: z.array(
       z
         .object({
@@ -1232,6 +1265,7 @@ export type NodeSpend = z.infer<typeof nodeSpend>
 export type FinalOutput = z.infer<typeof finalOutputSchema>
 export type Findings = z.infer<typeof findingsSchema>
 export type ScientificReview = z.infer<typeof scientificReviewSchema>
+export type Publication = z.infer<typeof publicationSchema>
 export type FindingsFeedDocument = z.infer<typeof findingsFeedSchema>
 export type FeedItem = z.infer<typeof feedItemSchema>
 

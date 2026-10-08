@@ -2755,3 +2755,42 @@
 @media (max-width: 1100px) { .ar-ws .run-profiles .pc-layout { height: auto; } }
 .ar-ws .pc-inspector .profile-runs td:first-child { min-width: 15em; overflow-wrap: normal; word-break: break-word; }
 .ar-ws .pc-inspector .profile-runs .profile-cost, .ar-ws .pc-inspector .profile-runs .profile-score { min-width: 12em; }
+
+/* ---- The provenance canvas (run Graph · Provenance): run, outside review and publication bands on the shared canvas. */
+.ar-ws .graph-modes { display: flex; gap: 6px; margin: 0 0 10px; }
+.ar-ws .pv-band { position: absolute; border: 1px dashed var(--ar-border-strong); border-radius: 14px; background: color-mix(in srgb, var(--ar-fg) 3%, transparent); pointer-events: none; }
+.ar-ws .pv-band-review { border-style: solid; border-color: var(--ar-fg-muted); background: color-mix(in srgb, var(--ar-fg) 6%, transparent); }
+.ar-ws .pv-band-label { position: absolute; top: 10px; left: 16px; font: 600 13px/1.4 var(--ar-font-mono); color: var(--ar-fg-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ar-ws .pv-node { grid-template-rows: auto auto auto; }
+.ar-ws .pv-node .pc-title b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--ar-text-s); line-height: 1.3; }
+.ar-ws .pv-claim { border-width: 2px; }
+.ar-ws .pv-reviewer { background: var(--ws-raised); }
+.ar-ws .pv-publication { border-style: double; border-width: 3px; }
+.ar-ws .pv-agent .pc-title b { font-size: var(--ar-text-m); }
+.ar-ws .pv-disagree { border: 2px solid var(--ar-c-run); box-shadow: inset 4px 0 0 var(--ar-c-run); }
+.ar-ws .pv-disagree-text { color: var(--ar-c-run); }
+.ar-ws .pv-kind-mark { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--ar-fg-faint); }
+.ar-ws .pv-mark-claim { border-radius: 50%; background: var(--ar-fg); }
+.ar-ws .pv-mark-reviewer { transform: rotate(45deg); background: var(--ar-fg-muted); }
+.ar-ws .pv-mark-publication { background: transparent; box-shadow: inset 0 0 0 2px var(--ar-fg); }
+.ar-ws .pv-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; overflow: hidden; max-height: 22px; }
+.ar-ws .pv-chip { display: inline-block; padding: 0 7px; border-radius: 999px; border: 1px solid var(--ar-border-strong); font: 700 11px/18px var(--ar-font-mono); color: var(--ar-fg-muted); }
+.ar-ws .pv-chip.tone-ok, .ar-ws .chip.tone-ok { color: var(--ar-c-ok); border-color: color-mix(in srgb, var(--ar-c-ok) 55%, transparent); }
+.ar-ws .pv-chip.tone-fail, .ar-ws .chip.tone-fail { color: var(--ar-c-fail); border-color: color-mix(in srgb, var(--ar-c-fail) 55%, transparent); }
+.ar-ws .pv-chip.tone-warn, .ar-ws .chip.tone-warn { color: var(--ar-c-run); border-color: color-mix(in srgb, var(--ar-c-run) 55%, transparent); }
+.ar-ws .pv-label-counts { display: flex; flex-wrap: wrap; gap: 6px; }
+.ar-ws .pv-verdict { position: absolute; transform: translate(-50%, -50%); padding: 0 8px; border-radius: 999px; border: 1px solid var(--ar-border-strong); background: var(--ws-panel); font: 700 12px/20px var(--ar-font-mono); color: var(--ar-fg-muted); pointer-events: none; transition: opacity 120ms ease; }
+.ar-ws .pv-verdict.tone-ok { color: var(--ar-c-ok); }
+.ar-ws .pv-verdict.tone-fail { color: var(--ar-c-fail); }
+.ar-ws .pv-verdict.tone-warn { color: var(--ar-c-run); }
+.ar-ws .pv-verdict.dim { opacity: 0.2; }
+.ar-ws .pc-edge.pv-edge-verdict { stroke-width: 2.2; }
+.ar-ws .pc-edge.pv-edge-verdict.tone-ok { stroke: color-mix(in srgb, var(--ar-c-ok) 70%, var(--ar-border-strong)); }
+.ar-ws .pc-edge.pv-edge-verdict.tone-fail { stroke: color-mix(in srgb, var(--ar-c-fail) 70%, var(--ar-border-strong)); }
+.ar-ws .pc-edge.pv-edge-verdict.tone-warn { stroke: color-mix(in srgb, var(--ar-c-run) 70%, var(--ar-border-strong)); stroke-dasharray: 6 4; }
+.ar-ws .pc-edge.pv-edge-cites { stroke-dasharray: 2 5; stroke-linecap: round; stroke-width: 2; }
+.ar-ws .pc-edge.pv-edge-spawned { stroke-dasharray: 4 4; }
+.ar-ws .pv-review { border-left: 3px solid var(--ar-border-strong); padding: 2px 0 2px 12px; display: grid; gap: 4px; }
+.ar-ws .pv-review p { margin: 0; }
+.ar-ws .pv-gap { border-style: dashed; background: transparent; }
+.ar-ws .pv-mark-gap { background: transparent; box-shadow: inset 0 0 0 2px var(--ar-fg-faint); border-radius: 50%; }
