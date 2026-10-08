@@ -78,3 +78,29 @@ test('the bands run left to right, columns never overlap, and keys follow the ed
   assert.ok(lit.has(`agent:${RUN}`) && lit.has('publication:packet/C-1'))
   assert.equal(lit.has(`claim:${sha('a')}#C-2`), false, 'a claim does not light its sibling')
 })
+
+test('review edge cases never point at a missing node, never merge unknown reviewers, and cite exactly', () => {
+  const doc = findings()
+  const a = doc.items[0]
+  a.reviews = [
+    ...a.reviews,
+    { ...review('z', 'C-9', 'NEW', lane) }, // a page not in the findings (an earlier version)
+    { ...review('a', 'C-4', 'NEW', lane), subject: { pageSha256: '', claimId: 'C-4' } }, // empty digest: the page it is attached to
+    { ...review('a', 'C-1', 'NEW', lane), status: 'stale', at: '2026-10-09' }, // stale beside the decided NEW
+    { ...review('a', 'C-5', 'KNOWN', null) },
+    { ...review('a', 'C-5', 'WRONG', undefined) },
+    review('a', 'C-2', 'KNOWN', lane), // an exact duplicate
+  ]
+  doc.publications[0].cites.push({ pageSha256: sha('a'), claimId: 'NOPE' }, { pageSha256: sha('a'), claimId: 'C-1', reviewer: 'ghost' })
+  const model = provenanceModel(doc, RUN)
+  assert.ok(model.edges.every((edge) => model.byId.has(edge.from) && model.byId.has(edge.to)), 'no edge points at a missing node')
+  assert.ok(model.byId.has(`page:${sha('z')}`))
+  assert.ok(model.byId.has(`claim:${sha('a')}#C-4`))
+  const laneOnC1 = model.edges.find((edge) => edge.from === `claim:${sha('a')}#C-1` && edge.to === 'reviewer:review-lane/math')
+  assert.equal(laneOnC1.label, 'NEW', 'a stale row never hides a decision')
+  assert.equal(model.byId.get(`claim:${sha('a')}#C-2`).claim.reviews.length, 1, 'a duplicate review is one verdict')
+  const unknown = model.nodes.filter((node) => node.kind === 'reviewer' && node.reviewer.key.startsWith('unattributed:'))
+  assert.equal(unknown.length, 2, 'two unattributed reviewers stay two')
+  assert.equal(model.edges.some((edge) => edge.to === 'publication:packet/C-1' && edge.from === `claim:${sha('a')}#C-2`), false, 'an unknown claim id does not cite every claim on the page')
+  assert.deepEqual(model.unresolved.sort(), ['packet/C-1: claim NOPE not reviewed', 'packet/C-1: reviewer ghost'])
+})

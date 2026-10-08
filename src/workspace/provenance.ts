@@ -75,6 +75,8 @@ export interface ProvenanceModel {
   readonly width: number
   readonly height: number
   readonly focus: string | null
+  /** Citations that name a claim or reviewer the reviews do not record. */
+  readonly unresolved: readonly string[]
   readonly counts: {
     readonly claims: number
     readonly reviewed: number
@@ -106,24 +108,24 @@ export const verdictTone = (label: string | null | undefined) =>
 
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null)
 
-/** Who reviewed: the row's reviewer identity, else the import or automatic source it came from. */
-export function reviewerOf(review: ScientificReview): Omit<ProvenanceReviewer, 'reviews'> {
+/** Who reviewed, by the identity the row records. A row without one is its own unattributed reviewer: two unknown
+ * reviewers are never merged into one, and no identity is made up from model or harness names. */
+export function reviewerOf(review: ScientificReview, fallback = 'unattributed'): Omit<ProvenanceReviewer, 'reviews'> {
   const reviewer = (review.reviewer ?? null) as Record<string, unknown> | null
   const source = review.source && typeof review.source === 'object' ? (review.source as Record<string, unknown>) : null
   const harness = text(reviewer?.harness)
   const model = text(reviewer?.model) ?? text(reviewer?.servedModel)
   const provider = text(reviewer?.provider)
   const kind = text(reviewer?.kind) ?? (source?.kind === 'automatic' ? 'automatic' : text(source?.kind))
-  const identity =
-    text(reviewer?.identity) ??
-    ([provider, harness, model].filter(Boolean).join('/') || (text(source?.importSha256) ? `import:${String(source!.importSha256).slice(0, 12)}` : null) || text(review.sourceRef) || 'unattributed')
+  const recorded = text(reviewer?.identity)
+  const identity = recorded ?? fallback
   const lane = text(reviewer?.lane)
   const label =
     kind === 'review-lane' && lane
       ? `review lane · ${lane}`
       : model
         ? `${kind === 'automatic' ? 'automatic review' : 'judge'} · ${model}`
-        : identity
+        : recorded ?? 'reviewer not recorded'
   return { key: identity, label, kind, harness, model, provider }
 }
 
@@ -135,18 +137,32 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
   // Claims: every precise claim a review names, grouped by page and claim id; reviewers by identity.
   const claims = new Map<string, { pageSha256: string; claimId: string; text: string; reviews: ScientificReview[] }>()
   const reviewers = new Map<string, Omit<ProvenanceReviewer, 'reviews'> & { reviews: ScientificReview[] }>()
+  const verdicts: { claim: string; reviewer: string; review: ScientificReview }[] = []
+  // A review names its page by digest; one with an empty digest is the page it is attached to. Per claim and reviewer
+  // the current verdict is the latest decided review (else the latest), so a stale row never hides a decision.
+  const current = new Map<string, { review: ScientificReview; pageSha256: string; reviewer: string }>()
+  let unattributed = 0
+  const rank = (review: ScientificReview) => `${review.status === 'decided' ? 1 : 0}|${String((review as { at?: unknown }).at ?? '')}`
   for (const item of items)
     for (const review of item.reviews ?? []) {
-      const pageSha256 = review.subject.pageSha256 || item.sha256
-      const key = `${pageSha256}#${review.subject.claimId}`
-      const claim = claims.get(key) ?? { pageSha256, claimId: review.subject.claimId, text: review.claim, reviews: [] }
-      claim.reviews.push(review)
-      claims.set(key, claim)
-      const who = reviewerOf(review)
-      const entry = reviewers.get(who.key) ?? { ...who, reviews: [] }
-      entry.reviews.push(review)
-      reviewers.set(who.key, entry)
+      const pageSha256 = /^[0-9a-f]{64}$/.test(review.subject.pageSha256) ? review.subject.pageSha256 : item.sha256
+      const recorded = text(review.reviewer?.identity)
+      const reviewer = recorded ?? `unattributed:${++unattributed}`
+      const slot = `${pageSha256}#${review.subject.claimId}|${reviewer}`
+      const held = current.get(slot)
+      if (!held || rank(review) >= rank(held.review)) current.set(slot, { review, pageSha256, reviewer })
     }
+  for (const { review, pageSha256, reviewer } of current.values()) {
+    const key = `${pageSha256}#${review.subject.claimId}`
+    const claim = claims.get(key) ?? { pageSha256, claimId: review.subject.claimId, text: review.claim, reviews: [] }
+    claim.reviews.push(review)
+    claims.set(key, claim)
+    const who = reviewerOf(review, reviewer)
+    const entry = reviewers.get(who.key) ?? { ...who, reviews: [] }
+    entry.reviews.push(review)
+    reviewers.set(who.key, entry)
+    verdicts.push({ claim: key, reviewer: who.key, review })
+  }
 
   // Pages: every reviewed page and every page a publication cites. The run's other declared results and claims are the
   // gap: counted in one node, so a run with a hundred results stays readable and the unreviewed share stays visible.
@@ -154,8 +170,9 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
   const reviewedPages = new Set([...claims.values()].map((claim) => claim.pageSha256))
   const shownPages = items.filter((item) => reviewedPages.has(item.sha256) || citedPages.has(item.sha256))
   const gap = items.filter((item) => DECLARED.has(item.kind) && !reviewedPages.has(item.sha256) && !citedPages.has(item.sha256))
-  // A cited page the run's findings do not list is still drawn, by its digest, so a citation never points nowhere.
-  const missing = [...citedPages].filter((sha) => !pages.has(sha))
+  // A reviewed or cited page the run's findings do not list (an earlier version of a revised page, a page of another
+  // run) is still drawn, by its digest, so no verdict or citation points nowhere.
+  const missing = [...new Set([...reviewedPages, ...citedPages])].filter((sha) => !pages.has(sha))
 
   // Agents: those that wrote a shown page, and their ancestors by spawn id (run:s1:s2 was spawned by run:s1).
   const agentLabels = new Map((findings.agents ?? []).map((agent) => [agent.agent, agent.label]))
@@ -191,8 +208,9 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
     nodes.push({ ...node, column, band: COLUMNS[column]!.band, x: 0, y: 0 })
   }
   for (const id of agentOrder) {
-    const label = agentLabels.get(id) ?? (id === runId ? 'root' : id.slice(runId.length + 1))
-    add({ id: `agent:${id}`, kind: 'agent', title: label.split(' · ').at(-1) ?? label, sub: id === runId ? 'root agent' : id.slice(runId.length + 1), agent: { id, label, parent: agentParent(id) } })
+    const local = id === runId ? 'root agent' : id.startsWith(`${runId}:`) ? id.slice(runId.length + 1) : id
+    const label = agentLabels.get(id) ?? (id === runId ? 'root' : local)
+    add({ id: `agent:${id}`, kind: 'agent', title: label.split(' · ').at(-1) || label || id, sub: local, agent: { id, label, parent: agentParent(id) } })
     const parent = agentParent(id)
     if (parent) edges.push({ id: `agent:${parent}->agent:${id}`, from: `agent:${parent}`, to: `agent:${id}`, kind: 'spawned', crossesBoundary: false })
   }
@@ -200,7 +218,7 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
     add({ id: `page:${item.sha256}`, kind: 'page', title: item.title ?? item.path, sub: `${item.kind} · ${item.sha256.slice(0, 12)}`, page: item })
     if (item.agent && agents.has(item.agent)) edges.push({ id: `agent:${item.agent}->page:${item.sha256}`, from: `agent:${item.agent}`, to: `page:${item.sha256}`, kind: 'wrote', crossesBoundary: false })
   }
-  for (const sha of missing) add({ id: `page:${sha}`, kind: 'page', title: 'page not in this run’s findings', sub: sha.slice(0, 12) })
+  for (const sha of missing) add({ id: `page:${sha}`, kind: 'page', title: 'page not in this run’s current findings', sub: `${sha.slice(0, 12)} · an earlier version or another run` })
   let disagreements = 0
   const labels: Record<string, number> = {}
   for (const [key, claim] of claimList) {
@@ -224,31 +242,38 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
       id: 'gap:unreviewed',
       kind: 'gap',
       title: `${gap.length} declared ${gap.length === 1 ? 'result' : 'results and claims'} with no outside verdict`,
-      sub: `${new Set(gap.map((item) => item.agent)).size} agents · not reviewed outside the run`,
+      sub: `${(n => `${n} ${n === 1 ? 'agent' : 'agents'}`)(new Set(gap.map((item) => item.agent)).size)} · not reviewed outside the run`,
       gap,
     })
   const reviewerList = [...reviewers.values()]
   for (const reviewer of reviewerList) {
     add({ id: `reviewer:${reviewer.key}`, kind: 'reviewer', title: reviewer.label, sub: [reviewer.harness, reviewer.model].filter(Boolean).join(' · ') || reviewer.kind || 'reviewer', reviewer })
-    const seen = new Set<string>()
-    for (const review of reviewer.reviews) {
-      const key = `${review.subject.pageSha256}#${review.subject.claimId}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      edges.push({ id: `claim:${key}->reviewer:${reviewer.key}`, from: `claim:${key}`, to: `reviewer:${reviewer.key}`, kind: 'verdict', label: review.status === 'decided' ? (review.label ?? 'undecided') : review.status, crossesBoundary: true })
-    }
+    for (const { claim, review } of verdicts.filter((verdict) => verdict.reviewer === reviewer.key))
+      edges.push({ id: `claim:${claim}->reviewer:${reviewer.key}`, from: `claim:${claim}`, to: `reviewer:${reviewer.key}`, kind: 'verdict', label: review.status === 'decided' ? (review.label ?? 'undecided') : review.status, crossesBoundary: true })
   }
+  const unresolved: string[] = []
   for (const publication of publications) {
     add({ id: `publication:${publication.id}`, kind: 'publication', title: publication.title, sub: [publication.kind.replaceAll('-', ' '), publication.status].filter(Boolean).join(' · '), publication })
-    const targets = new Set<string>()
+    const targets = new Map<string, string | undefined>()
     for (const cite of publication.cites) {
-      const claimKeys = cite.claimId ? [`${cite.pageSha256}#${cite.claimId}`].filter((key) => claims.has(key)) : []
-      // A citation of a page with reviewed claims cites those claims; otherwise the page itself.
-      const keys = claimKeys.length ? claimKeys : claimList.filter(([, claim]) => claim.pageSha256 === cite.pageSha256).map(([key]) => key)
-      for (const target of keys.length ? keys.map((key) => `claim:${key}`) : [`page:${cite.pageSha256}`]) targets.add(target)
-      if (cite.reviewer && reviewers.has(cite.reviewer)) targets.add(`reviewer:${cite.reviewer}`)
+      // A named claim is cited exactly; an unknown claim id or reviewer cites the page and says it did not resolve.
+      // A citation without a claim id cites the page's reviewed claims, else the page.
+      const named = cite.claimId ? `${cite.pageSha256}#${cite.claimId}` : null
+      if (named && claims.has(named)) targets.set(`claim:${named}`, undefined)
+      else if (named) targets.set(`page:${cite.pageSha256}`, `claim ${cite.claimId} not reviewed`)
+      else {
+        const keys = claimList.filter(([, claim]) => claim.pageSha256 === cite.pageSha256).map(([key]) => `claim:${key}`)
+        for (const target of keys.length ? keys : [`page:${cite.pageSha256}`]) targets.set(target, undefined)
+      }
+      if (cite.reviewer) {
+        if (reviewers.has(cite.reviewer)) targets.set(`reviewer:${cite.reviewer}`, undefined)
+        else unresolved.push(`${publication.id}: reviewer ${cite.reviewer}`)
+      }
     }
-    for (const target of targets) edges.push({ id: `${target}->publication:${publication.id}`, from: target, to: `publication:${publication.id}`, kind: 'cites', crossesBoundary: true })
+    for (const [target, note] of targets) {
+      if (note) unresolved.push(`${publication.id}: ${note}`)
+      edges.push({ id: `${target}->publication:${publication.id}`, from: target, to: `publication:${publication.id}`, kind: 'cites', label: note, crossesBoundary: true })
+    }
   }
 
   // Layout: columns left to right with a wider gap between bands; each column is ordered by the mean row of what it
@@ -292,11 +317,13 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
     if (!(out.get(node.id) ?? []).length) tail += P_NODE_H + ROW_GAP
     return y
   })
-  pack(columns[0]!, (node) => {
-    // An agent centres on its pages, or (a spawner of agents only) on its children once they are placed.
-    const own = meanOut(node.id, Number.NaN)
-    return Number.isNaN(own) ? 0 : own
-  })
+  // An agent centres on its pages; a spawner of agents only, on its children once they are placed (deepest first).
+  const agentWant = new Map<string, number>()
+  for (const node of [...columns[0]!].sort((a, b) => b.id.length - a.id.length)) {
+    const pagesY = (out.get(node.id) ?? []).map((target) => ys.get(target) ?? agentWant.get(target.slice(6))).filter((value): value is number => value !== undefined)
+    agentWant.set(node.id.slice(6), pagesY.length ? pagesY.reduce((sum, value) => sum + value, 0) / pagesY.length : 0)
+  }
+  pack(columns[0]!, (node) => agentWant.get(node.id.slice(6)) ?? 0)
   pack(columns[3]!, (node) => mean(node.id, 0))
   pack(columns[4]!, (node) => mean(node.id, 0))
 
@@ -325,6 +352,7 @@ export function provenanceModel(findings: Findings, runId: string): ProvenanceMo
       publications: publications.length,
       labels,
     },
+    unresolved,
   }
 }
 

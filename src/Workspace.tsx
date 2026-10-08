@@ -861,7 +861,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           </div>
           {params.get('graph') === 'provenance' ? (
             <section className="run-panel run-profiles" aria-label="Provenance">
-              <ProvenanceCanvas doc={doc} onOpenPage={openFinding} />
+              <ProvenanceCanvas doc={doc} runUrl={runUrl} onOpenPage={openFinding} />
             </section>
           ) : (
             <WorkGraph doc={doc} runUrl={runUrl} onOpen={openFinding} />

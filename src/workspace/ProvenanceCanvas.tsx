@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { RunDocument, ScientificReview } from '../workspace.js'
+import type { Findings, RunDocument, ScientificReview } from '../workspace.js'
+import { useDocument } from './data.js'
 import { CanvasControls } from './ProfileCanvas.js'
 import { P_NODE_H, P_NODE_W, provenanceLit, provenanceModel, provenanceNeighbour, verdictTone, VERDICTS } from './provenance.js'
 import type { ProvenanceEdge, ProvenanceModel, ProvenanceNode } from './provenance.js'
@@ -14,10 +15,14 @@ const BAND_LABEL: Record<string, string> = { run: 'Discovery run', review: 'Outs
  * reviewers outside the run joined to each claim by a verdict; and what publishes or packages the claims. Selecting a
  * node shows its reviews, references and citations beside the canvas.
  */
-export function ProvenanceCanvas({ doc, onOpenPage }: { doc: RunDocument; onOpenPage: (sha: string) => void }) {
-  const findings = doc.findings
+export function ProvenanceCanvas({ doc, runUrl, onOpenPage }: { doc: RunDocument; runUrl: string; onOpenPage: (sha: string) => void }) {
+  // The run document lists the first pages only; a longer run's provenance reads the whole findings document.
+  const partial = !!doc.findings && doc.findings.total > doc.findings.items.length
+  const full = useDocument<Findings>(partial ? `${runUrl}/findings` : null)
+  const findings = partial ? (full.data ?? null) : doc.findings
   const model = useMemo(() => (findings ? provenanceModel(findings, doc.run.id) : null), [findings, doc.run.id])
   const [selected, setSelected] = useState<string | null>(null)
+  if (partial && !findings) return <p className="ws-status run-panel" role={full.error ? 'alert' : 'status'}>{full.error ? `This run's findings are unavailable: ${full.error}` : 'Loading every page of this run…'}</p>
   if (!model || !findings) return <p className="ws-status run-panel">No knowledge pages were recorded for this run, so it has no claims to trace.</p>
   return (
     <div className="pc-layout pv-layout" data-provenance={doc.run.id}>
@@ -40,7 +45,21 @@ function ProvenancePane({ model, selectedId, onChoose }: { model: ProvenanceMode
   }, [model])
   const width = model.width + PAD * 2
   const height = model.height + PAD * 2 + 40
-  const canvas = useCanvasView({ width, height, box, focus: model.focus, selectedId, neighbour: (id, key) => provenanceNeighbour(model, id, key) })
+  const canvas = useCanvasView({
+    width,
+    height,
+    box,
+    focus: model.focus,
+    selectedId,
+    neighbour: (id, key) => provenanceNeighbour(model, id, key),
+    // Too wide to read whole (a phone): open at a readable size on the focus claim, its page column at the left edge.
+    open: (_size, fit) => {
+      const at = model.focus ? box(model.focus) : null
+      if (fit.k >= 0.5 || !at) return null
+      const k = 0.8
+      return { k, x: 16 - (at.x - P_NODE_W - 140) * k, y: 16 - (at.y - 60) * k }
+    },
+  })
   const lit = useMemo(() => {
     const id = canvas.hover ?? selectedId
     return id && model.byId.has(id) ? provenanceLit(model, id) : null
@@ -77,6 +96,7 @@ function ProvenancePane({ model, selectedId, onChoose }: { model: ProvenanceMode
               return (
                 <span
                   key={`label:${edge.id}`}
+                  aria-hidden="true"
                   className={`pv-verdict tone-${verdictTone(edge.label)}${dim ? ' dim' : ''}`}
                   style={{ left: PAD + from.x + P_NODE_W + 56, top: PAD + 40 + from.y + P_NODE_H / 2 + (to.y - from.y) * 0.18 }}
                 >
@@ -103,7 +123,7 @@ function ProvenancePane({ model, selectedId, onChoose }: { model: ProvenanceMode
                 .join(' ')}
               style={{ left: PAD + node.x, top: PAD + 40 + node.y, width: P_NODE_W, height: P_NODE_H }}
               aria-pressed={node.id === selectedId}
-              aria-label={`${node.kind} ${node.title}${node.disagree ? ', reviewers disagree' : ''}`}
+              aria-label={`${node.kind}: ${node.title}. ${node.sub}${node.disagree ? '. Reviewers disagree' : ''}`}
               title={node.title}
               data-provenance-node={node.kind}
               onPointerEnter={() => canvas.setHover(node.id)}
@@ -176,6 +196,12 @@ function ProvenanceIntro({ model }: { model: ProvenanceModel }) {
         {counts.reviewers ? `, judged by ${counts.reviewers} ${counts.reviewers === 1 ? 'reviewer' : 'reviewers'} outside the run` : ''}
         {counts.publications ? `, cited by ${counts.publications} ${counts.publications === 1 ? 'publication' : 'publications'}` : ''}.
       </p>
+      {model.unresolved.length > 0 && (
+        <p className="pv-disagree-text">
+          {model.unresolved.length} {model.unresolved.length === 1 ? 'citation names' : 'citations name'} a claim or reviewer no review records:{' '}
+          {model.unresolved.join('; ')}
+        </p>
+      )}
       {counts.claims > 0 && (
         <p className="pv-label-counts">
           {VERDICTS.filter((label) => counts.labels[label]).map((label) => (
