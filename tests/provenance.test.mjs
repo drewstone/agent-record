@@ -53,7 +53,7 @@ test('a publication cites the exact claim and the reviewer whose verdict it reli
   const model = provenanceModel(findings(), RUN)
   const cites = model.edges.filter((edge) => edge.to === 'publication:packet/C-1').map((edge) => edge.from).sort()
   assert.deepEqual(cites, [`claim:${sha('a')}#C-1`, `page:${sha('e')}`, 'reviewer:review-lane/math'])
-  assert.equal(model.byId.get(`page:${sha('e')}`).title, 'page not in this run’s findings')
+  assert.equal(model.byId.get(`page:${sha('e')}`).title, 'page not in this run’s current findings')
 })
 
 test('unreviewed declared results fold into one gap node; process pages stay off the canvas', () => {
@@ -84,7 +84,7 @@ test('review edge cases never point at a missing node, never merge unknown revie
   const a = doc.items[0]
   a.reviews = [
     ...a.reviews,
-    { ...review('z', 'C-9', 'NEW', lane) }, // a page not in the findings (an earlier version)
+    { ...review('f', 'C-9', 'NEW', lane) }, // a page not in the findings (an earlier version)
     { ...review('a', 'C-4', 'NEW', lane), subject: { pageSha256: '', claimId: 'C-4' } }, // empty digest: the page it is attached to
     { ...review('a', 'C-1', 'NEW', lane), status: 'stale', at: '2026-10-09' }, // stale beside the decided NEW
     { ...review('a', 'C-5', 'KNOWN', null) },
@@ -94,7 +94,7 @@ test('review edge cases never point at a missing node, never merge unknown revie
   doc.publications[0].cites.push({ pageSha256: sha('a'), claimId: 'NOPE' }, { pageSha256: sha('a'), claimId: 'C-1', reviewer: 'ghost' })
   const model = provenanceModel(doc, RUN)
   assert.ok(model.edges.every((edge) => model.byId.has(edge.from) && model.byId.has(edge.to)), 'no edge points at a missing node')
-  assert.ok(model.byId.has(`page:${sha('z')}`))
+  assert.ok(model.byId.has(`page:${sha('f')}`))
   assert.ok(model.byId.has(`claim:${sha('a')}#C-4`))
   const laneOnC1 = model.edges.find((edge) => edge.from === `claim:${sha('a')}#C-1` && edge.to === 'reviewer:review-lane/math')
   assert.equal(laneOnC1.label, 'NEW', 'a stale row never hides a decision')
