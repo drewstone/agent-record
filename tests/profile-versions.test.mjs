@@ -13,6 +13,14 @@ test('the fixture satisfies the served schema', () => {
   assert.throws(() => profileGraphDocumentSchema.parse({ ...doc, nodes: [{ ...doc.nodes[0], parents: [{ ...doc.nodes[1].parents[0], basis: 'guessed' }] }] }))
 })
 
+test('a run retains the seven commit subjects shown in the profile canvas', () => {
+  const contract = { version: 'research-contract-v2', commit: 'a'.repeat(40), components: Array.from({ length: 7 }, (_, index) => ({ id: `C${index + 1}`, commit: String(index + 1).repeat(40), message: `feat: reason ${index + 1}` })) }
+  const index = doc.nodes.findIndex((node) => node.runs.length > 0)
+  const nodes = doc.nodes.map((node, at) => at === index ? { ...node, runs: [{ ...node.runs[0], contract }, ...node.runs.slice(1)] } : node)
+  const parsed = profileGraphDocumentSchema.parse({ ...doc, nodes })
+  assert.deepEqual(parsed.nodes[index].runs[0].contract, contract)
+})
+
 test('a profile is found by its short digest, and a root is drawn by its run', () => {
   const graph = profileGraph(doc)
   const sourcer = byName('model:sourcer')
