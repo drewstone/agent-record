@@ -293,6 +293,7 @@ function NodeCard({
   const profile = node.node!
   const state = profileState(profile)
   const full = profile.name ?? profile.label ?? profile.short
+  const contract = profile.runs.find((run) => run.contract?.version === 'research-contract-v2')?.contract
   // A registered profile is named after its run; the play is the page's, so the card shows the run's own part.
   const name = node.play && full.startsWith(`${node.play}-`) ? full.slice(node.play.length + 1) : full
   return (
@@ -302,7 +303,7 @@ function NodeCard({
       data-profile-node={profile.short}
       aria-pressed={on}
       aria-label={`${full}, ${KIND_LABEL[profile.kind] ?? profile.kind} profile ${profile.short}${node.foreign && node.play ? `, from play ${node.play}` : ''}`}
-      title={[full, profile.description].filter(Boolean).join('\n')}
+      title={[full, profile.description, contract && `research-contract-v2 ${contract.commit}\n${contract.components.map((component) => `${component.id} ${component.commit.slice(0, 8)} · ${component.message}`).join('\n')}`].filter(Boolean).join('\n')}
     >
       {node.foreign && node.play && <span className="pc-play mono">{node.play}</span>}
       <span className="pc-title">
@@ -314,6 +315,7 @@ function NodeCard({
       <span className="pc-line mono faint">
         {profile.short}
         {profile.version ? ` · v${profile.version}` : ''}
+        {contract ? ' · contract v2' : ''}
         {searchText(profile) ?? ` · ${profile.runs.length} ${profile.runs.length === 1 ? 'run' : 'runs'}`}
         {node.elsewhere.plays.length > 0 ? ` · ${node.elsewhere.plays.length} other ${node.elsewhere.plays.length === 1 ? 'play' : 'plays'}` : ''}
       </span>

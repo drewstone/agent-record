@@ -1023,6 +1023,12 @@ const profileEdgeEventSchema = z
   })
   .catchall(z.unknown())
 
+const researchContractSchema = z.object({
+  version: z.literal('research-contract-v2'),
+  commit: z.string(),
+  components: z.array(z.object({ id: z.string(), commit: z.string(), message: z.string() })),
+}).catchall(z.unknown())
+
 export const profileNodeSchema = z
   .object({
     digest: profileDigest,
@@ -1079,6 +1085,7 @@ export const profileNodeSchema = z
           outcome: z.string().nullable(),
           run: z.object({ state: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown()),
           score: profileScoreSchema,
+          contract: researchContractSchema.nullable().optional().catch(null),
         })
         .catchall(z.unknown()),
     ),

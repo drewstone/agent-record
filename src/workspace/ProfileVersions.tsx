@@ -168,6 +168,7 @@ export function ProfileDetail({
 }
 
 function ProfileRuns({ runs, cost }: { runs: ProfileRun[]; cost?: (runId: string) => ReactNode }) {
+  const hasContract = runs.some((run) => run.contract?.version === 'research-contract-v2')
   return (
     <div className="table-scroll">
       <table className="data-table profile-runs">
@@ -177,6 +178,7 @@ function ProfileRuns({ runs, cost }: { runs: ProfileRun[]; cost?: (runId: string
             <th>Agent outcome</th>
             <th>Run state</th>
             <th title="The readout scores the whole run, so every profile in a run shows that run's score">Run score</th>
+            {hasContract && <th>Research contract</th>}
             {cost && <th>Cost</th>}
           </tr>
         </thead>
@@ -193,6 +195,12 @@ function ProfileRuns({ runs, cost }: { runs: ProfileRun[]; cost?: (runId: string
                 {run.run.reason && <small className="faint"> {run.run.reason}</small>}
               </td>
               <td className="profile-score"><Score score={run.score} /></td>
+              {hasContract && <td>{run.contract?.version === 'research-contract-v2' ? <details>
+                <summary>v2 · <code>{run.contract.commit.slice(0, 8)}</code></summary>
+                <ol>{run.contract.components.map((component) => <li key={component.id}>
+                  <b>{component.id}</b> <code>{component.commit.slice(0, 8)}</code> · {component.message}
+                </li>)}</ol>
+              </details> : <span className="faint">—</span>}</td>}
               {cost && <td className="profile-cost">{cost(run.runId)}</td>}
             </tr>
           ))}

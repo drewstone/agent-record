@@ -62,6 +62,7 @@ function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, 
       }
     }
     const scores = judgesOf(version.root, version.run.id)
+    const contract = graph?.nodes.flatMap((node) => node.runs).find((run) => run.runId === version.run.id && run.contract?.version === 'research-contract-v2')?.contract
     nodes.push({
       id: versionNodeId(version.run.id),
       parents: [...(version.previous ? [versionNodeId(version.previous.run.id)] : []), ...(ghostParents.get(version.run.id) ?? [])],
@@ -73,6 +74,8 @@ function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, 
       chips: [
         { label: stateLabel(version.run.state), tone: stateTone(version.run.state) },
         { label: scores ? judgeShort(scores.judges) : 'no readout', tone: 'muted' },
+        ...(contract ? [{ label: `research contract v2 · ${contract.commit.slice(0, 8)}`, tone: 'muted' as const,
+          title: contract.components.map((component) => `${component.id} ${component.commit.slice(0, 8)} · ${component.message}`).join('\n') }] : []),
         { label: version.root ? `Δ ${changeSummary(version.comparison)}` : 'profile not indexed', tone: 'accent' },
       ],
     })
