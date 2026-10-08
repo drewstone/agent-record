@@ -2373,6 +2373,7 @@
 .ar-ws .graph-edges { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .ar-ws .graph-edges .edge { fill: none; stroke: var(--ar-fg-faint); stroke-width: 1.6; transition: opacity .12s ease; }
 .ar-ws .graph-edges .edge.dim { opacity: .12; }
+.ar-ws .graph-edges .edge-contains.dim { opacity: .04; }
 .ar-ws .graph-edges .edge.lit { opacity: .85; }
 .ar-ws .edge-claim, .ar-ws .edge-result { stroke: var(--ws-accent); }
 .ar-ws .edge-check { stroke: var(--ar-c-ok); }

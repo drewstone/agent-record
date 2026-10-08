@@ -103,7 +103,8 @@ function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; run
               {graph.edges.map((edge, i) => {
                 const from = graph.byId.get(edge.from)!
                 const to = graph.byId.get(edge.to)!
-                const lit = !focus || edge.from === focus || edge.to === focus
+                // Container membership makes the bundle one graph, but its many root links recede until inspected.
+                const lit = focus ? edge.from === focus || edge.to === focus : edge.kind !== 'contains'
                 return <path key={i} data-graph-edge-kind={edge.kind} d={path(from, to)} className={`edge edge-${edge.kind} ${lit ? 'lit' : 'dim'}`} />
               })}
             </svg>
