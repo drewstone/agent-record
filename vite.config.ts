@@ -14,6 +14,7 @@ export default defineConfig({
         'research-publication': 'src/adapters/research-publication.ts',
         'agent-runtime': 'src/adapters/agent-runtime.ts',
         'harness-sessions': 'src/adapters/harness-sessions.ts',
+        'trace-spans': 'src/adapters/trace-spans.ts',
         publication: 'src/publication.ts',
       },
       formats: ['es'],

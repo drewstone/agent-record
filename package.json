@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.33.0",
+  "version": "0.33.1",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -45,6 +45,10 @@
     "./adapters/harness-sessions": {
       "types": "./dist/adapters/harness-sessions.d.ts",
       "import": "./dist/harness-sessions.js"
+    },
+    "./adapters/trace-spans": {
+      "types": "./dist/adapters/trace-spans.d.ts",
+      "import": "./dist/trace-spans.js"
     },
     "./publication": {
       "types": "./dist/publication.d.ts",
