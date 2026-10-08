@@ -2995,3 +2995,5 @@
 /* The conversation rail's usage column holds a compact figure ("12.2M tok"), never wrapped. */
 .ar-ws .agent-rail .agent-row { grid-template-columns: minmax(0, 1fr) auto 86px; }
 .ar-ws .agent-rail .agent-row > .num { white-space: nowrap; }
+
+.ar-ws .rs-receipt-lag { margin: 12px 0 0; padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--ar-c-run); background: color-mix(in srgb, var(--ar-c-run) 10%, transparent); font-size: var(--ar-text-s); color: var(--ar-fg); max-width: 100ch; }
