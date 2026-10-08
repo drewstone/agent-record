@@ -90,6 +90,8 @@ const record = fromHarnessSessions([session], { recordId: 'review-1', title: 'Re
 
 Session projection event IDs use `shared-session.v1`, not publication `anchor.v1`. Keep the existing anchored converter for published research records until the shared readers expose equivalent source locations and publication verification passes. Review raw text and paths before serving the projection publicly.
 
+The Overview, run progress, and play charts use the live React renderers from `@tangle-network/charts`. Agent-record supplies the data, state colors, labels, links, and theme tokens; the shared package owns chart geometry, interaction, and CSS. The distributed `styles.css` includes the package's live chart stylesheet for hosts that load one renderer CSS file.
+
 ## Run workspace
 
 `dist/workspace-viewer.js` renders a play page and a run page from a same-origin run workspace API, for example the Tangle Discovery wall:
