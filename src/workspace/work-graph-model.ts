@@ -164,6 +164,8 @@ export function recordWorkGraphModel(record: RunRecord): WorkGraphModel {
   }
   for (const profile of record.profileVersions ?? [])
     for (const parent of profile.parents) link(`profile:${parent}`, `profile:${profile.digest}`, 'parent')
+  // A play's record: each run is a node, each fork an edge between them, from the fork's own receipt.
+  for (const fork of record.forks ?? []) link(`node:${fork.from}`, `node:${fork.to}`, 'fork')
   const used = groups.map((group, index) => ({ group, index })).filter(({ group }) => group.length)
   // Empty columns stay out of the view; the positions of present columns remain stable across records.
   const nodes = groups.flat()
@@ -178,6 +180,7 @@ export function recordWorkGraphModel(record: RunRecord): WorkGraphModel {
     legend: [
       { kind: 'contains', label: 'in this record' },
       { kind: 'parent', label: 'recorded parent' },
+      { kind: 'fork', label: 'forked into (fork.json)' },
       { kind: 'states', label: 'states this claim' },
       { kind: 'reviewed', label: 'reviewed by this session' },
       { kind: 'verdict', label: 'verdict on this claim' },

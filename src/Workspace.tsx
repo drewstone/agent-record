@@ -6,6 +6,7 @@ import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
 import { PlayCharts } from './workspace/PlayCharts.js'
+import { RunLineage } from './workspace/RunLineage.js'
 import { OverviewPage } from './workspace/Overview.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
@@ -328,13 +329,13 @@ function PlaysPage({ api }: { api: string }) {
 // /play/<id>
 // ---------------------------------------------------------------------------------------------------------
 /** The play's tabs: what it found first (charts across its runs, then its results and claims), then its runs and versions. */
-type PlayTab = 'results' | 'runs' | 'versions' | 'profiles' | 'input' | 'spend' | 'assessments'
+type PlayTab = 'results' | 'story' | 'runs' | 'versions' | 'profiles' | 'input' | 'spend' | 'assessments'
 
 function PlayPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
   const play = useDocument<PlayDocument>(`${api}/plays/${encodeURIComponent(id)}`)
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
-  const tab = (['results', 'runs', 'versions', 'profiles', 'input', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'results'
+  const tab = (['results', 'story', 'runs', 'versions', 'profiles', 'input', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'results'
   const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(id)}/profiles`)
   const graph = profiles.data ?? null
   const selectedRun = params.get('run')
@@ -406,11 +407,21 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             label="Play"
             value={tab}
             onChange={(next) => update({ tab: next === 'results' ? undefined : next })}
-            tabs={[['results', 'Results'], ['runs', 'Runs'], ['versions', 'Versions'], ['profiles', 'Profiles'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
+            tabs={[['results', 'Results'], ['story', 'Story'], ['runs', 'Runs'], ['versions', 'Versions'], ['profiles', 'Profiles'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
           />
           <div className="ws-content" role="tabpanel">
+            {tab === 'story' && <RunLineage api={api} play={doc} selected={params.get('at')} onSelect={(id) => update({ at: id ?? undefined }, true)} />}
             {tab === 'results' && (
               <div className="ws-section play-results" data-section="results">
+                {doc.lineage.edges.some((edge) => edge.kind !== 'version') && (
+                  <p className="play-story-link">
+                    <button type="button" className="link-button" onClick={() => update({ tab: 'story' })}>
+                      How its {doc.runs.length} runs connect
+                      {(doc.lineage.forks?.length ?? 0) > 0 ? `: ${doc.lineage.forks!.length} forks` : ''}
+                      {(doc.lineage.releases?.length ?? 0) > 0 ? `, ${doc.lineage.releases!.length} releases of the deliverable` : ''} →
+                    </button>
+                  </p>
+                )}
                 <PlayCharts play={doc} />
                 <h3>What this play found</h3>
                 {doc.findings?.length ? (

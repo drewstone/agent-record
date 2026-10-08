@@ -14,6 +14,8 @@ export const STATE_COLOR: Record<string, string> = {
   'no-winner': '#c98500',
   'no-record': '#e2508f',
   failed: '#4a90e2',
+  // Ended unsettled with its coordinator gone (often stopped to be forked): a neutral, not a failure colour.
+  abandoned: '#8e8e8e',
   unknown: '#b97637',
 }
 
