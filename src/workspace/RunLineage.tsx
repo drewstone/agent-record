@@ -417,14 +417,16 @@ function PlayRecord({ api, play }: { api: string; play: PlayDocument }) {
   const [open, setOpen] = useState(false)
   const url = `${api}/plays/${encodeURIComponent(play.id)}/record`
   const doc = useDocument<unknown>(open ? url : null)
-  const record = useMemo(() => {
-    if (!doc.data) return null
+  const parsed = useMemo((): { record: ReturnType<typeof readRecord> | null; error: string | null } => {
+    if (!doc.data) return { record: null, error: null }
     try {
-      return readRecord(doc.data)
-    } catch {
-      return null
+      return { record: readRecord(doc.data), error: null }
+    } catch (error) {
+      return { record: null, error: error instanceof Error ? error.message : 'not a record' }
     }
   }, [doc.data])
+  const record = parsed.record
+  const error = doc.error ?? parsed.error
   return (
     <section className="ws-section ln-record" aria-label="The play's record">
       <details onToggle={(event) => setOpen((event.target as HTMLDetailsElement).open)}>
@@ -433,7 +435,7 @@ function PlayRecord({ api, play }: { api: string; play: PlayDocument }) {
           One record for the whole play (agent-record.v1): a node per run, an edge per fork from its fork.json, and each run&rsquo;s own record joined by its digest.{' '}
           <a href={url} download={`${play.id}.record.json`}>Download it</a>
         </p>
-        {open && (doc.error ? <p className="ws-status" role="alert">The play&rsquo;s record is unavailable: {doc.error}</p> : record ? <RecordWorkGraph record={record} /> : <p className="ws-status" role="status">Loading the play&rsquo;s record…</p>)}
+        {open && (error ? <p className="ws-status" role="alert">The play&rsquo;s record is unavailable: {error}</p> : record ? <RecordWorkGraph record={record} /> : <p className="ws-status" role="status">Loading the play&rsquo;s record…</p>)}
       </details>
     </section>
   )

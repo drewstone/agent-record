@@ -48,6 +48,8 @@ export interface LineageModel {
   readonly nodes: readonly LineageNode[]
   readonly edges: readonly LineageEdge[]
   readonly byId: ReadonlyMap<string, LineageNode>
+  /** Each run's parent on the canvas: its strongest recorded link. */
+  readonly parents: ReadonlyMap<string, string>
   readonly width: number
   readonly height: number
   /** The newest run on the longest line: where the canvas opens. */
@@ -129,7 +131,7 @@ export function lineageModel(play: PlayDocument): LineageModel {
   const lanes = Math.max(1, ...nodes.map((node) => node.lane + 1))
   const deepest = nodes.filter((node) => node.run).sort((a, b) => b.column - a.column || a.lane - b.lane)[0] ?? null
   return {
-    nodes, edges, byId,
+    nodes, edges, byId, parents: new Map([...parent].map(([child, link]) => [child, link.id])),
     width: (columns - 1) * L_COL_W + L_NODE_W,
     height: (lanes - 1) * L_ROW_H + L_NODE_H,
     focus: deepest?.id ?? null,
@@ -141,8 +143,8 @@ export function lineageModel(play: PlayDocument): LineageModel {
 export function lineageNeighbour(model: LineageModel, id: string, key: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown'): string | null {
   const node = model.byId.get(id)
   if (!node) return null
-  if (key === 'ArrowLeft') return model.edges.find((edge) => edge.to === id)?.from ?? null
-  if (key === 'ArrowRight') return model.edges.find((edge) => edge.from === id)?.to ?? null
+  if (key === 'ArrowLeft') return model.parents.get(id) ?? null
+  if (key === 'ArrowRight') return model.nodes.find((other) => model.parents.get(other.id) === id && other.lane === node.lane)?.id ?? model.nodes.find((other) => model.parents.get(other.id) === id)?.id ?? null
   const lane = node.lane + (key === 'ArrowDown' ? 1 : -1)
   const candidates = model.nodes.filter((other) => other.lane === lane)
   return candidates.sort((a, b) => Math.abs(a.column - node.column) - Math.abs(b.column - node.column))[0]?.id ?? null
