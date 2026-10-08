@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { FeedItem, FindingsFeedDocument } from '../workspace.js'
 import { stateClass, useDocument } from './data.js'
+import { ReviewBadges } from './ScientificReviews.js'
 
 const KINDS = [
   ['all', 'All'],
@@ -44,7 +45,7 @@ export function FindingsFeed({ api, query = '', program: selectedProgram }: { ap
           <h2 className="kicker tone-finding">What the runs found</h2>
           <p className="faint">
             Since {feed.data.since}: {runs.withFindings} of {runs.considered} runs left findings, {runs.results} results and {runs.claims} claims. Every one
-            is the agents' own work; outside acceptance is unassessed unless the run says otherwise.
+            is the agents' own work. Outside verdicts appear on reviewed claims; other claims remain pending.
           </p>
         </div>
         <div className="feed-filters">
@@ -86,6 +87,7 @@ export function FeedCards({ items }: { items: readonly FeedItem[] }) {
             <span className="feed-tags">
               <span className={`ftag kind-${item.kind}`}>{item.ledger ? 'result ledger' : item.kind}</span>
               {item.class && <span className="ftag tone-neutral">{item.class.toLowerCase()}</span>}
+              <ReviewBadges reviews={item.reviews} />
               <span className="faint mono">{short(item.agentLabel)} · {day(item.at)}</span>
             </span>
           </a>

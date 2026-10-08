@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FindingItem, Findings, RunDocument } from '../workspace.js'
 import { MessageText } from '../viewer/StructuredContent.js'
+import { ReviewBadges, ReviewDetails } from './ScientificReviews.js'
 
 const LEAD_KINDS = new Set(['result', 'claim'])
 const SHOWN = 10
@@ -75,6 +76,7 @@ function FindingRow({ item, pageHref, open, onToggle }: { item: FindingItem; pag
         <span className="finding-tags">
           <span className={`ftag kind-${item.kind}`}>{KIND_LABEL[item.kind] ?? item.kind}</span>
           {item.class && <span className="ftag tone-neutral">{item.class.toLowerCase()}</span>}
+          {LEAD_KINDS.has(item.kind) && <ReviewBadges reviews={item.reviews} />}
         </span>
         <span className="finding-text">
           <span className="finding-title">{item.title}</span>
@@ -94,6 +96,7 @@ function FindingRow({ item, pageHref, open, onToggle }: { item: FindingItem; pag
             {item.versions > 1 && <span>{item.versions} versions</span>}
             {item.uncaptured && <span className="tone-warn" title="The run directory holds this page; the conversation record stopped before the agent wrote it.">written after capture stopped</span>}
           </div>
+          {LEAD_KINDS.has(item.kind) && <ReviewDetails reviews={item.reviews} />}
           <div className="finding-actions">
             <button type="button" className="ui-button" onClick={() => setReading((value) => !value)} aria-expanded={reading}>
               {reading ? 'Hide the page' : 'Read the page'}

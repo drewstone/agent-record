@@ -2284,6 +2284,14 @@
 .ar-ws .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .finding-body { display: grid; gap: 8px; padding: 4px 14px 14px calc(112px + 28px); background: var(--ar-raised, var(--ar-bg-alt)); }
 .ar-ws .finding-body .finding-summary { margin: 0; max-width: 100ch; }
+.ar-ws .scientific-reviews { max-width: 100ch; font-size: var(--ar-text-s); }
+.ar-ws .scientific-reviews summary { cursor: pointer; font-weight: 650; }
+.ar-ws .scientific-reviews > ol { margin: 8px 0 0; padding-left: 22px; display: grid; gap: 12px; }
+.ar-ws .scientific-reviews li { overflow-wrap: anywhere; }
+.ar-ws .scientific-reviews li p { margin: 4px 0; }
+.ar-ws .scientific-reviews li ul { margin: 4px 0; padding-left: 20px; }
+.ar-ws .review-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ar-ws .review-note { margin: 4px 0; font-size: var(--ar-text-s); }
 .ar-ws .finding-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--ar-fg-faint); font-size: var(--ar-text-s); }
 .ar-ws .finding-actions { display: flex; gap: 8px; }
 .ar-ws .finding-page { max-height: 640px; overflow: auto; padding: 12px 16px; border: 1px solid var(--ar-border); border-radius: 8px; background: var(--ar-background, var(--ar-bg)); font-size: var(--ar-text-s); }
