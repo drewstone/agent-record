@@ -90,6 +90,18 @@ const record = fromHarnessSessions([session], { recordId: 'review-1', title: 'Re
 
 Session projection event IDs use `shared-session.v1`, not publication `anchor.v1`. Keep the existing anchored converter for published research records until the shared readers expose equivalent source locations and publication verification passes. Review raw text and paths before serving the projection publicly.
 
+### Normalized trace spans
+
+`fromTraceSpans` projects OpenInference/OTLP spans already emitted by `@tangle-network/traces` or the ChatGPT fleet into the same record model. `fromStoryboardSpans` projects the separate `@tangle-network/agent-eval` `Span[]` shape used by `@tangle-network/run-capsule`. Both retain recorded trace/run, span and parent-span IDs on events. Each trace or run is one session node; span containment is not treated as agent delegation. The caller can supply exact retained source locations and claim/verdict/publication references. Missing parents, conflicting session IDs and untimed spans become coverage gaps.
+
+```ts
+import { fromTraceSpans } from '@drewstone/agent-record/adapters/trace-spans'
+
+const record = fromTraceSpans(spans, { recordId: 'fleet-review', title: 'Fleet review' })
+```
+
+OTLP projection uses `trace-span.v1` IDs; the storyboard projection uses `storyboard-span.v1` IDs. Neither claims original capture completeness. Review content and source paths before public serving. They do not replace the anchored research-publication converter. The two upstream span formats remain different; this package does not convert ChatGPT OTLP spans into run-capsule's storyboard input.
+
 The Overview, run progress, and play charts use the live React renderers from `@tangle-network/charts`. Agent-record supplies the data, state colors, labels, links, and theme tokens; the shared package owns chart geometry, interaction, and CSS. The distributed `styles.css` includes the package's live chart stylesheet for hosts that load one renderer CSS file.
 
 ## Run workspace

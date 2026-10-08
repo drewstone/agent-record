@@ -46,6 +46,10 @@
       "types": "./dist/adapters/harness-sessions.d.ts",
       "import": "./dist/harness-sessions.js"
     },
+    "./adapters/trace-spans": {
+      "types": "./dist/adapters/trace-spans.d.ts",
+      "import": "./dist/trace-spans.js"
+    },
     "./publication": {
       "types": "./dist/publication.d.ts",
       "import": "./dist/publication.js"

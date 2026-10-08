@@ -1,0 +1,129 @@
+[
+  {
+    "trace_id": "a50722d65cf76c102ba6aa448da100a4",
+    "span_id": "73d4ed1ba3130a90",
+    "parent_span_id": null,
+    "name": "Fixture conversation",
+    "kind": "AGENT",
+    "start_time": "2026-10-08T00:00:00.000Z",
+    "end_time": "2026-10-08T00:00:03.000Z",
+    "status": {
+      "code": "STATUS_CODE_OK"
+    },
+    "attributes": {
+      "openinference.span.kind": "AGENT",
+      "service.name": "chatgpt",
+      "agent.name": "chatgpt-pro",
+      "tangle.sessionId": "fixture-chatgpt-one",
+      "trace.contract.version": "2.0.0",
+      "chatgpt.conversation": "fixture-chatgpt-one",
+      "chatgpt.url": "https://chatgpt.com/c/fixture-chatgpt-one",
+      "chatgpt.managed": true,
+      "chatgpt.item.id": "fixture-task",
+      "chatgpt.item.state": "merged",
+      "chatgpt.turns": 1,
+      "agent.outcome": "pass"
+    }
+  },
+  {
+    "trace_id": "a50722d65cf76c102ba6aa448da100a4",
+    "span_id": "459ed11a9826a32c",
+    "parent_span_id": "73d4ed1ba3130a90",
+    "name": "turn 1",
+    "kind": "CHAIN",
+    "start_time": "2026-10-08T00:00:00.000Z",
+    "end_time": "2026-10-08T00:00:03.000Z",
+    "status": {
+      "code": "STATUS_CODE_OK"
+    },
+    "attributes": {
+      "openinference.span.kind": "CHAIN",
+      "service.name": "chatgpt",
+      "agent.loop.id": "fixture-chatgpt-one",
+      "agent.loop.iteration": 1,
+      "agent.loop.resumed": false
+    }
+  },
+  {
+    "trace_id": "a50722d65cf76c102ba6aa448da100a4",
+    "span_id": "49fdcd516e90bd9b",
+    "parent_span_id": "459ed11a9826a32c",
+    "name": "user.prompt",
+    "kind": "CHAIN",
+    "start_time": "2026-10-08T00:00:00.000Z",
+    "end_time": "2026-10-08T00:00:00.000Z",
+    "status": {
+      "code": "STATUS_CODE_OK"
+    },
+    "attributes": {
+      "openinference.span.kind": "CHAIN",
+      "service.name": "chatgpt",
+      "content": "Summarize the checked result.",
+      "tangle.actor": "agent",
+      "chatgpt.message": "user-1"
+    }
+  },
+  {
+    "trace_id": "a50722d65cf76c102ba6aa448da100a4",
+    "span_id": "817d127d56075fad",
+    "parent_span_id": "459ed11a9826a32c",
+    "name": "tool.GitHub.read_file",
+    "kind": "TOOL",
+    "start_time": "2026-10-08T00:00:01.000Z",
+    "end_time": "2026-10-08T00:00:02.000Z",
+    "status": {
+      "code": "STATUS_CODE_OK"
+    },
+    "attributes": {
+      "openinference.span.kind": "TOOL",
+      "service.name": "chatgpt",
+      "gen_ai.tool.name": "GitHub.read_file",
+      "chatgpt.recipient": "api_tool.call_tool",
+      "input.value": "{\"path\":\"/GitHub/example/read_file\"}",
+      "output.value": "File checked.",
+      "chatgpt.tool.output_exported": true,
+      "chatgpt.message": "tool-1"
+    }
+  },
+  {
+    "trace_id": "a50722d65cf76c102ba6aa448da100a4",
+    "span_id": "53ee279c308ec903",
+    "parent_span_id": "459ed11a9826a32c",
+    "name": "fixture-model turn",
+    "kind": "LLM",
+    "start_time": "2026-10-08T00:00:00.000Z",
+    "end_time": "2026-10-08T00:00:03.000Z",
+    "status": {
+      "code": "STATUS_CODE_OK"
+    },
+    "attributes": {
+      "openinference.span.kind": "LLM",
+      "service.name": "chatgpt",
+      "gen_ai.request.model": "fixture-model",
+      "gen_ai.system": "openai",
+      "chatgpt.turn.outcome": "answered",
+      "chatgpt.turn.tool_calls": 1,
+      "chatgpt.turn.tool_outputs_missing": 0,
+      "chatgpt.turn.replies": 1
+    }
+  },
+  {
+    "trace_id": "a50722d65cf76c102ba6aa448da100a4",
+    "span_id": "3c4068d871d81917",
+    "parent_span_id": "53ee279c308ec903",
+    "name": "message.assistant",
+    "kind": "CHAIN",
+    "start_time": "2026-10-08T00:00:03.000Z",
+    "end_time": "2026-10-08T00:00:03.000Z",
+    "status": {
+      "code": "STATUS_CODE_OK"
+    },
+    "attributes": {
+      "openinference.span.kind": "CHAIN",
+      "service.name": "chatgpt",
+      "content": "The result is checked.",
+      "chatgpt.message": "answer-1",
+      "chatgpt.final": true
+    }
+  }
+]

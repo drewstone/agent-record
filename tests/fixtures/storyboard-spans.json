@@ -1,0 +1,40 @@
+[
+  {
+    "spanId": "agent-1",
+    "runId": "storyboard-fixture",
+    "kind": "agent",
+    "name": "Checked summary",
+    "startedAt": 1791417600000,
+    "endedAt": 1791417603000,
+    "status": "ok",
+    "attributes": {"service.name": "agent-eval"}
+  },
+  {
+    "spanId": "model-1",
+    "parentSpanId": "agent-1",
+    "runId": "storyboard-fixture",
+    "kind": "llm",
+    "name": "Summarize",
+    "startedAt": 1791417601000,
+    "endedAt": 1791417602000,
+    "status": "ok",
+    "model": "fixture-model",
+    "messages": [{"role": "user", "content": "Summarize the checked result."}],
+    "output": "The result is checked.",
+    "inputTokens": 7,
+    "outputTokens": 6
+  },
+  {
+    "spanId": "tool-1",
+    "parentSpanId": "agent-1",
+    "runId": "storyboard-fixture",
+    "kind": "tool",
+    "name": "Read file",
+    "startedAt": 1791417602000,
+    "endedAt": 1791417603000,
+    "status": "ok",
+    "toolName": "read_file",
+    "args": {"path": "fixture.txt"},
+    "result": "File checked."
+  }
+]
