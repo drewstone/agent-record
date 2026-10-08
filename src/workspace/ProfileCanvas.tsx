@@ -1,22 +1,19 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace.js'
 import { money, stateClass, stateLabel } from './data.js'
 import { canvasModel, COL_W, lineageOf, neighbour, NODE_H, NODE_W, originChain, originText, originVerb, profileRunCost, runPlays } from './profile-canvas.js'
 import type { CanvasEdge, CanvasModel, CanvasNode, CanvasScope } from './profile-canvas.js'
 import { findProfile, profileGraph, profileState } from './profile-graph.js'
 import { ProfileDetail } from './ProfileVersions.js'
+import { useCanvasView } from './useCanvasView.js'
+import type { Box } from './useCanvasView.js'
 
 const PAD = 48
-const MIN_K = 0.12
-const MAX_K = 2
 const runHref = (runId: string) => `/run/${encodeURIComponent(runId)}`
 const playHref = (play: string) => `/play/${encodeURIComponent(play)}`
-const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k))
 const KIND_LABEL: Record<string, string> = { root: 'registered', spawned: 'runtime', proposed: 'optimizer', proposal: 'proposed' }
 const RELATION_TEXT: Record<string, string> = { authored: 'written at runtime by an agent running', replaced: 'restarted from', revision: 'revised from', treatment: 'the treatment arm of' }
-
-type View = { x: number; y: number; k: number }
 
 /**
  * A pan-and-zoom canvas of the agent profiles a run (or a play) used, each traced back to the version it derives from
@@ -129,190 +126,34 @@ function CanvasPane({
   onToggleAll: () => void
   onChoose: (id: string) => void
 }) {
-  const viewport = useRef<HTMLDivElement>(null)
-  const buttons = useRef(new Map<string, HTMLButtonElement>())
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
-  const [view, setRawView] = useState<View | null>(null)
-  // Until the reader moves the canvas, the opening view follows the viewport's size as the page settles.
-  const touched = useRef(false)
-  const setView = (next: View | null | ((current: View | null) => View | null)) => {
-    touched.current = true
-    setRawView(next)
-  }
-  const viewRef = useRef<View | null>(null)
-  viewRef.current = view
-  const [hover, setHover] = useState<string | null>(null)
-  const [active, setActive] = useState<string | null>(null)
-  const keyboard = useRef(false)
-  const worldW = model.width + PAD * 2
-  const worldH = model.height + PAD * 2
-
-  useLayoutEffect(() => {
-    const element = viewport.current
-    if (!element) return
-    const measure = () => setSize({ w: element.clientWidth, h: element.clientHeight })
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
-  const fitView = useCallback((): View | null => {
-    if (!size) return null
-    const k = clampK(Math.min((size.w - 32) / worldW, (size.h - 32) / worldH, 1))
-    return { k, x: (size.w - worldW * k) / 2, y: Math.max(8, (size.h - worldH * k) / 2) }
-  }, [size, worldW, worldH])
-  const centred = useCallback(
-    (id: string, k: number): View | null => {
-      const node = model.byId.get(id)
-      if (!node || !size) return null
-      const cx = PAD + node.x + NODE_W / 2
-      const cy = PAD + node.y + NODE_H / 2
-      return { k, x: size.w / 2 - cx * k, y: size.h / 2 - cy * k }
+  const box = useCallback((id: string): Box | null => {
+    const node = model.byId.get(id)
+    return node ? { x: PAD + node.x, y: PAD + node.y, w: NODE_W, h: NODE_H } : null
+  }, [model])
+  const canvas = useCanvasView({
+    width: model.width + PAD * 2,
+    height: model.height + PAD * 2,
+    box,
+    focus: model.focus,
+    selectedId,
+    neighbour: (id, key) => neighbour(model, id, key),
+    // Too wide to read whole: open at a readable size with the focus's parent column at the left edge, in the upper part
+    // of the viewport, which is what shows below the page header.
+    open: (size, fit) => {
+      const start = selectedId ?? model.focus
+      const node = start ? model.byId.get(start) : undefined
+      if (fit.k >= 0.55 || !node) return null
+      const k = 0.85
+      const left = PAD + Math.max(0, node.x - (node.parent ? COL_W : 0))
+      return { k, x: 24 - left * k, y: Math.min(size.h / 2, 260) - (PAD + node.y + NODE_H / 2) * k }
     },
-    [model, size],
-  )
-
-  // The opening view: the whole canvas when it reads at half size or more, else the focus at a readable size.
-  const opening = useRef({ fitView, centred, model, selectedId })
-  opening.current = { fitView, centred, model, selectedId }
-  useEffect(() => {
-    if (touched.current || !size) return
-    const { fitView, model, selectedId } = opening.current
-    const fit = fitView()
-    const start = selectedId ?? model.focus
-    const node = start ? model.byId.get(start) : undefined
-    if (fit && (fit.k >= 0.55 || !node)) return setRawView(fit)
-    // Too wide to read whole: open at a readable size with the focus's parent column at the left edge.
-    const k = 0.85
-    const left = PAD + Math.max(0, node!.x - (node!.parent ? COL_W : 0))
-    // The canvas usually opens below the run's header, so the focus sits in its upper part, where the screen shows it.
-    setRawView({ k, x: 24 - left * k, y: Math.min(size.h / 2, 260) - (PAD + node!.y + NODE_H / 2) * k })
-  }, [size])
-
-  // A selection made outside the canvas (a link in the inspector, the URL) is brought into view.
-  useEffect(() => {
-    if (!selectedId || !size) return
-    const node = model.byId.get(selectedId)
-    const current = viewRef.current
-    if (!node || !current) return
-    const left = current.x + (PAD + node.x) * current.k
-    const top = current.y + (PAD + node.y) * current.k
-    if (left < 0 || top < 0 || left + NODE_W * current.k > size.w || top + NODE_H * current.k > size.h) setView(centred(selectedId, Math.max(current.k, 0.6)))
-  }, [selectedId, model, size, centred])
-
-  const zoomAt = (px: number, py: number, factor: number) =>
-    setView((current) => {
-      if (!current) return current
-      const k = clampK(current.k * factor)
-      return { k, x: px - (px - current.x) * (k / current.k), y: py - (py - current.y) * (k / current.k) }
-    })
-  const zoomCentre = (factor: number) => size && zoomAt(size.w / 2, size.h / 2, factor)
-
-  // Wheel: a pinch (ctrl) or a mouse wheel zooms at the pointer; a two-finger trackpad scroll pans.
-  useEffect(() => {
-    const element = viewport.current
-    if (!element) return
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault()
-      const rect = element.getBoundingClientRect()
-      const mouseWheel = event.deltaMode !== 0 || (event.deltaX === 0 && Number.isInteger(event.deltaY) && Math.abs(event.deltaY) >= 40)
-      if (event.ctrlKey || event.metaKey || mouseWheel) {
-        const factor = Math.exp(-event.deltaY * (event.ctrlKey && !mouseWheel ? 0.01 : 0.0015) * (event.deltaMode === 1 ? 16 : 1))
-        zoomAt(event.clientX - rect.left, event.clientY - rect.top, factor)
-      } else setView((current) => (current ? { ...current, x: current.x - event.deltaX, y: current.y - event.deltaY } : current))
-    }
-    element.addEventListener('wheel', onWheel, { passive: false })
-    return () => element.removeEventListener('wheel', onWheel)
-  }, [])
-
-  // Drag pans, two pointers pinch; a press that moves less than a few pixels stays a click on the node under it.
-  const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const gesture = useRef<{ from: View; x: number; y: number; dist: number; moved: boolean } | null>(null)
-  const dragged = useRef(false)
-  const startGesture = () => {
-    const points = [...pointers.current.values()]
-    const current = viewRef.current
-    if (!current || !points.length) return (gesture.current = null)
-    const x = points.reduce((sum, p) => sum + p.x, 0) / points.length
-    const y = points.reduce((sum, p) => sum + p.y, 0) / points.length
-    const dist = points.length > 1 ? Math.hypot(points[0]!.x - points[1]!.x, points[0]!.y - points[1]!.y) : 0
-    gesture.current = { from: current, x, y, dist, moved: gesture.current?.moved ?? false }
-  }
-  const onPointerDown = (event: ReactPointerEvent) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return
-    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
-    dragged.current = false
-    startGesture()
-  }
-  const onPointerMove = (event: ReactPointerEvent) => {
-    if (!pointers.current.has(event.pointerId)) return
-    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
-    const g = gesture.current
-    if (!g) return
-    const points = [...pointers.current.values()]
-    const x = points.reduce((sum, p) => sum + p.x, 0) / points.length
-    const y = points.reduce((sum, p) => sum + p.y, 0) / points.length
-    if (!g.moved && Math.hypot(x - g.x, y - g.y) < 5 && points.length < 2) return
-    if (!g.moved) {
-      g.moved = true
-      viewport.current?.setPointerCapture(event.pointerId)
-    }
-    dragged.current = true
-    const rect = viewport.current!.getBoundingClientRect()
-    if (points.length > 1 && g.dist > 0) {
-      const dist = Math.hypot(points[0]!.x - points[1]!.x, points[0]!.y - points[1]!.y)
-      const k = clampK(g.from.k * (dist / g.dist))
-      const px = g.x - rect.left
-      const py = g.y - rect.top
-      setView({ k, x: px - (px - g.from.x) * (k / g.from.k) + (x - g.x), y: py - (py - g.from.y) * (k / g.from.k) + (y - g.y) })
-    } else setView({ ...g.from, x: g.from.x + (x - g.x), y: g.from.y + (y - g.y) })
-  }
-  const onPointerUp = (event: ReactPointerEvent) => {
-    pointers.current.delete(event.pointerId)
-    // The click that ends a drag fires after this; any later click (a key, assistive tech) must go through.
-    if (dragged.current) window.setTimeout(() => (dragged.current = false), 0)
-    if (pointers.current.size) startGesture()
-    else gesture.current = null
-  }
-
-  const current = active && model.byId.has(active) ? active : selectedId && model.byId.has(selectedId) ? selectedId : model.focus
-  useEffect(() => {
-    if (!keyboard.current || !current) return
-    keyboard.current = false
-    buttons.current.get(current)?.focus({ preventScroll: true })
-  }, [current])
-  const onKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.ctrlKey || event.metaKey || event.altKey) return
-    const key = event.key
-    if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown') {
-      event.preventDefault()
-      const next = current ? neighbour(model, current, key) : model.focus
-      if (!next) return
-      keyboard.current = true
-      setActive(next)
-      setHover(next)
-      const node = model.byId.get(next)!
-      const v = viewRef.current
-      if (v && size) {
-        const left = v.x + (PAD + node.x) * v.k
-        const top = v.y + (PAD + node.y) * v.k
-        if (left < 16 || top < 16 || left + NODE_W * v.k > size.w - 16 || top + NODE_H * v.k > size.h - 16) setView(centred(next, v.k))
-      }
-    } else if (key === '+' || key === '=') zoomCentre(1.25)
-    else if (key === '-' || key === '_') zoomCentre(0.8)
-    else if (key === '0') setView(fitView())
-    else if (key === 'f' && current) setView(centred(current, Math.max(viewRef.current?.k ?? 0.85, 0.85)))
-    else if (key === 'Escape') setHover(null)
-    else return
-  }
-
+  })
+  const { hover } = canvas
   const lit = useMemo(() => {
     const id = hover ?? selectedId
     return id && model.byId.has(id) ? lineageOf(model, id) : null
   }, [hover, selectedId, model])
 
-  const k = view?.k ?? 1
   return (
     <section className="pc-pane" aria-label="Profile lineage canvas">
       <div className="pc-toolbar">
@@ -331,34 +172,17 @@ function CanvasPane({
             </>
           )}
         </p>
-        <div className="pc-controls" role="group" aria-label="Canvas view">
+        <CanvasControls canvas={canvas} selectedId={selectedId}>
           {(model.counts.clustered > 0 || allOpen) && (
             <button type="button" className="ui-button" onClick={onToggleAll} aria-pressed={allOpen}>
               {allOpen ? 'Collapse runtime profiles' : `Expand all (${model.counts.clustered})`}
             </button>
           )}
-          <button type="button" className="ui-button" onClick={() => zoomCentre(0.8)} aria-label="Zoom out">−</button>
-          <span className="pc-zoom mono">{Math.round(k * 100)}%</span>
-          <button type="button" className="ui-button" onClick={() => zoomCentre(1.25)} aria-label="Zoom in">+</button>
-          <button type="button" className="ui-button" onClick={() => setView(fitView())}>Fit</button>
-          {selectedId && <button type="button" className="ui-button" onClick={() => setView(centred(selectedId, Math.max(k, 0.85)))}>Selected</button>}
-        </div>
+        </CanvasControls>
       </div>
-      <div
-        ref={viewport}
-        className="pc-viewport"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onKeyDown={onKeyDown}
-        data-zoom={k.toFixed(2)}
-      >
-        <div
-          className="pc-world"
-          style={{ width: worldW, height: worldH, transform: view ? `translate(${view.x}px, ${view.y}px) scale(${view.k})` : undefined, visibility: view ? 'visible' : 'hidden' }}
-        >
-          <svg className="pc-edges" width={worldW} height={worldH} aria-hidden="true">
+      <div {...canvas.viewportProps} className="pc-viewport" data-zoom={canvas.k.toFixed(2)}>
+        <div className="pc-world" style={canvas.worldStyle}>
+          <svg className="pc-edges" width={canvas.worldStyle.width} height={canvas.worldStyle.height} aria-hidden="true">
             {model.edges.map((edge) => (
               <path key={edge.id} d={edgePath(model, edge)} className={edgeClass(edge, lit)} />
             ))}
@@ -386,17 +210,17 @@ function CanvasPane({
               key={node.id}
               node={node}
               on={node.id === selectedId}
-              active={node.id === current}
+              active={node.id === canvas.current}
               dim={!!lit && !lit.has(node.id)}
               hot={!!lit && lit.has(node.id) && node.id !== (hover ?? selectedId)}
-              register={(element) => (element ? buttons.current.set(node.id, element) : buttons.current.delete(node.id))}
-              onHover={setHover}
+              register={canvas.register(node.id)}
+              onHover={canvas.setHover}
               onChoose={(id) => {
-                if (dragged.current) return
+                if (canvas.wasDragged()) return
                 const first = model.byId.get(id)?.cluster?.members[0]?.digest
                 // An expanded cluster's card unmounts; its first profile takes the focus.
-                if (first) keyboard.current = true
-                setActive(first ?? id)
+                if (first) canvas.moveFocus(first)
+                else canvas.setActive(id)
                 onChoose(id)
               }}
             />
@@ -405,6 +229,20 @@ function CanvasPane({
       </div>
       <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move along the lineage, Enter opens · 0 fits</p>
     </section>
+  )
+}
+
+/** Zoom, fit and centre-on-selection buttons for a canvas, after any canvas-specific controls. */
+export function CanvasControls({ canvas, selectedId, children }: { canvas: ReturnType<typeof useCanvasView>; selectedId: string | null; children?: ReactNode }) {
+  return (
+    <div className="pc-controls" role="group" aria-label="Canvas view">
+      {children}
+      <button type="button" className="ui-button" onClick={canvas.zoomOut} aria-label="Zoom out">−</button>
+      <span className="pc-zoom mono">{Math.round(canvas.k * 100)}%</span>
+      <button type="button" className="ui-button" onClick={canvas.zoomIn} aria-label="Zoom in">+</button>
+      <button type="button" className="ui-button" onClick={canvas.fit}>Fit</button>
+      {selectedId && <button type="button" className="ui-button" onClick={() => canvas.centre(selectedId)}>Selected</button>}
+    </div>
   )
 }
 
