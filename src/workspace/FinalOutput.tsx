@@ -294,8 +294,8 @@ export function TraceReviewSection({ review }: { review: TraceReview }) {
               <tr><th>Question</th><th className="num">Score</th><th>Verdict</th></tr>
             </thead>
             <tbody>
-              {review.questions.map((item) => (
-                <tr key={item.id} data-review-question={item.id}>
+              {review.questions.map((item, index) => (
+                <tr key={`${index}:${item.id}`} data-review-question={item.id}>
                   <td>
                     <b>{questionLabel(item.id)}</b>
                     {item.question && <div className="final-evidence faint"><Clamped text={item.question} /></div>}
