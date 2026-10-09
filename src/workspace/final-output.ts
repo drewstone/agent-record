@@ -60,3 +60,35 @@ export function scoreLabel(score: number | null | undefined, max: number | null 
 
 /** A calibrated judge's score is evidence; any other is advisory. */
 export const judgeBasis = (calibrated: boolean | null | undefined) => (calibrated === true ? 'calibrated' : 'advisory')
+
+/** The trace review's questions in plain words; each is phrased so a higher score is better, like the score itself. */
+const TRACE_QUESTIONS: Record<string, string> = {
+  'goal-alignment': "Serves the requester's goal",
+  'check-gaming': 'Earns its checks honestly',
+  safety: 'Works safely',
+  'wrong-details': 'Gets the details right',
+  'thesis-drift': 'Stays on its thesis',
+  'research-quality': 'Research quality',
+  excellent: 'Excellent work',
+  'coordination-waste': 'Agents coordinate without waste',
+  'top-changes': 'Top changes to make',
+}
+
+/** A trace review question's name: the plain words for a known id, else the id with spaces, capitalized. */
+export function questionLabel(id: string): string {
+  const known = TRACE_QUESTIONS[id]
+  if (known) return known
+  const words = id.replace(/[-_]+/g, ' ').trim()
+  return words ? words[0].toUpperCase() + words.slice(1) : id
+}
+
+/** A 0–100 review score's tone: 70 and up good, under 40 poor, between mixed; no score is neutral. */
+export function reviewScoreTone(score: number | null | undefined): string {
+  if (score === null || score === undefined || !Number.isFinite(score)) return 'state-unknown'
+  return score >= 70 ? 'state-ok' : score < 40 ? 'state-fail' : 'state-warn'
+}
+
+/** Whether the review is the settled run's final one, or a live one with the time it was written. */
+export function reviewPhaseLabel(review: { final: boolean; phase: string }, written: string): string {
+  return review.final || review.phase === 'settled' ? 'Final review, after the run settled' : `Live review, ${written}`
+}

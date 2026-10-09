@@ -1847,6 +1847,13 @@
 .ar-ws .final-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .ar-ws .final-more { border: 0; background: none; padding: 0; font: inherit; font-size: var(--ar-text-s); color: var(--ws-accent); cursor: pointer; }
 .ar-ws .final-more:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 2px; border-radius: 3px; }
+/* The trace review: a model's 0-100 answers about the run's sessions, each with its quotes and suggestions folded. */
+.ar-ws .review-detail { margin-top: 4px; font-size: var(--ar-text-s); }
+.ar-ws .review-detail > summary { cursor: pointer; color: var(--ws-accent); }
+.ar-ws .review-quotes, .ar-ws .review-suggestions { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: var(--ar-text-s); overflow-wrap: anywhere; }
+.ar-ws .review-quotes { list-style: none; padding-left: 0; }
+.ar-ws .review-citation { margin-left: 6px; }
+.ar-ws .review-note { margin: 6px 0 0; font-size: var(--ar-text-s); }
 @media (max-width: 640px) { .ar-ws .ws-final { padding: 10px 12px; } }
 /* Profile versions on the play page: one node per exact profile, under the profile it came from. */
 .ar-ws .profile-arrow { fill: var(--ar-fg-muted); }
