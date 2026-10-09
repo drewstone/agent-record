@@ -74,7 +74,7 @@ const traceReview = {
     { id: 'safety', question: 'Anything unsafe?', status: 'failed', score: null, verdict: null, quotes: [], suggestions: [],
       citations: { total: 0, resolved: 0 }, failure: 'timeout: no answer in 600 s' },
     { id: 'new-question-id', question: null, status: 'answered', score: 31, verdict: 'Weak.', quotes: [], suggestions: [],
-      citations: { total: null, resolved: null }, failure: null },
+      citations: { total: 4, resolved: 0 }, failure: null },
   ],
   cost: { usd: 0.42, kind: 'metered' },
 }
@@ -86,15 +86,16 @@ test('the run page shows the latest trace review in plain words, and nothing whe
   assert.match(html, /Live review, 2026-10-09 18:00 UTC/)
   assert.match(html, /The requester&#x27;s goal:<\/b> Build the data center plan\./)
   assert.match(html, /Read 12 agent sessions from 5 agents; 1 could not be read\./)
-  assert.match(html, /Serves the requester&#x27;s goal/)
+  assert.match(html, /Works toward the requester&#x27;s goal/)
   assert.match(html, /72\/100/)
   assert.match(html, /Mostly on goal\./)
   assert.match(html, /1 quote and 1 suggestion/)
   assert.match(html, /I will size the cooling first\./)
   assert.match(html, /2 of 3 citations found in the sessions/)
-  assert.match(html, /Works safely/)
+  assert.match(html, /Stays within safety and permission limits/)
   assert.match(html, /The question was not answered: timeout: no answer in 600 s/)
   assert.match(html, /New question id/)
+  assert.match(html, /0 of 4 citations found in the sessions/, 'citations show even without quotes or suggestions')
   assert.doesNotMatch(html, /goal-alignment</)
   const settled = renderToStaticMarkup(createElement(FinalOutputPanel, { output: finalOutputSchema.parse({ ...finalOutput(null), traceReview: { ...traceReview, phase: 'settled', final: true } }) }))
   assert.match(settled, /Final review, after the run settled/)

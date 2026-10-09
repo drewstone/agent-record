@@ -63,15 +63,15 @@ export const judgeBasis = (calibrated: boolean | null | undefined) => (calibrate
 
 /** The trace review's questions in plain words; each is phrased so a higher score is better, like the score itself. */
 const TRACE_QUESTIONS: Record<string, string> = {
-  'goal-alignment': "Serves the requester's goal",
-  'check-gaming': 'Earns its checks honestly',
-  safety: 'Works safely',
-  'wrong-details': 'Gets the details right',
-  'thesis-drift': 'Stays on its thesis',
-  'research-quality': 'Research quality',
-  excellent: 'Excellent work',
+  'goal-alignment': "Works toward the requester's goal",
+  'check-gaming': 'Works for the requester, not the checks',
+  safety: 'Stays within safety and permission limits',
+  'wrong-details': 'Focuses on substance, not busywork',
+  'thesis-drift': 'Keeps to the direction the requester asked for',
+  'research-quality': 'Research quality: sourced, checked numbers',
+  excellent: 'What is excellent and worth keeping',
   'coordination-waste': 'Agents coordinate without waste',
-  'top-changes': 'Top changes to make',
+  'top-changes': 'Top changes that would raise the score',
 }
 
 /** A trace review question's name: the plain words for a known id, else the id with spaces, capitalized. */

@@ -211,38 +211,41 @@ function ReadoutSection({ readout, output, grading }: { readout: Readout; output
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
 
-/** A question's quotes from the agents and its suggestions, folded until the reader opens them. */
+/** How many of a question's citations were found in the sessions, then its quotes and suggestions, folded until opened. */
 function QuestionDetail({ item }: { item: TraceReviewQuestion }) {
   const { quotes, suggestions, citations } = item
-  if (quotes.length === 0 && suggestions.length === 0) return null
   const parts = [quotes.length > 0 && plural(quotes.length, 'quote'), suggestions.length > 0 && plural(suggestions.length, 'suggestion')].filter(Boolean)
   return (
-    <details className="review-detail">
-      <summary>{parts.join(' and ')}</summary>
-      {quotes.length > 0 && (
-        <ul className="review-quotes">
-          {quotes.map((quote, index) => (
-            <li key={index}>
-              <span className="faint">{quote.agent ?? 'An agent'} wrote:</span> <q>{quote.quote}</q>
-              {quote.citation && <span className="mono faint review-citation">{quote.citation}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
+    <>
       {citations.total !== null && citations.total > 0 && (
-        <p className="faint review-note">
-          {citations.resolved ?? 'unknown'} of {plural(citations.total, 'citation')} found in the sessions.
+        <p className={`review-note ${citations.resolved !== null && citations.resolved < citations.total ? 'state-warn' : 'faint'}`}>
+          {citations.resolved ?? 'An unknown number'} of {plural(citations.total, 'citation')} found in the sessions.
         </p>
       )}
-      {suggestions.length > 0 && (
-        <>
-          <p className="review-note">Suggestions</p>
-          <ol className="review-suggestions">
-            {suggestions.map((text, index) => <li key={index}>{text}</li>)}
-          </ol>
-        </>
+      {parts.length > 0 && (
+        <details className="review-detail">
+          <summary>{parts.join(' and ')}</summary>
+          {quotes.length > 0 && (
+            <ul className="review-quotes">
+              {quotes.map((quote, index) => (
+                <li key={index}>
+                  <span className="faint">{quote.agent ?? 'An agent'} wrote:</span> <q>{quote.quote}</q>
+                  {quote.citation && <span className="mono faint review-citation">{quote.citation}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {suggestions.length > 0 && (
+            <>
+              <p className="review-note">Suggestions</p>
+              <ol className="review-suggestions">
+                {suggestions.map((text, index) => <li key={index}>{text}</li>)}
+              </ol>
+            </>
+          )}
+        </details>
       )}
-    </details>
+    </>
   )
 }
 
@@ -254,8 +257,7 @@ export function TraceReviewSection({ review }: { review: TraceReview }) {
     <div className="final-readout final-review" data-trace-review={review.final ? 'final' : 'live'}>
       <div className="final-readout-head">
         <h3>Trace review</h3>
-        <span className={`state-pill ${review.final ? 'state-ok' : 'state-warn'}`}>{review.final ? 'final' : 'live'}</span>
-        <span className="faint">{reviewPhaseLabel(review, when(review.generatedAt))}</span>
+        <span className={`state-pill ${review.final ? 'state-ok' : 'state-warn'}`}>{reviewPhaseLabel(review, when(review.generatedAt))}</span>
       </div>
       <p className="final-summary">
         <b>The requester's goal:</b> {review.goal ?? <span className="faint">not registered for this run</span>}
