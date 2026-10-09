@@ -635,6 +635,44 @@ export const panelReviewSchema = z
   })
   .catchall(z.unknown())
 
+/** One question of a trace review: a 0–100 score (higher is better for every question), a verdict, quotes and suggestions. */
+export const traceReviewQuestionSchema = z
+  .object({
+    id: z.string(),
+    question: z.string().nullable(),
+    status: z.enum(['answered', 'failed']),
+    score: z.number().min(0).max(100).nullable(),
+    verdict: z.string().nullable(),
+    quotes: z.array(z.object({ agent: z.string().nullable(), quote: z.string(), citation: z.string().nullable() }).catchall(z.unknown())),
+    suggestions: z.array(z.string()),
+    citations: z.object({ total: z.number().int().nullable(), resolved: z.number().int().nullable() }).catchall(z.unknown()),
+    failure: z.string().nullable(),
+  })
+  .catchall(z.unknown())
+
+/** The run's latest trace review (discovery-lab `runner/trace-review.mjs`): a model read the run's agent sessions and
+ * answered a bank of questions about them, while the run runs and once after it settles. Advisory. */
+export const traceReviewSchema = z
+  .object({
+    phase: z.enum(['running', 'settled']),
+    final: z.boolean(),
+    generatedAt: time.nullable(),
+    goal: z.string().nullable(),
+    requester: z.string().nullable(),
+    model: z.string().nullable(),
+    sessions: z
+      .object({
+        read: z.number().int().nullable(),
+        nodes: z.number().int().nullable(),
+        unreadable: z.array(z.object({ node: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown())),
+        unreadableCount: z.number().int(),
+      })
+      .catchall(z.unknown()),
+    questions: z.array(traceReviewQuestionSchema),
+    cost: z.object({ usd: z.number().nullable(), kind: z.string().nullable() }).catchall(z.unknown()),
+  })
+  .catchall(z.unknown())
+
 /** What the run was asked to deliver and whether it did. Absent on documents built before the field existed. */
 export const finalOutputSchema = z
   .object({
@@ -666,6 +704,8 @@ export const finalOutputSchema = z
     grades: z.object({ latest: z.array(humanGradeSchema), count: z.number().int() }).optional(),
     /** The AI persona panel's reviews of the run. */
     panel: z.array(panelReviewSchema).optional(),
+    /** The run's latest trace review; null when it has none, absent on documents built before the field existed. */
+    traceReview: traceReviewSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -1416,6 +1456,8 @@ export type ProgressBrief = z.infer<typeof progressBriefSchema>
 export type RunProgress = z.infer<typeof runProgressSchema>
 export type HumanGrade = z.infer<typeof humanGradeSchema>
 export type PanelReview = z.infer<typeof panelReviewSchema>
+export type TraceReview = z.infer<typeof traceReviewSchema>
+export type TraceReviewQuestion = z.infer<typeof traceReviewQuestionSchema>
 export type ReadoutChart = NonNullable<Readout['charts']>[number]
 export type VersionGraphDocument = z.infer<typeof versionGraphDocumentSchema>
 export type VersionCommit = VersionGraphDocument['commits'][number]

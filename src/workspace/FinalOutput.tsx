@@ -1,6 +1,17 @@
 import { useState } from 'react'
-import type { FinalOutput, OutputFile, Readout } from '../workspace.js'
-import { byteSize, deliveryLabel, externalHref, judgeBasis, sameOriginHref, scoreLabel, verdictView } from './final-output.js'
+import type { FinalOutput, OutputFile, Readout, TraceReview, TraceReviewQuestion } from '../workspace.js'
+import {
+  byteSize,
+  deliveryLabel,
+  externalHref,
+  judgeBasis,
+  questionLabel,
+  reviewPhaseLabel,
+  reviewScoreTone,
+  sameOriginHref,
+  scoreLabel,
+  verdictView,
+} from './final-output.js'
 import { money, when } from './data.js'
 import { ChartGallery, GradeControl, ScoresTable } from './Scores.js'
 
@@ -198,6 +209,129 @@ function ReadoutSection({ readout, output, grading }: { readout: Readout; output
   )
 }
 
+const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
+
+/** How many of a question's citations were found in the sessions, then its quotes and suggestions, folded until opened. */
+function QuestionDetail({ item }: { item: TraceReviewQuestion }) {
+  const { quotes, suggestions, citations } = item
+  const parts = [quotes.length > 0 && plural(quotes.length, 'quote'), suggestions.length > 0 && plural(suggestions.length, 'suggestion')].filter(Boolean)
+  return (
+    <>
+      {citations.total !== null && citations.total > 0 && (
+        <p className={`review-note ${citations.resolved !== null && citations.resolved < citations.total ? 'state-warn' : 'faint'}`}>
+          {citations.resolved ?? 'An unknown number'} of {plural(citations.total, 'citation')} found in the sessions.
+        </p>
+      )}
+      {parts.length > 0 && (
+        <details className="review-detail">
+          <summary>{parts.join(' and ')}</summary>
+          {quotes.length > 0 && (
+            <ul className="review-quotes">
+              {quotes.map((quote, index) => (
+                <li key={index}>
+                  <span className="faint">{quote.agent ?? 'An agent'} wrote:</span> <q>{quote.quote}</q>
+                  {quote.citation && <span className="mono faint review-citation">{quote.citation}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {suggestions.length > 0 && (
+            <>
+              <p className="review-note">Suggestions</p>
+              <ol className="review-suggestions">
+                {suggestions.map((text, index) => <li key={index}>{text}</li>)}
+              </ol>
+            </>
+          )}
+        </details>
+      )}
+    </>
+  )
+}
+
+/** The run's latest trace review: a model read the agents' sessions and answered each question with a 0–100 score
+ * (higher is better), a verdict, quotes and suggestions. Advisory, like the persona panel. */
+export function TraceReviewSection({ review }: { review: TraceReview }) {
+  const { sessions } = review
+  return (
+    <div className="final-readout final-review" data-trace-review={review.final ? 'final' : 'live'}>
+      <div className="final-readout-head">
+        <h3>Trace review</h3>
+        <span className={`state-pill ${review.final ? 'state-ok' : 'state-warn'}`}>{reviewPhaseLabel(review, when(review.generatedAt))}</span>
+      </div>
+      <p className="final-summary">
+        <b>The requester's goal:</b> {review.goal ?? <span className="faint">not registered for this run</span>}
+      </p>
+      <p className="final-links faint" data-review-sessions>
+        <span>
+          Read {sessions.read === null ? 'an unknown number of' : sessions.read} agent session{sessions.read === 1 ? '' : 's'}
+          {sessions.nodes !== null ? ` from ${plural(sessions.nodes, 'agent')}` : ''}
+          {sessions.unreadableCount > 0 ? `; ${sessions.unreadableCount} could not be read` : '; none was unreadable'}.
+        </span>
+        {review.model && <span>Reviewed by {review.model}</span>}
+        {review.cost.usd !== null && (
+          <span className="final-cost">
+            review cost <b>{money(review.cost.usd)}</b>
+          </span>
+        )}
+      </p>
+      {sessions.unreadable.length > 0 && (
+        <details className="final-files-all">
+          <summary>Sessions the review could not read</summary>
+          <ul className="review-quotes">
+            {sessions.unreadable.map((item, index) => (
+              <li key={index}>
+                <span className="mono">{item.node ?? 'unknown agent'}</span>: {item.reason ?? 'no reason given'}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {review.questions.length === 0 ? (
+        <p className="faint final-none">The review answered no questions.</p>
+      ) : (
+        <div className="table-scroll">
+          <table className="data-table final-table" data-trace-review-questions>
+            <thead>
+              <tr><th>Question</th><th className="num">Score</th><th>Verdict</th></tr>
+            </thead>
+            <tbody>
+              {review.questions.map((item, index) => (
+                <tr key={`${index}:${item.id}`} data-review-question={item.id}>
+                  <td>
+                    <b>{questionLabel(item.id)}</b>
+                    {item.question && <div className="final-evidence faint"><Clamped text={item.question} /></div>}
+                  </td>
+                  <td className="num final-nowrap">
+                    {item.status === 'failed' ? (
+                      <span className="state-pill state-fail">failed</span>
+                    ) : item.score === null ? (
+                      <span className="faint">no score</span>
+                    ) : (
+                      <span className={`state-pill ${reviewScoreTone(item.score)}`}>{Math.round(item.score)}/100</span>
+                    )}
+                  </td>
+                  <td>
+                    {item.status === 'failed' ? (
+                      <span className="final-error">The question was not answered: {item.failure ?? 'no reason recorded'}</span>
+                    ) : item.verdict ? (
+                      <Clamped text={item.verdict} />
+                    ) : (
+                      <span className="faint">No verdict.</span>
+                    )}
+                    <QuestionDetail item={item} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="faint final-none">Scores are 0–100, higher is better, from a model reading the sessions; advisory, not acceptance.</p>
+    </div>
+  )
+}
+
 /** What the run was asked to deliver and whether it did. Older run documents carry no field, and show nothing. */
 /** Where a writer's grade goes, and what to do once it is saved. */
 export interface Grading {
@@ -218,6 +352,7 @@ export function FinalOutputPanel({ output, grading }: { output: FinalOutput | nu
         {output.checkedAt && <span className="faint final-checked">checked {when(output.checkedAt)}</span>}
       </header>
       {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} />}
+      {output.traceReview && <TraceReviewSection review={output.traceReview} />}
       {declared ? (
         <>
           <p className="final-declared">
