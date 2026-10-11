@@ -123,6 +123,17 @@ const runKey = z
 export const hiddenReasons = ['failed', 'smoke', 'archived'] as const
 const hiddenReason = z.enum(hiddenReasons)
 
+/** A play check that passed (see RunSummary.playCheck). */
+export const playCheckSchema = z
+  .object({
+    at: z.string().nullable(),
+    source: z.string(),
+    lines: z.array(z.string()),
+    solved: z.string().nullable(),
+    settle: z.object({ kind: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown()).nullable().optional(),
+  })
+  .catchall(z.unknown())
+
 export const runSummarySchema = z
   .object({
     id: z.string(),
@@ -160,6 +171,18 @@ export const runSummarySchema = z
     /** The run it was forked from (fork.json), and the agent-hours its failures cost (0 when none were lost). */
     forkedFrom: z.string().nullable().optional(),
     lostHours: z.number().optional(),
+    /**
+     * The play check that passed (discovery-lab's objective for a play), which makes the run a winner though Runtime
+     * recorded none: when it passed, the file the host read it from, the check's output lines (a cut one ends in …), its
+     * whole SOLVED line or null, and Runtime's own settle. Absent or null when no check passed.
+     */
+    playCheck: playCheckSchema.nullable().optional(),
+    /** The best run of a play only: the deliverables its readout names, each with a link to it on the run page. */
+    deliverables: z
+      .array(z.object({ id: z.string().nullable(), path: z.string(), present: z.boolean().nullable().optional(), href: z.string() }).catchall(z.unknown()))
+      .optional(),
+    /** The best run of a play only: its best checkpoint's receipt. */
+    receipt: z.object({ tag: z.string(), status: z.string().nullable(), href: z.string() }).catchall(z.unknown()).nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -219,6 +242,8 @@ export const playsDocumentSchema = z
           noProgram: z.boolean().optional(),
           state: z.string().nullable(),
           latestRun: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable(),
+          /** Its best result: the newest run that won (its root submitted, or its play check passed); null before one did. */
+          best: z.string().nullable().optional(),
           runCount: z.number().int().nonnegative(),
           /** Runs by why they are hidden by default; `shown` counts the rest. */
           counts: z
@@ -420,7 +445,7 @@ export const playDocumentSchema = z
         .catchall(z.unknown()),
     ),
     gaps: z.array(gapSchema),
-    /** The newest run that settled with a winner: the play's best result, a separate fact from its latest run. */
+    /** The newest run that won (its root submitted, or its play check passed): the play's best result, a separate fact from its latest run. */
     best: z.string().nullable().optional(),
     /** The play's results and claims, newest run first, each run's result ledgers first. */
     findings: z.array(feedItemSchema).optional(),
@@ -1375,6 +1400,7 @@ export type Gap = z.infer<typeof gapSchema>
 export type Spend = z.infer<typeof spendSchema>
 export type RecordStatus = z.infer<typeof recordStatusSchema>
 export type RunSummary = z.infer<typeof runSummarySchema>
+export type PlayCheck = z.infer<typeof playCheckSchema>
 export type PlayInput = z.infer<typeof playInputSchema>
 export type PlaysDocument = z.infer<typeof playsDocumentSchema>
 export type PlayDocument = z.infer<typeof playDocumentSchema>
@@ -1392,8 +1418,11 @@ export type Release = z.infer<typeof releaseSchema>
 type Bin = { lo: number; hi: number; n: number }
 /** The Discovery overview (`agent-workspace.overview.v1`, served at `overview`): runs, findings, tokens, money, the
  * sandbox fleet, storage and subscription seats over its `days`. Every series is aligned to `days`. */
-/** A run's lead finding on the overview: its result ledger, else its newest result, else its newest claim. */
-export interface OverviewLead { title: string | null; kind: 'result' | 'claim'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string }
+/**
+ * A run's lead finding on the overview: a passed play check (`check`: its SOLVED line, else the run's stated answer), else
+ * its best result or claim page, a page that states its answer first.
+ */
+export interface OverviewLead { title: string | null; kind: 'result' | 'claim' | 'check'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string }
 export interface OverviewRun {
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
   results: number; claims: number; findingsPending?: boolean; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number

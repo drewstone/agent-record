@@ -5,6 +5,7 @@ import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
+import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayCharts } from './workspace/PlayCharts.js'
 import { RunLineage } from './workspace/RunLineage.js'
 import { OverviewPage } from './workspace/Overview.js'
@@ -328,7 +329,7 @@ function PlaysPage({ api }: { api: string }) {
 // ---------------------------------------------------------------------------------------------------------
 // /play/<id>
 // ---------------------------------------------------------------------------------------------------------
-/** The play's tabs: what it found first (charts across its runs, then its results and claims), then its runs and versions. */
+/** The play's tabs: its answer first (the best run, its check and deliverable), then its results and claims, then charts across its runs; then its runs and versions. */
 type PlayTab = 'results' | 'story' | 'runs' | 'versions' | 'profiles' | 'input' | 'spend' | 'assessments'
 
 function PlayPage({ api, id }: { api: string; id: string }) {
@@ -413,6 +414,14 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             {tab === 'story' && <RunLineage api={api} play={doc} selected={params.get('at')} onSelect={(id) => update({ at: id ?? undefined }, true)} />}
             {tab === 'results' && (
               <div className="ws-section play-results" data-section="results">
+                <PlayAnswer play={doc} />
+                <h3>What this play found</h3>
+                {doc.findings?.length ? (
+                  <FeedCards items={doc.findings} />
+                ) : (
+                  <p className="ws-status">No result or claim has been derived from this play&rsquo;s runs yet. Each run&rsquo;s pages are under its Findings.</p>
+                )}
+                <PlayCharts play={doc} />
                 {doc.lineage.edges.some((edge) => edge.kind !== 'version') && (
                   <p className="play-story-link">
                     <button type="button" className="link-button" onClick={() => update({ tab: 'story' })}>
@@ -421,13 +430,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                       {(doc.lineage.releases?.length ?? 0) > 0 ? `, ${doc.lineage.releases!.length} releases of the deliverable` : ''} →
                     </button>
                   </p>
-                )}
-                <PlayCharts play={doc} />
-                <h3>What this play found</h3>
-                {doc.findings?.length ? (
-                  <FeedCards items={doc.findings} />
-                ) : (
-                  <p className="ws-status">No result or claim has been derived from this play&rsquo;s runs yet. Each run&rsquo;s pages are under its Findings.</p>
                 )}
               </div>
             )}
@@ -520,7 +522,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
 
 /** One adverse label per headline dimension. */
 /**
- * The play's standing as two facts: its best result (the newest run that won) and its latest run with how it is going.
+ * The play's standing as two facts: its best result (the newest run that won: its play check passed, or its root
+ * submitted) and its latest run with how it is going.
  * A failed latest run never hides an earlier winner, and no winner yet is said plainly.
  */
 function PlayStanding({ play }: { play: PlayDocument }) {

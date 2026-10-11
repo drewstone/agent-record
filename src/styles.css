@@ -2357,6 +2357,15 @@
 .ar-ws .play-fact:hover, .ar-ws .play-fact:focus-visible { background: var(--ar-hover, var(--ws-raised)); }
 .ar-ws .play-results { display: grid; gap: 14px; }
 .ar-ws .play-results > h3 { margin: 6px 0 0; }
+.ar-ws .play-answer { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--ar-border); border-left: 3px solid var(--ar-c-ok); border-radius: 8px; min-width: 0; }
+.ar-ws .play-answer.is-none { border-left-color: var(--ar-border); }
+.ar-ws .play-answer h3 { margin: 0; }
+.ar-ws .play-answer p { margin: 0; }
+.ar-ws .play-answer-text { font-size: 1.05em; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.ar-ws .play-answer-run { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5em; }
+.ar-ws .play-answer-run .mono { overflow-wrap: anywhere; min-width: 0; }
+.ar-ws .play-check-lines { margin: 0; padding: 10px 12px; max-height: 18em; overflow: auto; border-radius: 6px; background: var(--ws-raised, color-mix(in srgb, var(--ar-fg) 5%, transparent)); font: .82em/1.5 var(--ar-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ar-ws .play-answer-links { display: flex; flex-wrap: wrap; gap: .4em 1.2em; }
 .ar-ws .run-progress-note { margin: 0; }
 .ar-ws .ov-gantt-label { font-size: .85em; }
 .ar-ws .run-tab { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--ar-fg-muted); font: 600 var(--ar-text-s)/1.2 var(--ar-font-body); white-space: nowrap; }

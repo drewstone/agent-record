@@ -19,7 +19,7 @@ import {
   valueChars,
   valuePreview,
 } from '../dist/index.js'
-import { canvasModel } from '../src/workspace/profile-canvas.ts'
+import { canvasModel, CLUSTER_MIN } from '../src/workspace/profile-canvas.ts'
 import { sampleProfileGraph } from './fixtures/profile-graph.mjs'
 
 const render = (element) => renderToStaticMarkup(element)
@@ -167,7 +167,16 @@ test("a profile's detail shows its prompt, instructions and tools with previews 
 })
 
 test('the profile canvas lists the names a collapsed card sums up, whole and expandable', () => {
-  const doc = profileGraphDocumentSchema.parse(sampleProfileGraph())
+  // The sample's run e wrote five runtime profiles; a card folds only more than CLUSTER_MIN, so e writes more here.
+  const sample = sampleProfileGraph()
+  const e = sample.nodes.find((node) => node.name === 'sample-study-20261005e-director')
+  const reader = sample.nodes.find((node) => node.parents.some((parent) => parent.digest === e.digest && parent.relation === 'authored'))
+  const readers = Array.from({ length: CLUSTER_MIN }, (_, i) => {
+    const digest = `sha256:${String(i).padStart(64, 'e')}`
+    return { ...reader, digest, short: digest.slice(7, 19), name: `e reader ${i}`, label: `e reader ${i}`,
+      runs: reader.runs.map((run) => ({ ...run, nodeIds: [`${run.runId}:r${i}`] })) }
+  })
+  const doc = profileGraphDocumentSchema.parse({ ...sample, nodes: [...sample.nodes, ...readers] })
   const scope = { kind: 'run', runId: 'sample-study-20261005e', play: 'sample-study' }
   const cluster = canvasModel(doc, scope).nodes.find((node) => node.cluster)
   assert.ok(cluster, 'run e wrote more runtime profiles than a card folds')
