@@ -1910,8 +1910,19 @@
 .ar-ws .score-delta .num.up { color: var(--ar-c-ok); }
 .ar-ws .score-delta .num.down { color: var(--ar-c-fail); }
 .ar-ws .score-delta p { margin: 0; font-size: var(--ar-text-s); }
-.ar-ws .profile-content > summary { cursor: pointer; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
-.ar-ws .profile-content pre { max-height: 40vh; overflow: auto; }
+/* A long profile value: its first characters and "show full (N chars)", then the whole value in place. */
+.ar-ws .cv-head { overflow-wrap: anywhere; }
+.ar-ws .cv-toggle { font-size: var(--ar-text-s); text-decoration: underline; }
+.ar-ws .cv-head + .cv-toggle { white-space: nowrap; margin-left: .3ch; }
+.ar-ws .cv-full { display: block; margin: 4px 0 6px; padding: 8px 10px; max-width: 100%; background: var(--ar-bg-sink, var(--ws-raised)); border-radius: 6px; color: var(--ar-fg); font: var(--ar-text-s)/1.55 var(--ar-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ar-ws .cv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 12px; font-size: var(--ar-text-s); }
+.ar-ws .cv-bar[hidden] { display: none; }
+.ar-ws .cv-bar .ui-button { min-height: 0; padding: 2px 10px; }
+.ar-ws .kv > div.wide { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.ar-ws .ws-facts > span:has(.cv-open) { flex-basis: 100%; }
+.ar-ws .pc-clusters { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--ar-border); }
+.ar-ws .pc-clusters h3 { margin: 0 0 8px; font: 600 var(--ar-text-m)/1.3 var(--ar-font-body); }
+.ar-ws .profile-content { display: grid; gap: 4px; }
 .ar-ws .profile-instructions { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: var(--ar-text-s); max-width: 110ch; }
 .ar-ws .profile-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--ar-text-s); }
 @media (max-width: 700px) {

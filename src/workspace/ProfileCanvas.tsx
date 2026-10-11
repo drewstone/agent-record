@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace.js'
+import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 import { money, stateClass, stateLabel } from './data.js'
 import { canvasModel, COL_W, lineageOf, neighbour, NODE_H, NODE_W, originChain, originText, originVerb, profileRunCost, runPlays } from './profile-canvas.js'
 import type { CanvasEdge, CanvasModel, CanvasNode, CanvasScope } from './profile-canvas.js'
@@ -20,20 +21,24 @@ const RELATION_TEXT: Record<string, string> = { authored: 'written at runtime by
  * and the run whose evidence proposed it, across plays. Selecting a profile shows its rules, scorecards, the diff from
  * its parent and the runs that used it with their outcomes and costs.
  */
-export function ProfileCanvas({
-  api,
-  doc,
-  scope,
-  selected,
-  onSelect,
-}: {
+export function ProfileCanvas(props: ProfileCanvasProps) {
+  return (
+    <ValueScope>
+      <ProfileCanvasBody {...props} />
+    </ValueScope>
+  )
+}
+
+interface ProfileCanvasProps {
   api: string
   doc: ProfileGraphDocument
   scope: CanvasScope
   /** The selected profile's short or full digest. */
   selected: string | null
   onSelect: (short: string | null) => void
-}) {
+}
+
+function ProfileCanvasBody({ api, doc, scope, selected, onSelect }: ProfileCanvasProps) {
   const graph = useMemo(() => profileGraph(doc), [doc])
   const selectedNode = findProfile(graph, selected)
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
@@ -74,11 +79,13 @@ export function ProfileCanvas({
         onChoose={choose}
       />
       <aside className="pc-inspector" aria-label="Selected profile">
+        <ValueControls />
         {inspectorId ? (
           <CanvasInspector api={api} doc={doc} model={model} id={inspectorId} scopePlay={scopePlay} shortRun={shortRun} onChoose={choose} onSelectShort={onSelect} />
         ) : (
           <CanvasIntro model={model} scope={scope} shortRun={shortRun} />
         )}
+        <RuntimeClusters model={model} />
       </aside>
     </div>
   )
@@ -228,6 +235,29 @@ function CanvasPane({
         </div>
       </div>
       <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move along the lineage, Enter opens · 0 fits</p>
+    </section>
+  )
+}
+
+/** The names a collapsed card sums up, whole: a card shows three and a count. */
+function RuntimeClusters({ model }: { model: CanvasModel }) {
+  const clusters = model.nodes.filter((node) => node.cluster)
+  if (clusters.length === 0) return null
+  return (
+    <section className="pc-clusters" aria-label="Profiles written at runtime" data-profile-clusters>
+      <h3>Profiles written at runtime</h3>
+      <dl className="kv">
+        {clusters.map((node) => {
+          const cluster = node.cluster!
+          const parent = model.byId.get(cluster.parent)?.node
+          return (
+            <div key={node.id} className="wide">
+              <dt>{parent?.name ?? parent?.label ?? parent?.short ?? 'A profile'} wrote {cluster.members.length} profiles</dt>
+              <dd className="mono"><CollapsibleValue value={cluster.names.join(', ')} /></dd>
+            </div>
+          )
+        })}
+      </dl>
     </section>
   )
 }

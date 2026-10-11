@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { versionGraphDocumentSchema } from '../workspace.js'
 import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace.js'
+import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 import { money, useDocument, when } from './data.js'
 import { flagLabel, layoutVersionGraph, runGraphModel, scoreLine } from './version-graph.js'
 import { RunRoles } from './RoleScorecards.js'
@@ -232,7 +233,13 @@ export function RunVersions({
         {doc.roles && <RunRoles roles={doc.roles} />}
       </section>
       <aside className="inspector-pane" aria-label="Inspector">
-        {commit ? <CommitInspector doc={doc} commit={commit} onSelect={onSelect} onOpenAgent={onOpenAgent} /> : <p className="faint">No version to show.</p>}
+        {commit ? (
+          <ValueScope>
+            <CommitInspector doc={doc} commit={commit} onSelect={onSelect} onOpenAgent={onOpenAgent} />
+          </ValueScope>
+        ) : (
+          <p className="faint">No version to show.</p>
+        )}
       </aside>
     </div>
   )
@@ -306,6 +313,7 @@ function CommitInspector({
   const children = doc.commits.filter((item) => item.parents.includes(commit.id))
   return (
     <div className="inspector" data-inspector={commit.id}>
+      <ValueControls />
       <header className="inspector-head">
         <h2 className="vg-inspector-title">{commit.subject}</h2>
         <span className="chip">{commit.kind === 'integrate' ? 'merge' : commit.kind}</span>
@@ -360,7 +368,7 @@ function CommitInspector({
         {commit.spawned && (
           <p className="faint">
             Spawned <code>{commit.spawned}</code>
-            {commit.profileDigest && <> with profile <code>{commit.profileDigest.slice(0, 19)}</code></>}{' '}
+            {commit.profileDigest && <> with profile <code><CollapsibleValue value={commit.profileDigest} limit={19} /></code></>}{' '}
             <button type="button" className="link-button" onClick={() => onOpenAgent(commit.spawned!)}>open its conversation</button>
           </p>
         )}

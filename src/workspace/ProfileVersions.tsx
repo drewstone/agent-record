@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, ProfileParent, ProfileRun } from '../workspace.js'
+import { CollapsibleValue } from './CollapsibleValue.js'
 import { stateClass, stateLabel, when } from './data.js'
 import type { Comparison } from './profile-compare.js'
 import { primaryDiff, primaryParent, profileLabel, proposedVersions } from './profile-graph.js'
@@ -44,15 +45,23 @@ export function ProfileDetail({
           <button type="button" className="ui-button profile-close" onClick={() => onSelect(null)}>Close</button>
         </header>
       )}
-      {node.description && <p className="profile-description">{node.description}</p>}
+      {node.description && <p className="profile-description"><CollapsibleValue value={node.description} /></p>}
       <div className="ws-facts">
-        <span><b>Model</b> <span className="mono">{[node.model.id ?? 'unknown', node.model.provider, node.model.reasoningEffort].filter(Boolean).join(' · ')}</span></span>
-        <span><b>Harness</b> {node.harness ?? 'unknown'}</span>
+        <span>
+          <b>Model</b>{' '}
+          <span className="mono">
+            {[node.model.id ?? 'unknown', node.model.provider, node.model.reasoningEffort].filter((part): part is string => !!part).map((part, i) => (
+              <Fragment key={i}>{i > 0 && ' · '}<CollapsibleValue value={part} /></Fragment>
+            ))}
+          </span>
+        </span>
+        <span><b>Harness</b> <CollapsibleValue value={node.harness} empty="unknown" /></span>
         <span><b>Tools</b> {node.tools.length}</span>
         <span><b>Instructions</b> {node.instructions.length}</span>
         {node.files.length > 0 && <span><b>Files</b> {node.files.length}</span>}
-        {node.skills.length > 0 && <span><b>Skills</b> {node.skills.map((skill) => skill.name).join(', ')}</span>}
-        {node.version && <span><b>Version</b> {node.version}</span>}
+        {node.skills.length > 0 && <span><b>Skills</b> <CollapsibleValue value={node.skills.map((skill) => skill.name).join(', ')} /></span>}
+        {node.version && <span><b>Version</b> <CollapsibleValue value={node.version} /></span>}
+        <span><b>Digest</b> <span className="mono"><CollapsibleValue value={node.digest} limit={19} /></span></span>
         <span>
           <b>Author</b>{' '}
           {node.author.kind === 'operator' ? (
@@ -72,7 +81,7 @@ export function ProfileDetail({
         </span>
         <span><b>Created in</b> {node.createdIn ? <a className="mono" href={runHref(node.createdIn)}>{node.createdIn}</a> : 'unknown'}</span>
         <span><b>Created</b> {when(node.createdAt)}</span>
-        {node.budget && <span><b>Budget</b> <span className="mono">{budgetText(node.budget)}</span></span>}
+        {node.budget && <span><b>Budget</b> <span className="mono"><CollapsibleValue value={budgetText(node.budget)} /></span></span>}
       </div>
 
       <h4>Runs</h4>
@@ -111,7 +120,7 @@ export function ProfileDetail({
               {byDigest.has(edge.digest) ? (
                 <button type="button" className="link-button mono" onClick={() => onSelect(shortDigest(edge.digest))}>{name(edge.digest)}</button>
               ) : (
-                <code title={edge.digest}>{shortDigest(edge.digest)}</code>
+                <code><CollapsibleValue value={edge.digest} limit={19} /></code>
               )}
               {edge.evidence.length > 0 && (
                 <ul className="profile-evidence">
@@ -138,31 +147,31 @@ export function ProfileDetail({
         <p className="profile-empty faint">{parent ? 'No diff is indexed for this edge.' : 'A first version: nothing to compare.'}</p>
       )}
 
-      <details className="profile-content">
-        <summary>Prompt, tools and files of this profile</summary>
+      <section className="profile-content" data-profile-content>
+        <h4>Prompt, tools and files of this profile</h4>
         {node.systemPrompt && (
           <>
             <h5>System prompt</h5>
-            <pre className="activity-code">{node.systemPrompt}</pre>
+            <CollapsibleValue value={node.systemPrompt} />
           </>
         )}
         <h5>Instructions</h5>
         {node.instructions.length ? (
-          <ol className="profile-instructions">{node.instructions.map((line, i) => <li key={i}>{line}</li>)}</ol>
+          <ol className="profile-instructions">{node.instructions.map((line, i) => <li key={i}><CollapsibleValue value={line} /></li>)}</ol>
         ) : (
           <p className="profile-empty faint">None.</p>
         )}
         <h5>Tools</h5>
-        <div className="chips">{node.tools.map((tool) => <span key={tool} className="chip mono">{tool}</span>)}</div>
+        {node.tools.length ? <span className="mono"><CollapsibleValue value={node.tools.join(', ')} /></span> : <p className="profile-empty faint">None.</p>}
         {node.files.length > 0 && (
           <>
             <h5>Files</h5>
             <ul className="profile-files">
-              {node.files.map((file) => <li key={file.path}><code>{file.path}</code> <span className="faint">{bytes(file.bytes)} · {file.sha256.replace(/^sha256:/, '').slice(0, 12)}</span></li>)}
+              {node.files.map((file) => <li key={file.path}><code>{file.path}</code> <span className="faint">{bytes(file.bytes)} · <CollapsibleValue value={file.sha256} limit={19} /></span></li>)}
             </ul>
           </>
         )}
-      </details>
+      </section>
     </section>
   )
 }
@@ -275,9 +284,9 @@ function DiffFieldView({ field }: { field: ProfileDiffField }) {
     return (
       <div className="diff-field diff-value">
         <span className="diff-name">{title}</span>
-        <del>{field.from ?? 'absent'}</del>
+        <del><CollapsibleValue value={field.from} empty="absent" /></del>
         <span aria-hidden="true" className="faint">→</span>
-        <ins>{field.to ?? 'absent'}</ins>
+        <ins><CollapsibleValue value={field.to} empty="absent" /></ins>
       </div>
     )
   if (field.kind === 'set')
