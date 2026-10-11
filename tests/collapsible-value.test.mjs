@@ -19,6 +19,7 @@ import {
   valueChars,
   valuePreview,
 } from '../dist/index.js'
+import { canvasModel } from '../src/workspace/profile-canvas.ts'
 import { sampleProfileGraph } from './fixtures/profile-graph.mjs'
 
 const render = (element) => renderToStaticMarkup(element)
@@ -154,7 +155,8 @@ test("a profile's detail shows its prompt, instructions and tools with previews 
   const base = doc.nodes.find((node) => node.kind !== 'root' && node.instructions.length > 0)
   const node = { ...base, systemPrompt, instructions: [longInstruction, ...base.instructions], tools: [...tools], model: { ...base.model, id: 'm'.repeat(300) } }
   const html = render(createElement(ProfileDetail, { doc, node, heading: false, onSelect: () => undefined }))
-  assert.ok(!html.includes('<details'), 'no fold hides the prompt')
+  const content = html.slice(html.indexOf('data-profile-content'))
+  assert.ok(content.includes('System prompt') && !content.includes('<details'), 'no fold hides the prompt')
   assert.ok(html.includes(`show full (${valueChars(systemPrompt)})`))
   assert.ok(html.includes(`show full (${valueChars(longInstruction)})`))
   assert.ok(html.includes(`show full (${valueChars(tools.join(', '))})`))
@@ -166,10 +168,14 @@ test("a profile's detail shows its prompt, instructions and tools with previews 
 
 test('the profile canvas lists the names a collapsed card sums up, whole and expandable', () => {
   const doc = profileGraphDocumentSchema.parse(sampleProfileGraph())
-  const html = render(createElement(ProfileCanvas, { api: '/api/discovery', doc, scope: { kind: 'play', play: 'sample-study', runs: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((x) => `sample-study-20261005${x}`) }, selected: null, onSelect: () => undefined }))
-  assert.ok(html.includes('data-profile-cluster='), 'the sample play collapses runtime-written profiles into a card')
+  const scope = { kind: 'run', runId: 'sample-study-20261005e', play: 'sample-study' }
+  const cluster = canvasModel(doc, scope).nodes.find((node) => node.cluster)
+  assert.ok(cluster, 'run e wrote more runtime profiles than a card folds')
+  const html = render(createElement(ProfileCanvas, { api: '/api/discovery', doc, scope, selected: null, onSelect: () => undefined }))
+  assert.ok(html.includes('data-profile-cluster='), 'the card is drawn')
   const list = html.slice(html.indexOf('data-profile-clusters'))
-  assert.ok(list.includes(' wrote '), 'the list says whose profiles they are')
-  assert.ok(list.includes('data-value-chars=') || /director/.test(list), 'their names are listed, collapsed past the preview')
+  assert.ok(list.includes(` wrote ${cluster.cluster.members.length} profiles`), 'the list says how many profiles and whose')
+  const names = cluster.cluster.names.join(', ')
+  assert.ok(names.length > 240 ? list.includes(`show full (${valueChars(names)})`) : list.includes(names), 'their names are listed whole, or collapsed past the preview with their length')
   assert.ok(html.includes('data-value-controls'))
 })
