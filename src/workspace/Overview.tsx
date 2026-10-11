@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
 import { useDocument } from './data.js'
+import { plain } from './FindingsFeed.js'
 import { bytes, ChartCard, compact, DayBars, Histogram, HBars, Legend, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
 
 // Five ranked causes plus "other". The six fixed slots passed the categorical validator on #16181f.
@@ -47,11 +48,13 @@ function Section({ id, title, tone, aside, children }: { id?: string; title: str
   )
 }
 
+/** What a run found: a passed play check ("check passed") with its SOLVED line or the run's stated answer, else its best page. */
 function Lead({ lead }: { lead: OverviewLead }) {
+  const text = plain(lead.text) || plain(lead.title) || 'No answer recorded'
   return (
-    <span className="ov-lead" title={lead.text || undefined}>
-      <span className={`ov-lead-kind kind-${lead.kind}`}>{lead.kind}</span>
-      <span className="ov-lead-title">{lead.text || lead.title || 'No answer recorded'}</span>
+    <span className="ov-lead" title={lead.kind === 'check' && lead.title ? `${lead.title}: ${text}` : text}>
+      <span className={`ov-lead-kind kind-${lead.kind}`}>{lead.kind === 'check' ? 'check passed' : lead.kind}</span>
+      <span className="ov-lead-title">{text}</span>
     </span>
   )
 }

@@ -14,7 +14,20 @@ const day = (value: string | null | undefined) => (value ? `${value.slice(5, 10)
 const short = (label: string | null | undefined) => (label ? label.split(' · ')[0]! : 'agent')
 const shortRunId = (play: string, runId: string) => (runId.startsWith(`${play}-`) ? runId.slice(play.length + 1) : runId)
 // A card shows prose: markdown emphasis, code ticks and list bullets from the page are dropped, the words kept.
-const plain = (text: string) => text.replace(/\*\*|__|`/g, '').replace(/^\s*(?:[-*]|\d+\.)\s+/, '')
+/**
+ * A finding as a reader reads it, by the host's rules (tangle-tools fleet/discovery_workspace.py `_plain`): no front matter
+ * or key line ahead of its prose (`--- kind: claim … ---`, `kind: evidence`), no heading or list marker, no Markdown
+ * emphasis or code marks. A document composed before the host applied them reads the same.
+ */
+export const plain = (text: string | null | undefined) =>
+  (text ?? '')
+    .replace(/^\s*---\s[\s\S]{0,4096}?\s---(?=\s|$)/, '')
+    .replace(/^(?:\s*[a-z_][a-z0-9_]*(?:[-.][a-z0-9_]+)*:(?:[ \t]+(?:\[[^\]\n]*\]|[^\s[]+))?(?=\s|$))+/, '')
+    .replace(/(^|\s)#{1,6}\s+(?=\S)/g, '$1')
+    .replace(/\*\*|__|`/g, '')
+    .replace(/(^|[^\w*])\*(?=\S)(.+?)(?<=\S)\*(?![\w*])/g, '$1$2')
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '')
+    .trim()
 
 /**
  * The Discovery home: what the fleet found, newest first, from every programmed run's knowledge pages. A run whose

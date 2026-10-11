@@ -24,6 +24,8 @@ export { FinalOutputPanel, TraceReviewSection } from './workspace/FinalOutput.js
 export { CollapsibleValue, ValueControls, ValueScope, VALUE_PREVIEW, followCommand, valueChars, valuePreview } from './workspace/CollapsibleValue.js'
 export { ProfileCanvas } from './workspace/ProfileCanvas.js'
 export { InputView } from './workspace/InputView.js'
+export { PlayAnswer } from './workspace/PlayAnswer.js'
+export { plain as plainFinding } from './workspace/FindingsFeed.js'
 export { ProfileDetail } from './workspace/ProfileVersions.js'
 export { RecordWorkGraph } from './workspace/WorkGraph.js'
 export { recordWorkGraphModel } from './workspace/work-graph-model.js'
