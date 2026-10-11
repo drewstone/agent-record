@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunDocument } from '../workspace.js'
+import { ValueControls, ValueScope } from './CollapsibleValue.js'
 import { duration, money, stateClass, stateLabel, useDocument, when } from './data.js'
 import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Version } from './profile-compare.js'
@@ -148,21 +149,25 @@ export function VersionCanvas({
 }
 
 /** What the inspector shows for the selected version or authored profile. */
-export function Inspector({
-  api,
-  play,
-  graph,
-  versions,
-  selection,
-  onSelect,
-}: {
+export function Inspector(props: InspectorProps) {
+  return (
+    <ValueScope>
+      <ValueControls />
+      <InspectorBody {...props} />
+    </ValueScope>
+  )
+}
+
+interface InspectorProps {
   api: string
   play: PlayDocument
   graph: ProfileGraphDocument | null
   versions: Version[]
   selection: Selection | null
   onSelect: (selection: Selection) => void
-}) {
+}
+
+function InspectorBody({ api, play, graph, versions, selection, onSelect }: InspectorProps) {
   const newest = versions.at(-1)
   const runId = selection?.runId ?? newest?.run.id
   const version = versions.find((item) => item.run.id === runId)

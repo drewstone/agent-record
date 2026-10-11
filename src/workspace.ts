@@ -189,6 +189,10 @@ export const playInputSchema = z
         tools: z.array(z.string()),
         skills: z.array(z.string()),
         systemPromptSha256: z.string().nullable(),
+        /** The system prompt in full, when the profile has one; `systemPromptSha256` names it. */
+        systemPrompt: z.string().nullable().optional(),
+        /** Every instruction of the profile, whole and in order. */
+        instructions: z.array(z.string()).optional(),
       })
       .catchall(z.unknown())
       .nullable(),

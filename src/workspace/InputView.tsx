@@ -3,6 +3,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { PlayInput } from '../workspace.js'
 import { MessageText, StructuredContent } from '../viewer/StructuredContent.js'
+import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 
 function Long({ title, text }: { title: string; text: string | null }) {
   const [open, setOpen] = useState(false)
@@ -57,7 +58,7 @@ function FileReader({ api, runId, file }: { api: string; runId: string; file: Pl
       <header>
         <div>
           <h4 className="mono">{file.path}</h4>
-          <p className="faint mono">{bytes(file.bytes)} · sha256 {file.sha256.slice(0, 16)}</p>
+          <p className="faint mono">{bytes(file.bytes)} · sha256 <CollapsibleValue value={file.sha256} limit={16} /></p>
         </div>
         {markdown && (
           <button type="button" className="ui-button" aria-pressed={source} onClick={() => setSource(!source)}>
@@ -79,7 +80,15 @@ function FileReader({ api, runId, file }: { api: string; runId: string; file: Pl
   )
 }
 
-export function InputView({ input, api, changed }: { input: PlayInput | null; api: string; changed?: boolean }) {
+export function InputView(props: { input: PlayInput | null; api: string; changed?: boolean }) {
+  return (
+    <ValueScope>
+      <InputBody {...props} />
+    </ValueScope>
+  )
+}
+
+function InputBody({ input, api, changed }: { input: PlayInput | null; api: string; changed?: boolean }) {
   const [file, setFile] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const acceptance = input?.acceptance as Record<string, unknown> | null
@@ -94,6 +103,7 @@ export function InputView({ input, api, changed }: { input: PlayInput | null; ap
   const { outsideCriterion, sandboxBounds: _b, budgetDerivation, ...restAcceptance } = acceptance ?? {}
   return (
     <div className="input-view" data-input-view>
+      <ValueControls />
       {changed && <p className="input-changed">This run's input differs from the play's latest input.</p>}
       <div className="input-columns">
         <div className="input-main">
@@ -150,25 +160,34 @@ export function InputView({ input, api, changed }: { input: PlayInput | null; ap
             <section className="input-block" data-input="profile">
               <h4>Profile</h4>
               <dl className="kv">
-                {profile.name && <div><dt>Name</dt><dd className="mono">{profile.name}</dd></div>}
-                <div><dt>Version</dt><dd className="mono">{profile.version ?? 'not recorded'}</dd></div>
-                <div><dt>Digest</dt><dd className="mono" title={profile.digest ?? undefined}>{profile.digest ? profile.digest.slice(0, 23) : 'not recorded'}</dd></div>
-                <div><dt>Harness</dt><dd>{profile.harness ?? 'not set'}</dd></div>
-                <div><dt>Model</dt><dd className="mono">{profile.model ?? 'not set'}</dd></div>
-                <div><dt>Reasoning effort</dt><dd>{profile.reasoningEffort ?? 'not set'}</dd></div>
-                <div><dt>Credential</dt><dd>{profile.credentialSource ?? 'not recorded'}</dd></div>
-                {profile.systemPromptSha256 && <div><dt>System prompt</dt><dd className="mono">sha256 {profile.systemPromptSha256.slice(0, 16)}</dd></div>}
+                {profile.name && <div><dt>Name</dt><dd className="mono"><CollapsibleValue value={profile.name} /></dd></div>}
+                <div><dt>Version</dt><dd className="mono"><CollapsibleValue value={profile.version} empty="not recorded" /></dd></div>
+                <div><dt>Digest</dt><dd className="mono"><CollapsibleValue value={profile.digest} limit={23} empty="not recorded" /></dd></div>
+                <div><dt>Harness</dt><dd><CollapsibleValue value={profile.harness} /></dd></div>
+                <div><dt>Model</dt><dd className="mono"><CollapsibleValue value={profile.model} /></dd></div>
+                <div><dt>Reasoning effort</dt><dd><CollapsibleValue value={profile.reasoningEffort} /></dd></div>
+                <div><dt>Credential</dt><dd><CollapsibleValue value={profile.credentialSource} empty="not recorded" /></dd></div>
+                {profile.systemPromptSha256 && (
+                  <div><dt>System prompt sha256</dt><dd className="mono"><CollapsibleValue value={profile.systemPromptSha256} limit={16} /></dd></div>
+                )}
+                {profile.systemPrompt && <div className="wide" data-profile-value="system-prompt"><dt>System prompt</dt><dd><CollapsibleValue value={profile.systemPrompt} /></dd></div>}
+                {profile.instructions && profile.instructions.length > 0 && (
+                  <div className="wide" data-profile-value="instructions">
+                    <dt>Instructions ({profile.instructions.length})</dt>
+                    <dd>
+                      <ol className="profile-instructions">
+                        {profile.instructions.map((line, i) => <li key={i}><CollapsibleValue value={line} /></li>)}
+                      </ol>
+                    </dd>
+                  </div>
+                )}
+                {profile.tools.length > 0 && (
+                  <div className="wide" data-profile-value="tools"><dt>Tools ({profile.tools.length})</dt><dd className="mono"><CollapsibleValue value={profile.tools.join(', ')} /></dd></div>
+                )}
+                {profile.skills.length > 0 && (
+                  <div className="wide" data-profile-value="skills"><dt>Skills ({profile.skills.length})</dt><dd><CollapsibleValue value={profile.skills.join(', ')} /></dd></div>
+                )}
               </dl>
-              {profile.tools.length > 0 && (
-                <div className="chips" aria-label="Tools">
-                  {profile.tools.map((tool) => <span key={tool} className="chip mono">{tool}</span>)}
-                </div>
-              )}
-              {profile.skills.length > 0 && (
-                <div className="chips" aria-label="Skills">
-                  {profile.skills.map((skill) => <span key={skill} className="chip">{skill}</span>)}
-                </div>
-              )}
             </section>
           )}
           <section className="input-block" data-input="files">
@@ -186,7 +205,7 @@ export function InputView({ input, api, changed }: { input: PlayInput | null; ap
                 </li>
               ))}
             </ul>
-            <p className="faint mono">run-input.json · sha256 {input.source.sha256.slice(0, 16)}</p>
+            <p className="faint mono">run-input.json · sha256 <CollapsibleValue value={input.source.sha256} limit={16} /></p>
           </section>
         </aside>
       </div>
