@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { apiCost, axisTicks, billedCost, day, dollars, dotLabel, headlineBest, panelModel, playNames } from '../src/workspace/theatre.ts'
+import { apiCost, axisTicks, billedCost, day, dollars, dotLabel, headlineBars, panelModel, playNames } from '../src/workspace/theatre.ts'
 
 const act = (n, over = {}) => ({
   act: n, decided: `2026-10-0${n}T10:00:00.000Z`, proposer: 'operator', change: `change ${n}`, plays: [], onBar: [],
@@ -87,12 +87,17 @@ test('rounds of plays no act holds get a column of their own, not a silent drop'
   assert.equal(panel.dots.filter((dot) => dot.act === null).length, 1)
 })
 
-test('the header names the newest bar that has a best round, and says the bars after it have none', () => {
-  const lone = { ...view, headline: { best: null, plays: { onBar: 1, live: ['p'] } }, staircase: [] }
-  const best = headlineBest([view, lone])
-  assert.deepEqual([best.bar, best.play, best.tag, best.passed, best.total], [1, 'b', 'rc6', 10, 10])
-  assert.deepEqual(best.newer, [{ bar: 2, live: 1 }])
-  assert.equal(headlineBest([lone]), null)
+test('the header names the current bar\'s best round and each earlier bar\'s beside its own checks, and never picks one across bars', () => {
+  const lone = { ...view, bar: { ...view.bar, digest: 'sha256:bbb', checkCount: 15 }, headline: { best: null, plays: { onBar: 1, live: ['p'] } }, staircase: [] }
+  const head = headlineBars([view, lone])
+  assert.deepEqual([head.current.bar, head.current.best, head.current.live], [2, null, 1], 'the current bar has no round read yet; the earlier bar\'s best is not its best')
+  assert.deepEqual(head.earlier.map((item) => [item.bar, item.play, item.tag, item.passed, item.total, item.checks]), [[1, 'b', 'rc6', 10, 10, 10]])
+  const read = { ...lone, headline: { best: { play: 'p-b-20261003b', tag: 'rc1', taggedAt: '2026-10-08T00:00:00.000Z', text: '' }, plays: { onBar: 1, live: [] } }, staircase: [step('p-b-20261003b', 'rc1', 8, 3, 'selected', { total: 15 })] }
+  const both = headlineBars([view, read])
+  assert.deepEqual([both.current.bar, both.current.best.tag, both.current.best.passed, both.current.best.total], [2, 'rc1', 3, 15])
+  assert.equal(both.earlier.length, 1)
+  assert.deepEqual(headlineBars([view]).earlier, [])
+  assert.equal(headlineBars([]), null)
 })
 
 test('axis ticks are thirds when whole, else halves; a name repeated across rounds is still one name', () => {
