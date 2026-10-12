@@ -9,6 +9,7 @@ import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayCharts } from './workspace/PlayCharts.js'
 import { RunLineage } from './workspace/RunLineage.js'
 import { OverviewPage } from './workspace/Overview.js'
+import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
 import { Conversation } from './viewer/Conversation.js'
@@ -43,7 +44,7 @@ import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, Spe
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
-  mode: 'plays' | 'play' | 'run' | 'overview'
+  mode: 'plays' | 'play' | 'run' | 'overview' | 'theatre'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -52,7 +53,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'overview' ? <OverviewPage api={api} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
+      {mode === 'overview' ? <OverviewPage api={api} /> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
