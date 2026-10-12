@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useDocument, when } from './data.js'
-import { apiCost, billedCost, day, dotLabel, headlineBest, panelModel, playNames } from './theatre.js'
+import { apiCost, billedCost, day, dotLabel, headlineBars, panelModel, playNames } from './theatre.js'
 import type { Column, Dot, Panel, RoundKind, TheatreAct, TheatreBarView, TheatreViewsDocument } from './theatre.js'
 
 const CHIP: Record<TheatreAct['result']['status'], string> = {
@@ -129,19 +129,27 @@ function BarPanel({ view, index }: { view: TheatreBarView; index: number }) {
 }
 
 function Banner({ views, name }: { views: TheatreBarView[]; name: string }) {
-  const best = headlineBest(views)
-  const first = views[0]
+  const head = headlineBars(views)
   const last = views[views.length - 1]
-  if (!first || !last) return null
+  if (!head || !last) return null
+  const { current, earlier } = head
+  const several = views.length > 1
+  const label = several ? `Best round on bar ${current.bar}` : 'Best round so far'
   return (
-    <section className="th-banner" aria-label="Best round so far">
+    <section className="th-banner" aria-label={label}>
       <p className="th-goal"><b>{name} theatre</b>{last.goal}</p>
-      {best ? (
+      {current.best ? (
         <>
-          <p className="th-best"><span>Best round so far</span><b>{best.play} {best.tag}</b><em>{best.passed === null ? '' : `${best.passed} of ${best.total} checks`} · bar {best.bar}</em></p>
-          {best.newer.length > 0 && <p className="th-newer">{best.newer.map((item) => `Bar ${item.bar}${item.live > 0 ? ` has ${item.live} ${item.live === 1 ? 'play' : 'plays'} running and` : ''} has no round with a reading yet`).join('; ')}.</p>}
+          <p className="th-best"><span>{label}</span><b title={current.best.runId}>{current.best.play} {current.best.tag}</b><em>{current.best.passed === null ? '' : `${current.best.passed} of ${current.best.total} checks`}</em></p>
+          <p className="th-newer">Play {current.best.runId}, tagged {when(current.best.taggedAt)}.</p>
         </>
-      ) : <p className="th-best"><span>Best round so far</span><b>none read yet</b></p>}
+      ) : (
+        <p className="th-best"><span>{label}</span><b>none read yet</b>{current.live > 0 && <em>{current.live} {current.live === 1 ? 'play' : 'plays'} running</em>}</p>
+      )}
+      {earlier.map((item) => (
+        <p className="th-newer" key={item.bar}>Bar {item.bar}, scored on its own {item.checks} checks: <b title={item.runId}>{item.play} {item.tag}</b> ({item.runId}){item.passed === null ? '' : `, ${item.passed} of ${item.total}`}.</p>
+      ))}
+      {earlier.length > 0 && <p className="th-newer">The bars check different things, so their counts do not compare.</p>}
       <p className="th-meta">As of {when(last.asOf)} · the next act is proposed by the {last.bar.policy}</p>
     </section>
   )

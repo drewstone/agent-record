@@ -170,25 +170,24 @@ export function billedCost(spend: ActSpend): string {
   return spend.billedKnownUsd === null ? 'unknown' : dollars(spend.billedKnownUsd, true)
 }
 
-/** The theatre's best round for the header: the newest bar that has one, said with the bars after it that have none. */
-export function headlineBest(views: readonly TheatreBarView[]) {
-  for (let i = views.length - 1; i >= 0; i -= 1) {
-    const view = views[i]!
+/**
+ * The header's rounds: the current bar's best round (the last view's), and each earlier bar's best round. Bars are scored on
+ * different checks, so no count of one is a count of another; the header says each beside its own bar and never picks one.
+ */
+export function headlineBars(views: readonly TheatreBarView[]) {
+  const row = (view: TheatreBarView, index: number) => {
     const best = view.headline.best
-    if (!best) continue
+    if (!best) return null
     const step = view.staircase.find((item) => item.play === best.play && item.tag === best.tag)
-    const names = playNames([best.play])
-    return {
-      bar: i + 1,
-      play: names.get(best.play) ?? best.play,
-      tag: best.tag,
-      taggedAt: best.taggedAt,
-      passed: step?.passed ?? null,
-      total: step?.total ?? view.bar.checkCount,
-      newer: views.slice(i + 1).map((item, j) => ({ bar: i + 2 + j, live: item.headline.plays.live.length })),
-    }
+    return { bar: index + 1, play: playNames([best.play]).get(best.play) ?? best.play, runId: best.play, tag: best.tag, taggedAt: best.taggedAt, passed: step?.passed ?? null, total: step?.total ?? view.bar.checkCount }
   }
-  return null
+  const last = views.length - 1
+  const current = views[last]
+  if (!current) return null
+  return {
+    current: { bar: last + 1, best: row(current, last), live: current.headline.plays.live.length },
+    earlier: views.slice(0, last).flatMap((view, i) => { const found = row(view, i); return found ? [{ ...found, checks: view.bar.checkCount }] : [] }),
+  }
 }
 
 const kindOf = (step: StaircaseStep | undefined, round: TheatreRound): RoundKind => {
