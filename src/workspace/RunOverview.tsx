@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { FigureView, Meter } from '@tangle-network/charts/react'
-import { timeline } from '@tangle-network/charts'
+import { timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
 import type { RunDocument } from '../workspace.js'
 import type { NodeStats } from './RunTable.js'
@@ -57,6 +57,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const lanes = r.timeline.lanes.map((lane) => ({ ...lane, spans: lane.spans.map((span) => ({ ...span, start: Date.parse(span.start), end: span.end === null ? null : Date.parse(span.end), note: span.note ?? undefined })) }))
   const marks = r.timeline.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind }))
   const figure = timeline(lanes, { measure: 'Recorded agent time', ...(r.timeline.end ? { now: Date.parse(r.timeline.end) } : {}), marks })
+  const versionFigure = r.versions?.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
   return <article className={`rr-page${print ? ' rr-print' : ''}`} data-overview data-receipt={r.runId}>
     <header className={`rr-verdict rr-${r.outcome.status}`}>
       <div className="rr-title-row"><h1 data-field="title">{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
@@ -85,8 +86,8 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       </aside>
     </div>
     <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div></Drawer>
-    <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p><p><Field path="chosen.tag" value={r.chosen.tag} /> <code><Field path="chosen.commit" value={r.chosen.commit} /></code></p>{open && !print && <button onClick={() => open('versions')}>Open version history</button>}<dl className="rr-facts">{r.scores?.checks.map((check, i) => <div key={check.id}><dt data-field={`scores.checks.${i}.label`}>{check.label ?? check.id}</dt><dd data-field={`scores.checks.${i}.result`}>{check.result}</dd></div>)}</dl></Drawer>
-    <Drawer title="How it ran" print={print}><dl className="rr-facts"><dt>Tool calls</dt><dd><Field path="work.toolCalls" value={r.work.toolCalls} /></dd><dt>Tries</dt><dd><Field path="work.tries" value={r.work.tries} /></dd><dt>Run ended</dt><dd data-field="outcome.reason">{r.outcome.reason ?? missing}</dd></dl>{r.system?.errors?.top.map((error, i) => <div key={i}><Field path={`system.errors.top.${i}.count`} value={error.count} /> × {error.tool}<pre data-field={`system.errors.top.${i}.message`}>{error.message}</pre></div>)}{open && !print && <button onClick={() => open('agents')}>Open conversations</button>}</Drawer>
+    <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><Field path={`versions.rows.${i}.tag`} value={row.tag} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : <p>{missing}</p>}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>
+    <Drawer title="How it ran" print={print}><dl className="rr-facts"><dt>Tool calls</dt><dd><Field path="work.toolCalls" value={r.work.toolCalls} /></dd><dt>Tries</dt><dd><Field path="work.tries" value={r.work.tries} /></dd><dt>Team</dt><dd data-field="timeline.lanes">{r.timeline.lanes.map((lane) => lane.label).join(', ') || missing}</dd><dt>Lineage</dt><dd data-field="lineage.chain">{r.lineage?.chain.join(' / ') ?? missing}</dd><dt>Run ended</dt><dd data-field="outcome.reason">{r.outcome.reason ?? missing}</dd></dl>{r.system?.errors?.top.map((error, i) => <div key={i}><Field path={`system.errors.top.${i}.count`} value={error.count} /> × {error.tool}<pre data-field={`system.errors.top.${i}.message`}>{error.message}</pre></div>)}{open && !print && <button onClick={() => open('agents')}>Open conversations</button>}</Drawer>
     <Drawer title="What was asked" print={print}><div className="rr-brief" data-field="brief"><Markdown remarkPlugins={[remarkGfm]}>{r.brief ?? missing}</Markdown></div></Drawer>
   </article>
 }

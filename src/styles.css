@@ -3270,3 +3270,7 @@
   --ar-ok:initial; --ar-warn:initial; --ar-crit:initial; --ar-hold:initial;
 }
 .ar-ws .rr-print, .agent-record[data-theme="light"] .rr-page { background:var(--ar-bg); color:var(--ar-fg); }
+
+.ar-ws .rr-table { overflow:auto; }
+.ar-ws .rr-table table { width:100%; border-collapse:collapse; font-size:var(--ar-text-s); text-align:left; }
+.ar-ws .rr-table th, .ar-ws .rr-table td { border-bottom:1px solid var(--ar-border); padding:8px 12px; }
