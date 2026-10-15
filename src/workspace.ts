@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { runReceiptSchema } from './workspace/run-receipt.js'
 
 /**
  * Documents served by a run workspace API (`/api/discovery/*` on the Tangle wall).
@@ -830,6 +831,7 @@ export const findingsFeedSchema = z
 export const runDocumentSchema = z
   .object({
     schema: z.literal('agent-workspace.run.v1'),
+    receipt: runReceiptSchema.nullable().optional(),
     run: runSummarySchema,
     input: playInputSchema.nullable(),
     spend: spendSchema.extend({ nodes: z.record(z.string(), nodeSpend) }),

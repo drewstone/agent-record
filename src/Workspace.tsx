@@ -33,6 +33,8 @@ import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable } from './workspace/RunTable.js'
+import { RunReceiptView } from './workspace/RunOverview.js'
+import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
@@ -44,7 +46,7 @@ import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, Spe
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
-  mode: 'plays' | 'play' | 'run' | 'overview' | 'theatre'
+  mode: 'plays' | 'play' | 'run' | 'receipt' | 'overview' | 'theatre'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -53,7 +55,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'overview' ? <OverviewPage api={api} /> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'overview' ? <OverviewPage api={api} /> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
@@ -1600,4 +1602,13 @@ function EventDetail({
       )}
     </aside>
   )
+}
+
+/** The receipt is the run overview in print mode, supplied by the same Lab document. */
+function ReceiptPage({ api, id }: { api: string; id: string }) {
+  const [runId, tag] = id.split('@')
+  const url = `${api}/runs/${encodeURIComponent(runId!)}/receipt${tag ? `/${encodeURIComponent(tag)}` : ''}/receipt.json`
+  const doc = useDocument<RunReceipt>(url)
+  if (!doc.data) return <p role="status">{doc.error ?? 'Loading receipt…'}</p>
+  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print /></div>
 }
