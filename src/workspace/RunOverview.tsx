@@ -16,7 +16,7 @@ const missing = 'not recorded'
 /** All measures and decisions belong to the Lab document. This component only formats them. */
 export function RunOverview({ api, doc, open, print = false }: { api: string; doc: RunDocument; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
   const r = doc.receipt
-  if (!r) return <section className="rr-page"><h1>Run receipt</h1><p>The receipt document is {missing}.</p></section>
+  if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p>The receipt document is {missing}.</p></section>
   return <RunReceiptView api={api} receipt={r} print={print} open={open} />
 }
 
@@ -37,6 +37,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
+  if (!r.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p>The receipt document is {missing}.</p></section>
   const fileBase = `${api}/runs/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}`
   const decide = async (id: string) => {
     const operationId = operation[id] ?? crypto.randomUUID()
@@ -78,7 +79,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
           <p data-field={`decisions.${i}.consequence`}>{decision.enabled ? decision.consequence : decision.reason ?? missing}</p>
           {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${i}.command`}>{decision.command}</code></details>}
         </div>)}</div>{notice && <p role="status">{notice}</p>}</section>
-        <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2><div className="rr-chart" data-field="work.recordedHours"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>
+        <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2><div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>
           <dl className="rr-facts rr-measures"><dt>Work</dt><dd><Field path="work.agentHours" value={r.work.agentHours} format={hoursText} /></dd><dt>Idle</dt><dd><Field path="work.idleHours" value={r.work.idleHours} format={hoursText} /></dd><dt>Untraced</dt><dd><Field path="work.untracedHours" value={r.work.untracedHours} format={hoursText} /></dd><dt>Fresh tokens</dt><dd><Field path="work.tokens.fresh" value={r.work.tokens.fresh} format={tokensText} /></dd><dt>Cached tokens</dt><dd><Field path="work.tokens.cached" value={r.work.tokens.cached} format={tokensText} /></dd><dt>Total tokens</dt><dd><Field path="work.tokens.total" value={r.work.tokens.total} format={tokensText} /></dd><dt>After first pass</dt><dd><Field path="waste.afterPass.hours" value={r.waste.afterPass.hours} format={hoursText} />, <Field path="waste.afterPass.tokens" value={r.waste.afterPass.tokens} format={tokensText} />, <Field path="waste.afterPass.usd" value={r.waste.afterPass.usd} format={money} /></dd><dt>Verdict delay</dt><dd><Field path="waste.verdictDelay.minutes" value={r.waste.verdictDelay.minutes} /> min, <Field path="waste.verdictDelay.refusedChecks" value={r.waste.verdictDelay.refusedChecks} /> checks refused</dd></dl>
         </section>
       </aside>

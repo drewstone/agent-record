@@ -3260,3 +3260,13 @@
   .ar-ws .rr-drawer { break-inside:avoid; }
   .ar-ws .rr-command code { display:block; }
 }
+
+/* Let the renderer's light tokens own print and an explicitly light host view. */
+.agent-record:has(.rr-print), #agent-workspace[data-theme="light"] {
+  --ar-background:initial; --ar-surface:initial; --ar-surface-alt:initial; --ar-raised:initial;
+  --ar-hover:initial; --ar-selected:initial; --ar-line:initial; --ar-line-strong:initial;
+  --ar-foreground:initial; --ar-muted:initial; --ar-faint:initial; --ar-subtle:initial;
+  --ar-accent:initial; --ar-info:initial; --ar-frame:initial; --ar-title:initial;
+  --ar-ok:initial; --ar-warn:initial; --ar-crit:initial; --ar-hold:initial;
+}
+.ar-ws .rr-print, .agent-record[data-theme="light"] .rr-page { background:var(--ar-bg); color:var(--ar-fg); }

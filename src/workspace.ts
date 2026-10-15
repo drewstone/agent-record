@@ -644,7 +644,8 @@ export const humanGradeSchema = z
     by: z.string(),
     target: z.object({ kind: z.enum(['run', 'deliverable', 'file']), id: z.string() }),
     category: z.string(),
-    score: z.number().int().min(0).max(100),
+    score: z.number().int().min(0).max(100).nullable(),
+    decision: z.literal('take').optional(),
     comment: z.string(),
     scale: z.string(),
   })
