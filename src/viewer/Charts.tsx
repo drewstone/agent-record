@@ -254,6 +254,8 @@ interface Point {
   at: number
   values: Partial<Record<Channel, number>>
   elapsed?: number
+  /** A usage-window marker (execution-to-date at metering time), not a per-response measurement. */
+  scoped?: boolean
 }
 
 export function UsageChart({
@@ -318,17 +320,24 @@ export function UsageChart({
       }
       const usage = event.detail.usage
       if (!usage) continue
+      // Scoped usage (metered windows, execution totals) is cumulative by
+      // meaning: it charts only in the cumulative metric, never as a
+      // per-response value, and keeps its own dashed series.
+      const scoped = event.detail.usageScope !== undefined
+      if (metric !== 'cumulative' && scoped) continue
       if (channels.some((channel) => usage[channel] === undefined)) incomplete++
       const values: Partial<Record<Channel, number>> = {}
       for (const channel of channels) {
         const value = usage[channel]
         if (value === undefined) continue
-        totals[channel] += value
-        counts[channel]++
-        values[channel] = metric === 'cumulative' ? totals[channel] : value
+        if (!scoped) {
+          totals[channel] += value
+          counts[channel]++
+        }
+        values[channel] = metric === 'cumulative' ? (scoped ? value : totals[channel]) : value
       }
       if (Object.keys(values).length)
-        points.push({ event, at: ms(event.at), values })
+        points.push({ event, at: ms(event.at), values, scoped })
     }
     return { points, totals, counts, incomplete, ambiguous, invalidTiming }
   }, [index, cutoff, actor, metric, axis])
@@ -353,16 +362,17 @@ export function UsageChart({
       : i / Math.max(1, points.length - 1)) *
       (width - left - right)
   const y = (value: number) => bottom - (value / max) * (bottom - top)
-  const path = (channel: Channel) => {
+  const path = (channel: Channel, scoped: boolean) => {
     let connected = false
     return points
-      .map((point, i) => {
+      .filter((point) => !!point.scoped === scoped)
+      .map((point) => {
         const value = point.values[channel]
         if (value === undefined) {
           connected = false
           return ''
         }
-        const segment = `${connected ? 'L' : 'M'}${x(point, i)},${y(value)}`
+        const segment = `${connected ? 'L' : 'M'}${x(point, points.indexOf(point))},${y(value)}`
         connected = true
         return segment
       })
@@ -427,8 +437,17 @@ export function UsageChart({
           channels.map((channel) => (
             <path
               key={channel}
-              d={path(channel)}
+              d={path(channel, false)}
               className={`usage-line ${channel}-line`}
+            />
+          ))}
+        {metric === 'cumulative' &&
+          points.some((point) => point.scoped) &&
+          channels.map((channel) => (
+            <path
+              key={`scoped-${channel}`}
+              d={path(channel, true)}
+              className={`usage-line ${channel}-line scoped-line`}
             />
           ))}
         {points.map((point, i) => {
@@ -465,7 +484,9 @@ export function UsageChart({
                   ? point.event.detail.isError
                     ? 'time-error'
                     : 'time-point'
-                  : 'usage-point'
+                  : point.scoped
+                    ? 'usage-point scoped-point'
+                    : 'usage-point'
               }
               data-id={point.event.id}
               tabIndex={0}
@@ -500,6 +521,9 @@ export function UsageChart({
               {channelLabels[channel]}
             </span>
           ))}
+          {points.some((point) => point.scoped) && (
+            <span className="scoped-key">metered windows · execution-to-date</span>
+          )}
         </div>
       )}
       <p className="small" data-token-caption>

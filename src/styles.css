@@ -693,6 +693,25 @@
   fill-opacity: 0.15;
   cursor: pointer;
 }
+.agent-record svg .scoped-line {
+  stroke-dasharray: 4 4;
+}
+.agent-record svg .scoped-point {
+  fill: transparent;
+  stroke: var(--ar-fg);
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+}
+.agent-record .usage-legend .scoped-key::before {
+  content: '';
+  display: inline-block;
+  width: 1.1rem;
+  height: 0;
+  border-top: 2px dashed var(--ar-fg);
+  opacity: 0.55;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
 .agent-record svg .time-point {
   fill: var(--ar-c-info);
   cursor: pointer;
