@@ -37,7 +37,7 @@ import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.4.0'
+export const ADAPTER_VERSION = '2.5.0'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
