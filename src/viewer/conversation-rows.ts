@@ -162,7 +162,7 @@ export function hollowCalls(
   event: RecordEvent,
   calls: readonly RowCall[],
   captured: ResultCaptured,
-): RowCall[] | null {
+): readonly RowCall[] | null {
   const detail = event.detail
   if (detail.role !== 'assistant' || event.category === 'lifecycle' || detail.lifecycle !== undefined) return null
   if (
