@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { FocusEvent, KeyboardEvent, MouseEvent } from 'react'
 import type { RecordEvent } from '../record.js'
 import { fmt, hoverLines, interval, ms, toolKey, utcTime } from './model.js'
@@ -269,6 +269,10 @@ export function UsageChart({
   metric,
   axis,
 }: PlotProps & { actor: string; metric: Metric; axis: Axis }) {
+  // Channels the reader toggled off; the scale follows the visible channels so one
+  // dominant channel (a huge cache-read total) cannot flatten every other curve.
+  const [hidden, setHidden] = useState<ReadonlySet<Channel>>(() => new Set())
+  const visible = channels.filter((channel) => !hidden.has(channel))
   const measured = useMemo(() => {
     const points: Point[] = []
     const totals: Record<Channel, number> = {
@@ -352,7 +356,7 @@ export function UsageChart({
     ...points.flatMap((point) =>
       metric === 'tool-time'
         ? [point.elapsed ?? 0]
-        : Object.values(point.values),
+        : visible.map((channel) => point.values[channel] ?? 0),
     ),
   )
   const x = (point: Point, i: number) =>
@@ -434,7 +438,7 @@ export function UsageChart({
               : 'Measured tokens per response'}
         </text>
         {metric !== 'tool-time' &&
-          channels.map((channel) => (
+          visible.map((channel) => (
             <path
               key={channel}
               d={path(channel, false)}
@@ -443,7 +447,7 @@ export function UsageChart({
           ))}
         {metric === 'cumulative' &&
           points.some((point) => point.scoped) &&
-          channels.map((channel) => (
+          visible.map((channel) => (
             <path
               key={`scoped-${channel}`}
               d={path(channel, true)}
@@ -454,7 +458,8 @@ export function UsageChart({
           const value =
             metric === 'tool-time'
               ? point.elapsed!
-              : Math.max(0, ...Object.values(point.values))
+              : Math.max(0, ...visible.map((channel) => point.values[channel] ?? 0))
+          if (metric !== 'tool-time' && value === 0 && !visible.some((channel) => point.values[channel] !== undefined)) return null
           const lines = hoverLines(point.event, index, cutoff)
           if (metric === 'tool-time')
             lines.push(
@@ -517,9 +522,23 @@ export function UsageChart({
       {metric !== 'tool-time' && (
         <div className="usage-legend">
           {channels.map((channel) => (
-            <span key={channel} className={`${channel}-key`}>
+            <button
+              key={channel}
+              type="button"
+              className={`${channel}-key legend-toggle`}
+              aria-pressed={!hidden.has(channel)}
+              title={hidden.has(channel) ? `Show ${channelLabels[channel]}` : `Hide ${channelLabels[channel]}`}
+              onClick={() =>
+                setHidden((current) => {
+                  const next = new Set(current)
+                  if (next.has(channel)) next.delete(channel)
+                  else next.add(channel)
+                  return next
+                })
+              }
+            >
               {channelLabels[channel]}
-            </span>
+            </button>
           ))}
           {points.some((point) => point.scoped) && (
             <span className="scoped-key">metered windows · execution-to-date</span>

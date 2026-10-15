@@ -14,7 +14,9 @@ import {
   argsLabel,
   callStatus,
   answeredBy,
+  collapseHollowTurns,
   collapsePolls,
+  hollowSummary,
   pendingReceipt,
   pollSummary,
   thinkingMarkers,
@@ -173,4 +175,65 @@ test('calls answered only by pending receipts collapse as polls; one real answer
   assert.deepEqual(rows.map((row) => row.kind), ['polls', 'event'])
   assert.equal(rows[0].events.length, 2)
   assert.equal(collapsePolls(events, { callsOf, answered: (event, id) => answeredBy(results[id]), keyOf: (event) => event.id }).every((row) => row.kind === 'event'), true)
+})
+
+test('consecutive hollow tool turns collapse into one compact row', () => {
+  const hollow = (id, at, name) => ({
+    id,
+    node: 'run:s0',
+    at,
+    kind: 'message',
+    category: 'tools',
+    label: 'assistant',
+    source: { path: 'x.jsonl', line: 1 },
+    detail: { role: 'assistant', publicToolCalls: [{ id, name, input: undefined }] },
+  })
+  const events = [
+    hollow('a', '2026-10-03T19:00:00Z', 'Bash'),
+    hollow('b', '2026-10-03T19:01:00Z', 'Bash'),
+    hollow('c', '2026-10-03T19:02:30Z', 'Read'),
+    {
+      ...hollow('d', '2026-10-03T19:03:00Z', 'Bash'),
+      detail: { role: 'assistant', publicToolCalls: [{ id: 'd', name: 'Bash', input: 'ls -la' }] },
+    },
+  ]
+  const rows = collapseHollowTurns(
+    events.map((event) => ({ kind: 'event', key: event.id, event })),
+    { callsOf, captured: () => false, keyOf: (event) => event.id },
+  )
+  const groups = rows.filter((row) => row.kind === 'hollow')
+  assert.equal(groups.length, 1)
+  assert.deepEqual(groups[0].calls, [
+    { name: 'Bash', count: 2 },
+    { name: 'Read', count: 1 },
+  ])
+  assert.equal(groups[0].spanMs, 150_000)
+  assert.equal(hollowSummary(groups[0].calls), '3 tool calls · Bash ×2 · Read')
+  // The turn with captured arguments keeps its own row.
+  assert.equal(rows.at(-1).kind, 'event')
+  assert.equal(rows.at(-1).event.id, 'd')
+})
+
+test('a captured result keeps its turn out of the hollow run, and a lone hollow turn stays a row', () => {
+  const hollow = (id, at) => ({
+    id,
+    node: 'run:s0',
+    at,
+    kind: 'message',
+    category: 'tools',
+    label: 'assistant',
+    source: { path: 'x.jsonl', line: 1 },
+    detail: { role: 'assistant', publicToolCalls: [{ id, name: 'Bash', input: undefined }] },
+  })
+  const rows = collapseHollowTurns(
+    [hollow('a', '2026-10-03T19:00:00Z'), hollow('b', '2026-10-03T19:00:30Z')].map((event) => ({ kind: 'event', key: event.id, event })),
+    { callsOf, captured: (event, id) => event.id === 'a' && id === 'a', keyOf: (event) => event.id },
+  )
+  assert.equal(rows.filter((row) => row.kind === 'hollow').length, 0)
+  const lone = collapseHollowTurns(
+    [hollow('z', '2026-10-03T19:00:00Z')].map((event) => ({ kind: 'event', key: event.id, event })),
+    { callsOf, captured: () => false, keyOf: (event) => event.id },
+  )
+  assert.equal(lone.filter((row) => row.kind === 'hollow').length, 0)
+  assert.equal(lone[0].kind, 'event')
 })

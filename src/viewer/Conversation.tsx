@@ -14,7 +14,7 @@ import {
   utcTime,
 } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
-import { anchorsOf, answeredBy, argsLabel, callStatus, collapsePolls, outputTokens, pollSummary, quietThinking, thinkingMarkers } from './conversation-rows.js'
+import { anchorsOf, answeredBy, argsLabel, callStatus, collapseHollowTurns, collapsePolls, hollowSummary, outputTokens, pollSummary, quietThinking, thinkingMarkers } from './conversation-rows.js'
 import type { CallState, ConversationRow } from './conversation-rows.js'
 
 /** A withheld-thinking bar is full at this many output tokens; larger turns stay full. */
@@ -207,11 +207,19 @@ export function Conversation({
   )
   const rows = useMemo(
     () =>
-      collapsePolls(items, {
-        callsOf,
-        answered: (event, id) => answeredBy(index.results.get(toolKey(event.node, id))),
-        keyOf: anchor,
-      }),
+      collapseHollowTurns(
+        collapsePolls(items, {
+          callsOf,
+          answered: (event, id) => answeredBy(index.results.get(toolKey(event.node, id))),
+          keyOf: anchor,
+        }),
+        {
+          callsOf,
+          captured: (event, id) =>
+            (index.results.get(toolKey(event.node, id)) ?? []).some((result) => textOf(result)),
+          keyOf: anchor,
+        },
+      ),
     [items, index, anchor],
   )
   // How long each withheld-thinking turn took: the time since this agent's previous event.
@@ -230,6 +238,7 @@ export function Conversation({
     const map = new Map<string, string>()
     for (const row of rows)
       if (row.kind === 'polls') for (const event of row.events) map.set(event.id, row.key)
+      else if (row.kind === 'hollow') for (const event of row.events) map.set(event.id, row.key)
       else map.set(row.event.id, row.key)
     return map
   }, [rows])
@@ -325,13 +334,55 @@ export function Conversation({
     (row: ConversationRow) =>
       row.kind === 'polls'
         ? 48
-        : isLifecycle(row.event)
+        : row.kind === 'hollow'
           ? 34
-          : !textOf(row.event) && callsOf(row.event).length
-            ? 8 + 40 * callsOf(row.event).length
-            : 150,
+          : isLifecycle(row.event)
+            ? 34
+            : !textOf(row.event) && callsOf(row.event).length
+              ? 8 + 40 * callsOf(row.event).length
+              : 150,
     [],
   )
+  const renderHollow = (row: Extract<ConversationRow, { kind: 'hollow' }>) => {
+    const open = opened.has(row.key)
+    const chosen = row.events.some((event) => event.id === selected)
+    return (
+      <details
+        className={`hollow-group ${chosen ? 'selected' : ''}`}
+        data-hollow-group={row.events.length}
+        data-open-key={row.key}
+        data-entry={row.events[0]!.id}
+        open={open}
+        onToggle={(e) => setOpen(row.key, e.currentTarget.open)}
+      >
+        <summary>
+          <span className="execution-icon">
+            <ToolIcon name={row.calls[0]?.name ?? 'tool'} />
+          </span>
+          <span className="hollow-facts">{hollowSummary(row.calls)} · arguments and results not captured</span>
+          <span className="execution-time" title="Time from the first to the last call in this run">
+            {row.spanMs ? interval(row.spanMs) : ''}
+          </span>
+          <time dateTime={row.events[0]!.at}>{utcTime(row.events[0]!.at)}</time>
+        </summary>
+        {open && (
+          <ol className="hollow-calls">
+            {row.events.flatMap((event) =>
+              callsOf(event).map((call) => (
+                <li key={`${event.id}:${call.id}`} data-message={event.id}>
+                  <time dateTime={event.at}>{utcTime(event.at)}</time>
+                  <span className="mono">{toolName(call.name)}</span>
+                  <span className="poll-args">{argsLabel(call.input) ?? compact(call.input ?? '')}</span>
+                  {sourceButton(event)}
+                </li>
+              )),
+            )}
+          </ol>
+        )}
+      </details>
+    )
+  }
+
   const renderPolls = (row: Extract<ConversationRow, { kind: 'polls' }>) => {
     const summary = pollSummary(row.events)
     const open = opened.has(row.key)
@@ -375,6 +426,7 @@ export function Conversation({
   }
   const render = (row: ConversationRow) => {
     if (row.kind === 'polls') return renderPolls(row)
+    if (row.kind === 'hollow') return renderHollow(row)
     const event = row.event
     const at = anchor(event)
     if (isLifecycle(event)) {
