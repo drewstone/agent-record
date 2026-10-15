@@ -37,7 +37,7 @@ import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.5.0'
+export const ADAPTER_VERSION = '2.6.0'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
@@ -726,6 +726,19 @@ export class Ingest {
       const reason = str(event.reason ?? event.cause ?? event.record?.error ?? event.outcome?.error ?? event.detail)
       const shown = reason ? this.clip(reason, () => this.lineSource(rel, row.line, row.raw)) : null
       const spent = event.spent ?? event.spend
+      // Metered windows are execution-to-date totals at metering time; carried as
+      // scoped usage so the viewer charts them as a cumulative series and never
+      // mistakes them for per-response measurements.
+      const meteredUsage =
+        kind === 'metered' && typeof spent?.tokens?.input === 'number'
+          ? {
+              usage: {
+                input: spent.tokens.input,
+                ...(typeof spent.tokens.output === 'number' ? { output: spent.tokens.output } : {}),
+              },
+              usageScope: 'metered' as const,
+            }
+          : undefined
       this.emit({
         node: node.id,
         at,
@@ -740,6 +753,7 @@ export class Ingest {
           ...(shown ? { publicText: shown.text, ...(shown.clip ? { clip: shown.clip } : {}) } : {}),
           ...(kind === 'settled' || kind === 'execution-result' ? { isError: event.status === 'down' || event.outcome?.success === false } : {}),
           ...(spent && (kind === 'settled' || kind === 'metered' || kind === 'reconciled') ? { spent: this.compactValue(spent) } : {}),
+          ...(meteredUsage ?? {}),
           data: this.compactValue(rest),
         },
       })

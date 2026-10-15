@@ -253,3 +253,24 @@ test('a file cache shared across conversions never changes the record, and a cha
   assert.equal(again.json, ingestRun(run, options).json)
   assert.ok(again.record.events.some((event) => event.detail.publicText === 'Continue.'))
 })
+
+test('a metered journal window becomes scoped usage the usage view can chart cumulatively', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const run = join(root, 'run-m')
+  mkdirSync(run, { recursive: true })
+  writeFileSync(join(run, 'run-input.json'), JSON.stringify({ task: { objective: 'fixture' } }))
+  writeFileSync(join(run, 'spawn-journal.jsonl'), jsonl([
+    { kind: 'event', root: 'run-m', event: { kind: 'spawned', id: 'run-m', at: '2026-08-16T20:00:00Z' } },
+    { kind: 'event', root: 'run-m', event: { kind: 'spawned', id: 'run-m:s0', at: '2026-08-16T20:01:00Z' } },
+    { kind: 'event', root: 'run-m', event: { kind: 'metered', id: 'run-m:s0', at: '2026-08-16T20:05:00Z', spent: { iterations: 1, tokens: { input: 248, output: 134562, cacheBreakdownKnown: false }, usd: 10.88, usdKnown: false } } },
+    { kind: 'event', root: 'run-m', event: { kind: 'settled', id: 'run-m:s0', at: '2026-08-16T20:09:00Z', status: 'up' } },
+  ]))
+  const record = ingestRun(run, { runId: 'run-m' }).record
+  const metered = record.events.filter((event) => event.kind === 'metered')
+  assert.equal(metered.length, 1)
+  assert.deepEqual(metered[0].detail.usage, { input: 248, output: 134562 })
+  assert.equal(metered[0].detail.usageScope, 'metered')
+  // Scoped usage is cumulative by meaning: never presented as a per-response measurement.
+  assert.equal(record.events.filter((event) => event.detail.usage && event.detail.usageScope === undefined).length, 0)
+})
