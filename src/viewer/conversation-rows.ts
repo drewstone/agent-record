@@ -148,6 +148,94 @@ export function pollCall(event: RecordEvent, calls: readonly RowCall[], answered
 export type ConversationRow =
   | { kind: 'event'; key: string; event: RecordEvent }
   | { kind: 'polls'; key: string; name: string; input: string | undefined; events: RecordEvent[] }
+  | { kind: 'hollow'; key: string; events: RecordEvent[]; calls: Array<{ name: string; count: number }>; spanMs: number }
+
+/** Whether any paired result carries answer text; injected so this module stays types-only. */
+export type ResultCaptured = (event: RecordEvent, callId: string) => boolean
+
+/**
+ * The calls of a hollow turn: an assistant tool turn with no text, thinking, or notes whose every call has neither
+ * captured arguments nor a captured answer. Nothing in it can be shown but the fact that it ran, so a run of them
+ * collapses to one row. A call with any captured side keeps its own row.
+ */
+export function hollowCalls(
+  event: RecordEvent,
+  calls: readonly RowCall[],
+  captured: ResultCaptured,
+): RowCall[] | null {
+  const detail = event.detail
+  if (detail.role !== 'assistant' || event.category === 'lifecycle' || detail.lifecycle !== undefined) return null
+  if (
+    detail.publicText ||
+    detail.recordedClaim ||
+    detail.reasoning ||
+    detail.responseStatus === 'error' ||
+    detail.contentOmitted ||
+    detail.publicationNote ||
+    detail.clip ||
+    thinkingMarkers(detail).length
+  )
+    return null
+  if (!calls.length) return null
+  if (calls.some((call) => call.input !== undefined || call.clip || call.publicationNote || captured(event, call.id))) return null
+  return calls
+}
+
+/**
+ * Consecutive hollow turns become one row (min 2); everything else passes through untouched. Chained after
+ * collapsePolls so each rule keeps its own meaning.
+ */
+export function collapseHollowTurns(
+  rows: readonly ConversationRow[],
+  { callsOf, captured, keyOf, min = 2 }: { callsOf: (event: RecordEvent) => readonly RowCall[]; captured: ResultCaptured; keyOf: (event: RecordEvent) => string; min?: number },
+): ConversationRow[] {
+  const out: ConversationRow[] = []
+  let run: { events: RecordEvent[]; calls: Map<string, number>; spanMs: number } | null = null
+  const close = () => {
+    if (!run) return
+    if (run.events.length >= min)
+      out.push({
+        kind: 'hollow',
+        key: `hollow:${keyOf(run.events[0]!)}`,
+        events: run.events,
+        calls: [...run.calls.entries()].map(([name, count]) => ({ name, count })),
+        spanMs: run.spanMs,
+      })
+    else for (const event of run.events) out.push({ kind: 'event', key: keyOf(event), event })
+    run = null
+  }
+  for (const row of rows) {
+    if (row.kind !== 'event') {
+      close()
+      out.push(row)
+      continue
+    }
+    const calls = hollowCalls(row.event, callsOf(row.event), captured)
+    if (!calls) {
+      close()
+      out.push(row)
+      continue
+    }
+    run ??= { events: [], calls: new Map(), spanMs: 0 }
+    run.events.push(row.event)
+    for (const call of calls) run.calls.set(call.name, (run.calls.get(call.name) ?? 0) + 1)
+  }
+  close()
+  // The span is the time from the first to the last event of the run; filled once the run is closed.
+  for (const row of out) {
+    if (row.kind !== 'hollow') continue
+    const times = row.events.map((event) => Date.parse(event.at)).filter(Number.isFinite)
+    row.spanMs = times.length > 1 ? Math.max(...times) - Math.min(...times) : 0
+  }
+  return out
+}
+
+/** `12 tool calls · Bash ×9 · Read ×3` for a collapsed hollow run. */
+export function hollowSummary(calls: readonly { name: string; count: number }[]): string {
+  const total = calls.reduce((sum, entry) => sum + entry.count, 0)
+  const parts = calls.map((entry) => (entry.count > 1 ? `${entry.name} ×${entry.count}` : entry.name))
+  return `${total} tool call${total === 1 ? '' : 's'} · ${parts.join(' · ')}`
+}
 
 /**
  * Consecutive polls of the same tool with the same arguments (empty and absent arguments count as the same) become

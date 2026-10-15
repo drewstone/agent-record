@@ -712,6 +712,73 @@
   margin-right: 0.35rem;
   vertical-align: middle;
 }
+.agent-record .usage-legend .legend-toggle {
+  font: inherit;
+  color: inherit;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  background: transparent;
+  cursor: pointer;
+}
+.agent-record .usage-legend .legend-toggle[aria-pressed='false'] {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+.agent-record .usage-legend .legend-toggle:hover {
+  border-color: var(--ar-line);
+}
+.agent-record .hollow-group {
+  border: 1px dashed var(--ar-line);
+  border-radius: 5px;
+  background: transparent;
+  overflow: hidden;
+  min-width: 0;
+}
+.agent-record .hollow-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.5rem;
+  font: var(--ar-text-s) var(--ar-font-mono);
+  min-height: 26px;
+  color: var(--ar-fg-muted);
+  cursor: pointer;
+}
+.agent-record .hollow-group > summary::after {
+  content: '+';
+  font-size: var(--ar-text-s);
+  color: var(--ar-fg-faint);
+  margin-left: 0.2rem;
+}
+.agent-record .hollow-group[open] > summary::after {
+  content: '−';
+}
+.agent-record .hollow-group > summary:hover {
+  background: var(--ar-bg-alt);
+}
+.agent-record .hollow-group.selected {
+  border-color: var(--ar-line-strong);
+}
+.agent-record .hollow-facts {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agent-record .hollow-calls {
+  margin: 0;
+  padding: 0.3rem 0.5rem 0.45rem;
+  list-style: none;
+  display: grid;
+  gap: 0.15rem;
+  font: var(--ar-text-s) var(--ar-font-mono);
+  color: var(--ar-fg-muted);
+}
+.agent-record .hollow-calls li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  min-width: 0;
+}
 .agent-record svg .time-point {
   fill: var(--ar-c-info);
   cursor: pointer;
