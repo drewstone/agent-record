@@ -1,3 +1,5 @@
+import { smallMultiples } from '@tangle-network/charts'
+import { FigureView } from '@tangle-network/charts/react'
 import type { PlayDocument } from '../workspace.js'
 import { ChartCard, DayBars, Lines, SERIES, STATE_COLOR, compact, usd } from './OverviewCharts.js'
 import { go } from './data.js'
@@ -50,6 +52,7 @@ export function PlayCharts({ play }: { play: PlayDocument }) {
   const date = (t: number) => new Date(t).toISOString().slice(5, 10)
   return (
     <div className="ov-grid play-charts" data-play-charts={runs.length}>
+      {play.comparison && <section className="rr-comparison" data-field="comparison"><h3 data-field="comparison.headline">{play.comparison.headline}</h3><FigureView figure={smallMultiples(play.comparison.arms, { x: { label: 'Hours after start', domain: play.comparison.x }, y: { label: 'Cells covered', unit: 'cells', domain: play.comparison.y }, shared: 'both', noun: 'arm' })} /><table><thead><tr><th>Arm</th><th>Window</th><th>Evidence</th></tr></thead><tbody>{play.comparison.arms.map((arm, i) => <tr key={arm.id}><th><a href={`/run/${encodeURIComponent(arm.id)}`}>{arm.label}</a></th><td data-field={`comparison.arms.${i}.windowHours`} data-value={arm.windowHours}>{arm.windowHours} h</td><td>{arm.missing?.why ?? (arm.end ? 'Ended early' : arm.fullWindow ? 'Full window' : 'Partial observations')}<small>{arm.source}</small></td></tr>)}</tbody></table><p>{play.comparison.source}</p></section>}
       <ChartCard title="Runs by day and how they ended" legend={byDay.map((s) => ({ name: s.name, color: s.color }))} note="Every run of the play, failed ones included, on the day it started.">
         <DayBars days={days} series={byDay} rows={10} missing="no run" />
       </ChartCard>

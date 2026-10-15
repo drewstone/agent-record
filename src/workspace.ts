@@ -417,6 +417,7 @@ export const playDocumentSchema = z
       })
       .catchall(z.unknown())
       .nullable(),
+    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), arms: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional() })) }).nullable().optional(),
     /** The latest run's input. */
     input: playInputSchema.nullable(),
     /** Newest first; versions are folded into their run. */
