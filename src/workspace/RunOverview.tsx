@@ -60,7 +60,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const versionFigure = r.versions?.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
   return <article className={`rr-page${print ? ' rr-print' : ''}`} data-overview data-receipt={r.runId}>
     <header className={`rr-verdict rr-${r.outcome.status}`}>
-      <div className="rr-title-row"><h1 data-field="title">{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
+      <div className="rr-title-row"><h1 data-field="title" title={r.title}>{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
       <p data-field="outcome.sentence">{r.outcome.sentence}</p>
       <p className="rr-summary"><span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span><span><Field path="cost.billedUsd.total.usd" value={r.cost.billedUsd.total.usd} format={money} /> billed</span><span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span><a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
     </header>

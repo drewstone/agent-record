@@ -28,8 +28,8 @@ test('the Lab fixture reaches the live DOM and print DOM with identical field va
       assert.equal(await page.locator('[data-field="work.toolCalls"]').textContent(), '172')
       assert.equal(await page.locator('[data-field="work.tokens.total"]').getAttribute('data-value'), '12920470')
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${theme} ${viewport.width}: page reflows`)
-      if (viewport.width === 1440) for (const path of ['check.output', 'check.inputs.sha256', 'check.rerun']) assert.ok(await page.locator(`[data-field="${path}"]`).evaluate((node) => node.getBoundingClientRect().bottom <= 900), `${path} above the fold`)
       if (evidence) { await mkdir(evidence, { recursive: true }); await page.screenshot({ path: `${evidence}/run-${viewport.width}-${theme}.png`, fullPage: true }) }
+      if (viewport.width === 1440) for (const path of ['check.output', 'check.inputs.sha256', 'check.rerun']) assert.ok(await page.locator(`[data-field="${path}"]`).evaluate((node) => node.getBoundingClientRect().bottom <= 900), `${path} above the fold`)
       await page.setContent(renderRunReceipt(fixture, { css }))
       assert.equal(await page.locator('.rr-print').count(), 1)
       assert.equal(await page.locator('.rr-drawer:not([open])').count(), 0)
