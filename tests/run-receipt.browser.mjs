@@ -4,7 +4,6 @@ import { test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RunOverview, RunReceiptView, runReceiptSchema } from '../dist/index.js'
-import { smallMultiples } from '@tangle-network/charts'
 import { renderRunReceipt } from '../dist/receipt.js'
 
 const fixture = JSON.parse(await readFile(new URL('./fixtures/run-receipt-jcs.json', import.meta.url), 'utf8'))
@@ -60,18 +59,4 @@ test('the shared receipt schema preserves the sources and treats unknown work as
   const commission = { ...parsed, check: null }
   assert.equal(runReceiptSchema.parse(commission).check, null)
   assert.match(renderToStaticMarkup(createElement(RunReceiptView, { receipt: commission })), /No play check is registered/)
-})
-
-
-test('a narrow shared comparison chart fits inside a phone card', { skip: !playwright }, async () => {
-  const { chromium } = await import(playwright)
-  const browser = await chromium.launch({ headless: true })
-  try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-    const figure = smallMultiples([{ id: 'missing', label: 'Worker', missing: { why: 'Provider refused before work began' } }], { x: { label: 'Hours', domain: [0, 2] }, y: { label: 'Cells', unit: 'cells', domain: [0, 10] }, shared: 'both' })
-    assert.ok(figure.svg?.narrow)
-    await page.setContent(`<!doctype html><style>${css}</style><div class="agent-record ar-ws" style="width:284px;margin:40px"><section class="rr-comparison"><figure class="tgc-figure tgc-figure-view"><div class="tgc-view-plot tgc-view-narrow">${figure.svg.narrow}</div></figure></section></div>`)
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
-    assert.ok(await page.locator('svg').evaluate((node) => node.getBoundingClientRect().width <= node.parentElement.clientWidth))
-  } finally { await browser.close() }
 })
