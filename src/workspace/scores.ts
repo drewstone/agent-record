@@ -6,6 +6,11 @@ import type { HumanGrade, PanelReview, Readout, ReadoutChart } from '../workspac
  * judge is calibrated, and a person's grade is that person's. Types only, so the node tests load this file directly.
  */
 
+/** A saved choice is not a numeric grade and never replaces one in the grade control. */
+export function latestNumericGrade(grades: readonly HumanGrade[] | null | undefined, target: HumanGrade['target']): HumanGrade | null {
+  return grades?.filter((grade) => grade.target.kind === target.kind && grade.target.id === target.id && typeof grade.score === 'number').at(-1) ?? null
+}
+
 export const ABSOLUTE_SCALE = 'absolute 0–100 vs world-class'
 
 /** The persona panel names the readout judges' `graphics` category `visuals`. */

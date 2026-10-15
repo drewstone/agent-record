@@ -89,7 +89,7 @@ function ScoreRowView({ row, people }: { row: ScoreRow; people: string[] }) {
         const grade = row.people.find((item) => item.by === by)
         return (
           <td key={by} className="num" title={grade ? `${grade.comment || 'no comment'} · ${when(grade.at)}` : undefined}>
-            {grade ? grade.score : '—'}
+            {grade?.decision === 'take' ? 'Taken' : grade?.score ?? '—'}
           </td>
         )
       })}

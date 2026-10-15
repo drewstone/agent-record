@@ -1,0 +1,644 @@
+{
+  "schema": "discovery-lab.run-receipt",
+  "runId": "jcs-rfc8785-js-20261015b",
+  "tag": "rc3",
+  "status": "chosen at the deadline",
+  "current": true,
+  "draft": false,
+  "generatedAt": "2026-10-15T22:49:30.676Z",
+  "commit": "51018bf60e457ec05a5f8622cfebd58db6bfeea7",
+  "taggedAt": "2026-10-15T12:16:07+00:00",
+  "scores": {
+    "source": "current evaluator set",
+    "vector": {
+      "mandate": [
+        0,
+        0
+      ],
+      "exact": [
+        1,
+        1
+      ],
+      "heldOut": [
+        0,
+        0
+      ],
+      "blockers": 0,
+      "judge": null,
+      "unscored": []
+    },
+    "complete": true,
+    "rule": "the candidate the play's passed check ran on, else exact checks, then held-out checks, then fewest open referee blockers, then judges, counted over the checks measured on both tags; ties keep the earlier tag; candidates are the declared tags and the newest clock snapshot",
+    "checks": [
+      {
+        "id": "deliverables-present",
+        "tier": "exact",
+        "result": "pass",
+        "label": "handoff page present"
+      },
+      {
+        "id": "open-blockers",
+        "tier": "referee",
+        "result": "pass"
+      }
+    ],
+    "checkFirst": true
+  },
+  "check": {
+    "passed": true,
+    "at": "2026-10-15T13:18:17.431Z",
+    "detail": "SOLVED: all 467 inputs (the 6 published pairs, the 26 RFC 8785 Appendix B samples, 119 inputs refused as RFC 8785 requires, and edge cases and values drawn at check time) and all 100000000 published number lines\ninputs: 467 (348 to canonicalize, 119 of 119 refused as they must be)\nnumber lines: all 100000000 match the published file (sha256 0f7dda6b0837dde083c5d6b896f7d62340c8a2415b0c7121d83145e08a755272) in 130 s\nfailures 0",
+    "source": "play-check.json",
+    "commit": "51018bf60e457ec05a5f8622cfebd58db6bfeea7",
+    "checkedOn": "rc3",
+    "thisTag": true,
+    "known": true,
+    "output": "SOLVED: all 467 inputs (the 6 published pairs, the 26 RFC 8785 Appendix B samples, 119 inputs refused as RFC 8785 requires, and edge cases and values drawn at check time) and all 100000000 published number lines\ninputs: 467 (348 to canonicalize, 119 of 119 refused as they must be)\nnumber lines: all 100000000 match the published file (sha256 0f7dda6b0837dde083c5d6b896f7d62340c8a2415b0c7121d83145e08a755272) in 130 s\nfailures 0",
+    "tag": "rc3",
+    "checker": {
+      "path": "inputs/check.mjs",
+      "sha256": "95aba0cddc42f52a8b14174bc51c31abefac048a9f1e8296bb087a52bfc45344"
+    },
+    "inputs": {
+      "source": "deliverables.git:51018bf60e457ec05a5f8622cfebd58db6bfeea7:pages/jcs-rfc8785-js/",
+      "sha256": "2ab91c5b18f7072a5f426688d4a1c26f88edcf4adf8ab786f1aaef665c8024a6",
+      "count": null
+    },
+    "rerun": "disco scorecard jcs-rfc8785-js-20261015b --play-check --recheck --force --queue --commit 51018bf60e457ec05a5f8622cfebd58db6bfeea7 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\""
+  },
+  "summary": null,
+  "files": [
+    {
+      "file": "jcs.mjs",
+      "label": "Code jcs.mjs",
+      "size": 7121,
+      "sha256": "285075093157dc948d25544309dd6641536b582cfde9475ceaff4155812ffc98",
+      "matches": null,
+      "from": "pages/jcs-rfc8785-js/jcs.mjs.md"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "handoff",
+      "present": true,
+      "files": 1
+    }
+  ],
+  "cost": {
+    "apiEquivalentUsd": {
+      "usd": 1.6882316,
+      "estimated": 1.6882316,
+      "provenance": "estimated"
+    },
+    "billedUsd": {
+      "model": {
+        "usd": 0,
+        "provenance": "Router charges on the run's 2 box(es): 0 Router key(s) charged, 1 billed nothing, 1 had no Router key (30-day window read 2026-10-15T13:19:12.794Z)"
+      },
+      "compute": {
+        "usd": null,
+        "provenance": "Sandbox key not read: tangle-admin: no key matches name ~ 'jcs-rfc8785-js-20261015b'"
+      },
+      "total": {
+        "usd": null,
+        "provenance": "unknown until both parts are measured; at least $0.00"
+      },
+      "fill": "disco cost --refresh --run=jcs-rfc8785-js-20261015b"
+    },
+    "clause": "API-equivalent $1.69, billed unknown (model $0.00, compute unknown; fill with disco cost --refresh --run=jcs-rfc8785-js-20261015b)",
+    "provenance": "API-equivalent: estimated (Runtime totals, every token at API list price, whoever paid). Billed model: Router charges on the run's 2 box(es): 0 Router key(s) charged, 1 billed nothing, 1 had no Router key (30-day window read 2026-10-15T13:19:12.794Z). Billed compute: Sandbox key not read: tangle-admin: no key matches name ~ 'jcs-rfc8785-js-20261015b'."
+  },
+  "lineage": {
+    "schema": "discovery-lab.run-lineage",
+    "runId": "jcs-rfc8785-js-20261015b",
+    "chain": [
+      "jcs-rfc8785-js-20261015b"
+    ],
+    "ancestors": [],
+    "inherited": {
+      "from": null,
+      "forkCommit": null,
+      "sourceCommit": null,
+      "tags": [],
+      "contentCommits": 0,
+      "pages": 0,
+      "apiEquivalentUsd": null,
+      "apiEquivalentComplete": true
+    },
+    "own": {
+      "tags": [
+        "rc1",
+        "rc2",
+        "rc3"
+      ],
+      "contentCommits": 5,
+      "pages": 18,
+      "cost": {
+        "apiEquivalentUsd": 1.6882316,
+        "apiEquivalentProvenance": "estimated",
+        "billedUsd": null,
+        "billedProvenance": "unknown until both parts are measured; at least $0.00"
+      }
+    }
+  },
+  "provenance": null,
+  "system": {
+    "runId": "jcs-rfc8785-js-20261015b",
+    "at": "2026-10-15T22:49:29.576Z",
+    "live": false,
+    "caughtUp": true,
+    "attempts": {
+      "tries": 5,
+      "failed": 0,
+      "hours": 0.29,
+      "failedHours": 0,
+      "causes": [
+        {
+          "cause": "completed",
+          "label": "completed",
+          "tries": 5,
+          "hours": 0.29
+        }
+      ]
+    },
+    "workers": {
+      "count": 0,
+      "neverFinished": 0,
+      "neverFinishedHours": 0,
+      "hours": 0
+    },
+    "context": {
+      "calls": 0,
+      "p50": null,
+      "p90": null,
+      "perCallHarnesses": [],
+      "turnOnlyHarnesses": [
+        "codex"
+      ]
+    },
+    "waiting": {
+      "sleepHours": 0,
+      "sleepCalls": 0,
+      "pollHours": 0,
+      "pollCalls": 0
+    },
+    "errors": {
+      "total": 12,
+      "calls": 172,
+      "top": [
+        {
+          "tool": "mcp__agent-runtime-coordination__knowledge_record",
+          "message": "tool call error: tool call failed for `agent-runtime-coordination/knowledge_record`",
+          "count": 4
+        },
+        {
+          "tool": "exec_command",
+          "message": "Exit code 1 \u00b7 inputs: N (N to canonicalize, N of N refused as they must be)",
+          "count": 2
+        },
+        {
+          "tool": "exec_command",
+          "message": "Exit code 2 \u00b7 ls: cannot access '/mnt/traces/discovery-runs/jcs-rfcN-js-Nb/knowledge/runs/",
+          "count": 2
+        },
+        {
+          "tool": "exec_command",
+          "message": "Exit code 2 \u00b7 ls: cannot access '<path> No such file or directory",
+          "count": 2
+        },
+        {
+          "tool": "exec_command",
+          "message": "Exit code N \u00b7 /bin/bash: line 1: python: command not found",
+          "count": 2
+        }
+      ]
+    },
+    "startup": {
+      "root": 0,
+      "children": 0,
+      "childNodes": 0,
+      "paths": []
+    },
+    "brief": {
+      "expected": 3,
+      "received": 3,
+      "hashesMatch": true,
+      "retried": false,
+      "mountedAt": "2026-10-15T11:05:33.209Z",
+      "failed": null,
+      "rootCalls": 172,
+      "firstCallAt": "2026-10-15T11:05:50.478Z",
+      "readAt": "2026-10-15T11:05:57.763Z",
+      "readAtCall": 3,
+      "steeredAt": null,
+      "late": false
+    },
+    "play": {
+      "verdict": {
+        "passed": true,
+        "at": "2026-10-15T13:18:17.431Z",
+        "source": "play-check.json",
+        "commit": "51018bf60e457ec05a5f8622cfebd58db6bfeea7"
+      },
+      "checks": 1,
+      "firstPassAt": null,
+      "hoursToFirstPass": null,
+      "afterPass": null,
+      "passedBySettle": true,
+      "reader": null
+    },
+    "capture": {
+      "pending": {
+        "count": 0,
+        "oldestMinutes": null
+      },
+      "native": {
+        "copies": 2,
+        "failedAttempts": 0,
+        "slowestFailedMinutes": null,
+        "slowestFailedStage": null,
+        "slowestFailedPhase": null,
+        "slowestResultToReceiptMinutes": 0.4,
+        "slowestStagesMinutes": {
+          "exportMinutes": 0.2,
+          "summaryMinutes": 0,
+          "archiveStoreMinutes": 0.2,
+          "offloadMinutes": 0,
+          "totalMinutes": 0.4,
+          "preflightMinutes": 0,
+          "stagingMinutes": 0
+        },
+        "maxFiles": 597
+      },
+      "workspace": {
+        "captures": 2,
+        "failed": 0,
+        "slowestMinutes": 0.7,
+        "slowestSeconds": 43.9,
+        "slowestStagesMinutes": {
+          "exportMinutes": 1.4,
+          "summaryMinutes": 0,
+          "archiveStoreMinutes": 0.2,
+          "offloadMinutes": 0,
+          "totalMinutes": 1.6,
+          "preflightMinutes": 0,
+          "stagingMinutes": 0
+        }
+      }
+    },
+    "settle": {
+      "kind": "solved",
+      "class": "work",
+      "why": "solved: the play check passed"
+    },
+    "traces": {
+      "runRoot": null,
+      "turns": 0,
+      "nodes": {
+        "traced": 0,
+        "settled": 1
+      },
+      "claims": null
+    }
+  },
+  "continue": {
+    "fork": "disco fork jcs-rfc8785-js-20261015b --at rc3 --spec <child-registration.json> --out <child-record.json> [--press]",
+    "seed": "disco fork seed jcs-rfc8785-js-20261015b <seed-dir>",
+    "run": "disco run <child-registration.json> --knowledge-seed <seed-dir>",
+    "registration": null
+  },
+  "links": {
+    "runPage": "https://workspace.example.invalid/run/jcs-rfc8785-js-20261015b",
+    "versions": "https://workspace.example.invalid/run/jcs-rfc8785-js-20261015b?section=versions",
+    "readout": null,
+    "record": "record-host:/records/jcs-rfc8785-js-20261015b",
+    "repository": "record-host:/records/jcs-rfc8785-js-20261015b/deliverables.git"
+  },
+  "title": "I want a dependency-free JavaScript implementation of RFC 8785, the JSON Canonicalization Scheme (JCS), that I can drop into our receipt-signing code: one ES module exporting canonicalize(value) whose output is byte-exact for every input and output pair in the published cyberphone json-canonicalization test vectors, including the ECMAScript number-serialization edge cases, and that refuses what RFC 8785 forbids, such as non-finite numbers and lone surrogates.",
+  "brief": "The requester's words: \"I want a dependency-free JavaScript implementation of RFC 8785, the JSON Canonicalization Scheme (JCS), that I can drop into our receipt-signing code: one ES module exporting canonicalize(value) whose output is byte-exact for every input and output pair in the published cyberphone json-canonicalization test vectors, including the ECMAScript number-serialization edge cases, and that refuses what RFC 8785 forbids, such as non-finite numbers and lone surrogates.\"\n\nBuild that module, `jcs.mjs`. These are the questions a maintainer of a JCS implementation would check first:\n\n- The published vectors are the six input/output pairs in cyberphone's `testdata` folder and all 100,000,000 lines of `es6testfile100m.txt`. The number lines open with the RFC 8785 Appendix B samples: minus zero, the smallest subnormal, the largest double, 2^53, the switch between plain and exponent notation at 1e21 and at 1e-7, and a round-half-even case. Every line must come out byte for byte.\n- Property names sort by UTF-16 code units (RFC 8785 section 3.2.3), so the key U+1F600 (stored as the code units D83D DE00) sorts before U+FB33. Sorting by code point or by UTF-8 bytes puts those two keys the other way round.\n- Strings keep their Unicode exactly as given, with no normalization (section 3.1), and escape only what section 3.2.2.2 lists. U+2028, U+2029, DEL and U+0080 stay raw.\n- Refusing means canonicalize throws and returns nothing. That covers NaN, Infinity and -Infinity anywhere in the value (section 3.2.2.3), and any string or property name that is not well-formed UTF-16: a lone high surrogate, a lone low surrogate or a reversed pair (section 3.2.2.2). The cyberphone Go implementation was fixed on 2026-10-11 because it wrote a reversed pair as U+FFFD instead of refusing it.\n- The requester has not said what canonicalize does with a JavaScript value that has no JSON form: undefined, a function, a symbol, a BigInt, a cycle, a Map, or an object with toJSON such as a Date. JSON.stringify drops some of these and converts others. Choose the rule, state it at the top of the module, and record why.\n- The requester has not said where the receipt-signing code runs. The check runs Node 20 or later. A module that uses only ECMAScript built-ins also runs in browsers, workers, Deno and Bun.\n- The requester has not said what licence the module ships under. Code adapted from an existing implementation keeps that implementation's licence terms, so record where any adapted code came from.",
+  "outcome": {
+    "status": "passed",
+    "sentence": "The check passed on the chosen version.",
+    "at": "2026-10-15T13:18:17.431Z",
+    "reason": "budget-exhausted",
+    "class": "work"
+  },
+  "chosen": {
+    "tag": "rc3",
+    "commit": "51018bf60e457ec05a5f8622cfebd58db6bfeea7",
+    "why": "The play check passed on this version."
+  },
+  "decisions": [
+    {
+      "id": "take",
+      "label": "Take this version",
+      "consequence": "Save this version as your choice.",
+      "command": "curl 'https://workspace.example.invalid/api/discovery/runs/jcs-rfc8785-js-20261015b/decisions' -H 'Origin: https://workspace.example.invalid' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc3\\\",\\\"commit\\\":\\\"51018bf60e457ec05a5f8622cfebd58db6bfeea7\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
+      "enabled": true,
+      "reason": null
+    },
+    {
+      "id": "continue",
+      "label": "Continue from this version",
+      "consequence": "Start another run from this version.",
+      "command": "disco fork jcs-rfc8785-js-20261015b --at rc3 --spec <child-registration.json> --out <child-record.json> [--press]",
+      "enabled": false,
+      "reason": "Add a brief for the next run before continuing."
+    },
+    {
+      "id": "rerun",
+      "label": "Rerun the check",
+      "consequence": "Wait for any active check, then run this check again.",
+      "command": "disco scorecard jcs-rfc8785-js-20261015b --play-check --recheck --force --queue --commit 51018bf60e457ec05a5f8622cfebd58db6bfeea7 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\"",
+      "enabled": true,
+      "reason": null
+    }
+  ],
+  "work": {
+    "wallHours": 2.23,
+    "recordedHours": 2.23,
+    "agentHours": 0.29,
+    "idleHours": 1.05,
+    "untracedHours": 0.8899999999999999,
+    "toolCalls": 172,
+    "tokens": {
+      "fresh": 564264,
+      "cached": 12253952,
+      "output": 102254,
+      "cacheWrite": 0,
+      "total": 12920470
+    },
+    "tries": 5
+  },
+  "waste": {
+    "afterPass": {
+      "hours": null,
+      "tokens": null,
+      "usd": null
+    },
+    "verdictDelay": {
+      "minutes": null,
+      "refusedChecks": null
+    }
+  },
+  "timeline": {
+    "start": "2026-10-15T11:04:15.598Z",
+    "end": "2026-10-15T13:18:17.431Z",
+    "deadline": "2026-10-15T13:04:14.985Z",
+    "lanes": [
+      {
+        "id": "root",
+        "label": "root",
+        "spans": [
+          {
+            "start": "2026-10-15T11:04:16.249Z",
+            "end": "2026-10-15T11:18:53.711Z",
+            "state": "work",
+            "note": "Completed turn"
+          },
+          {
+            "start": "2026-10-15T11:18:53.767Z",
+            "end": "2026-10-15T11:21:32.762Z",
+            "state": "work",
+            "note": "Completed turn"
+          },
+          {
+            "start": "2026-10-15T11:24:21.668Z",
+            "end": "2026-10-15T11:24:21.725Z",
+            "state": "work",
+            "note": "Completed turn"
+          },
+          {
+            "start": "2026-10-15T11:41:21.797Z",
+            "end": "2026-10-15T11:41:21.892Z",
+            "state": "work",
+            "note": "Completed turn"
+          },
+          {
+            "start": "2026-10-15T12:15:25.609Z",
+            "end": "2026-10-15T12:15:25.688Z",
+            "state": "work",
+            "note": "Completed turn"
+          },
+          {
+            "start": "2026-10-15T12:15:25.688Z",
+            "end": "2026-10-15T13:18:17.372Z",
+            "state": "idle",
+            "note": "No completed turn"
+          }
+        ]
+      }
+    ],
+    "marks": [
+      {
+        "t": "2026-10-15T13:04:14.985Z",
+        "label": "Deadline",
+        "kind": "deadline"
+      }
+    ]
+  },
+  "sources": {
+    "work.recordedHours": "scorecard.json:sum(roles.nodes.hours)",
+    "work.tokens.output": "scorecard.json:calls.tokens.output",
+    "work.tokens.cacheWrite": "scorecard.json:calls.tokens.cacheWrite",
+    "work.wallHours": "scorecard.json:timing.hours",
+    "work.agentHours": "scorecard.json:attempts.hours",
+    "work.idleHours": "scorecard.json:roles.deadRoleHours",
+    "work.untracedHours": "scorecard.json:sum(roles.nodes.hours)-attempts.hours-roles.deadRoleHours",
+    "work.toolCalls": "scorecard.json:calls.toolCalls",
+    "work.tokens.fresh": "scorecard.json:calls.tokens.fresh",
+    "work.tokens.cached": "scorecard.json:calls.tokens.cacheRead",
+    "work.tokens.total": "scorecard.json:calls.tokens.total",
+    "work.tries": "scorecard.json:attempts.tries",
+    "waste.afterPass.hours": "scorecard.json:play.afterPass.nodeHours",
+    "waste.afterPass.tokens": "scorecard.json:play.afterPass.tokens",
+    "waste.afterPass.usd": null,
+    "waste.verdictDelay.minutes": "scorecard.json:play.verdictDelay.minutes",
+    "waste.verdictDelay.refusedChecks": "scorecard.json:play.verdictDelay.refusedChecks",
+    "check.inputs.count": null,
+    "scores.vector.mandate.0": "runner/release-score.mjs:scoreUnder",
+    "scores.vector.mandate.1": "runner/release-score.mjs:scoreUnder",
+    "scores.vector.exact.0": "runner/release-score.mjs:scoreUnder",
+    "scores.vector.exact.1": "runner/release-score.mjs:scoreUnder",
+    "scores.vector.heldOut.0": "runner/release-score.mjs:scoreUnder",
+    "scores.vector.heldOut.1": "runner/release-score.mjs:scoreUnder",
+    "scores.vector.blockers": "runner/release-score.mjs:scoreUnder",
+    "files.0.size": "deliverables.git:51018bf60e457ec05a5f8622cfebd58db6bfeea7",
+    "deliverables.0.files": "deliverables.git:51018bf60e457ec05a5f8622cfebd58db6bfeea7",
+    "cost.apiEquivalentUsd.usd": "runner/readout-facts.mjs:runDollars",
+    "cost.apiEquivalentUsd.estimated": "runner/readout-facts.mjs:runDollars",
+    "cost.billedUsd.model.usd": "runner/readout-facts.mjs:runDollars",
+    "lineage.inherited.contentCommits": "runner/play-lineage.mjs:runLineage",
+    "lineage.inherited.pages": "runner/play-lineage.mjs:runLineage",
+    "lineage.own.contentCommits": "runner/play-lineage.mjs:runLineage",
+    "lineage.own.pages": "runner/play-lineage.mjs:runLineage",
+    "lineage.own.cost.apiEquivalentUsd": "runner/play-lineage.mjs:runLineage",
+    "system.attempts.tries": "scorecard.json:systemSummary",
+    "system.attempts.failed": "scorecard.json:systemSummary",
+    "system.attempts.hours": "scorecard.json:systemSummary",
+    "system.attempts.failedHours": "scorecard.json:systemSummary",
+    "system.attempts.causes.0.tries": "scorecard.json:systemSummary",
+    "system.attempts.causes.0.hours": "scorecard.json:systemSummary",
+    "system.workers.count": "scorecard.json:systemSummary",
+    "system.workers.neverFinished": "scorecard.json:systemSummary",
+    "system.workers.neverFinishedHours": "scorecard.json:systemSummary",
+    "system.workers.hours": "scorecard.json:systemSummary",
+    "system.context.calls": "scorecard.json:systemSummary",
+    "system.waiting.sleepHours": "scorecard.json:systemSummary",
+    "system.waiting.sleepCalls": "scorecard.json:systemSummary",
+    "system.waiting.pollHours": "scorecard.json:systemSummary",
+    "system.waiting.pollCalls": "scorecard.json:systemSummary",
+    "system.errors.total": "scorecard.json:systemSummary",
+    "system.errors.calls": "scorecard.json:systemSummary",
+    "system.errors.top.0.count": "scorecard.json:systemSummary",
+    "system.errors.top.1.count": "scorecard.json:systemSummary",
+    "system.errors.top.2.count": "scorecard.json:systemSummary",
+    "system.errors.top.3.count": "scorecard.json:systemSummary",
+    "system.errors.top.4.count": "scorecard.json:systemSummary",
+    "system.startup.root": "scorecard.json:systemSummary",
+    "system.startup.children": "scorecard.json:systemSummary",
+    "system.startup.childNodes": "scorecard.json:systemSummary",
+    "system.brief.expected": "scorecard.json:systemSummary",
+    "system.brief.received": "scorecard.json:systemSummary",
+    "system.brief.rootCalls": "scorecard.json:systemSummary",
+    "system.brief.readAtCall": "scorecard.json:systemSummary",
+    "system.play.checks": "scorecard.json:systemSummary",
+    "system.capture.pending.count": "scorecard.json:systemSummary",
+    "system.capture.native.copies": "scorecard.json:systemSummary",
+    "system.capture.native.failedAttempts": "scorecard.json:systemSummary",
+    "system.capture.native.slowestResultToReceiptMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.exportMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.summaryMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.archiveStoreMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.offloadMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.totalMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.preflightMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.slowestStagesMinutes.stagingMinutes": "scorecard.json:systemSummary",
+    "system.capture.native.maxFiles": "scorecard.json:systemSummary",
+    "system.capture.workspace.captures": "scorecard.json:systemSummary",
+    "system.capture.workspace.failed": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestSeconds": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.exportMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.summaryMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.archiveStoreMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.offloadMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.totalMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.preflightMinutes": "scorecard.json:systemSummary",
+    "system.capture.workspace.slowestStagesMinutes.stagingMinutes": "scorecard.json:systemSummary",
+    "system.traces.turns": "scorecard.json:systemSummary",
+    "system.traces.nodes.traced": "scorecard.json:systemSummary",
+    "system.traces.nodes.settled": "scorecard.json:systemSummary",
+    "versions.rows.0.exactPassed": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.rows.0.exactTotal": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.rows.1.exactPassed": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.rows.1.exactTotal": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.rows.2.exactPassed": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.rows.2.exactTotal": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.line.x.0": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.line.x.1": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.line.y.0": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+    "versions.line.y.1": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags"
+  },
+  "versions": {
+    "rows": [
+      {
+        "tag": "rc1",
+        "commit": "d87f46f5d6ca21614b1424e89717067bce0db7af",
+        "at": "2026-10-15T11:07:14+00:00",
+        "exactPassed": 0,
+        "exactTotal": 1,
+        "checks": [
+          {
+            "id": "play-check",
+            "label": "Play check",
+            "result": "not recorded"
+          },
+          {
+            "id": "deliverables-present",
+            "tier": "exact",
+            "result": "fail",
+            "label": "handoff page present"
+          },
+          {
+            "id": "open-blockers",
+            "tier": "referee",
+            "result": "fail"
+          }
+        ]
+      },
+      {
+        "tag": "rc2",
+        "commit": "709682ae1e15d5af9583b63a9ab9d946e22f962d",
+        "at": "2026-10-15T11:20:46+00:00",
+        "exactPassed": 1,
+        "exactTotal": 1,
+        "checks": [
+          {
+            "id": "play-check",
+            "label": "Play check",
+            "result": "not recorded"
+          },
+          {
+            "id": "deliverables-present",
+            "tier": "exact",
+            "result": "pass",
+            "label": "handoff page present"
+          },
+          {
+            "id": "open-blockers",
+            "tier": "referee",
+            "result": "pass"
+          }
+        ]
+      },
+      {
+        "tag": "rc3",
+        "commit": "51018bf60e457ec05a5f8622cfebd58db6bfeea7",
+        "at": "2026-10-15T12:16:07+00:00",
+        "exactPassed": 1,
+        "exactTotal": 1,
+        "checks": [
+          {
+            "id": "play-check",
+            "label": "Play check",
+            "result": "pass"
+          },
+          {
+            "id": "deliverables-present",
+            "tier": "exact",
+            "result": "pass",
+            "label": "handoff page present"
+          },
+          {
+            "id": "open-blockers",
+            "tier": "referee",
+            "result": "pass"
+          }
+        ]
+      }
+    ],
+    "line": {
+      "x": [
+        1792062255598,
+        1792070297431
+      ],
+      "y": [
+        0,
+        1
+      ],
+      "marks": [
+        {
+          "t": "2026-10-15T13:18:17.431Z",
+          "label": "Recorded pass",
+          "kind": "pass"
+        },
+        {
+          "t": "2026-10-15T13:04:14.985Z",
+          "label": "Deadline",
+          "kind": "deadline"
+        }
+      ]
+    }
+  }
+}

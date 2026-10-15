@@ -1,3 +1,5 @@
+import { smallMultiples } from '@tangle-network/charts'
+import { FigureView } from '@tangle-network/charts/react'
 import type { PlayDocument } from '../workspace.js'
 import { ChartCard, DayBars, Lines, SERIES, STATE_COLOR, compact, usd } from './OverviewCharts.js'
 import { go } from './data.js'
@@ -50,6 +52,8 @@ export function PlayCharts({ play }: { play: PlayDocument }) {
   const date = (t: number) => new Date(t).toISOString().slice(5, 10)
   return (
     <div className="ov-grid play-charts" data-play-charts={runs.length}>
+      {play.comparison && <section className="rr-comparison" data-field="comparison"><h3 data-field="comparison.headline">{play.comparison.headline}</h3>{play.comparison.groups.map((group, gi) => <section key={group.id}><h4>{group.label}</h4><FigureView figure={smallMultiples(group.panels, { x: { label: 'Hours after start', domain: play.comparison!.x }, y: { label: 'Cells covered', unit: 'cells', domain: play.comparison!.y }, shared: 'both', noun: 'root' })} /><table><thead><tr><th>Run</th><th>Window</th><th>Evidence</th></tr></thead><tbody>{group.panels.map((arm, i) => <tr key={arm.id}><th><a href={`/run/${encodeURIComponent(arm.id)}`}>{arm.label}</a></th><td data-field={`comparison.groups.${gi}.panels.${i}.windowHours`} data-value={arm.windowHours}>{arm.windowHours} h</td><td>{arm.missing?.why ?? (arm.end ? 'Ended early' : arm.fullWindow ? 'Full window' : 'Partial observations')}<small>{arm.source}</small></td></tr>)}</tbody></table></section>)}<p>{play.comparison.source}</p></section>}
+
       <ChartCard title="Runs by day and how they ended" legend={byDay.map((s) => ({ name: s.name, color: s.color }))} note="Every run of the play, failed ones included, on the day it started.">
         <DayBars days={days} series={byDay} rows={10} missing="no run" />
       </ChartCard>

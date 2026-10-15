@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { runReceiptSchema } from './workspace/run-receipt.js'
 
 /**
  * Documents served by a run workspace API (`/api/discovery/*` on the Tangle wall).
@@ -416,6 +417,7 @@ export const playDocumentSchema = z
       })
       .catchall(z.unknown())
       .nullable(),
+    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), groups: z.array(z.object({ id: z.string(), label: z.string(), fullWindow: z.boolean(), panels: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional(), marks: z.array(z.object({ at: z.number(), kind: z.literal('deadline'), label: z.string() })) })) })) }).nullable().optional(),
     /** The latest run's input. */
     input: playInputSchema.nullable(),
     /** Newest first; versions are folded into their run. */
@@ -643,7 +645,8 @@ export const humanGradeSchema = z
     by: z.string(),
     target: z.object({ kind: z.enum(['run', 'deliverable', 'file']), id: z.string() }),
     category: z.string(),
-    score: z.number().int().min(0).max(100),
+    score: z.number().int().min(0).max(100).nullable(),
+    decision: z.literal('take').optional(),
     comment: z.string(),
     scale: z.string(),
   })
@@ -830,6 +833,7 @@ export const findingsFeedSchema = z
 export const runDocumentSchema = z
   .object({
     schema: z.literal('agent-workspace.run.v1'),
+    receipt: runReceiptSchema.nullable().optional(),
     run: runSummarySchema,
     input: playInputSchema.nullable(),
     spend: spendSchema.extend({ nodes: z.record(z.string(), nodeSpend) }),

@@ -10,6 +10,7 @@ export default defineConfig({
         record: 'src/record.ts',
         report: 'src/report.ts',
         workspace: 'src/workspace.ts',
+        receipt: 'src/receipt.tsx',
         assessment: 'src/assessment.ts',
         'research-publication': 'src/adapters/research-publication.ts',
         'agent-runtime': 'src/adapters/agent-runtime.ts',
@@ -21,7 +22,7 @@ export default defineConfig({
       fileName: (_format, name) => `${name}.js`,
     },
     rolldownOptions: {
-      external: [/^node:/, /^@tangle-network\//, 'react', 'react-dom', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
+      external: [/^node:/, /^@tangle-network\//, 'react', 'react-dom', 'react-dom/server', 'react/jsx-runtime', 'zod', 'react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
     },
   },
 })
