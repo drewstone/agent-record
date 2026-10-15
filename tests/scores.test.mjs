@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { chartPairs, headlineScore, median, scoreRows } from '../src/workspace/scores.ts'
+import { chartPairs, headlineScore, latestNumericGrade, median, scoreRows } from '../src/workspace/scores.ts'
 
 const readout = (judges) => ({ status: 'complete', judges })
 const review = (persona, overall, scores) => ({ panel: 'p1', persona, overall, decision: 'no', verdict: `${persona} verdict`, scores })
@@ -60,4 +60,13 @@ test('charts pair by id, then by unit, then alone, with the run-process charts l
     ['run-spend', 'run-spend', 'id'],
   ])
   assert.deepEqual(chartPairs(null, undefined), [])
+})
+
+
+test('a saved choice preserves the last numeric grade for the exact target', () => {
+  const target = { kind: 'run', id: 'r' }
+  const prior = grade(72)
+  const taken = { ...grade(null), decision: 'take', commit: 'a'.repeat(40) }
+  assert.equal(latestNumericGrade([prior, taken, grade(90, 'run', 'another')], target), prior)
+  assert.equal(latestNumericGrade([taken], target), null)
 })

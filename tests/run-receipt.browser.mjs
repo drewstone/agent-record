@@ -52,8 +52,10 @@ test('the shared receipt schema preserves the sources and treats unknown work as
   assert.deepEqual(parsed.sources, fixture.sources)
   const missing = structuredClone(parsed)
   missing.work.toolCalls = null
+  missing.check.checker.path = null
   const markup = renderToStaticMarkup(createElement(RunReceiptView, { receipt: missing }))
   assert.match(markup, /data-field="work.toolCalls" data-value="">not recorded/)
+  assert.match(markup, /data-field="check.checker.path" data-value="">not recorded/)
   const commission = { ...parsed, check: null }
   assert.equal(runReceiptSchema.parse(commission).check, null)
   assert.match(renderToStaticMarkup(createElement(RunReceiptView, { receipt: commission })), /No play check is registered/)

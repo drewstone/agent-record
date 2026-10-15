@@ -1,3 +1,4 @@
+import { latestNumericGrade } from './scores.js'
 import { useState } from 'react'
 import type { FinalOutput, OutputFile, Readout, TraceReview, TraceReviewQuestion } from '../workspace.js'
 import {
@@ -175,7 +176,7 @@ function ReadoutSection({ readout, output, grading }: { readout: Readout; output
           runId={grading.runId}
           target={{ kind: 'run', id: grading.runId }}
           label="Your grade of this run"
-          current={output.grades?.latest.filter((grade) => grade.target.kind === 'run').at(-1) ?? null}
+          current={latestNumericGrade(output.grades?.latest, { kind: 'run', id: grading.runId })}
           onSaved={grading.onSaved}
         />
       )}

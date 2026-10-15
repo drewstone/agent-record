@@ -1,3 +1,4 @@
+import { latestNumericGrade } from './scores.js'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -174,7 +175,7 @@ function GroupView({ group, root, onSelect, grading, grades }: { group: OutputGr
           runId={grading.runId}
           target={{ kind: 'deliverable', id: deliverable.id }}
           label={`Your grade of ${deliverable.id}`}
-          current={grades?.filter((grade) => grade.target.kind === 'deliverable' && grade.target.id === deliverable.id).at(-1) ?? null}
+          current={latestNumericGrade(grades, { kind: 'deliverable', id: deliverable.id })}
           onSaved={grading.onSaved}
         />
       )}
@@ -265,7 +266,7 @@ function OutputReader({ file, files, onBack, onOpen, grading, grades }: { file: 
           runId={grading.runId}
           target={{ kind: 'file', id: file.path }}
           label="Your grade of this file"
-          current={grades?.filter((grade) => grade.target.kind === 'file' && grade.target.id === file.path).at(-1) ?? null}
+          current={latestNumericGrade(grades, { kind: 'file', id: file.path })}
           onSaved={grading.onSaved}
         />
       )}

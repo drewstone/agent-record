@@ -6,7 +6,7 @@ import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sam
 import type { Comparison, Version } from './profile-compare.js'
 import { OutputChanges } from './Outputs.js'
 import { GradeControl, ScoresTable } from './Scores.js'
-import { headlineScore, scoreRows } from './scores.js'
+import { headlineScore, latestNumericGrade, scoreRows } from './scores.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
 import { runOfProfile } from './profile-graph.js'
 import type { GraphModel, GraphNode, GraphTone } from './version-graph.js'
@@ -268,7 +268,7 @@ function VersionInspector({ api, play, version }: { api: string; play: PlayDocum
               runId={run.id}
               target={{ kind: 'run', id: run.id }}
               label={`Your grade of ${shortRun(play.id, run.id)}`}
-              current={final.grades?.latest.filter((grade) => grade.target.kind === 'run').at(-1) ?? null}
+              current={latestNumericGrade(final.grades?.latest, { kind: 'run', id: run.id })}
               onSaved={() => setRevision((value) => value + 1)}
             />
           </>
