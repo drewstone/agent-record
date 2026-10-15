@@ -54,4 +54,7 @@ test('the shared receipt schema preserves the sources and treats unknown work as
   missing.work.toolCalls = null
   const markup = renderToStaticMarkup(createElement(RunReceiptView, { receipt: missing }))
   assert.match(markup, /data-field="work.toolCalls" data-value="">not recorded/)
+  const commission = { ...parsed, check: null }
+  assert.equal(runReceiptSchema.parse(commission).check, null)
+  assert.match(renderToStaticMarkup(createElement(RunReceiptView, { receipt: commission })), /No play check is registered/)
 })
