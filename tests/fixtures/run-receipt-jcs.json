@@ -332,7 +332,7 @@
     {
       "id": "take",
       "label": "Take this version",
-      "consequence": "Record this choice as a grade row.",
+      "consequence": "Save this version as your choice.",
       "command": "curl 'https://workspace.example.invalid/api/discovery/runs/jcs-rfc8785-js-20261015b/decisions' -H 'Origin: https://workspace.example.invalid' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc3\\\",\\\"commit\\\":\\\"51018bf60e457ec05a5f8622cfebd58db6bfeea7\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
       "enabled": true,
       "reason": null
@@ -340,15 +340,15 @@
     {
       "id": "continue",
       "label": "Continue from this version",
-      "consequence": "Fork a new run with a registered brief.",
+      "consequence": "Start another run from this version.",
       "command": "disco fork jcs-rfc8785-js-20261015b --at rc3 --spec <child-registration.json> --out <child-record.json> [--press]",
       "enabled": false,
-      "reason": "Register the child brief before continuing."
+      "reason": "Add a brief for the next run before continuing."
     },
     {
       "id": "rerun",
       "label": "Rerun the check",
-      "consequence": "Queue the check behind the host check slot.",
+      "consequence": "Wait for any active check, then run this check again.",
       "command": "disco scorecard jcs-rfc8785-js-20261015b --play-check --recheck --force --queue --commit 51018bf60e457ec05a5f8622cfebd58db6bfeea7 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\"",
       "enabled": true,
       "reason": null
