@@ -68,7 +68,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
         <section aria-labelledby="rr-check"><h2 id="rr-check">The check</h2><pre className="rr-output" data-field="check.output">{r.check.output ?? missing}</pre><dl className="rr-facts">
           <dt>Ran on</dt><dd><Field path="check.tag" value={r.check.tag} /> <code><Field path="check.commit" value={r.check.commit} /></code></dd>
           <dt>At</dt><dd><Field path="check.at" value={r.check.at} format={utcClock} /></dd>
-          <dt>Inputs SHA-256</dt><dd><code><Field path="check.inputs.sha256" value={r.check.inputs.sha256} /></code></dd>
+          <dt>Inputs SHA-256</dt><dd><code><Field path="check.inputs.sha256" value={r.check.inputs.sha256} /></code><span className="rr-muted" data-field="check.inputs.source">{r.check.inputs.source ?? missing}</span></dd>
           <dt>Checker SHA-256</dt><dd><code><Field path="check.checker.sha256" value={r.check.checker.sha256} /></code><span className="rr-muted" data-field="check.checker.path">{r.check.checker.path}</span></dd>
         </dl>{r.check.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check.rerun}</code>{!print && <Copy text={r.check.rerun} />}</div>}</section>
       </div>

@@ -243,3 +243,12 @@ The conversation renders only the rows near its viewport.
 Extracted from [Drew Stone's research site](https://github.com/drewstone/drewstone.github.io) at `95e0aaf`.
 Code is MIT licensed.
 Example records retain their source references and publication notes; upstream papers and excerpts retain their original rights.
+
+## Run receipt
+
+`RunReceiptView` renders the Lab's `discovery-lab.run-receipt` document. RunOverview reads that same object at `doc.receipt`; it formats recorded values and never chooses a version or reconstructs a missing measure.
+Use `print` to open the receipt's drawers and show commands instead of action buttons.
+`renderRunReceipt` from `@drewstone/agent-record/receipt` uses the same component to produce shareable static HTML.
+Supply the package stylesheet through its `css` option. The workspace standalone bundle accepts `data-mode="receipt"` and `data-id="runId@tag"`.
+
+The fixture-to-DOM browser check is `node --test tests/run-receipt.browser.mjs` after a build, with `PLAYWRIGHT_MODULE` pointing to the installed Playwright module. `RECEIPT_EVIDENCE_DIR` retains desktop/phone captures in both themes outside the public repository.
