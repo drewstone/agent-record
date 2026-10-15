@@ -5,7 +5,7 @@ export const runReceiptSchema = z.object({
   schema: z.literal('discovery-lab.run-receipt'), runId: z.string(), tag: z.string(), title: z.string(), brief: nullableText,
   outcome: z.object({ status: z.enum(['running', 'passed', 'not-passed', 'unmeasured', 'cancelled']), sentence: z.string(), at: nullableText, reason: nullableText, class: nullableText }),
   chosen: z.object({ tag: z.string(), commit: nullableText, why: z.string() }),
-  check: z.object({ passed: z.boolean().nullable(), known: z.boolean(), output: nullableText, commit: nullableText, tag: nullableText, at: nullableText, checker: z.object({ path: nullableText, sha256: nullableText }), inputs: z.object({ source: nullableText, sha256: nullableText, count: nullableNumber }), rerun: nullableText }).catchall(z.unknown()),
+  check: z.object({ passed: z.boolean().nullable(), known: z.boolean(), output: nullableText, commit: nullableText, tag: nullableText, at: nullableText, checker: z.object({ path: nullableText, sha256: nullableText }), inputs: z.object({ source: nullableText, sha256: nullableText, count: nullableNumber }), rerun: nullableText }).catchall(z.unknown()).nullable(),
   files: z.array(z.object({ file: z.string(), label: z.string(), size: z.number().optional() }).catchall(z.unknown())),
   decisions: z.array(z.object({ id: z.string(), label: z.string(), consequence: z.string(), command: nullableText, enabled: z.boolean(), reason: nullableText })),
   work: z.object({ wallHours: nullableNumber, recordedHours: nullableNumber, agentHours: nullableNumber, idleHours: nullableNumber, untracedHours: nullableNumber, toolCalls: nullableNumber, tokens: z.object({ fresh: nullableNumber, cached: nullableNumber, total: nullableNumber }).catchall(z.unknown()), tries: nullableNumber }),
