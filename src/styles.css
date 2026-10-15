@@ -1,4 +1,5 @@
 @import '@tangle-network/charts/react/live.css';
+@import '@tangle-network/charts/figure.css';
 /* All styles are scoped. Override --ar-* on the component or an ancestor. */
 /* One type scale, three sizes: meta (labels, chips, axes, table headers), body, and titles. */
 .agent-record {
@@ -3279,3 +3280,14 @@
 .ar-ws .rr-comparison table { width:100%; text-align:left; font-size:var(--ar-text-s); }
 .ar-ws .rr-comparison td, .ar-ws .rr-comparison th { padding:8px; overflow-wrap:anywhere; }
 .ar-ws .rr-comparison small { display:block; color:var(--ar-fg-muted); }
+
+/* Bind the chart package's semantic roles to this renderer's host theme. */
+.ar-ws .rr-page, .ar-ws .rr-comparison {
+  --chart-accent:var(--ar-c-action); --chart-ink:var(--ar-fg); --chart-ink-muted:var(--ar-fg-muted);
+  --chart-canvas:var(--ar-bg); --chart-muted:var(--ar-fg-faint); --chart-shade:var(--ar-bg-alt);
+  --chart-grid:var(--ar-border); --chart-rule:var(--ar-border-strong); --chart-pass:var(--ar-c-ok);
+  --chart-breach:var(--ar-c-fail); --chart-tier-s:var(--ar-c-action); --chart-tier-a:var(--ar-c-info);
+  --chart-tier-b:var(--ar-c-ok); --chart-tier-c:var(--ar-c-run);
+  --chart-live-fg:var(--ar-fg); --chart-live-muted:var(--ar-fg-muted); --chart-live-faint:var(--ar-fg-faint);
+  --chart-live-font-mono:var(--ar-font-mono); --chart-live-surface:var(--ar-bg);
+}

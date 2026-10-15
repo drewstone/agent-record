@@ -30,6 +30,11 @@ test('the Lab fixture reaches the live DOM and print DOM with identical field va
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${theme} ${viewport.width}: page reflows`)
       if (evidence) { await mkdir(evidence, { recursive: true }); await page.screenshot({ path: `${evidence}/run-${viewport.width}-${theme}.png`, fullPage: true }) }
       if (viewport.width === 1440) for (const path of ['check.output', 'check.inputs.sha256', 'check.rerun']) assert.ok(await page.locator(`[data-field="${path}"]`).evaluate((node) => node.getBoundingClientRect().bottom <= 900), `${path} above the fold`)
+      assert.notEqual(await page.locator('.ov-meter-track [data-segment="Work"]').evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)', 'work segment receives the host theme')
+      assert.notEqual(await page.locator('.ov-meter-track [data-segment="Untraced"]').evaluate((node) => getComputedStyle(node).backgroundImage), 'none', 'untraced time is hatched')
+      await page.getByText('Versions', { exact: true }).click()
+      assert.ok(await page.locator('[data-field="versions.rows"] tbody tr').count())
+      if (evidence) await page.screenshot({ path: `${evidence}/versions-${viewport.width}-${theme}.png`, fullPage: true })
       await page.setContent(renderRunReceipt(fixture, { css }))
       assert.equal(await page.locator('.rr-print').count(), 1)
       assert.equal(await page.locator('.rr-drawer:not([open])').count(), 0)
