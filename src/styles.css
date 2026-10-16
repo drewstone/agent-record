@@ -3304,10 +3304,9 @@
 }
 .agent-record .run-execution {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--ar-line);
+  border-bottom: 1px solid var(--ar-border);
   overflow-wrap: anywhere;
 }
 .agent-record .run-execution p { margin: 0 0 8px; }
 .agent-record .run-execution-next { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .agent-record .run-execution pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; }
-.agent-record .live-transcript .conversation { min-height: 20rem; }
