@@ -930,7 +930,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <InputView input={doc.input} api={api} />
         </section>
       )}
-      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
+      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={!doc.execution.alive && recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
       {index && section === 'agents' && !streamConversation && actor && (
         <div className="agents-layout">
           <aside className="agent-rail" aria-label="Agents">

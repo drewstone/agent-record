@@ -145,7 +145,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
         if (direction !== 'after' || page.reset) earlier = page.hasEarlier
         if (trimmed && direction !== 'before') earlier = true
         windowState.current = { node, rows, earlier, generation, first, last }
-        setState((prior) => ({ rows, nodes: page.nodes, earlier, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: direction === 'tail' || page.reset ? page.firstSeq === null && page.lastSeq === null && page.events.length === 0 : prior.emptyTail }))
+        setState((prior) => ({ rows, nodes: page.nodes, earlier, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: !page.alive && rows.length === 0 && first === null && last === null }))
         // Drain bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
         if (direction !== 'before' && page.hasMore && last !== cursor) timer = window.setTimeout(() => void load('after'), 0)
         else if (direction !== 'before' && page.alive && alive) timer = window.setTimeout(() => void load('after'), 3_000)

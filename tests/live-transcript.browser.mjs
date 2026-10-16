@@ -116,6 +116,8 @@ test('settled archives keep captured Messages and an empty directory stream fall
   const bundle = await readFile(new URL('../dist/workspace-viewer.js', import.meta.url))
   const css = await readFile(new URL('../dist/styles.css', import.meta.url))
   let location = 'archive'
+  let capturedAlive = false
+  let aliveStreamReads = 0
   const transcriptRequests = []
   const api = `/api/runs/${captured.runId}`
   const server = createServer((req, res) => {
@@ -124,12 +126,17 @@ test('settled archives keep captured Messages and an empty directory stream fall
     if (url.pathname === '/bundle.js') { res.setHeader('content-type', 'application/javascript; charset=utf-8'); return res.end(bundle) }
     if (url.pathname === '/style.css') { res.setHeader('content-type', 'text/css; charset=utf-8'); return res.end(css) }
     if (url.pathname === api) return json({
-      schema: 'agent-workspace.run.v1', run: { id: captured.runId, play: 'corpus', state: 'winner', location: { kind: location, path: null }, record: { status: 'ready', digest: 'captured-fixture' } },
-      input: null, spend: { nodes: {}, gaps: [] }, versions: [], live: { polling: false, mirrorAt: null },
-      execution: { alive: false, lastActivityAt: first.at, failedAttempts: 0, settleKind: 'winner', endingError: null, lastAttempt: null, diagnoses: [], resume: { status: 'unavailable', command: null, reason: 'Source sandbox is not preserved.' } },
+      schema: 'agent-workspace.run.v1', run: { id: captured.runId, play: 'corpus', state: capturedAlive ? 'running' : 'winner', location: { kind: location, path: null }, record: { status: 'ready', digest: 'captured-fixture' } },
+      input: null, spend: { nodes: {}, gaps: [] }, versions: [], live: { polling: capturedAlive, mirrorAt: null },
+      execution: { alive: capturedAlive, lastActivityAt: first.at, failedAttempts: 0, settleKind: capturedAlive ? null : 'winner', endingError: null, lastAttempt: null, diagnoses: [], resume: { status: 'unavailable', command: null, reason: 'Source sandbox is not preserved.' } },
     })
     if (url.pathname === `${api}/record`) return json(url.searchParams.get('part') === 'nodes' ? { ...captured, events: [] } : captured)
-    if (url.pathname === `${api}/transcript`) { transcriptRequests.push(url.search); return json({ runId: captured.runId, node: actor, events: [], nodes: [{ id: actor, label: 'Director', parent: null }], firstSeq: null, lastSeq: null, hasEarlier: false, hasMore: false, alive: false }) }
+    if (url.pathname === `${api}/transcript`) {
+      transcriptRequests.push(url.search)
+      if (capturedAlive) aliveStreamReads += 1
+      const events = capturedAlive && aliveStreamReads > 1 ? [{ seq: 0, at: first.at, event: { kind: 'text_delta', text: 'The live agent started after an empty tail.' } }] : []
+      return json({ runId: captured.runId, node: actor, events, nodes: [{ id: actor, label: 'Director', parent: null }], firstSeq: events.length ? 0 : null, lastSeq: events.length ? 0 : null, hasEarlier: false, hasMore: false, alive: capturedAlive })
+    }
     if (url.pathname === '/api/dimensions') return json({ dimensions: [] })
     if (url.pathname.endsWith('/assessments')) return json({ rows: [] })
     if (url.pathname === `/run/${captured.runId}`) { res.setHeader('content-type', 'text/html; charset=utf-8'); return res.end(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/style.css"><div id="agent-workspace" data-mode="run" data-id="${captured.runId}" data-api="/api"></div><script src="/bundle.js"></script>`) }
@@ -152,6 +159,15 @@ test('settled archives keep captured Messages and an empty directory stream fall
       await page.locator('[data-chat] .activity-prose').getByText(/Seven zip archives are in/).waitFor()
       assert.equal(transcriptRequests.length, location === 'dir' ? 1 : 0, 'Messages does not bounce back to an empty stream')
     }
+    capturedAlive = true
+    await page.goto(`${base}&case=alive-empty`)
+    await page.getByText('The live agent started after an empty tail.', { exact: true }).waitFor()
+    assert.ok(aliveStreamReads >= 2, 'an empty alive stream keeps polling even with a ready captured record')
+    assert.equal(await page.getByRole('tab', { name: 'Messages', exact: true }).count(), 0, 'the live stream stays selected')
+    capturedAlive = false
+    await page.getByText(/Stopped · winner/).waitFor()
+    await page.getByText('The live agent started after an empty tail.', { exact: true }).waitFor()
+    assert.equal(await page.getByRole('tab', { name: 'Messages', exact: true }).count(), 0, 'settlement retains the stream that started after an empty tail')
     assert.deepEqual(errors, [])
   } finally { await browser.close(); await new Promise((resolve) => server.close(resolve)) }
 })
