@@ -33,11 +33,38 @@ function Copy({ text }: { text: string }) {
   return <button type="button" className="rr-copy" onClick={() => { void navigator.clipboard.writeText(text).then(() => setState('Copied'), () => setState('Copy failed')) }} aria-live="polite">{state}</button>
 }
 
+function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['behaviorExpectations']>; print: boolean }) {
+  return <section className="rr-behavior" aria-labelledby="rr-behavior-title" data-field="behaviorExpectations">
+    <h2 id="rr-behavior-title">Profile behavior · <span data-field="behaviorExpectations.verdict">{reading.verdict}</span></h2>
+    <p className="rr-muted">Advisory: {reading.basis}.</p>
+    {reading.profiles.length === 0 && <p>No profile behavior is recorded.</p>}
+    {reading.profiles.map((profile, i) => <details className="rr-profile" key={profile.digest ?? i} open={print || profile.verdict === 'violated' || undefined}>
+      <summary><span>{profile.name ?? 'Unknown profile'}</span><strong data-field={`behaviorExpectations.profiles.${i}.verdict`}>{profile.verdict}</strong><code>{profile.digest?.slice(7, 19) ?? 'unknown version'}</code></summary>
+      <div className="rr-profile-body">
+        {profile.digest && <p className="rr-muted">Profile version <code>{profile.digest}</code></p>}
+        {profile.nodes.map((node) => <div key={node.nodeId} className="rr-behavior-node">
+          <h3><code>{node.nodeId}</code> · {node.verdict}</h3>
+          {node.reason && <p className="rr-muted">{node.reason}</p>}
+          {node.dimensions.map((dimension) => <div className="rr-expectation" key={dimension.dimension} data-dimension={dimension.dimension}>
+            <p><strong>{dimension.dimension} · {dimension.verdict}</strong>{dimension.interpretation && <> · {dimension.interpretation}</>}</p>
+            <dl className="rr-facts"><dt>Observed candidates</dt><dd>{dimension.count ?? 'unknown'} over {dimension.observed} observed events</dd><dt>Expected</dt><dd><code>{typeof dimension.expected === 'string' ? dimension.expected : `${dimension.expected.min}–${dimension.expected.max}`}</code></dd></dl>
+            {dimension.reason && <p className="rr-muted">{dimension.reason}</p>}
+            {dimension.verdict === 'violated' && <div className="rr-behavior-evidence"><strong>Evidence spans</strong>{dimension.evidence.length ? <ul>{dimension.evidence.map((item, j) => <li key={j}>
+              {item.source ? <><code>{item.source.path}</code><span>bytes {item.source.offset}–{item.source.offset + item.source.bytes}</span><code>SHA-256 {item.source.lineSha256}</code></> : <span>Source span unavailable{item.eventId ? `; event ${item.eventId}` : ''}</span>}
+            </li>)}</ul> : <p>No source span recorded.</p>}</div>}
+          </div>)}
+        </div>)}
+      </div>
+    </details>)}
+  </section>
+}
+
 export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
   if (!r.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p>The receipt document is {missing}.</p></section>
+  const behavior = r.behaviorExpectations ?? r.system?.behaviorExpectations
   const fileBase = `${api}/runs/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}`
   const decide = async (id: string) => {
     const operationId = operation[id] ?? crypto.randomUUID()
@@ -64,6 +91,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       <p data-field="outcome.sentence">{r.outcome.sentence}</p>
       <p className="rr-summary"><span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span><span><Field path="cost.billedUsd.total.usd" value={r.cost.billedUsd.total.usd} format={money} /> billed</span><span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span><a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
     </header>
+    {behavior && <ProfileBehavior reading={behavior} print={print} />}
     <div className="rr-columns">
       <div className="rr-evidence">
         <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.length ? r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>) : <li>{missing}</li>}</ul></section>

@@ -3238,6 +3238,16 @@
 .ar-ws .rr-drawer { border-top:1px solid var(--ar-border); padding-top:16px; min-width:0; }
 .ar-ws .rr-drawer > summary { cursor:pointer; font-weight:600; }
 .ar-ws .rr-drawer-body { padding-top:16px; min-width:0; }
+.ar-ws .rr-behavior { border-top:1px solid var(--ar-border); padding-top:20px; min-width:0; }
+.ar-ws .rr-profile { border-top:1px solid var(--ar-border); margin-top:16px; padding-top:12px; min-width:0; }
+.ar-ws .rr-profile > summary { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; cursor:pointer; overflow-wrap:anywhere; }
+.ar-ws .rr-profile > summary > span { flex:1; min-width:12ch; }
+.ar-ws .rr-profile-body { padding-top:12px; }
+.ar-ws .rr-behavior-node h3 { font-size:var(--ar-text-s); overflow-wrap:anywhere; margin:16px 0 8px; }
+.ar-ws .rr-expectation { padding:8px 0 12px; }
+.ar-ws .rr-behavior-evidence { margin-top:12px; font-size:var(--ar-text-s); }
+.ar-ws .rr-behavior-evidence ul { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:12px; }
+.ar-ws .rr-behavior-evidence li { display:grid; gap:4px; overflow-wrap:anywhere; }
 .ar-ws .rr-brief { max-width:76ch; line-height:1.65; }
 .ar-ws .rr-brief pre { overflow:auto; }
 @media(hover:hover) and (pointer:fine) { .ar-ws .rr-page button:enabled:hover { filter:brightness(1.08); } .ar-ws .rr-page a:hover { text-decoration:underline; } }
