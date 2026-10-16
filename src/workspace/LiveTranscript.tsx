@@ -183,7 +183,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     {state.error && <p role="alert">{state.error}</p>}
     {state.rows.filter((row) => row.event?.kind === 'capture_gap' && (!row.at || !Number.isFinite(Date.parse(row.at)))).map((row) => <p className="faint" key={row.seq}>{row.event?.text ?? 'A stream record could not be displayed.'}</p>)}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
-    <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" inspect={setDetail} lifecycle live={alive} />
+    {(!state.loading || state.rows.length > 0) && <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" inspect={setDetail} lifecycle live={alive} />}
     {detail && <EventDetail key={detail.id} event={detail} index={index} onClose={() => setDetail(null)} load={async () => { throw new Error('Original bytes are available in the captured record.') }} />}
   </section>
 }
