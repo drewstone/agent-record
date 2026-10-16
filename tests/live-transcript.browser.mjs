@@ -40,11 +40,16 @@ test('run HTTP page reads bounded root and child streams and stops polling after
       const events = before !== null ? rows.filter((row) => row.seq < Number(before)) : after !== null ? rows.filter((row) => row.seq > Number(after)) : node === 'worker' ? rows : rows.slice(1)
       return json({ runId: 'run-fixture', node, events, nodes, alive, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: before === null && after === null && node !== 'worker', hasMore: false })
     }
-    if (url.pathname === '/api/runs/run-fixture') return json({
+    if (url.pathname === '/api/runs/run-fixture') {
+      const etag = alive ? '"running"' : '"settled"'
+      res.setHeader('etag', etag)
+      if (req.headers['if-none-match'] === etag) return res.writeHead(304).end()
+      return json({
       schema: 'agent-workspace.run.v1', run: { id: 'run-fixture', play: 'fixture', state: alive ? 'running' : 'failed', record: { status: 'missing', digest: null } },
       input: null, spend: { nodes: {} }, versions: [], live: { polling: alive, mirrorAt: null },
       execution: { alive, lastActivityAt: at, failedAttempts: 2, settleKind: alive ? null : 'failed', endingError: alive ? null : { name: 'RetainedWorkspaceCapturePendingError', message: 'Workspace capture pending' }, lastAttempt: alive ? null : { error: 'HTTP 429', classification: 'transient' }, diagnoses: alive ? [] : [{ id: 'provider-rate-limit', fix: 'Resume after provider capacity returns' }], resume: { status: 'preserved', command: 'disco run --resume run-fixture', reason: 'Source sandbox preserved' } },
-    })
+      })
+    }
     if (url.pathname === '/api/dimensions') return json({ dimensions: [] })
     if (url.pathname.endsWith('/assessments')) return json({ rows: [] })
     if (url.pathname === '/run/run-fixture') { res.setHeader('content-type', 'text/html'); return res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><div id="agent-workspace" data-mode="run" data-id="run-fixture" data-api="/api"></div><script src="/bundle.js"></script>') }
@@ -58,6 +63,8 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     page.on('pageerror', (error) => errors.push(error.message))
     await page.goto(`http://127.0.0.1:${server.address().port}/run/run-fixture`)
     await page.getByText('Running', { exact: true }).waitFor()
+    const initialStatus = await page.locator('[data-run-status]').textContent()
+    await page.waitForFunction((previous) => document.querySelector('[data-run-status]')?.textContent !== previous, initialStatus)
     assert.equal(requests.length, 0, 'overview does not fetch streams')
     await page.getByRole('button', { name: 'Conversations', exact: true }).click()
     await page.getByText('Current answer', { exact: true }).waitFor()

@@ -63,8 +63,14 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
 
 export function RunExecution({ doc, onConversations }: { doc: RunDocument; onConversations: () => void }) {
   const execution = doc.execution
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (!execution?.alive) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000)
+    return () => window.clearInterval(timer)
+  }, [execution?.alive])
   if (!execution) return null
-  const age = execution.lastActivityAt ? Math.max(0, Math.floor((Date.now() - Date.parse(execution.lastActivityAt)) / 1000)) : null
+  const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
   return <section className="run-execution" aria-label="Run status">
     <p role="status" data-run-status>
       <strong>{execution.alive ? 'Running' : `Stopped · ${execution.settleKind ?? 'settle kind unknown'}`}</strong>
