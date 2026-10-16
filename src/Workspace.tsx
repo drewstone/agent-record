@@ -17,10 +17,10 @@ import { withPrompts } from './viewer/prompts.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
-import { agentState, indexRecord, interval, measuredUsage, ms, roleOf, textOf, utcTime } from './viewer/model.js'
+import { agentState, indexRecord, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
-import { StructuredContent, VerbatimContent } from './viewer/StructuredContent.js'
+import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
 import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
@@ -36,6 +36,7 @@ import { AgentTable } from './workspace/RunTable.js'
 import { RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
+import { LiveTranscript, RunExecution } from './workspace/LiveTranscript.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -800,6 +801,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [revision, setRevision] = useState(0)
   // The finding open in the run's findings; the agent rail and the graph open one there too.
   const [finding, setFinding] = useState<string | null>(null)
+  const [capturedStreams, setCapturedStreams] = useState<ReadonlySet<string>>(() => new Set())
+  const openedLiveStream = useRef<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
@@ -813,9 +816,16 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const section = sectionOf(params)
   const requested = params.get('node')
   const index = nodes.index
+  const streamNode = requested ?? id
+  const archivedCapture = recordReady && !run.data?.execution?.alive && ['archive', 'none'].includes(run.data?.run.location?.kind ?? '') && openedLiveStream.current !== streamNode
+  const streamConversation = !!run.data?.execution && !archivedCapture && !capturedStreams.has(streamNode) && !['timeline', 'usage'].includes(params.get('tab') ?? '')
+  useEffect(() => {
+    if (section === 'agents' && streamConversation && run.data?.execution?.alive) openedLiveStream.current = streamNode
+    else if (section !== 'agents' || !streamConversation) openedLiveStream.current = null
+  }, [section, streamConversation, streamNode, run.data?.execution?.alive])
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
-  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
+  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && streamConversation) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
   const summary = run.data?.run
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
@@ -825,6 +835,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
+        <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
         <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
@@ -848,6 +859,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   }
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
+      <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
       <DetailBar doc={doc} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
       {section === 'findings' &&
         (doc.findings?.total ? (
@@ -918,7 +930,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <InputView input={doc.input} api={api} />
         </section>
       )}
-      {index && section === 'agents' && actor && (
+      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={!doc.execution.alive && recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
+      {index && section === 'agents' && !streamConversation && actor && (
         <div className="agents-layout">
           <aside className="agent-rail" aria-label="Agents">
             <AgentTable
@@ -971,7 +984,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           )}
         </section>
       )}
-      {!index && AGENT_PART_SECTIONS.has(section) && (
+      {!index && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && streamConversation) && (
         <div className="ws-section">
           {/* The record's request starts after the run document names it ready: until it answers, it is loading, not missing. */}
           {nodes.loading || (recordReady && nodes.pending) ? (
@@ -1513,94 +1526,6 @@ function Coverage({ index, doc, gaps: recordGaps, onSelect }: { index: RecordInd
         </>
       )}
     </div>
-  )
-}
-
-function EventDetail({
-  event,
-  full,
-  index,
-  onClose,
-  load,
-}: {
-  event: RecordEvent
-  /** Source hash of a clipped body to show in full. */
-  full?: string
-  index: RecordIndex
-  onClose: () => void
-  load: (sha: string) => Promise<string>
-}) {
-  const [raw, setRaw] = useState<{ text?: string; error?: string }>({})
-  const [whole, setWhole] = useState<{ text?: string; error?: string }>({})
-  const source = event.source as { path?: string; sha256?: string; line?: number; pointer?: string } | null | undefined
-  useEffect(() => {
-    if (!full) return
-    load(full)
-      .then((text) => setWhole({ text }))
-      .catch((error: unknown) => setWhole({ error: error instanceof Error ? error.message : 'Unavailable' }))
-  }, [full, load])
-  const loadLine = (sha: string, line?: number) => load(`${sha}${line ? `?line=${line}` : ''}`)
-  useEffect(() => {
-    const close = (keyboard: KeyboardEvent) => {
-      if (keyboard.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', close)
-    return () => window.removeEventListener('keydown', close)
-  }, [onClose])
-  return (
-    <aside className="event-detail" role="dialog" aria-label="Event details" data-event-detail={event.id}>
-      <header>
-        <div>
-          <h3>{event.label}</h3>
-          <p className="faint mono">
-            {utcTime(event.at, true)} · {index.nodes.get(index.canonical(event.node))?.label ?? event.node} · {event.category}
-          </p>
-        </div>
-        <button type="button" className="ui-button" onClick={onClose}>Close</button>
-      </header>
-      <p className="mono faint event-id">{event.id}</p>
-      {full ? (
-        <section className="event-full" data-full-output={whole.text !== undefined ? full : undefined}>
-          <h4>Full output</h4>
-          <p className="mono faint">sha256 {full}</p>
-          {whole.error && <p role="alert">{whole.error}</p>}
-          {whole.text === undefined && !whole.error && <p className="faint">Loading…</p>}
-          {whole.text !== undefined && <VerbatimContent text={whole.text} rawLabel="Original bytes" />}
-        </section>
-      ) : (
-        textOf(event) && (event.detail.toolCallId !== undefined || event.category === 'lifecycle' ? <VerbatimContent text={textOf(event)} /> : <StructuredContent text={textOf(event)} />)
-      )}
-      <details className="raw-data" open={!full}>
-        <summary>Recorded detail</summary>
-        <pre>{JSON.stringify(event.detail, null, 2)}</pre>
-      </details>
-      {source?.path && (
-        <section className="event-source">
-          <h4>Source</h4>
-          <p className="mono">
-            {source.path}
-            {source.line ? `:${source.line}` : ''}
-            {source.pointer ? `#${source.pointer}` : ''}
-          </p>
-          {source.sha256 && <p className="mono faint">sha256 {source.sha256}</p>}
-          {source.sha256 && source.line && raw.text === undefined && (
-            <button
-              type="button"
-              className="ui-button"
-              onClick={() =>
-                loadLine(source.sha256!, source.line)
-                  .then((text) => setRaw({ text }))
-                  .catch((error: unknown) => setRaw({ error: error instanceof Error ? error.message : 'Unavailable' }))
-              }
-            >
-              Original line
-            </button>
-          )}
-          {raw.error && <p role="alert">{raw.error}</p>}
-          {raw.text !== undefined && <VerbatimContent text={raw.text} rawLabel="Original bytes" />}
-        </section>
-      )}
-    </aside>
   )
 }
 
