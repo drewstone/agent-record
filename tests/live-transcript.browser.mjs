@@ -145,11 +145,11 @@ test('settled archives keep captured Messages and an empty directory stream fall
     for (location of ['archive', 'none', 'dir']) {
       await page.goto(`${base}&case=${location}`)
       await page.getByRole('tab', { name: 'Messages', exact: true }).waitFor()
-      await page.locator('[data-chat]').getByText(/Seven zip archives are in/).waitFor()
+      await page.locator('[data-chat] .activity-prose').getByText(/Seven zip archives are in/).waitFor()
       assert.equal(transcriptRequests.length, location === 'dir' ? 1 : 0, `${location} uses captured Messages`)
       await page.getByRole('tab', { name: 'Timeline', exact: true }).click()
       await page.getByRole('tab', { name: 'Messages', exact: true }).click()
-      await page.locator('[data-chat]').getByText(/Seven zip archives are in/).waitFor()
+      await page.locator('[data-chat] .activity-prose').getByText(/Seven zip archives are in/).waitFor()
       assert.equal(transcriptRequests.length, location === 'dir' ? 1 : 0, 'Messages does not bounce back to an empty stream')
     }
     assert.deepEqual(errors, [])
