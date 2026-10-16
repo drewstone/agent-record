@@ -3276,9 +3276,10 @@
 .ar-ws .rr-table table { width:100%; border-collapse:collapse; font-size:var(--ar-text-s); text-align:left; }
 .ar-ws .rr-table th, .ar-ws .rr-table td { border-bottom:1px solid var(--ar-border); padding:8px 12px; }
 
-.ar-ws .rr-comparison { grid-column:1/-1; min-width:0; }
-.ar-ws .rr-comparison table { width:100%; text-align:left; font-size:var(--ar-text-s); }
-.ar-ws .rr-comparison td, .ar-ws .rr-comparison th { padding:8px; overflow-wrap:anywhere; }
+.ar-ws .rr-comparison { grid-column:1/-1; flex:1 1 100%; min-width:0; }
+.ar-ws .rr-comparison .tgc-view-plot svg { max-width:100%; height:auto; }
+.ar-ws .rr-comparison > section > table { width:100%; table-layout:fixed; text-align:left; font-size:var(--ar-text-s); }
+.ar-ws .rr-comparison > section > table td, .ar-ws .rr-comparison > section > table th { padding:8px; overflow-wrap:anywhere; }
 .ar-ws .rr-comparison small { display:block; color:var(--ar-fg-muted); }
 
 /* Bind the chart package's semantic roles to this renderer's host theme. */
