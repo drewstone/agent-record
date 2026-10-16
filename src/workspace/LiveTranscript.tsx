@@ -7,7 +7,7 @@ import { projectPartEvents } from '../adapters/part-events.js'
 
 type StreamRow = { seq: number; at: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
-type StreamPage = { runId: string; node: string; events: StreamRow[]; firstSeq: number | null; lastSeq: number | null; hasEarlier: boolean; hasMore: boolean; alive: boolean; nodes: StreamNode[] }
+type StreamPage = { runId: string; node: string; generation?: string; reset?: boolean; events: StreamRow[]; firstSeq: number | null; lastSeq: number | null; hasEarlier: boolean; hasMore: boolean; alive: boolean; nodes: StreamNode[] }
 const LIMIT = 200
 const RETAIN = 2000
 
@@ -92,7 +92,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect }: { r
   const [reload, setReload] = useState(0)
   const older = useRef<(() => void) | null>(null)
   const wasAlive = useRef(alive)
-  const windowState = useRef({ node, rows: [] as StreamRow[], earlier: false })
+  const windowState = useRef({ node, rows: [] as StreamRow[], earlier: false, generation: undefined as string | undefined })
   useEffect(() => {
     let cancelled = false
     let timer = 0
@@ -103,6 +103,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect }: { r
     wasAlive.current = alive
     let rows: StreamRow[] = retain ? windowState.current.rows : []
     let earlier = retain ? windowState.current.earlier : false
+    let generation = retain ? windowState.current.generation : undefined
     let loadingOlder = false
     let forwardPending = false
     let olderPending = false
@@ -115,18 +116,20 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect }: { r
       try {
         const query = new URLSearchParams({ node, limit: String(LIMIT) })
         if (cursor !== undefined) query.set(direction, String(cursor))
+        if (generation && cursor !== undefined) query.set('generation', generation)
         const response = await fetch(`${runUrl}/transcript?${query}`, { signal: controller.signal, credentials: 'same-origin' })
         if (!response.ok) throw new Error(`Transcript unavailable (HTTP ${response.status})`)
         const page = await response.json() as StreamPage
         if (cancelled) return
-        const merged = direction === 'tail' ? page.events : direction === 'before' ? [...page.events, ...rows] : [...rows, ...page.events]
+        const merged = direction === 'tail' || page.reset ? page.events : direction === 'before' ? [...page.events, ...rows] : [...rows, ...page.events]
+        generation = page.generation
         const seen = new Map(merged.map((row) => [row.seq, row]))
         rows = [...seen.values()].sort((a, b) => a.seq - b.seq)
         const trimmed = rows.length > RETAIN
         if (trimmed) rows = direction === 'before' ? rows.slice(0, RETAIN) : rows.slice(-RETAIN)
-        if (direction !== 'after') earlier = page.hasEarlier
+        if (direction !== 'after' || page.reset) earlier = page.hasEarlier
         if (trimmed && direction !== 'before') earlier = true
-        windowState.current = { node, rows, earlier }
+        windowState.current = { node, rows, earlier, generation }
         setState((prior) => ({ rows, nodes: page.nodes, earlier, loading: false, error: null, trimmed: trimmed || prior.trimmed }))
         // Drain bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
         if (direction !== 'before' && page.hasMore && !loadingOlder) timer = window.setTimeout(() => void load('after'), 0)
