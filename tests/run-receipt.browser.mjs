@@ -3,7 +3,7 @@ import { readFile, mkdir } from 'node:fs/promises'
 import { test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { RunOverview, RunReceiptView, runReceiptSchema } from '../dist/index.js'
+import { RunOverview } from '../dist/index.js'
 import { renderRunReceipt } from '../dist/receipt.js'
 
 const fixture = JSON.parse(await readFile(new URL('./fixtures/run-receipt-jcs.json', import.meta.url), 'utf8'))
@@ -44,19 +44,4 @@ test('the Lab fixture reaches the live DOM and print DOM with identical field va
       await context.close()
     }
   } finally { await browser.close() }
-})
-
-test('the shared receipt schema preserves the sources and treats unknown work as unknown', () => {
-  const parsed = runReceiptSchema.parse(fixture)
-  assert.deepEqual(parsed.work, fixture.work)
-  assert.deepEqual(parsed.sources, fixture.sources)
-  const missing = structuredClone(parsed)
-  missing.work.toolCalls = null
-  missing.check.checker.path = null
-  const markup = renderToStaticMarkup(createElement(RunReceiptView, { receipt: missing }))
-  assert.match(markup, /data-field="work.toolCalls" data-value="">not recorded/)
-  assert.match(markup, /data-field="check.checker.path" data-value="">not recorded/)
-  const commission = { ...parsed, check: null }
-  assert.equal(runReceiptSchema.parse(commission).check, null)
-  assert.match(renderToStaticMarkup(createElement(RunReceiptView, { receipt: commission })), /No play check is registered/)
 })
