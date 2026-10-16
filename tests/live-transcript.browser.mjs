@@ -10,6 +10,8 @@ test('run HTTP page reads bounded root and child streams and stops polling after
   const bundle = await readFile(new URL('../dist/workspace-viewer.js', import.meta.url))
   const css = await readFile(new URL('../dist/styles.css', import.meta.url))
   let alive = true
+  let releaseChildResponse
+  const childResponseReady = new Promise((resolve) => { releaseChildResponse = resolve })
   const requests = []
   const runRequests = []
   const at = '2026-10-16T12:00:00.000Z'
@@ -40,7 +42,9 @@ test('run HTTP page reads bounded root and child streams and stops polling after
       if (node !== 'worker' && after === '4') return json({ runId: 'run-fixture', node, events: [], nodes, alive, firstSeq: 5, lastSeq: 5, hasEarlier: true, hasMore: true })
       if (node !== 'worker' && after === '5') return json({ runId: 'run-fixture', node, events: [{ seq: 6, at, event: { kind: 'text_delta', text: 'After skipped lines' } }], nodes, alive, firstSeq: 6, lastSeq: 6, hasEarlier: true, hasMore: false })
       const events = before !== null ? rows.filter((row) => row.seq < Number(before)) : after !== null ? rows.filter((row) => row.seq > Number(after)) : node === 'worker' ? rows : rows.slice(1)
-      return json({ runId: 'run-fixture', node, events, nodes, alive, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: before === null && after === null && node !== 'worker', hasMore: false })
+      const reply = () => json({ runId: 'run-fixture', node, events, nodes, alive, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: before === null && after === null && node !== 'worker', hasMore: false })
+      if (node === 'worker' && after === null) return void childResponseReady.then(reply)
+      return reply()
     }
     if (url.pathname === '/api/runs/run-fixture') {
       runRequests.push({ alive, etag: req.headers['if-none-match'] ?? null })
@@ -85,7 +89,12 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     await page.getByText(/Reading history, new output continues/).waitFor()
     assert.ok(requests.some((query) => query.includes('before=1')))
     await page.waitForResponse((response) => response.url().includes('/transcript?') && response.url().includes('after=6'))
+    const childRequest = page.waitForRequest((request) => request.url().includes('/transcript?') && request.url().includes('node=worker'))
     await page.getByLabel('Agent conversation').selectOption('worker')
+    await childRequest
+    await page.getByText('Loading transcript…', { exact: true }).waitFor()
+    assert.equal(await page.getByText('Conversation not retained. Its absence does not mean the agent did no work.', { exact: true }).count(), 0, 'an initial child request does not claim the conversation is missing while loading')
+    releaseChildResponse()
     await page.getByText('Child complete', { exact: true }).waitFor()
     await page.getByText('A stream record exceeded the payload bound.', { exact: true }).waitFor()
     assert.equal(await page.getByText('Child partial', { exact: true }).count(), 0, 'native snapshot updates replace the prior part')
@@ -109,7 +118,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     await page.setViewportSize({ width: 390, height: 844 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'phone reflows')
     assert.equal(await page.locator('.run-execution-next button').evaluate((button) => button.getBoundingClientRect().bottom <= innerHeight), true, 'long canonical fixes keep resume and Conversations above the phone fold')
-  } finally { await browser.close(); await new Promise((resolve) => server.close(resolve)) }
+  } finally { releaseChildResponse(); await browser.close(); await new Promise((resolve) => server.close(resolve)) }
 })
 
 test('settled archives keep captured Messages and an empty directory stream falls back to the same record', { skip: !playwright, timeout: 45_000 }, async () => {
