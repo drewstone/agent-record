@@ -4,6 +4,7 @@ import type { RunDocument } from '../workspace.js'
 import { Conversation } from '../viewer/Conversation.js'
 import { indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
+import { EventDetail } from './EventDetail.js'
 
 type StreamRow = { seq: number; at: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
@@ -90,6 +91,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
   const node = selected ?? runId
   const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false })
   const [reload, setReload] = useState(0)
+  const [detail, setDetail] = useState<RecordEvent | null>(null)
   const older = useRef<(() => void) | null>(null)
   const wasAlive = useRef(alive)
   const windowState = useRef({ node, rows: [] as StreamRow[], earlier: false, generation: undefined as string | undefined, first: null as number | null, last: null as number | null })
@@ -110,6 +112,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     let forwardPending = false
     let olderPending = false
     setState((prior) => ({ ...prior, rows, earlier, loading: true, error: null, trimmed: retain && prior.trimmed, history: false }))
+    setDetail(null)
     const load = async (direction: 'tail' | 'after' | 'before') => {
       if (cancelled || (direction === 'before' ? olderPending : forwardPending)) return
       if (direction === 'before') olderPending = true
@@ -168,6 +171,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     {state.loading && <p role="status">Loading transcript…</p>}
     {state.error && <p role="alert">{state.error}</p>}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
-    <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" inspect={() => {}} lifecycle live={alive} />
+    <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" inspect={setDetail} lifecycle live={alive} />
+    {detail && <EventDetail key={detail.id} event={detail} index={index} onClose={() => setDetail(null)} load={async () => { throw new Error('Original bytes are available in the captured record.') }} />}
   </section>
 }
