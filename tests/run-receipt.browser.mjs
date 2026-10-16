@@ -45,4 +45,3 @@ test('the Lab fixture reaches the live DOM and print DOM with identical field va
     }
   } finally { await browser.close() }
 })
-
