@@ -812,11 +812,12 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const catalogue = useMemo(() => dimensionMap(dimensions.data), [dimensions.data])
   const section = sectionOf(params)
+  const streamConversation = !!run.data?.execution && !['timeline', 'usage'].includes(params.get('tab') ?? '')
   const requested = params.get('node')
   const index = nodes.index
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
-  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && run.data?.execution) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
+  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && streamConversation) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
   const summary = run.data?.run
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
@@ -826,7 +827,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <RunExecution doc={doc} onConversations={() => open('agents')} />
+        <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
         <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
@@ -850,7 +851,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   }
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
-      <RunExecution doc={doc} onConversations={() => open('agents')} />
+      <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
       <DetailBar doc={doc} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
       {section === 'findings' &&
         (doc.findings?.total ? (
@@ -921,8 +922,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <InputView input={doc.input} api={api} />
         </section>
       )}
-      {section === 'agents' && doc.execution && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} />}
-      {index && section === 'agents' && !doc.execution && actor && (
+      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} />}
+      {index && section === 'agents' && !streamConversation && actor && (
         <div className="agents-layout">
           <aside className="agent-rail" aria-label="Agents">
             <AgentTable
@@ -975,7 +976,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           )}
         </section>
       )}
-      {!index && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && doc.execution) && (
+      {!index && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && streamConversation) && (
         <div className="ws-section">
           {/* The record's request starts after the run document names it ready: until it answers, it is loading, not missing. */}
           {nodes.loading || (recordReady && nodes.pending) ? (

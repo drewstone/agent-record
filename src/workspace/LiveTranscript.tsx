@@ -86,7 +86,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
 }
 
 /** A bounded stream window. Only the selected agent is fetched; settled runs load once, without a timer. */
-export function LiveTranscript({ runUrl, runId, alive, selected, onSelect }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void }) {
+export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void }) {
   const node = selected ?? runId
   const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false })
   const [reload, setReload] = useState(0)
@@ -162,6 +162,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect }: { r
       <label>Agent <select aria-label="Agent conversation" value={node} onChange={(event) => onSelect(event.target.value)}>{nodes.map((item) => <option key={item.id} value={item.id}>{item.label}{item.parent ? ' (child)' : ' (root)'}</option>)}</select></label>
       <button type="button" className="ui-button" disabled={!state.earlier || state.loading} onClick={() => older.current?.()}>Load older</button>
       <button type="button" className="ui-button" onClick={() => setReload((value) => value + 1)}>Latest</button>
+      {onRecorded && <button type="button" className="ui-button" onClick={onRecorded}>Timeline and usage</button>}
       <span className="muted">{state.history && alive ? 'Reading history, updates paused until Latest' : alive ? 'Live transcript' : 'Settled transcript'} · {state.rows.length} stream events{state.trimmed ? ' · window limited to 2,000 events' : ''}</span>
     </div>
     {state.loading && <p role="status">Loading transcript…</p>}
