@@ -89,8 +89,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     assert.equal(await page.getByText('Child partial', { exact: true }).count(), 0, 'native snapshot updates replace the prior part')
     alive = false
     await page.getByText(/Stopped · failed/).waitFor({ timeout: 10_000 }).catch(async (error) => {
-      error.message += `\nRun requests: ${JSON.stringify(runRequests)}\nPage errors: ${JSON.stringify(errors)}\nRendered page: ${await page.locator('body').innerText()}`
-      throw error
+      throw new Error(`${error.message}\nRun requests: ${JSON.stringify(runRequests)}\nPage errors: ${JSON.stringify(errors)}\nRendered page: ${await page.locator('body').innerText()}`, { cause: error })
     })
     await page.getByText(/RetainedWorkspaceCapturePendingError/).waitFor()
     await page.getByText(/provider-rate-limit: Resume after provider capacity returns/).waitFor()
