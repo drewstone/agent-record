@@ -34,6 +34,8 @@ test('run HTTP page reads bounded root and child streams and stops polling after
       const before = url.searchParams.get('before')
       const after = url.searchParams.get('after')
       const rows = node === 'worker' ? child : root
+      if (node !== 'worker' && after === '4') return json({ runId: 'run-fixture', node, events: [], nodes, alive, firstSeq: 5, lastSeq: 5, hasEarlier: true, hasMore: true })
+      if (node !== 'worker' && after === '5') return json({ runId: 'run-fixture', node, events: [{ seq: 6, at, event: { kind: 'text_delta', text: 'After skipped lines' } }], nodes, alive, firstSeq: 6, lastSeq: 6, hasEarlier: true, hasMore: false })
       const events = before !== null ? rows.filter((row) => row.seq < Number(before)) : after !== null ? rows.filter((row) => row.seq > Number(after)) : node === 'worker' ? rows : rows.slice(1)
       return json({ runId: 'run-fixture', node, events, nodes, alive, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: before === null && after === null && node !== 'worker', hasMore: false })
     }
@@ -62,9 +64,11 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     assert.equal(await page.getByText('Private reasoning body', { exact: true }).count(), 0)
     await page.getByText('read_file', { exact: true }).first().click()
     await page.getByText('Retained tool result', { exact: true }).waitFor()
-    await page.waitForResponse((response) => response.url().includes('/transcript?') && response.url().includes('after=4'))
+    await page.getByText('After skipped lines', { exact: true }).waitFor()
+    assert.ok(requests.some((query) => query.includes('after=5')), 'cursor advances across skipped malformed lines')
     await page.getByRole('button', { name: 'Load older' }).click()
     await page.getByText(/Earlier history/).waitFor()
+    await page.getByText(/Reading history, updates paused/).waitFor()
     assert.ok(requests.some((query) => query.includes('before=1')))
     await page.getByLabel('Agent conversation').selectOption('worker')
     await page.getByText('Child complete', { exact: true }).waitFor()
