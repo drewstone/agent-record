@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RecordEvent, RunRecord } from '../record.js'
 import type { RunDocument } from '../workspace.js'
 import { Conversation } from '../viewer/Conversation.js'
-import { indexRecord } from '../viewer/model.js'
+import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
 
@@ -11,6 +11,7 @@ type StreamNode = { id: string; label: string; parent: string | null }
 type StreamPage = { runId: string; node: string; generation?: string; reset?: boolean; events: StreamRow[]; firstSeq: number | null; lastSeq: number | null; hasEarlier: boolean; hasMore: boolean; alive: boolean; nodes: StreamNode[] }
 const LIMIT = 200
 const RETAIN = 2000
+const FIX_PREVIEW = 180
 
 /** Project the runtime's normalized stream into the existing Conversation and its tool-pairing model. */
 function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: StreamRow[]): RunRecord {
@@ -70,6 +71,9 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
     return () => window.clearInterval(timer)
   }, [execution?.alive])
   if (!execution) return null
+  const diagnosis = execution.diagnoses[0]
+  const fix = diagnosis ? compact(diagnosis.fix) : ''
+  const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
   return <section className="run-execution" aria-label="Run status">
     <p role="status" data-run-status>
@@ -77,14 +81,15 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
       {execution.alive ? <> · last activity {age !== null && Number.isFinite(age) ? `${age} s ago` : 'unknown'} · attempts failed {execution.failedAttempts}</> : <>
         {execution.endingError && <> · {execution.endingError.name}</>}
         {execution.lastAttempt && <> · last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</>}
-        {execution.diagnoses.map((diagnosis) => <span key={diagnosis.id}> · {diagnosis.id}: {diagnosis.fix}</span>)}
+        {diagnosis && <span> · {diagnosis.id}: {fixLine}</span>}
       </>}
     </p>
     <div className="run-execution-next">
       <span>{execution.resume.status === 'preserved' ? 'Source sandbox preserved. Resume with ' : `${execution.resume.reason} `}{execution.resume.command && <code>{execution.resume.command}</code>}</span>
       <button type="button" className="ui-button" onClick={onConversations}>Conversations</button>
     </div>
-    {!execution.alive && (execution.endingError?.message || execution.runnerTail || execution.diagnosisError) && <details><summary>Ending evidence</summary>
+    {!execution.alive && (execution.endingError?.message || execution.runnerTail || execution.diagnosisError || execution.diagnoses.length > 0) && <details><summary>Ending evidence</summary>
+      {execution.diagnoses.length > 0 && <dl>{execution.diagnoses.map((item) => <div key={item.id}><dt><strong>{item.id}</strong></dt><dd>{item.fix}</dd></div>)}</dl>}
       {execution.endingError?.message && <pre>{execution.endingError.message}</pre>}
       {execution.diagnosisError && <p>Known failure lookup unavailable: {execution.diagnosisError}</p>}
       {execution.runnerTail && <><p>Runner log tail</p><pre>{execution.runnerTail}</pre></>}

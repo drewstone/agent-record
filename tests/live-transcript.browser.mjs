@@ -50,7 +50,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
       return json({
       schema: 'agent-workspace.run.v1', run: { id: 'run-fixture', play: 'fixture', state: alive ? 'running' : 'failed', location: { kind: alive ? 'dir' : 'archive', path: null }, record: { status: alive ? 'missing' : 'ready', digest: null } },
       input: null, spend: { nodes: {} }, versions: [], live: { polling: alive, mirrorAt: null },
-      execution: { alive, lastActivityAt: at, failedAttempts: 2, settleKind: alive ? null : 'failed', endingError: alive ? null : { name: 'RetainedWorkspaceCapturePendingError', message: 'Workspace capture pending' }, lastAttempt: alive ? null : { error: 'HTTP 429', classification: 'transient' }, diagnoses: alive ? [] : [{ id: 'provider-rate-limit', fix: 'Resume after provider capacity returns' }], resume: { status: 'preserved', command: 'disco run --resume run-fixture', reason: 'Source sandbox preserved' } },
+      execution: { alive, lastActivityAt: at, failedAttempts: 2, settleKind: alive ? null : 'failed', endingError: alive ? null : { name: 'RetainedWorkspaceCapturePendingError', message: 'Workspace capture pending' }, lastAttempt: alive ? null : { error: 'HTTP 429', classification: 'transient' }, diagnoses: alive ? [] : [{ id: 'provider-rate-limit', fix: `Resume after provider capacity returns. ${'Keep the source sandbox and inspect the provider response. '.repeat(40)}` }, { id: 'retained-capture', fix: 'Capture the preserved workspace. '.repeat(40) }, { id: 'settle-capture', fix: 'Check retained evidence before judging the run. '.repeat(40) }], resume: { status: 'preserved', command: 'disco run --resume run-fixture', reason: 'Source sandbox preserved' } },
       })
     }
     if (url.pathname === '/api/dimensions') return json({ dimensions: [] })
@@ -97,6 +97,10 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     await page.getByText(/RetainedWorkspaceCapturePendingError/).waitFor()
     await page.getByText(/provider-rate-limit: Resume after provider capacity returns/).waitFor()
     await page.getByText('Child final suffix', { exact: true }).waitFor()
+    await page.getByText('Ending evidence', { exact: true }).click()
+    await page.getByText('retained-capture', { exact: true }).waitFor()
+    await page.getByText('settle-capture', { exact: true }).waitFor()
+    await page.getByText('Ending evidence', { exact: true }).click()
     await page.waitForTimeout(500)
     const settledCount = requests.length
     await page.waitForTimeout(3500)
@@ -104,6 +108,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     assert.equal(errors.length, 0, errors.join('\n'))
     await page.setViewportSize({ width: 390, height: 844 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'phone reflows')
+    assert.equal(await page.locator('.run-execution-next button').evaluate((button) => button.getBoundingClientRect().bottom <= innerHeight), true, 'long canonical fixes keep resume and Conversations above the phone fold')
   } finally { await browser.close(); await new Promise((resolve) => server.close(resolve)) }
 })
 
