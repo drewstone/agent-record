@@ -61,7 +61,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     await page.getByRole('button', { name: 'Conversations', exact: true }).click()
     await page.getByText('Current answer', { exact: true }).waitFor()
     assert.equal(await page.locator('details.reasoning-body[open]').count(), 0)
-    assert.equal(await page.getByText('Private reasoning body', { exact: true }).count(), 0)
+    assert.equal(await page.locator('.reasoning-body .activity-prose').count(), 0, 'collapsed reasoning has no expanded body')
     await page.getByText('read_file', { exact: true }).first().click()
     await page.getByText('Retained tool result', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Inspect source of assistant', exact: true }).first().click()
