@@ -10,6 +10,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
   const css = await readFile(new URL('../dist/styles.css', import.meta.url))
   let alive = true
   const requests = []
+  const runRequests = []
   const at = '2026-10-16T12:00:00.000Z'
   const nodes = [{ id: 'run-fixture', label: 'Root', parent: null }, { id: 'worker', label: 'Worker', parent: 'run-fixture' }]
   const root = [
@@ -41,6 +42,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
       return json({ runId: 'run-fixture', node, events, nodes, alive, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: before === null && after === null && node !== 'worker', hasMore: false })
     }
     if (url.pathname === '/api/runs/run-fixture') {
+      runRequests.push({ alive, etag: req.headers['if-none-match'] ?? null })
       const etag = alive ? '"running"' : '"settled"'
       res.setHeader('etag', etag)
       if (req.headers['if-none-match'] === etag) return res.writeHead(304).end()
@@ -86,7 +88,10 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     await page.getByText('A stream record exceeded the payload bound.', { exact: true }).waitFor()
     assert.equal(await page.getByText('Child partial', { exact: true }).count(), 0, 'native snapshot updates replace the prior part')
     alive = false
-    await page.getByText(/Stopped · failed/).waitFor()
+    await page.getByText(/Stopped · failed/).waitFor({ timeout: 10_000 }).catch(async (error) => {
+      error.message += `\nRun requests: ${JSON.stringify(runRequests)}\nPage errors: ${JSON.stringify(errors)}\nRendered page: ${await page.locator('body').innerText()}`
+      throw error
+    })
     await page.getByText(/RetainedWorkspaceCapturePendingError/).waitFor()
     await page.getByText(/provider-rate-limit: Resume after provider capacity returns/).waitFor()
     await page.waitForTimeout(500)
