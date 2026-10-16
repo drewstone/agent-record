@@ -6,7 +6,7 @@ import { indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
 
-type StreamRow = { seq: number; at: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
+type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
 type StreamPage = { runId: string; node: string; generation?: string; reset?: boolean; events: StreamRow[]; firstSeq: number | null; lastSeq: number | null; hasEarlier: boolean; hasMore: boolean; alive: boolean; nodes: StreamNode[] }
 const LIMIT = 200
@@ -17,7 +17,7 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
   const events: RecordEvent[] = []
   const native = new Map<string, StreamRow[]>()
   for (const row of rows) {
-    if (!Number.isFinite(Date.parse(row.at))) continue
+    if (!row.at || !Number.isFinite(Date.parse(row.at))) continue
     if (!row.event) {
       const stream = row.stream ?? node
       const group = native.get(stream) ?? []
@@ -170,6 +170,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     </div>
     {state.loading && <p role="status">Loading transcript…</p>}
     {state.error && <p role="alert">{state.error}</p>}
+    {state.rows.filter((row) => row.event?.kind === 'capture_gap' && (!row.at || !Number.isFinite(Date.parse(row.at)))).map((row) => <p className="faint" key={row.seq}>{row.event?.text ?? 'A stream record could not be displayed.'}</p>)}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
     <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" inspect={setDetail} lifecycle live={alive} />
     {detail && <EventDetail key={detail.id} event={detail} index={index} onClose={() => setDetail(null)} load={async () => { throw new Error('Original bytes are available in the captured record.') }} />}

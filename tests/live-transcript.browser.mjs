@@ -22,6 +22,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
   const child = [
     { seq: 0, at, stream: 'worker/session', type: 'message.part.updated', data: { part: { id: 'text-1', type: 'text', text: 'Child partial', time: { start: Date.parse(at) } } } },
     { seq: 1, at, stream: 'worker/session', type: 'message.part.updated', data: { part: { id: 'text-1', type: 'text', text: 'Child complete', time: { start: Date.parse(at) } } } },
+    { seq: 2, event: { kind: 'capture_gap', text: 'A stream record exceeded the payload bound.' } },
   ]
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost')
@@ -75,6 +76,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     assert.ok(requests.some((query) => query.includes('before=1')))
     await page.getByLabel('Agent conversation').selectOption('worker')
     await page.getByText('Child complete', { exact: true }).waitFor()
+    await page.getByText('A stream record exceeded the payload bound.', { exact: true }).waitFor()
     assert.equal(await page.getByText('Child partial', { exact: true }).count(), 0, 'native snapshot updates replace the prior part')
     alive = false
     await page.getByText(/Stopped · failed/).waitFor()
