@@ -28,7 +28,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost')
     const json = (value) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(value)) }
-    if (url.pathname === '/bundle.js') { res.setHeader('content-type', 'application/javascript'); return res.end(bundle) }
+    if (url.pathname === '/bundle.js') { res.setHeader('content-type', 'application/javascript; charset=utf-8'); return res.end(bundle) }
     if (url.pathname === '/style.css') { res.setHeader('content-type', 'text/css'); return res.end(css) }
     if (url.pathname.endsWith('/transcript')) {
       requests.push(url.search)
@@ -54,7 +54,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     }
     if (url.pathname === '/api/dimensions') return json({ dimensions: [] })
     if (url.pathname.endsWith('/assessments')) return json({ rows: [] })
-    if (url.pathname === '/run/run-fixture') { res.setHeader('content-type', 'text/html'); return res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><div id="agent-workspace" data-mode="run" data-id="run-fixture" data-api="/api"></div><script src="/bundle.js"></script>') }
+    if (url.pathname === '/run/run-fixture') { res.setHeader('content-type', 'text/html; charset=utf-8'); return res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><div id="agent-workspace" data-mode="run" data-id="run-fixture" data-api="/api"></div><script src="/bundle.js"></script>') }
     res.writeHead(404).end()
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
