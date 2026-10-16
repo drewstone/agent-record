@@ -36,6 +36,7 @@ import { AgentTable } from './workspace/RunTable.js'
 import { RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
+import { LiveTranscript, RunExecution } from './workspace/LiveTranscript.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -815,7 +816,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const index = nodes.index
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
-  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
+  const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && run.data?.execution) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
   const summary = run.data?.run
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!summary) return <p className="ws-status" role="status">Loading…</p>
@@ -825,6 +826,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
+        <RunExecution doc={doc} onConversations={() => open('agents')} />
         <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
@@ -848,6 +850,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   }
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
+      <RunExecution doc={doc} onConversations={() => open('agents')} />
       <DetailBar doc={doc} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
       {section === 'findings' &&
         (doc.findings?.total ? (
@@ -918,7 +921,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <InputView input={doc.input} api={api} />
         </section>
       )}
-      {index && section === 'agents' && actor && (
+      {section === 'agents' && doc.execution && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} />}
+      {index && section === 'agents' && !doc.execution && actor && (
         <div className="agents-layout">
           <aside className="agent-rail" aria-label="Agents">
             <AgentTable
@@ -971,7 +975,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           )}
         </section>
       )}
-      {!index && AGENT_PART_SECTIONS.has(section) && (
+      {!index && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && doc.execution) && (
         <div className="ws-section">
           {/* The record's request starts after the run document names it ready: until it answers, it is loading, not missing. */}
           {nodes.loading || (recordReady && nodes.pending) ? (

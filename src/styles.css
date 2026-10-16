@@ -3302,3 +3302,12 @@
   --chart-live-fg:var(--ar-fg); --chart-live-muted:var(--ar-fg-muted); --chart-live-faint:var(--ar-fg-faint);
   --chart-live-font-mono:var(--ar-font-mono); --chart-live-surface:var(--ar-bg);
 }
+.agent-record .run-execution {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ar-line);
+  overflow-wrap: anywhere;
+}
+.agent-record .run-execution p { margin: 0 0 8px; }
+.agent-record .run-execution-next { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.agent-record .run-execution pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; }
+.agent-record .live-transcript .conversation { min-height: 20rem; }
