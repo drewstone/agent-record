@@ -1,10 +1,31 @@
 import { z } from 'zod'
 const nullableNumber = z.number().nullable()
 const nullableText = z.string().nullable()
+const behaviorVerdict = z.enum(['met', 'violated', 'unknown'])
+const behaviorExpectationsSchema = z.object({
+  schema: z.literal('disco.behavior-expectations.v1'), advisory: z.literal(true), verdict: behaviorVerdict,
+  basis: z.string(),
+  profiles: z.array(z.object({
+    name: nullableText, digest: nullableText, verdict: behaviorVerdict,
+    nodes: z.array(z.object({
+      nodeId: z.string(), verdict: behaviorVerdict, reason: nullableText.optional(),
+      dimensions: z.array(z.object({
+        dimension: z.string(), expected: z.union([z.string(), z.object({ min: z.number(), max: z.number() })]),
+        count: nullableNumber, observed: z.number(), verdict: behaviorVerdict, reason: nullableText,
+        interpretation: z.string().optional(),
+        evidence: z.array(z.object({
+          eventId: nullableText.optional(), at: nullableText.optional(),
+          source: z.object({ path: z.string(), offset: z.number(), bytes: z.number(), lineSha256: z.string() }).catchall(z.unknown()).nullable().optional(),
+        }).catchall(z.unknown())),
+      }).catchall(z.unknown())),
+    }).catchall(z.unknown())),
+  }).catchall(z.unknown())),
+}).catchall(z.unknown())
 export const runReceiptSchema = z.object({
   schema: z.literal('discovery-lab.run-receipt'), runId: z.string(), tag: z.string(), title: z.string(), brief: nullableText,
   outcome: z.object({ status: z.enum(['running', 'passed', 'not-passed', 'unmeasured', 'cancelled']), sentence: z.string(), at: nullableText, reason: nullableText, class: nullableText }),
   chosen: z.object({ tag: z.string(), commit: nullableText, why: z.string() }),
+  behaviorExpectations: behaviorExpectationsSchema.nullable().optional(),
   check: z.object({ passed: z.boolean().nullable(), known: z.boolean(), output: nullableText, commit: nullableText, tag: nullableText, at: nullableText, checker: z.object({ path: nullableText, sha256: nullableText }), inputs: z.object({ source: nullableText, sha256: nullableText, count: nullableNumber }), rerun: nullableText }).catchall(z.unknown()).nullable(),
   files: z.array(z.object({ file: z.string(), label: z.string(), size: z.number().optional() }).catchall(z.unknown())),
   decisions: z.array(z.object({ id: z.string(), label: z.string(), consequence: z.string(), command: nullableText, enabled: z.boolean(), reason: nullableText })),
@@ -16,7 +37,7 @@ export const runReceiptSchema = z.object({
   sources: z.record(z.string(), nullableText),
   cost: z.object({ billedUsd: z.object({ total: z.object({ usd: nullableNumber }).catchall(z.unknown()) }).catchall(z.unknown()) }).catchall(z.unknown()),
   scores: z.object({ checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) }).catchall(z.unknown()).nullable(),
-  system: z.object({ errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+  system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
 }).catchall(z.unknown())
 export type RunReceipt = z.infer<typeof runReceiptSchema>
 export const hoursText = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)} h`
