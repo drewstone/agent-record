@@ -11,17 +11,26 @@ import type { RunReceipt } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
-const missing = 'not recorded'
+const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
 
 /** All measures and decisions belong to the Lab document. This component only formats them. */
 export function RunOverview({ api, doc, open, print = false }: { api: string; doc: RunDocument; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
   const r = doc.receipt
-  if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p>The receipt document is {missing}.</p></section>
+  if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p></section>
   return <RunReceiptView api={api} receipt={r} print={print} open={open} />
 }
 
-function Field({ path, value, format = String, children }: { path: string; value: string | number | null | undefined; format?: (value: never) => string; children?: ReactNode }) {
-  return <span data-field={path} data-value={value ?? ''}>{children ?? (value === null || value === undefined ? missing : format(value as never))}</span>
+function Field({ path, value, format = String, suffix = '', children }: { path: string; value: string | number | null | undefined; format?: (value: never) => string; suffix?: string; children?: ReactNode }) {
+  if (!recorded(value)) return null
+  return <span data-field={path} data-value={value}>{children ?? format(value as never)}{suffix}</span>
+}
+
+function Fact({ label, when, children }: { label: string; when: boolean; children: ReactNode }) {
+  return when ? <><dt>{label}</dt><dd>{children}</dd></> : null
+}
+
+function Measures({ values }: { values: Array<{ path: string; value: number | null; format?: (value: never) => string; suffix?: string }> }) {
+  return values.filter(({ value }) => recorded(value)).map((field, i) => <span key={field.path}>{i > 0 && ', '}<Field {...field} /></span>)
 }
 
 function Drawer({ title, print, children }: { title: string; print: boolean; children: ReactNode }) {
@@ -63,7 +72,10 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
-  if (!r.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p>The receipt document is {missing}.</p></section>
+  if (!r.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p></section>
+  const hasRelease = Boolean(r.chosen.commit && r.chosen.tag && r.chosen.tag !== 'store')
+  const decisions = r.decisions.map((decision, i) => ({ ...decision, index: i })).filter((decision) =>
+    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) : hasRelease))
   const behavior = r.behaviorExpectations ?? r.system?.behaviorExpectations
   const fileBase = `${api}/runs/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}`
   const decide = async (id: string) => {
@@ -84,39 +96,56 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const lanes = r.timeline.lanes.map((lane) => ({ ...lane, spans: lane.spans.map((span) => ({ ...span, start: Date.parse(span.start), end: span.end === null ? null : Date.parse(span.end), note: span.note ?? undefined })) }))
   const marks = r.timeline.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind }))
   const figure = timeline(lanes, { measure: 'Recorded agent time', ...(r.timeline.end ? { now: Date.parse(r.timeline.end) } : {}), marks })
-  const versionFigure = r.versions?.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
+  const versionFigure = r.versions?.rows.length && r.versions.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
   return <article className={`rr-page${print ? ' rr-print' : ''}`} data-overview data-receipt={r.runId}>
     <header className={`rr-verdict rr-${r.outcome.status}`}>
       <div className="rr-title-row"><h1 data-field="title" title={r.title}>{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
       <p data-field="outcome.sentence">{r.outcome.sentence}</p>
-      <p className="rr-summary"><span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span><span><Field path="cost.billedUsd.total.usd" value={r.cost.billedUsd.total.usd} format={money} /> billed</span><span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span><a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
+      <p className="rr-summary">{hasRelease && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(r.cost.billedUsd.total.usd) && <span><Field path="cost.billedUsd.total.usd" value={r.cost.billedUsd.total.usd} format={money} /> billed</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
       {behavior && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
     </header>
     <div className="rr-columns">
       <div className="rr-evidence">
-        <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.length ? r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>) : <li>{missing}</li>}</ul></section>
-        <section aria-labelledby="rr-check"><h2 id="rr-check">The check</h2>{!r.check && <p>No play check is registered for this run.</p>}<pre className="rr-output" data-field="check.output">{r.check?.output ?? missing}</pre><dl className="rr-facts">
-          <dt>Ran on</dt><dd><Field path="check.tag" value={r.check?.tag} /> <code><Field path="check.commit" value={r.check?.commit} /></code></dd>
-          <dt>At</dt><dd><Field path="check.at" value={r.check?.at} format={utcClock} /></dd>
-          <dt>Inputs SHA-256</dt><dd><code><Field path="check.inputs.sha256" value={r.check?.inputs.sha256} /></code><span className="rr-muted" data-field="check.inputs.source">{r.check?.inputs.source ?? missing}</span></dd>
-          <dt>Checker SHA-256</dt><dd><code><Field path="check.checker.sha256" value={r.check?.checker.sha256} /></code><span className="rr-muted"><Field path="check.checker.path" value={r.check?.checker.path} /></span></dd>
-        </dl>{r.check?.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check?.rerun}</code>{!print && <Copy text={r.check?.rerun} />}</div>}</section>
+        {r.files.length > 0 ? <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>)}</ul></section> : !hasRelease && <p className="rr-muted">No release recorded yet.</p>}
+        {r.check && [r.check.output, r.check.tag, r.check.commit, r.check.at, r.check.rerun, r.check.checker.sha256, r.check.checker.path, r.check.inputs.sha256, r.check.inputs.source].some(recorded) ? <section aria-labelledby="rr-check"><h2 id="rr-check">The check</h2>
+          {recorded(r.check.output) && <pre className="rr-output" data-field="check.output">{r.check.output}</pre>}<dl className="rr-facts">
+            <Fact label="Ran on" when={[r.check.tag, r.check.commit].some(recorded)}><Field path="check.tag" value={r.check.tag} />{recorded(r.check.tag) && recorded(r.check.commit) && ' '}<code><Field path="check.commit" value={r.check.commit} /></code></Fact>
+            <Fact label="At" when={recorded(r.check.at)}><Field path="check.at" value={r.check.at} format={utcClock} /></Fact>
+            <Fact label="Inputs SHA-256" when={[r.check.inputs.sha256, r.check.inputs.source].some(recorded)}><code><Field path="check.inputs.sha256" value={r.check.inputs.sha256} /></code><span className="rr-muted"><Field path="check.inputs.source" value={r.check.inputs.source} /></span></Fact>
+            <Fact label="Checker SHA-256" when={[r.check.checker.sha256, r.check.checker.path].some(recorded)}><code><Field path="check.checker.sha256" value={r.check.checker.sha256} /></code><span className="rr-muted"><Field path="check.checker.path" value={r.check.checker.path} /></span></Fact>
+          </dl>{r.check.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check.rerun}</code>{!print && <Copy text={r.check.rerun} />}</div>}</section> : null}
       </div>
       <aside>
-        <section aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2><div className="rr-decisions">{r.decisions.map((decision, i) => <div key={decision.id}>
-          {print ? <strong data-field={`decisions.${i}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' ? 'rr-primary' : ''} disabled={!decision.enabled || pending !== null} onClick={() => { void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
-          <p data-field={`decisions.${i}.consequence`}>{decision.enabled ? decision.consequence : decision.reason ?? missing}</p>
-          {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${i}.command`}>{decision.command}</code></details>}
-        </div>)}</div>{notice && <p role="status">{notice}</p>}</section>
-        <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2><div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>
-          <dl className="rr-facts rr-measures"><dt>Work</dt><dd><Field path="work.agentHours" value={r.work.agentHours} format={hoursText} /></dd><dt>Idle</dt><dd><Field path="work.idleHours" value={r.work.idleHours} format={hoursText} /></dd><dt>Untraced</dt><dd><Field path="work.untracedHours" value={r.work.untracedHours} format={hoursText} /></dd><dt>Fresh tokens</dt><dd><Field path="work.tokens.fresh" value={r.work.tokens.fresh} format={tokensText} /></dd><dt>Cached tokens</dt><dd><Field path="work.tokens.cached" value={r.work.tokens.cached} format={tokensText} /></dd><dt>Total tokens</dt><dd><Field path="work.tokens.total" value={r.work.tokens.total} format={tokensText} /></dd><dt>After first pass</dt><dd><Field path="waste.afterPass.hours" value={r.waste.afterPass.hours} format={hoursText} />, <Field path="waste.afterPass.tokens" value={r.waste.afterPass.tokens} format={tokensText} />, <Field path="waste.afterPass.usd" value={r.waste.afterPass.usd} format={money} /></dd><dt>Verdict delay</dt><dd><Field path="waste.verdictDelay.minutes" value={r.waste.verdictDelay.minutes} /> min, <Field path="waste.verdictDelay.refusedChecks" value={r.waste.verdictDelay.refusedChecks} /> checks refused</dd></dl>
-        </section>
+        {decisions.length > 0 && <section aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2><div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
+          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' ? 'rr-primary' : ''} disabled={!decision.enabled || pending !== null} onClick={() => { void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
+          <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>
+          {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
+        </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
+        {[r.work.recordedHours, r.work.agentHours, r.work.idleHours, r.work.untracedHours, ...Object.values(r.work.tokens), ...Object.values(r.waste.afterPass), ...Object.values(r.waste.verdictDelay)].some(recorded) && <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2>
+          {recorded(r.work.recordedHours) && <div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>}
+          <dl className="rr-facts rr-measures">
+            <Fact label="Work" when={recorded(r.work.agentHours)}><Field path="work.agentHours" value={r.work.agentHours} format={hoursText} /></Fact>
+            <Fact label="Idle" when={recorded(r.work.idleHours)}><Field path="work.idleHours" value={r.work.idleHours} format={hoursText} /></Fact>
+            <Fact label="Untraced" when={recorded(r.work.untracedHours)}><Field path="work.untracedHours" value={r.work.untracedHours} format={hoursText} /></Fact>
+            <Fact label="Fresh tokens" when={recorded(r.work.tokens.fresh)}><Field path="work.tokens.fresh" value={r.work.tokens.fresh} format={tokensText} /></Fact>
+            <Fact label="Cached tokens" when={recorded(r.work.tokens.cached)}><Field path="work.tokens.cached" value={r.work.tokens.cached} format={tokensText} /></Fact>
+            <Fact label="Total tokens" when={recorded(r.work.tokens.total)}><Field path="work.tokens.total" value={r.work.tokens.total} format={tokensText} /></Fact>
+            <Fact label="After first pass" when={Object.values(r.waste.afterPass).some(recorded)}><Measures values={[{ path: 'waste.afterPass.hours', value: r.waste.afterPass.hours, format: hoursText }, { path: 'waste.afterPass.tokens', value: r.waste.afterPass.tokens, format: tokensText }, { path: 'waste.afterPass.usd', value: r.waste.afterPass.usd, format: money }]} /></Fact>
+            <Fact label="Verdict delay" when={Object.values(r.waste.verdictDelay).some(recorded)}><Measures values={[{ path: 'waste.verdictDelay.minutes', value: r.waste.verdictDelay.minutes, suffix: ' min' }, { path: 'waste.verdictDelay.refusedChecks', value: r.waste.verdictDelay.refusedChecks, suffix: ' checks refused' }]} /></Fact>
+          </dl>
+        </section>}
       </aside>
     </div>
     {behavior && <ProfileBehavior reading={behavior} print={print} />}
-    <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div><ul>{r.timeline.marks.map((mark, i) => <li key={`${mark.t}-${i}`}><Field path={`timeline.marks.${i}.t`} value={mark.t} format={utcClock} />: <span data-field={`timeline.marks.${i}.label`}>{mark.label}</span></li>)}</ul></Drawer>
-    <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><Field path={`versions.rows.${i}.tag`} value={row.tag} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : <p>{missing}</p>}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>
-    <Drawer title="How it ran" print={print}><dl className="rr-facts"><dt>Tool calls</dt><dd><Field path="work.toolCalls" value={r.work.toolCalls} /></dd><dt>Tries</dt><dd><Field path="work.tries" value={r.work.tries} /></dd><dt>Team</dt><dd data-field="timeline.lanes">{r.timeline.lanes.map((lane) => lane.label).join(', ') || missing}</dd><dt>Lineage</dt><dd data-field="lineage.chain">{r.lineage?.chain.join(' / ') ?? missing}</dd><dt>Run ended</dt><dd data-field="outcome.reason">{r.outcome.reason ?? missing}</dd></dl>{r.system?.errors?.top.map((error, i) => <div key={i}><Field path={`system.errors.top.${i}.count`} value={error.count} /> × {error.tool}<pre data-field={`system.errors.top.${i}.message`}>{error.message}</pre></div>)}{open && !print && <button onClick={() => open('agents')}>Open conversations</button>}</Drawer>
-    <Drawer title="What was asked" print={print}><div className="rr-brief" data-field="brief"><Markdown remarkPlugins={[remarkGfm]}>{r.brief ?? missing}</Markdown></div></Drawer>
+    {(lanes.length > 0 || marks.length > 0) && <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div><ul>{r.timeline.marks.map((mark, i) => <li key={`${mark.t}-${i}`}><Field path={`timeline.marks.${i}.t`} value={mark.t} format={utcClock} />: <span data-field={`timeline.marks.${i}.label`}>{mark.label}</span></li>)}</ul></Drawer>}
+    {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><Field path={`versions.rows.${i}.tag`} value={row.tag} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
+    {(recorded(r.work.toolCalls) || recorded(r.work.tries) || lanes.length > 0 || Boolean(r.lineage?.chain.length) || recorded(r.outcome.reason) || Boolean(r.system?.errors?.top.length) || Boolean(open)) && <Drawer title="How it ran" print={print}><dl className="rr-facts">
+      <Fact label="Tool calls" when={recorded(r.work.toolCalls)}><Field path="work.toolCalls" value={r.work.toolCalls} /></Fact>
+      <Fact label="Tries" when={recorded(r.work.tries)}><Field path="work.tries" value={r.work.tries} /></Fact>
+      <Fact label="Team" when={lanes.length > 0}><span data-field="timeline.lanes">{r.timeline.lanes.map((lane) => lane.label).join(', ')}</span></Fact>
+      <Fact label="Lineage" when={Boolean(r.lineage?.chain.length)}><span data-field="lineage.chain">{r.lineage?.chain.join(' / ')}</span></Fact>
+      <Fact label="Run ended" when={recorded(r.outcome.reason)}><span data-field="outcome.reason">{r.outcome.reason}</span></Fact>
+    </dl>{r.system?.errors?.top.map((error, i) => <div key={i}><Field path={`system.errors.top.${i}.count`} value={error.count} /> × {error.tool}<pre data-field={`system.errors.top.${i}.message`}>{error.message}</pre></div>)}{open && !print && <button onClick={() => open('agents')}>Open conversations</button>}</Drawer>}
+    {recorded(r.brief) && <Drawer title="What was asked" print={print}><div className="rr-brief" data-field="brief"><Markdown remarkPlugins={[remarkGfm]}>{r.brief!}</Markdown></div></Drawer>}
   </article>
 }
