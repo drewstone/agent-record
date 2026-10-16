@@ -801,6 +801,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [revision, setRevision] = useState(0)
   // The finding open in the run's findings; the agent rail and the graph open one there too.
   const [finding, setFinding] = useState<string | null>(null)
+  const [capturedStreams, setCapturedStreams] = useState<ReadonlySet<string>>(() => new Set())
+  const openedLiveStream = useRef<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
@@ -812,9 +814,15 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const catalogue = useMemo(() => dimensionMap(dimensions.data), [dimensions.data])
   const section = sectionOf(params)
-  const streamConversation = !!run.data?.execution && !['timeline', 'usage'].includes(params.get('tab') ?? '')
   const requested = params.get('node')
   const index = nodes.index
+  const streamNode = requested ?? id
+  const archivedCapture = recordReady && !run.data?.execution?.alive && ['archive', 'none'].includes(run.data?.run.location?.kind ?? '') && openedLiveStream.current !== streamNode
+  const streamConversation = !!run.data?.execution && !archivedCapture && !capturedStreams.has(streamNode) && !['timeline', 'usage'].includes(params.get('tab') ?? '')
+  useEffect(() => {
+    if (section === 'agents' && streamConversation && run.data?.execution?.alive) openedLiveStream.current = streamNode
+    else if (section !== 'agents' || !streamConversation) openedLiveStream.current = null
+  }, [section, streamConversation, streamNode, run.data?.execution?.alive])
   const root = index ? (index.actors.find((node) => node.parent === null && node.kind === 'agent')?.id ?? index.actors[0]?.id ?? null) : null
   const actor = index && requested && index.nodes.has(index.canonical(requested)) ? index.canonical(requested) : root
   const agent = useRecordPart(section && AGENT_PART_SECTIONS.has(section) && !(section === 'agents' && streamConversation) && actor ? `${runUrl}/record?node=${encodeURIComponent(actor)}${version}` : null)
@@ -922,7 +930,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <InputView input={doc.input} api={api} />
         </section>
       )}
-      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} />}
+      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
       {index && section === 'agents' && !streamConversation && actor && (
         <div className="agents-layout">
           <aside className="agent-rail" aria-label="Agents">

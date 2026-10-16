@@ -93,9 +93,9 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
 }
 
 /** A bounded stream window. Only the selected agent is fetched; settled runs load once, without a timer. */
-export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void }) {
+export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded, onEmpty }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void; onEmpty?: () => void }) {
   const node = selected ?? runId
-  const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false })
+  const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
   const [reload, setReload] = useState(0)
   const [detail, setDetail] = useState<RecordEvent | null>(null)
   const older = useRef<(() => void) | null>(null)
@@ -114,10 +114,10 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     let generation = retain ? windowState.current.generation : undefined
     let first = retain ? windowState.current.first : null
     let last = retain ? windowState.current.last : null
-    let loadingOlder = false
+    let readingHistory = false
     let forwardPending = false
     let olderPending = false
-    setState((prior) => ({ ...prior, rows, earlier, loading: true, error: null, trimmed: retain && prior.trimmed, history: false }))
+    setState((prior) => ({ ...prior, rows, earlier, loading: true, error: null, trimmed: retain && prior.trimmed, history: false, emptyTail: false }))
     setDetail(null)
     const load = async (direction: 'tail' | 'after' | 'before') => {
       if (cancelled || (direction === 'before' ? olderPending : forwardPending)) return
@@ -140,30 +140,30 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
         const seen = new Map(merged.map((row) => [row.seq, row]))
         rows = [...seen.values()].sort((a, b) => a.seq - b.seq)
         const trimmed = rows.length > RETAIN
-        if (trimmed) rows = direction === 'before' ? rows.slice(0, RETAIN) : rows.slice(-RETAIN)
-        if (trimmed && direction !== 'before') first = rows[0]?.seq ?? first
-        if (trimmed && direction === 'before') last = rows.at(-1)?.seq ?? last
+        if (trimmed) rows = readingHistory ? rows.slice(0, RETAIN) : rows.slice(-RETAIN)
+        if (trimmed && !readingHistory) first = rows[0]?.seq ?? first
         if (direction !== 'after' || page.reset) earlier = page.hasEarlier
         if (trimmed && direction !== 'before') earlier = true
         windowState.current = { node, rows, earlier, generation, first, last }
-        setState((prior) => ({ rows, nodes: page.nodes, earlier, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: loadingOlder }))
+        setState((prior) => ({ rows, nodes: page.nodes, earlier, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: direction === 'tail' || page.reset ? page.firstSeq === null && page.lastSeq === null && page.events.length === 0 : prior.emptyTail }))
         // Drain bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
-        if (direction !== 'before' && page.hasMore && last !== cursor && !loadingOlder) timer = window.setTimeout(() => void load('after'), 0)
-        else if (direction !== 'before' && page.alive && alive && !loadingOlder) timer = window.setTimeout(() => void load('after'), 3_000)
+        if (direction !== 'before' && page.hasMore && last !== cursor) timer = window.setTimeout(() => void load('after'), 0)
+        else if (direction !== 'before' && page.alive && alive) timer = window.setTimeout(() => void load('after'), 3_000)
       } catch (error) {
         if (!cancelled && !controller.signal.aborted) {
           setState((prior) => ({ ...prior, loading: false, error: error instanceof Error ? error.message : 'Transcript unavailable' }))
-          if (alive && direction !== 'before' && !loadingOlder) timer = window.setTimeout(() => void load('after'), 3_000)
+          if (alive && direction !== 'before') timer = window.setTimeout(() => void load('after'), 3_000)
         }
       } finally {
         if (direction === 'before') olderPending = false
         else forwardPending = false
       }
     }
-    older.current = () => { loadingOlder = true; window.clearTimeout(timer); setState((prior) => ({ ...prior, history: true })); void load('before') }
+    older.current = () => { readingHistory = true; setState((prior) => ({ ...prior, history: true })); void load('before') }
     void load(retain && last !== null ? 'after' : 'tail')
     return () => { cancelled = true; controller.abort(); window.clearTimeout(timer); older.current = null }
   }, [runUrl, node, alive, reload])
+  useEffect(() => { if (state.emptyTail && onEmpty) onEmpty() }, [state.emptyTail, onEmpty])
   const nodes = state.nodes.some((item) => item.id === node) ? state.nodes : [...state.nodes, { id: node, label: node === runId ? 'Root' : node, parent: null }]
   const index = useMemo(() => indexRecord(streamRecord(runId, node, nodes, state.rows)), [runId, node, state.nodes, state.rows])
   return <section className="run-panel live-transcript" aria-label="Conversations">
@@ -172,7 +172,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
       <button type="button" className="ui-button" disabled={!state.earlier || state.loading} onClick={() => older.current?.()}>Load older</button>
       <button type="button" className="ui-button" onClick={() => setReload((value) => value + 1)}>Latest</button>
       {onRecorded && <button type="button" className="ui-button" onClick={onRecorded}>Timeline and usage</button>}
-      <span className="muted">{state.history && alive ? 'Reading history, updates paused until Latest' : alive ? 'Live transcript' : 'Settled transcript'} · {state.rows.length} stream events{state.trimmed ? ' · window limited to 2,000 events' : ''}</span>
+      <span className="muted">{state.history && alive ? 'Reading history, new output continues' : alive ? 'Live transcript' : 'Settled transcript'} · {state.rows.length} stream events{state.trimmed ? ' · window limited to 2,000 events' : ''}</span>
     </div>
     {state.loading && <p role="status">Loading transcript…</p>}
     {state.error && <p role="alert">{state.error}</p>}
