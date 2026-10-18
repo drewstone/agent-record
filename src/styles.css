@@ -3234,6 +3234,16 @@
 .ar-ws .rr-command summary { cursor:pointer; color:var(--ar-fg-muted); }
 .ar-ws .rr-command code { display:block; margin-top:8px; }
 .ar-ws .rr-chart { min-width:0; overflow:hidden; margin:12px 0; }
+.ar-ws .rr-now { border-bottom:1px solid var(--ar-border); padding:16px 0 18px; }
+.ar-ws .rr-now h2 { margin:0 0 8px; }
+.ar-ws .rr-now h3 { margin:16px 0 8px; font-size:var(--ar-text-m); }
+.ar-ws .rr-now-verdict { margin:0 0 10px; }
+.ar-ws .rr-now-passed strong { color:var(--ar-c-ok); }
+.ar-ws .rr-now-failing strong { color:var(--ar-c-fail); }
+.ar-ws .rr-now-scores { overflow-wrap:anywhere; }
+.ar-ws .rr-contract { margin:0; padding-left:20px; display:grid; gap:10px; }
+.ar-ws .rr-contract li { display:grid; gap:2px; font-size:var(--ar-text-s); }
+.ar-ws .rr-contract-line { white-space:pre-wrap; overflow-wrap:anywhere; }
 .ar-ws .rr-chart .tgc-figure { margin:0; }
 .ar-ws .rr-drawer { border-top:1px solid var(--ar-border); padding-top:16px; min-width:0; }
 .ar-ws .rr-drawer > summary { cursor:pointer; font-weight:600; }
