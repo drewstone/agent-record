@@ -69,6 +69,11 @@ function RunNow({ receipt: r, outcome }: { receipt: RunReceipt; outcome: Outcome
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
       {outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
     </p>}
+    {outcome?.checkWait && <p className="rr-now-wait" data-field="progress.outcome.checkWait">
+      <strong>{shortTag(outcome.checkWait.tag) ?? 'The newest version'} is not checked yet</strong>
+      {outcome.checkWait.publishedAt && <span> · published {clock(outcome.checkWait.publishedAt)}</span>}
+      {outcome.checkWait.reason && <span> · {outcome.checkWait.reason}{outcome.checkWait.since && ` (since ${clock(outcome.checkWait.since)})`}</span>}
+    </p>}
     {outcome?.firstFailingLine && <><p className="rr-muted">First failing line{outcome.stage ? ` (${outcome.stage} stage)` : ''}</p><pre className="rr-output" data-field="progress.outcome.firstFailingLine">{outcome.firstFailingLine}</pre></>}
     {disputes.length > 0 && <><h3>Check disputes</h3><ol className="rr-contract" data-field="progress.outcome.disputes">{disputes.map((d, i) =>
       <li key={d.id ?? i} data-field={`progress.outcome.disputes.${i}`}>

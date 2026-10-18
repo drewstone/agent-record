@@ -578,6 +578,11 @@ export const runProgressSchema = z
         tag: z.string().nullable(),
         lastStreamAt: time.nullable(),
         minutesSinceLastStream: z.number().nullable(),
+        /**
+         * A live run's newest published tag that no check has read, and why the keeper holds its check (discovery-lab
+         * `runner/run-progress.mjs` outcomeOf); null when it has a check or nothing holds it.
+         */
+        checkWait: z.object({ tag: z.string().nullable(), publishedAt: time.nullable(), since: time.nullable(), reason: z.string().nullable() }).catchall(z.unknown()).nullable().optional(),
         /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
         disputes: z
           .array(
