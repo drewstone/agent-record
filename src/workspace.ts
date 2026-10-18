@@ -578,6 +578,22 @@ export const runProgressSchema = z
         tag: z.string().nullable(),
         lastStreamAt: time.nullable(),
         minutesSinceLastStream: z.number().nullable(),
+        /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
+        disputes: z
+          .array(
+            z
+              .object({
+                id: z.string().nullable(),
+                at: time.nullable(),
+                line: z.string().nullable(),
+                state: z.enum(['open', 'operator', 'upheld', 'rejected']).nullable(),
+                ruledAt: time.nullable(),
+                by: z.enum(['referee', 'operator']).nullable(),
+                attempts: z.number().int().nonnegative().nullable(),
+              })
+              .catchall(z.unknown()),
+          )
+          .optional(),
       })
       .catchall(z.unknown())
       .nullable()
