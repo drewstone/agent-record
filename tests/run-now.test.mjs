@@ -27,6 +27,19 @@ test('the run page opens with the outcome, the score curve and each contract lin
   assert.match(words, /workloads\/beta\.txt must hold the single word betaSent 01:53 UTC on rc2 to the rootAcknowledged: root deliveredFixed in a6f78d9e \(rc3\): its public stages passed and the tag was published at 01:55 UTC/)
 })
 
+test('each check dispute shows under the outcome with its line and its ruling', () => {
+  const disputes = [
+    { id: '0a1b2c3d4e5f', at: '2026-10-18T01:52:00.000Z', line: 'NOT SOLVED: alpha.txt must be at most 3 bytes', state: 'upheld', ruledAt: '2026-10-18T02:10:00.000Z', by: 'referee', attempts: 1 },
+    { id: '6a7b8c9d0e1f', at: '2026-10-18T02:20:00.000Z', line: 'NOT SOLVED: beta.txt must be empty', state: 'operator', ruledAt: null, by: null, attempts: 2 },
+    { id: '1f2e3d4c5b6a', at: '2026-10-18T02:30:00.000Z', line: 'NOT SOLVED: gamma.txt', state: 'open', ruledAt: null, by: null, attempts: 1 },
+  ]
+  const words = text(page({ ...passed, disputes }))
+  assert.match(words, /Check disputesNOT SOLVED: alpha\.txt must be at most 3 bytesDisputed 01:52 UTC as 0a1b2c3d4e5fUpheld by the referee at 02:10 UTC: the check is amended for this run/)
+  assert.match(words, /beta\.txt must be emptyDisputed 02:20 UTC as 6a7b8c9d0e1fAwaiting an operator ruling: the referee could not decide/)
+  assert.match(words, /Open: the referee outside the run is ruling \(1 attempt so far\)/)
+  assert.doesNotMatch(text(page(passed)), /Check disputes/)
+})
+
 test('a failing run shows its first failing line with its stage, and a page without progress still shows the Lab lines', () => {
   const failing = { ...passed, solved: false, checkedAt: '2026-10-18T01:51:33.804Z', tag: 'test-contract-loop-20261018c/rc1', stage: 'contract',
     firstFailingLine: 'NOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)' }

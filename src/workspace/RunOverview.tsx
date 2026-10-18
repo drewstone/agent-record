@@ -28,6 +28,17 @@ const shortAgent = (id: string | null, runId: string) => id === null ? 'agent' :
 const scoreText = (point: ScorePoint) => point.solved ? 'every stage passed' : !point.score ? 'no score' : [`stage ${point.score.reached} of ${point.score.of}${point.score.stage && !point.score.hidden ? ` (${point.score.stage})` : ''}`, ...(point.score.workloads ? [`public workloads ${point.score.workloads.passed}/${point.score.workloads.total}`] : [])].join(', ')
 const RESOLVED: Record<string, string> = { passed: 'the check passed', released: 'its public stages passed and the tag was published', moved: 'a later stage failed instead' }
 
+type Dispute = NonNullable<Outcome['disputes']>[number]
+
+/** A dispute's state as the Lab recorded it: open with the referee's attempts, awaiting the operator, or ruled. */
+function disputeState(d: Dispute) {
+  if (d.state === 'open') return `Open: the referee outside the run is ruling${d.attempts ? ` (${d.attempts} attempt${d.attempts === 1 ? '' : 's'} so far)` : ''}`
+  if (d.state === 'operator') return 'Awaiting an operator ruling: the referee could not decide'
+  if (d.state === 'upheld') return `Upheld by the ${d.by ?? 'referee'}${d.ruledAt ? ` at ${clock(d.ruledAt)}` : ''}: the check is amended for this run`
+  if (d.state === 'rejected') return `Rejected by the ${d.by ?? 'referee'}${d.ruledAt ? ` at ${clock(d.ruledAt)}` : ''}: the line stands`
+  return 'State not recorded'
+}
+
 function contractState(d: ContractDelivery) {
   if (d.resolvedAt === null) return d.lastFailingAt === null ? 'not checked again yet' : `still failing at ${clock(d.lastFailingAt)}`
   return `${RESOLVED[d.resolution ?? ''] ?? 'resolved'} at ${clock(d.resolvedAt)}`
@@ -41,6 +52,7 @@ function contractState(d: ContractDelivery) {
 function RunNow({ receipt: r, outcome }: { receipt: RunReceipt; outcome: Outcome | null }) {
   const scores = (r.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
   const contract = r.contract ?? []
+  const disputes = outcome?.disputes ?? []
   if (!outcome && scores.length === 0 && contract.length === 0) return null
   const times = scores.map((point) => Date.parse(point.at))
   const [first, last] = [Math.min(...times), Math.max(...times)]
@@ -58,6 +70,12 @@ function RunNow({ receipt: r, outcome }: { receipt: RunReceipt; outcome: Outcome
       {outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
     </p>}
     {outcome?.firstFailingLine && <><p className="rr-muted">First failing line{outcome.stage ? ` (${outcome.stage} stage)` : ''}</p><pre className="rr-output" data-field="progress.outcome.firstFailingLine">{outcome.firstFailingLine}</pre></>}
+    {disputes.length > 0 && <><h3>Check disputes</h3><ol className="rr-contract" data-field="progress.outcome.disputes">{disputes.map((d, i) =>
+      <li key={d.id ?? i} data-field={`progress.outcome.disputes.${i}`}>
+        <code className="rr-contract-line">{d.line ?? '?'}</code>
+        <span>Disputed {d.at ? clock(d.at) : 'at an unrecorded time'}{d.id && <> as <code>{d.id}</code></>}</span>
+        <span data-field={`progress.outcome.disputes.${i}.state`}>{disputeState(d)}</span>
+      </li>)}</ol></>}
     {figure && <div className="rr-chart" data-field="system.play.scores"><FigureView figure={figure} /></div>}
     {scores.length > 0 && <p className="rr-muted rr-now-scores">{scores.map((point, i) => <span key={`${point.at}-${i}`}>{i > 0 && ' → '}<code>{shortTag(point.tag) ?? point.commit?.slice(0, 8) ?? '?'}</code> {point.solved ? '1' : point.progress} ({scoreText(point)})</span>)}</p>}
     {contract.length > 0 && <><h3>Contract lines sent</h3><ol className="rr-contract" data-field="contract">{contract.map((d, i) => {
