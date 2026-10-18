@@ -21,6 +21,17 @@ const behaviorExpectationsSchema = z.object({
     }).catchall(z.unknown())),
   }).catchall(z.unknown())),
 }).catchall(z.unknown())
+const scorePointSchema = z.object({
+  at: z.string(), tag: nullableText, commit: nullableText, solved: z.boolean(), progress: nullableNumber.optional(), gate: z.string().optional(), settle: z.boolean().optional(),
+  score: z.object({ stage: nullableText.optional(), reached: z.number(), of: z.number(), hidden: z.boolean().optional(), workloads: z.object({ passed: z.number(), total: z.number() }).optional() }).catchall(z.unknown()).optional(),
+}).catchall(z.unknown())
+const contractDeliverySchema = z.object({
+  at: z.string(), line: z.string(), tag: nullableText, commit: nullableText, targets: z.array(z.string()), resolvedAt: nullableText, resolution: nullableText,
+  resolvedOn: nullableText, lastFailingAt: nullableText, fixCommit: nullableText.optional(),
+  acknowledgements: z.array(z.object({ worker: nullableText, effect: z.string(), at: nullableText }).catchall(z.unknown())).optional(),
+}).catchall(z.unknown())
+export type ScorePoint = z.infer<typeof scorePointSchema>
+export type ContractDelivery = z.infer<typeof contractDeliverySchema>
 export const runReceiptSchema = z.object({
   schema: z.literal('discovery-lab.run-receipt'), runId: z.string(), tag: z.string(), title: z.string(), brief: nullableText,
   outcome: z.object({ status: z.enum(['running', 'passed', 'not-passed', 'unmeasured', 'cancelled']), sentence: z.string(), at: nullableText, reason: nullableText, class: nullableText }),
@@ -37,7 +48,11 @@ export const runReceiptSchema = z.object({
   sources: z.record(z.string(), nullableText),
   cost: z.object({ billedUsd: z.object({ total: z.object({ usd: nullableNumber }).catchall(z.unknown()) }).catchall(z.unknown()) }).catchall(z.unknown()),
   scores: z.object({ checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) }).catchall(z.unknown()).nullable(),
-  system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+  system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional(),
+    /** The play check's dense score per version (discovery-lab runner/scorecard.mjs): 0 at the first stage to 1 for a pass. */
+    play: z.object({ scores: z.array(scorePointSchema).optional() }).catchall(z.unknown()).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+  /** Each contract line sent to the fleet (discovery-lab runner/play-check.mjs contractDeliveries), its acknowledgements and the fix. */
+  contract: z.array(contractDeliverySchema).optional(),
 }).catchall(z.unknown())
 export type RunReceipt = z.infer<typeof runReceiptSchema>
 export const hoursText = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)} h`

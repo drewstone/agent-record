@@ -565,6 +565,23 @@ export const runProgressSchema = z
     ),
     /** When each record the document reads last changed. */
     sources: z.record(z.string(), time.nullable()).optional(),
+    /**
+     * The run's outcome first (discovery-lab `runner/run-progress.mjs` outcomeOf): whether the play's check is solved,
+     * the first line its latest failing check printed and when, and the minutes since any agent's stream last moved.
+     */
+    outcome: z
+      .object({
+        solved: z.boolean().nullable(),
+        checkedAt: time.nullable(),
+        firstFailingLine: z.string().nullable(),
+        stage: z.string().nullable(),
+        tag: z.string().nullable(),
+        lastStreamAt: time.nullable(),
+        minutesSinceLastStream: z.number().nullable(),
+      })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
   })
   .catchall(z.unknown())
 

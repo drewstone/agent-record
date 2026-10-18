@@ -5,9 +5,9 @@ import remarkGfm from 'remark-gfm'
 import { FigureView, Meter } from '@tangle-network/charts/react'
 import { timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
-import type { RunDocument } from '../workspace.js'
+import type { RunDocument, RunProgress } from '../workspace.js'
 import type { NodeStats } from './RunTable.js'
-import type { RunReceipt } from './run-receipt.js'
+import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
@@ -17,7 +17,59 @@ const recorded = (value: unknown) => value !== null && value !== undefined && va
 export function RunOverview({ api, doc, open, print = false }: { api: string; doc: RunDocument; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
   const r = doc.receipt
   if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p></section>
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} />
+  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} />
+}
+
+type Outcome = NonNullable<RunProgress['outcome']>
+const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
+const clock = (at: string) => `${at.slice(11, 16)} UTC`
+const shortAgent = (id: string | null, runId: string) => id === null ? 'agent' : id === runId ? 'root' : id.startsWith(`${runId}:`) ? id.slice(runId.length + 1) : id
+/** A score in words, as the Lab's receipt prints it (discovery-lab runner/play-check.mjs scoreText). */
+const scoreText = (point: ScorePoint) => point.solved ? 'every stage passed' : !point.score ? 'no score' : [`stage ${point.score.reached} of ${point.score.of}${point.score.stage && !point.score.hidden ? ` (${point.score.stage})` : ''}`, ...(point.score.workloads ? [`public workloads ${point.score.workloads.passed}/${point.score.workloads.total}`] : [])].join(', ')
+const RESOLVED: Record<string, string> = { passed: 'the check passed', released: 'its public stages passed and the tag was published', moved: 'a later stage failed instead' }
+
+function contractState(d: ContractDelivery) {
+  if (d.resolvedAt === null) return d.lastFailingAt === null ? 'not checked again yet' : `still failing at ${clock(d.lastFailingAt)}`
+  return `${RESOLVED[d.resolution ?? ''] ?? 'resolved'} at ${clock(d.resolvedAt)}`
+}
+
+/**
+ * What the run is doing now, before anything else: the outcome its progress document states first (the verdict and the
+ * first failing line), the play check's dense score over versions, and each contract line sent to the fleet with its
+ * acknowledgements and the commit that fixed it. Every value is the Lab's; this only lays them out.
+ */
+function RunNow({ receipt: r, outcome }: { receipt: RunReceipt; outcome: Outcome | null }) {
+  const scores = (r.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
+  const contract = r.contract ?? []
+  if (!outcome && scores.length === 0 && contract.length === 0) return null
+  const times = scores.map((point) => Date.parse(point.at))
+  const [first, last] = [Math.min(...times), Math.max(...times)]
+  const figure = scores.length === 0 ? null : timeSeries([{ id: 'score', label: 'Stage score', points: scores.map((point) => ({ x: Date.parse(point.at), y: point.solved ? 1 : point.progress! })) }], {
+    x: { label: 'UTC', domain: first === last ? [first - 60_000, last + 60_000] : [first, last] }, y: { label: 'Stage score', unit: 'share of stages', domain: [0, 1] },
+    formatX: (at) => new Date(at).toISOString().slice(11, 16), formatY: (value) => value.toFixed(2),
+    marks: contract.map((d) => ({ at: Date.parse(d.at), label: `line sent on ${shortTag(d.tag) ?? '?'}`, kind: 'event' as const })),
+  })
+  const verdict = outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : 'No check verdict yet'
+  return <section className="rr-now" aria-labelledby="rr-now-title" data-section="now">
+    <h2 id="rr-now-title">Now</h2>
+    {outcome && <p className={`rr-now-verdict rr-now-${outcome.solved === true ? 'passed' : outcome.solved === false ? 'failing' : 'unknown'}`} data-field="progress.outcome.solved">
+      <strong>{verdict}</strong>
+      {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
+      {outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
+    </p>}
+    {outcome?.firstFailingLine && <><p className="rr-muted">First failing line{outcome.stage ? ` (${outcome.stage} stage)` : ''}</p><pre className="rr-output" data-field="progress.outcome.firstFailingLine">{outcome.firstFailingLine}</pre></>}
+    {figure && <div className="rr-chart" data-field="system.play.scores"><FigureView figure={figure} /></div>}
+    {scores.length > 0 && <p className="rr-muted rr-now-scores">{scores.map((point, i) => <span key={`${point.at}-${i}`}>{i > 0 && ' → '}<code>{shortTag(point.tag) ?? point.commit?.slice(0, 8) ?? '?'}</code> {point.solved ? '1' : point.progress} ({scoreText(point)})</span>)}</p>}
+    {contract.length > 0 && <><h3>Contract lines sent</h3><ol className="rr-contract" data-field="contract">{contract.map((d, i) => {
+      const acks = d.acknowledgements ?? []
+      return <li key={`${d.at}-${i}`} data-field={`contract.${i}`}>
+        <code className="rr-contract-line">{d.line}</code>
+        <span>Sent {clock(d.at)} on <code>{shortTag(d.tag) ?? d.commit?.slice(0, 8) ?? '?'}</code> to {d.targets.length === 1 ? 'the root' : `${d.targets.length} agents`}</span>
+        <span data-field={`contract.${i}.acknowledgements`}>Acknowledged: {acks.length === 0 ? 'none recorded' : acks.map((ack) => `${shortAgent(ack.worker, r.runId)} ${ack.effect}`).join(', ')}</span>
+        <span data-field={`contract.${i}.fixCommit`}>{d.fixCommit ? <>Fixed in <code>{d.fixCommit.slice(0, 8)}</code>{d.resolvedOn && shortTag(d.resolvedOn) !== d.fixCommit ? <> (<code>{shortTag(d.resolvedOn)}</code>)</> : null}: </> : null}{contractState(d)}</span>
+      </li>
+    })}</ol></>}
+  </section>
 }
 
 function Field({ path, value, format = String, suffix = '', children }: { path: string; value: string | number | null | undefined; format?: (value: never) => string; suffix?: string; children?: ReactNode }) {
@@ -68,7 +120,7 @@ function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['
   </section>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -104,6 +156,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       <p className="rr-summary">{hasRelease && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(r.cost.billedUsd.total.usd) && <span><Field path="cost.billedUsd.total.usd" value={r.cost.billedUsd.total.usd} format={money} /> billed</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
       {behavior && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
     </header>
+    <RunNow receipt={r} outcome={outcome} />
     <div className="rr-columns">
       <div className="rr-evidence">
         {r.files.length > 0 ? <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>)}</ul></section> : !hasRelease && <p className="rr-muted">No release recorded yet.</p>}

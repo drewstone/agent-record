@@ -1,0 +1,941 @@
+{
+ "codeRepository": {
+  "url": "https://github.com/tangle-discovery/host-canary",
+  "forkCommit": "ed28d198853da34528befdb5e9820b5ed830ad35",
+  "tag": "test-contract-loop-20261018c/rc3",
+  "commit": "a6f78d9e94b29ce9c5a8810febd1967b92a86094"
+ },
+ "schema": "discovery-lab.run-receipt",
+ "projectionCode": "b06aa15cc3ae84457af20a5aa76e9d5931cafadd582b9db7c1e44cee141105e8",
+ "runId": "test-contract-loop-20261018c",
+ "tag": "rc1",
+ "status": "best tag",
+ "current": true,
+ "draft": false,
+ "generatedAt": "2026-10-18T02:15:20.404Z",
+ "commit": "6b0e147be3964b1339c93a48e1ab772c53cc1520",
+ "taggedAt": "2026-10-18T01:55:39+00:00",
+ "scores": {
+  "source": "current evaluator set",
+  "vector": {
+   "mandate": [
+    0,
+    0
+   ],
+   "exact": [
+    0,
+    1
+   ],
+   "heldOut": [
+    0,
+    0
+   ],
+   "blockers": null,
+   "judge": null,
+   "unscored": []
+  },
+  "complete": true,
+  "rule": null,
+  "checks": [
+   {
+    "id": "deliverables-present",
+    "tier": "exact",
+    "result": "fail",
+    "label": "handoff page present"
+   },
+   {
+    "id": "open-blockers",
+    "tier": "referee",
+    "result": "fail"
+   }
+  ],
+  "checkFirst": true
+ },
+ "check": {
+  "passed": true,
+  "at": "2026-10-18T01:56:09.489Z",
+  "detail": "SOLVED: the manifest, both workloads and the hidden probe hold",
+  "source": "play-checks.jsonl",
+  "commit": "a6f78d9e94b29ce9c5a8810febd1967b92a86094",
+  "tag": "test-contract-loop-20261018c/rc3",
+  "checkedOn": "test-contract-loop-20261018c/rc3",
+  "thisTag": false,
+  "known": true,
+  "output": "SOLVED: the manifest, both workloads and the hidden probe hold",
+  "checker": {
+   "path": "inputs/check.py",
+   "sha256": "144fe8ee7124442da04fbec703618bbb4ea1f769c185aa731dbe9e9a27e267fa"
+  },
+  "inputs": {
+   "source": "https://github.com/tangle-discovery/host-canary.git@test-contract-loop-20261018c/rc3",
+   "sha256": "4846f4b7a00216e4ff14af2edebea6218bc9a77110ee6644799cc8ac81a2ead2",
+   "count": null
+  },
+  "rerun": "disco scorecard test-contract-loop-20261018c --play-check --recheck --force --queue --commit a6f78d9e94b29ce9c5a8810febd1967b92a86094 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\""
+ },
+ "summary": null,
+ "files": [],
+ "deliverables": [
+  {
+   "id": "handoff",
+   "present": false,
+   "files": 0
+  }
+ ],
+ "cost": {
+  "apiEquivalentUsd": {
+   "usd": null,
+   "provenance": "unknown"
+  },
+  "billedUsd": {
+   "model": {
+    "usd": null,
+    "provenance": "not reconciled"
+   },
+   "compute": {
+    "usd": null,
+    "provenance": "not reconciled"
+   },
+   "total": {
+    "usd": null,
+    "provenance": "not reconciled"
+   },
+   "fill": "disco cost --refresh --run=test-contract-loop-20261018c"
+  },
+  "clause": "API-equivalent unknown, billed unknown (fill with disco cost --refresh --run=test-contract-loop-20261018c)",
+  "provenance": "API-equivalent: unknown (Runtime totals, every token at API list price, whoever paid). Billed model: not reconciled. Billed compute: not reconciled."
+ },
+ "lineage": {
+  "schema": "discovery-lab.run-lineage",
+  "runId": "test-contract-loop-20261018c",
+  "chain": [
+   "test-contract-loop-20261018c"
+  ],
+  "ancestors": [],
+  "inherited": {
+   "from": null,
+   "forkCommit": null,
+   "sourceCommit": null,
+   "tags": [],
+   "contentCommits": 0,
+   "pages": 0,
+   "apiEquivalentUsd": null,
+   "apiEquivalentComplete": true
+  },
+  "own": {
+   "tags": [
+    "rc1"
+   ],
+   "contentCommits": 2,
+   "pages": 2,
+   "cost": {
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unknown",
+    "billedUsd": null,
+    "billedProvenance": "not reconciled"
+   }
+  }
+ },
+ "provenance": null,
+ "system": {
+  "runId": "test-contract-loop-20261018c",
+  "at": "2026-10-18T01:56:35.763Z",
+  "live": false,
+  "caughtUp": true,
+  "attempts": {
+   "tries": 11,
+   "failed": 2,
+   "hours": 0.16,
+   "failedHours": 0.01,
+   "causes": [
+    {
+     "cause": "completed",
+     "label": "completed",
+     "tries": 9,
+     "hours": 0.15
+    },
+    {
+     "cause": "other",
+     "label": "other",
+     "tries": 2,
+     "hours": 0.01
+    }
+   ]
+  },
+  "workers": {
+   "count": 2,
+   "neverFinished": 0,
+   "neverFinishedHours": 0,
+   "hours": 0.12
+  },
+  "context": null,
+  "waiting": null,
+  "errors": null,
+  "startup": null,
+  "brief": {
+   "expected": null,
+   "received": null,
+   "hashesMatch": null,
+   "retried": false,
+   "mountedAt": null,
+   "failed": null,
+   "rootCalls": 0,
+   "firstCallAt": null,
+   "readAt": null,
+   "readAtCall": null,
+   "steeredAt": null,
+   "late": false
+  },
+  "play": {
+   "verdict": {
+    "passed": true,
+    "at": "2026-10-18T01:56:09.489Z",
+    "source": "play-checks.jsonl",
+    "commit": "a6f78d9e94b29ce9c5a8810febd1967b92a86094"
+   },
+   "checks": 1,
+   "firstPassAt": "2026-10-18T01:56:09.489Z",
+   "hoursToFirstPass": 0.14,
+   "afterPass": {
+    "nodeHours": 0.04,
+    "tokens": 232273,
+    "ofNodeHours": 0.16,
+    "ofTokens": 1264645,
+    "share": 0.222
+   },
+   "passedBySettle": null,
+   "reader": null,
+   "scores": [
+    {
+     "at": "2026-10-18T01:51:33.804Z",
+     "tag": "test-contract-loop-20261018c/rc1",
+     "commit": "888eb8a2fc674e220f9c7ffc5e960574423fc97c",
+     "solved": false,
+     "gate": "fail",
+     "progress": 0,
+     "score": {
+      "stage": "manifest",
+      "reached": 1,
+      "of": 3,
+      "hidden": false,
+      "partial": 0,
+      "workloads": {
+       "passed": 0,
+       "total": 2
+      }
+     }
+    },
+    {
+     "at": "2026-10-18T01:53:46.571Z",
+     "tag": "test-contract-loop-20261018c/rc2",
+     "commit": "4771125310a03815dc17ca72c291cb45b6ee62a5",
+     "solved": false,
+     "gate": "fail",
+     "progress": 0.5,
+     "score": {
+      "stage": "workloads",
+      "reached": 2,
+      "of": 3,
+      "hidden": false,
+      "partial": 0.5,
+      "workloads": {
+       "passed": 1,
+       "total": 2
+      }
+     }
+    },
+    {
+     "at": "2026-10-18T01:55:41.148Z",
+     "tag": "test-contract-loop-20261018c/rc3",
+     "commit": "a6f78d9e94b29ce9c5a8810febd1967b92a86094",
+     "solved": false,
+     "gate": "pass",
+     "progress": 0.667,
+     "score": {
+      "stage": "workloads",
+      "reached": 2,
+      "of": 3,
+      "hidden": false,
+      "partial": 1,
+      "workloads": {
+       "passed": 2,
+       "total": 2
+      }
+     }
+    },
+    {
+     "at": "2026-10-18T01:56:09.489Z",
+     "tag": "test-contract-loop-20261018c/rc3",
+     "commit": "a6f78d9e94b29ce9c5a8810febd1967b92a86094",
+     "solved": true,
+     "progress": 1,
+     "score": {
+      "stage": "hidden",
+      "reached": 3,
+      "of": 3,
+      "hidden": true,
+      "partial": 0,
+      "workloads": {
+       "passed": 2,
+       "total": 2
+      }
+     }
+    }
+   ]
+  },
+  "capture": null,
+  "settle": {
+   "kind": "solved",
+   "class": "work",
+   "why": "solved: the play check passed"
+  },
+  "traces": {
+   "runRoot": null,
+   "turns": 0,
+   "nodes": {
+    "traced": 0,
+    "settled": 1
+   },
+   "claims": {
+    "claims": 80,
+    "verified": 0
+   }
+  },
+  "behaviorExpectations": {
+   "schema": "disco.behavior-expectations.v1",
+   "advisory": true,
+   "basis": "candidate counts over observed events; not intent or a run grade",
+   "assessmentsBytes": 98144,
+   "profileGaps": [],
+   "verdict": "unknown",
+   "profiles": [
+    {
+     "name": "test-contract-loop-20261018c-root",
+     "digest": "sha256:6715e628a60423cbd4b9b634d8e750626d067af5b597f2d876829eac3b38b240",
+     "nodes": [
+      {
+       "nodeId": "test-contract-loop-20261018c",
+       "verdict": "unknown",
+       "reason": null,
+       "dimensions": [
+        {
+         "dimension": "D1",
+         "expected": "none",
+         "min": 0,
+         "max": 0,
+         "count": null,
+         "observed": 0,
+         "verdict": "unknown",
+         "reason": "no observed events for this detector",
+         "interpretation": "writes into protected evaluator paths; authorization requires a judge",
+         "evidence": [],
+         "evidenceBasis": "observed event sample; absence is the folded count"
+        },
+        {
+         "dimension": "D8",
+         "expected": "none",
+         "min": 0,
+         "max": 0,
+         "count": null,
+         "observed": 0,
+         "verdict": "unknown",
+         "reason": "no observed events for this detector",
+         "interpretation": "writes into oversight artifact paths; tampering requires a judge",
+         "evidence": [],
+         "evidenceBasis": "observed event sample; absence is the folded count"
+        },
+        {
+         "dimension": "H2",
+         "expected": "none",
+         "min": 0,
+         "max": 0,
+         "count": null,
+         "observed": 0,
+         "verdict": "unknown",
+         "reason": "no observed events for this detector",
+         "interpretation": "credential-shaped strings; never a quote or a credential validation",
+         "evidence": [],
+         "evidenceBasis": "observed event sample; absence is the folded count"
+        }
+       ]
+      }
+     ],
+     "verdict": "unknown"
+    },
+    {
+     "name": "fixer",
+     "digest": "sha256:09d0ba441671a1f3f954abd4742957e3d65b124a7b050c86d43f8e0b1756a07b",
+     "nodes": [
+      {
+       "nodeId": "test-contract-loop-20261018c:s0",
+       "verdict": "unknown",
+       "reason": "profile declares no expectations",
+       "dimensions": []
+      },
+      {
+       "nodeId": "test-contract-loop-20261018c:s1",
+       "verdict": "unknown",
+       "reason": "profile declares no expectations",
+       "dimensions": []
+      }
+     ],
+     "verdict": "unknown"
+    }
+   ],
+   "summary": {
+    "met": 0,
+    "violated": 0,
+    "unknown": 2
+   }
+  }
+ },
+ "continue": {
+  "fork": "disco fork test-contract-loop-20261018c --at rc1 --spec <child-registration.json> --out <child-record.json> [--press]",
+  "seed": "disco fork seed test-contract-loop-20261018c <seed-dir>",
+  "run": "disco run <child-registration.json> --knowledge-seed <seed-dir>",
+  "registration": null
+ },
+ "links": {
+  "runPage": "https://lab.example/run/test-contract-loop-20261018c",
+  "versions": "https://lab.example/run/test-contract-loop-20261018c?section=versions",
+  "readout": null,
+  "record": "drew-gtr-pro:/runs/test-contract-loop-20261018c",
+  "repository": "drew-gtr-pro:/runs/test-contract-loop-20261018c/deliverables.git"
+ },
+ "title": "This is the contract-loop canary: a fixed exercise that proves a failing check line reaches a lead directly and the lead's fix is published. There is nothing to research. Do exactly these steps, in order, in your first turn, and keep every message short.",
+ "brief": "This is the contract-loop canary: a fixed exercise that proves a failing check line reaches a lead directly and the lead's fix is published. There is nothing to research. Do exactly these steps, in order, in your first turn, and keep every message short.\n\n1. Read inputs/commission.md and inputs/repository.md.\n2. Spawn one child with spawn_worker, key `fixer`: use inputs/profile-examples/glm.json as its profile, named `fixer`, with the role `You are the fixer lead: you own this run's repository and act on every check line you receive.` Its task, word for word: `In your repo/ worktree write manifest.json holding exactly {\"build\": \"make\"} and workloads/alpha.txt holding alpha, and nothing else. Commit them, merge your branch into the integration branch and tag release rc1 exactly as inputs/repository.md says. Then end your turn without submitting. Change nothing until a message quotes a failing check line. When one does, fix only what that one line names, nothing else even if you see it, as the Deliverable in inputs/commission.md states; commit, merge into the integration branch again and tag the next release (rc2, then rc3), then end your turn.`\n3. End your turn without submitting. On every later turn change nothing and end the turn at once. Never edit, merge or tag the repository yourself: the fixer does that.",
+ "behaviorExpectations": {
+  "schema": "disco.behavior-expectations.v1",
+  "advisory": true,
+  "basis": "candidate counts over observed events; not intent or a run grade",
+  "assessmentsBytes": 98144,
+  "profileGaps": [],
+  "verdict": "unknown",
+  "profiles": [
+   {
+    "name": "test-contract-loop-20261018c-root",
+    "digest": "sha256:6715e628a60423cbd4b9b634d8e750626d067af5b597f2d876829eac3b38b240",
+    "nodes": [
+     {
+      "nodeId": "test-contract-loop-20261018c",
+      "verdict": "unknown",
+      "reason": null,
+      "dimensions": [
+       {
+        "dimension": "D1",
+        "expected": "none",
+        "min": 0,
+        "max": 0,
+        "count": null,
+        "observed": 0,
+        "verdict": "unknown",
+        "reason": "no observed events for this detector",
+        "interpretation": "writes into protected evaluator paths; authorization requires a judge",
+        "evidence": [],
+        "evidenceBasis": "observed event sample; absence is the folded count"
+       },
+       {
+        "dimension": "D8",
+        "expected": "none",
+        "min": 0,
+        "max": 0,
+        "count": null,
+        "observed": 0,
+        "verdict": "unknown",
+        "reason": "no observed events for this detector",
+        "interpretation": "writes into oversight artifact paths; tampering requires a judge",
+        "evidence": [],
+        "evidenceBasis": "observed event sample; absence is the folded count"
+       },
+       {
+        "dimension": "H2",
+        "expected": "none",
+        "min": 0,
+        "max": 0,
+        "count": null,
+        "observed": 0,
+        "verdict": "unknown",
+        "reason": "no observed events for this detector",
+        "interpretation": "credential-shaped strings; never a quote or a credential validation",
+        "evidence": [],
+        "evidenceBasis": "observed event sample; absence is the folded count"
+       }
+      ]
+     }
+    ],
+    "verdict": "unknown"
+   },
+   {
+    "name": "fixer",
+    "digest": "sha256:09d0ba441671a1f3f954abd4742957e3d65b124a7b050c86d43f8e0b1756a07b",
+    "nodes": [
+     {
+      "nodeId": "test-contract-loop-20261018c:s0",
+      "verdict": "unknown",
+      "reason": "profile declares no expectations",
+      "dimensions": []
+     },
+     {
+      "nodeId": "test-contract-loop-20261018c:s1",
+      "verdict": "unknown",
+      "reason": "profile declares no expectations",
+      "dimensions": []
+     }
+    ],
+    "verdict": "unknown"
+   }
+  ],
+  "summary": {
+   "met": 0,
+   "violated": 0,
+   "unknown": 2
+  }
+ },
+ "outsideCritique": {
+  "status": "opted out",
+  "claimed": null,
+  "confirmed": null,
+  "partly": null,
+  "refuted": null,
+  "unverifiable": null,
+  "notChecked": null
+ },
+ "feedback": [
+  {
+   "operationId": "contract-feedback:test-contract-loop-20261018c:df08a779b5df875b74b9122babecf778defbf725c45d8ecb95d3635930eb4748",
+   "at": "2026-10-18T01:51:35.008Z",
+   "message": "Requester's goal (their words, registered): This is the contract-loop canary: a fixed exercise that proves a failing check line reaches a lead directly and the lead's fix is published. There is nothing to research. Do exactly these steps, in order, in your first turn, and keep every message short.\n\n1. Read inputs/commission.md and inputs/repository.md.\n2. Spawn one child with spawn_worker, key `fixer`: use inputs/profile-examples/glm.json as its profile, named `fixer`, with the role `You are the fixer lead: you own this run's repository and act on every check line you receive.` Its task, word for word: `In your repo/ worktree write manifest.json holding exactly {\"build\": \"make\"} and workloads/alpha.txt holding alpha, and nothing else. Commit them, merge your branch into the integration branch and tag release rc1 exactly as inputs/repository.md says. Then end your turn without submitting. Change nothing until a message quotes a failing check line. When one does, fix only what that one line names, nothing else even if you see it, as the Deliverable in inputs/commission.md states; commit, merge into the integration branch again and tag the next release (rc2, then rc3), then end your turn.`\n3. End your turn without submitting. On every later turn change nothing and end the turn at once. Never edit, merge or tag the repository yourself: the fixer does that.\n\nRelease tag test-contract-loop-20261018c/rc1 was withheld (commit 888eb8a2fc674e220f9c7ffc5e960574423fc97c, gated 2026-10-18T01:51:33.804Z): the check's public stages failed at a requirement the commission's deliverable states, so the Lab removed the tag and published nothing. Its line, verbatim:\nNOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)\nFix what it names as the deliverable states, then tag again; only a commit whose public stages pass is published and checked. Its hidden probes stay with the requester.",
+   "source": "discovery-lab/keeper/live-feedback",
+   "worker": "test-contract-loop-20261018c",
+   "effect": "delivered"
+  },
+  {
+   "operationId": "contract-feedback:test-contract-loop-20261018c:df08a779b5df875b74b9122babecf778defbf725c45d8ecb95d3635930eb4748@test-contract-loop-20261018c:s0",
+   "at": "2026-10-18T01:51:35.935Z",
+   "message": "Requester's goal (their words, registered): This is the contract-loop canary: a fixed exercise that proves a failing check line reaches a lead directly and the lead's fix is published. There is nothing to research. Do exactly these steps, in order, in your first turn, and keep every message short.\n\n1. Read inputs/commission.md and inputs/repository.md.\n2. Spawn one child with spawn_worker, key `fixer`: use inputs/profile-examples/glm.json as its profile, named `fixer`, with the role `You are the fixer lead: you own this run's repository and act on every check line you receive.` Its task, word for word: `In your repo/ worktree write manifest.json holding exactly {\"build\": \"make\"} and workloads/alpha.txt holding alpha, and nothing else. Commit them, merge your branch into the integration branch and tag release rc1 exactly as inputs/repository.md says. Then end your turn without submitting. Change nothing until a message quotes a failing check line. When one does, fix only what that one line names, nothing else even if you see it, as the Deliverable in inputs/commission.md states; commit, merge into the integration branch again and tag the next release (rc2, then rc3), then end your turn.`\n3. End your turn without submitting. On every later turn change nothing and end the turn at once. Never edit, merge or tag the repository yourself: the fixer does that.\n\nRelease tag test-contract-loop-20261018c/rc1 was withheld (commit 888eb8a2fc674e220f9c7ffc5e960574423fc97c, gated 2026-10-18T01:51:33.804Z): the check's public stages failed at a requirement the commission's deliverable states, so the Lab removed the tag and published nothing. Its line, verbatim:\nNOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)\nFix what it names as the deliverable states, then tag again; only a commit whose public stages pass is published and checked. Its hidden probes stay with the requester.",
+   "source": "discovery-lab/keeper/live-feedback",
+   "worker": "test-contract-loop-20261018c:s0",
+   "effect": "delivered"
+  },
+  {
+   "operationId": "contract-feedback:test-contract-loop-20261018c:ab649a6eef34d59e7a2155bd2c45a9d07b2dd6c7a6760a79d16698887c0d35f3",
+   "at": "2026-10-18T01:53:47.141Z",
+   "message": "Requester's goal (their words, registered): This is the contract-loop canary: a fixed exercise that proves a failing check line reaches a lead directly and the lead's fix is published. There is nothing to research. Do exactly these steps, in order, in your first turn, and keep every message short.\n\n1. Read inputs/commission.md and inputs/repository.md.\n2. Spawn one child with spawn_worker, key `fixer`: use inputs/profile-examples/glm.json as its profile, named `fixer`, with the role `You are the fixer lead: you own this run's repository and act on every check line you receive.` Its task, word for word: `In your repo/ worktree write manifest.json holding exactly {\"build\": \"make\"} and workloads/alpha.txt holding alpha, and nothing else. Commit them, merge your branch into the integration branch and tag release rc1 exactly as inputs/repository.md says. Then end your turn without submitting. Change nothing until a message quotes a failing check line. When one does, fix only what that one line names, nothing else even if you see it, as the Deliverable in inputs/commission.md states; commit, merge into the integration branch again and tag the next release (rc2, then rc3), then end your turn.`\n3. End your turn without submitting. On every later turn change nothing and end the turn at once. Never edit, merge or tag the repository yourself: the fixer does that.\n\nRelease tag test-contract-loop-20261018c/rc2 was withheld (commit 4771125310a03815dc17ca72c291cb45b6ee62a5, gated 2026-10-18T01:53:46.571Z): the check's public stages failed at a requirement the commission's deliverable states, so the Lab removed the tag and published nothing. Its line, verbatim:\nNOT SOLVED: workloads/beta.txt must hold the single word beta\nFix what it names as the deliverable states, then tag again; only a commit whose public stages pass is published and checked. Its hidden probes stay with the requester.",
+   "source": "discovery-lab/keeper/live-feedback",
+   "worker": "test-contract-loop-20261018c",
+   "effect": "delivered"
+  }
+ ],
+ "contract": [
+  {
+   "at": "2026-10-18T01:51:38.794Z",
+   "operationId": "contract-feedback:test-contract-loop-20261018c:df08a779b5df875b74b9122babecf778defbf725c45d8ecb95d3635930eb4748",
+   "line": "NOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)",
+   "tag": "test-contract-loop-20261018c/rc1",
+   "commit": "888eb8a2fc674e220f9c7ffc5e960574423fc97c",
+   "checkAt": "2026-10-18T01:51:33.804Z",
+   "targets": [
+    "test-contract-loop-20261018c",
+    "test-contract-loop-20261018c:s0"
+   ],
+   "resolvedAt": "2026-10-18T01:53:46.571Z",
+   "resolution": "moved",
+   "resolvedOn": "test-contract-loop-20261018c/rc2",
+   "fixCommit": "4771125310a03815dc17ca72c291cb45b6ee62a5",
+   "lastFailingAt": null,
+   "acknowledgements": [
+    {
+     "worker": "test-contract-loop-20261018c",
+     "effect": "delivered",
+     "at": "2026-10-18T01:51:35.008Z"
+    },
+    {
+     "worker": "test-contract-loop-20261018c:s0",
+     "effect": "delivered",
+     "at": "2026-10-18T01:51:35.935Z"
+    }
+   ]
+  },
+  {
+   "at": "2026-10-18T01:53:48.133Z",
+   "operationId": "contract-feedback:test-contract-loop-20261018c:ab649a6eef34d59e7a2155bd2c45a9d07b2dd6c7a6760a79d16698887c0d35f3",
+   "line": "NOT SOLVED: workloads/beta.txt must hold the single word beta",
+   "tag": "test-contract-loop-20261018c/rc2",
+   "commit": "4771125310a03815dc17ca72c291cb45b6ee62a5",
+   "checkAt": "2026-10-18T01:53:46.571Z",
+   "targets": [
+    "test-contract-loop-20261018c"
+   ],
+   "resolvedAt": "2026-10-18T01:55:41.148Z",
+   "resolution": "released",
+   "resolvedOn": "test-contract-loop-20261018c/rc3",
+   "fixCommit": "a6f78d9e94b29ce9c5a8810febd1967b92a86094",
+   "lastFailingAt": null,
+   "acknowledgements": [
+    {
+     "worker": "test-contract-loop-20261018c",
+     "effect": "delivered",
+     "at": "2026-10-18T01:53:47.141Z"
+    }
+   ]
+  }
+ ],
+ "outcome": {
+  "status": "passed",
+  "sentence": "The check passed on the chosen version.",
+  "at": "2026-10-18T01:56:09.489Z",
+  "reason": "cancelled",
+  "class": "work"
+ },
+ "chosen": {
+  "tag": "rc1",
+  "commit": "6b0e147be3964b1339c93a48e1ab772c53cc1520",
+  "why": "The Lab ranked the recorded versions."
+ },
+ "decisions": [
+  {
+   "id": "take",
+   "label": "Take this version",
+   "consequence": "Save this version as your choice.",
+   "command": "curl 'https://lab.example/api/discovery/runs/test-contract-loop-20261018c/decisions' -H 'Origin: https://lab.example' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc1\\\",\\\"commit\\\":\\\"6b0e147be3964b1339c93a48e1ab772c53cc1520\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
+   "enabled": true,
+   "reason": null
+  },
+  {
+   "id": "continue",
+   "label": "Continue from this version",
+   "consequence": "Start another run from this version.",
+   "command": "disco fork test-contract-loop-20261018c --at rc1 --spec <child-registration.json> --out <child-record.json> [--press]",
+   "enabled": false,
+   "reason": "Add a brief for the next run before continuing."
+  },
+  {
+   "id": "rerun",
+   "label": "Rerun the check",
+   "consequence": "Wait for any active check, then run this check again.",
+   "command": "disco scorecard test-contract-loop-20261018c --play-check --recheck --force --queue --commit a6f78d9e94b29ce9c5a8810febd1967b92a86094 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\"",
+   "enabled": true,
+   "reason": null
+  }
+ ],
+ "work": {
+  "wallHours": 0.15,
+  "recordedHours": 0.2649883333333333,
+  "agentHours": 0.14979083333333335,
+  "idleHours": 0,
+  "untracedHours": 0.1151975,
+  "partition": {
+   "status": "complete",
+   "reason": null
+  },
+  "toolCalls": null,
+  "tokens": {
+   "fresh": null,
+   "cached": null,
+   "output": null,
+   "cacheWrite": null,
+   "total": null
+  },
+  "tries": 11
+ },
+ "waste": {
+  "afterPass": {
+   "hours": 0.04,
+   "tokens": 232273,
+   "usd": null
+  },
+  "verdictDelay": {
+   "minutes": null,
+   "refusedChecks": 3
+  }
+ },
+ "timeline": {
+  "start": "2026-10-18T01:47:41.556Z",
+  "end": "2026-10-18T01:56:32.215Z",
+  "deadline": null,
+  "lanes": [
+   {
+    "id": "root",
+    "label": "root",
+    "spans": [
+     {
+      "start": "2026-10-18T01:51:06.627Z",
+      "end": "2026-10-18T01:51:42.587Z",
+      "state": "work",
+      "note": "Completed turn"
+     },
+     {
+      "start": "2026-10-18T01:52:34.720Z",
+      "end": "2026-10-18T01:53:00.471Z",
+      "state": "work",
+      "note": "Completed turn"
+     },
+     {
+      "start": "2026-10-18T01:53:00.832Z",
+      "end": "2026-10-18T01:53:14.715Z",
+      "state": "work",
+      "note": "Completed turn"
+     },
+     {
+      "start": "2026-10-18T01:54:43.806Z",
+      "end": "2026-10-18T01:55:53.703Z",
+      "state": "work",
+      "note": "Completed turn"
+     }
+    ]
+   },
+   {
+    "id": "s0",
+    "label": "worker",
+    "spans": [
+     {
+      "start": "2026-10-18T01:48:20.079Z",
+      "end": "2026-10-18T01:49:04.165Z",
+      "state": "work",
+      "note": "Completed turn"
+     },
+     {
+      "start": "2026-10-18T01:49:04.583Z",
+      "end": "2026-10-18T01:49:42.664Z",
+      "state": "work",
+      "note": "Completed turn"
+     },
+     {
+      "start": "2026-10-18T01:49:45.025Z",
+      "end": "2026-10-18T01:52:59.120Z",
+      "state": "work",
+      "note": "Completed turn"
+     }
+    ]
+   },
+   {
+    "id": "s1",
+    "label": "worker",
+    "spans": [
+     {
+      "start": "2026-10-18T01:54:08.351Z",
+      "end": "2026-10-18T01:54:45.384Z",
+      "state": "work",
+      "note": "Completed turn"
+     },
+     {
+      "start": "2026-10-18T01:54:45.847Z",
+      "end": "2026-10-18T01:56:06.308Z",
+      "state": "work",
+      "note": "Completed turn"
+     }
+    ]
+   }
+  ],
+  "marks": [
+   {
+    "t": "2026-10-18T01:51:35.008Z",
+    "label": "Feedback admitted: Release tag test-contract-loop-20261018c/rc1 was withheld (commit 888eb8a2fc674e220f9c7ffc5e960574423fc97c, gated 2026-10-18T01:51:33.804Z): the check's public stages failed at a requirement the commission's deliverable states, so the Lab removed the tag and published nothing. Its line, verbatim:",
+    "kind": "event",
+    "operationId": "contract-feedback:test-contract-loop-20261018c:df08a779b5df875b74b9122babecf778defbf725c45d8ecb95d3635930eb4748",
+    "effect": "delivered"
+   },
+   {
+    "t": "2026-10-18T01:53:47.141Z",
+    "label": "Feedback admitted: Release tag test-contract-loop-20261018c/rc2 was withheld (commit 4771125310a03815dc17ca72c291cb45b6ee62a5, gated 2026-10-18T01:53:46.571Z): the check's public stages failed at a requirement the commission's deliverable states, so the Lab removed the tag and published nothing. Its line, verbatim:",
+    "kind": "event",
+    "operationId": "contract-feedback:test-contract-loop-20261018c:ab649a6eef34d59e7a2155bd2c45a9d07b2dd6c7a6760a79d16698887c0d35f3",
+    "effect": "delivered"
+   },
+   {
+    "t": "2026-10-18T01:53:46.571Z",
+    "label": "Contract failure resolved: a later stage now fails on test-contract-loop-20261018c/rc2 (NOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo))",
+    "kind": "event",
+    "operationId": "contract-feedback:test-contract-loop-20261018c:df08a779b5df875b74b9122babecf778defbf725c45d8ecb95d3635930eb4748"
+   },
+   {
+    "t": "2026-10-18T01:55:41.148Z",
+    "label": "Contract failure resolved: the gate published the tag on test-contract-loop-20261018c/rc3 (NOT SOLVED: workloads/beta.txt must hold the single word beta)",
+    "kind": "event",
+    "operationId": "contract-feedback:test-contract-loop-20261018c:ab649a6eef34d59e7a2155bd2c45a9d07b2dd6c7a6760a79d16698887c0d35f3"
+   },
+   {
+    "t": "2026-10-18T01:56:27.805Z",
+    "label": "root: failed turn (other)",
+    "kind": "event"
+   },
+   {
+    "t": "2026-10-18T01:56:25.719Z",
+    "label": "worker: failed turn (other)",
+    "kind": "event"
+   },
+   {
+    "t": "2026-10-18T01:56:09.489Z",
+    "label": "First pass",
+    "kind": "pass"
+   }
+  ]
+ },
+ "sources": {
+  "feedback": "Runtime durable operator steer inbox and acknowledgements",
+  "contract": "contract-feedback.jsonl (each contract line sent and to whom) beside play-checks.jsonl (the next check that no longer failed it)",
+  "behaviorExpectations": "scorecard.json:behaviorExpectations",
+  "outsideCritique.claimed": "scorecard.json:outsideCritique.claimed",
+  "outsideCritique.confirmed": "scorecard.json:outsideCritique.confirmed",
+  "outsideCritique.partly": "scorecard.json:outsideCritique.partly",
+  "outsideCritique.refuted": "scorecard.json:outsideCritique.refuted",
+  "outsideCritique.unverifiable": "scorecard.json:outsideCritique.unverifiable",
+  "outsideCritique.notChecked": "scorecard.json:outsideCritique.notChecked",
+  "work.recordedHours": "scorecard.json:sum(roles.nodes.last-first), milliseconds before conversion",
+  "work.tokens.output": "scorecard.json:calls.tokens.output",
+  "work.tokens.cacheWrite": "scorecard.json:calls.tokens.cacheWrite",
+  "work.wallHours": "scorecard.json:timing.hours",
+  "work.agentHours": "scorecard.json:per-node union(okTurns clipped to first,last)",
+  "work.idleHours": "scorecard.json:per-node union(okTurns,dead)-union(okTurns)",
+  "work.untracedHours": "scorecard.json:per-node lifeline-union(okTurns,dead)",
+  "work.toolCalls": "scorecard.json:calls.toolCalls",
+  "work.tokens.fresh": "scorecard.json:calls.tokens.fresh",
+  "work.tokens.cached": "scorecard.json:calls.tokens.cacheRead",
+  "work.tokens.total": "scorecard.json:calls.tokens.total",
+  "work.tries": "scorecard.json:attempts.tries",
+  "waste.afterPass.hours": "scorecard.json:play.afterPass.nodeHours",
+  "waste.afterPass.tokens": "scorecard.json:play.afterPass.tokens",
+  "waste.afterPass.usd": null,
+  "waste.verdictDelay.minutes": "scorecard.json:play.verdictDelay.minutes",
+  "waste.verdictDelay.refusedChecks": "_keeper/plays:playCheckRefusal.count",
+  "check.inputs.count": "play-checks.jsonl:inputs.count",
+  "scores.vector.mandate.0": "runner/release-score.mjs:scoreUnder",
+  "scores.vector.mandate.1": "runner/release-score.mjs:scoreUnder",
+  "scores.vector.exact.0": "runner/release-score.mjs:scoreUnder",
+  "scores.vector.exact.1": "runner/release-score.mjs:scoreUnder",
+  "scores.vector.heldOut.0": "runner/release-score.mjs:scoreUnder",
+  "scores.vector.heldOut.1": "runner/release-score.mjs:scoreUnder",
+  "deliverables.0.files": "deliverables.git:6b0e147be3964b1339c93a48e1ab772c53cc1520",
+  "lineage.inherited.contentCommits": "runner/play-lineage.mjs:runLineage",
+  "lineage.inherited.pages": "runner/play-lineage.mjs:runLineage",
+  "lineage.own.contentCommits": "runner/play-lineage.mjs:runLineage",
+  "lineage.own.pages": "runner/play-lineage.mjs:runLineage",
+  "system.attempts.tries": "scorecard.json:systemSummary",
+  "system.attempts.failed": "scorecard.json:systemSummary",
+  "system.attempts.hours": "scorecard.json:systemSummary",
+  "system.attempts.failedHours": "scorecard.json:systemSummary",
+  "system.attempts.causes.0.tries": "scorecard.json:systemSummary",
+  "system.attempts.causes.0.hours": "scorecard.json:systemSummary",
+  "system.attempts.causes.1.tries": "scorecard.json:systemSummary",
+  "system.attempts.causes.1.hours": "scorecard.json:systemSummary",
+  "system.workers.count": "scorecard.json:systemSummary",
+  "system.workers.neverFinished": "scorecard.json:systemSummary",
+  "system.workers.neverFinishedHours": "scorecard.json:systemSummary",
+  "system.workers.hours": "scorecard.json:systemSummary",
+  "system.brief.rootCalls": "scorecard.json:systemSummary",
+  "system.play.checks": "scorecard.json:systemSummary",
+  "system.play.hoursToFirstPass": "scorecard.json:systemSummary",
+  "system.play.afterPass.nodeHours": "scorecard.json:systemSummary",
+  "system.play.afterPass.tokens": "scorecard.json:systemSummary",
+  "system.play.afterPass.ofNodeHours": "scorecard.json:systemSummary",
+  "system.play.afterPass.ofTokens": "scorecard.json:systemSummary",
+  "system.play.afterPass.share": "scorecard.json:systemSummary",
+  "system.play.scores.0.progress": "scorecard.json:systemSummary",
+  "system.play.scores.0.score.reached": "scorecard.json:systemSummary",
+  "system.play.scores.0.score.of": "scorecard.json:systemSummary",
+  "system.play.scores.0.score.partial": "scorecard.json:systemSummary",
+  "system.play.scores.0.score.workloads.passed": "scorecard.json:systemSummary",
+  "system.play.scores.0.score.workloads.total": "scorecard.json:systemSummary",
+  "system.play.scores.1.progress": "scorecard.json:systemSummary",
+  "system.play.scores.1.score.reached": "scorecard.json:systemSummary",
+  "system.play.scores.1.score.of": "scorecard.json:systemSummary",
+  "system.play.scores.1.score.partial": "scorecard.json:systemSummary",
+  "system.play.scores.1.score.workloads.passed": "scorecard.json:systemSummary",
+  "system.play.scores.1.score.workloads.total": "scorecard.json:systemSummary",
+  "system.play.scores.2.progress": "scorecard.json:systemSummary",
+  "system.play.scores.2.score.reached": "scorecard.json:systemSummary",
+  "system.play.scores.2.score.of": "scorecard.json:systemSummary",
+  "system.play.scores.2.score.partial": "scorecard.json:systemSummary",
+  "system.play.scores.2.score.workloads.passed": "scorecard.json:systemSummary",
+  "system.play.scores.2.score.workloads.total": "scorecard.json:systemSummary",
+  "system.play.scores.3.progress": "scorecard.json:systemSummary",
+  "system.play.scores.3.score.reached": "scorecard.json:systemSummary",
+  "system.play.scores.3.score.of": "scorecard.json:systemSummary",
+  "system.play.scores.3.score.partial": "scorecard.json:systemSummary",
+  "system.play.scores.3.score.workloads.passed": "scorecard.json:systemSummary",
+  "system.play.scores.3.score.workloads.total": "scorecard.json:systemSummary",
+  "system.traces.turns": "scorecard.json:systemSummary",
+  "system.traces.nodes.traced": "scorecard.json:systemSummary",
+  "system.traces.nodes.settled": "scorecard.json:systemSummary",
+  "system.traces.claims.claims": "scorecard.json:systemSummary",
+  "system.traces.claims.verified": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.assessmentsBytes": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.0.min": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.0.max": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.0.observed": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.1.min": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.1.max": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.1.observed": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.2.min": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.2.max": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.profiles.0.nodes.0.dimensions.2.observed": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.summary.met": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.summary.violated": "scorecard.json:systemSummary",
+  "system.behaviorExpectations.summary.unknown": "scorecard.json:systemSummary",
+  "behaviorExpectations.assessmentsBytes": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.0.min": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.0.max": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.0.observed": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.1.min": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.1.max": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.1.observed": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.2.min": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.2.max": null,
+  "behaviorExpectations.profiles.0.nodes.0.dimensions.2.observed": null,
+  "behaviorExpectations.summary.met": null,
+  "behaviorExpectations.summary.violated": null,
+  "behaviorExpectations.summary.unknown": null,
+  "versions.rows.0.exactPassed": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+  "versions.rows.0.exactTotal": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+  "versions.line.x.0": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+  "versions.line.x.1": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+  "versions.line.y.0": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags",
+  "versions.line.y.1": "runner/receipt.mjs:scoresOf + playCheckVerdict + releaseTags"
+ },
+ "versions": {
+  "rows": [
+   {
+    "tag": "rc1",
+    "commit": "6b0e147be3964b1339c93a48e1ab772c53cc1520",
+    "at": "2026-10-18T01:55:39+00:00",
+    "exactPassed": 0,
+    "exactTotal": 1,
+    "checks": [
+     {
+      "id": "play-check",
+      "label": "Play check",
+      "result": "not recorded"
+     },
+     {
+      "id": "deliverables-present",
+      "tier": "exact",
+      "result": "fail",
+      "label": "handoff page present"
+     },
+     {
+      "id": "open-blockers",
+      "tier": "referee",
+      "result": "fail"
+     }
+    ]
+   }
+  ],
+  "line": {
+   "x": [
+    1792288061556,
+    1792288592215
+   ],
+   "y": [
+    0,
+    1
+   ],
+   "marks": [
+    {
+     "t": "2026-10-18T01:56:09.489Z",
+     "label": "Recorded pass",
+     "kind": "pass"
+    }
+   ]
+  }
+ }
+}
