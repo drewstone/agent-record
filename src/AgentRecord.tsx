@@ -356,7 +356,7 @@ function RecordView({
           />
         </label>
       </div>
-      <details className="activity-replay"><summary>Timeline and replay</summary>
+      <details className="activity-replay" open><summary>Timeline and replay</summary>
       <div className="playback">
         <button
           className="ui-button"
