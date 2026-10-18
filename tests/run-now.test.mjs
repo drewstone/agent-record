@@ -50,3 +50,15 @@ test('a failing run shows its first failing line with its stage, and a page with
   assert.doesNotMatch(bare, /Check passed|Check not passing/)
   assert.match(bare, /Contract lines sent/)
 })
+
+// magnetar-rust-20261018b, 2026-10-18: rc7 passed its pre-tag gate at 07:32Z, the host was stood down at 07:37Z, and the
+// page showed rc6's 07:23Z check for 10 hours with nothing saying the keeper was holding rc7's.
+test('a live run whose newest version waits for its check says which version and why', () => {
+  const failing = { ...passed, solved: false, checkedAt: '2026-10-18T07:23:20.206Z', tag: 'magnetar-rust-20261018b/rc6', stage: 'hidden',
+    firstFailingLine: 'NOT SOLVED: (g) workload sha256: reference RV64I execution failed: not an RV64I instruction: 0x6b855593 at 0x10080' }
+  const checkWait = { tag: 'magnetar-rust-20261018b/rc7', publishedAt: '2026-10-18T07:32:09.588Z', since: '2026-10-18T07:37:45.098Z', reason: 'the host is stood down: GTR memory 102/121 GB used' }
+  const words = text(page({ ...failing, checkWait }))
+  assert.match(words, /Check not passing · checked 07:23 UTC on rc6/)
+  assert.match(words, /rc7 is not checked yet · published 07:32 UTC · the host is stood down: GTR memory 102\/121 GB used \(since 07:37 UTC\)/)
+  assert.doesNotMatch(text(page({ ...failing, checkWait: null })), /not checked yet/)
+})
