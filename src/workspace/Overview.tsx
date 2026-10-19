@@ -51,19 +51,19 @@ function Section({ id, title, tone, aside, children }: { id?: string; title: str
 }
 
 /**
- * What a run found: a play check (its verdict, its line and the best score the checks reached), else its best page.
- * The page's title comes before its text (R12): the title says what the page is, the text is its first lines.
+ * What a run found: a passed play check, else the newest check line and best score of a run whose checks never passed
+ * (`progress`), else its best page. The title comes before the text (R12): the title says what it is, the text its lines.
  */
 function Lead({ lead }: { lead: OverviewLead }) {
   const title = plain(lead.title)
   const text = plain(lead.text)
-  const kind = lead.kind === 'check' ? (lead.solved === false ? 'check' : 'check passed') : lead.kind
-  const words = [title, text && text !== title ? text : '', lead.best ?? ''].filter(Boolean)
-  const shown = words.length ? words : ['No answer recorded']
+  const failing = lead.kind === 'progress' && lead.verdict !== 'solved'
+  const kind = lead.kind === 'check' ? 'check passed' : lead.kind === 'progress' ? 'check' : lead.kind
+  const words = [title, text && text !== title ? text : ''].filter(Boolean)
   return (
-    <span className="ov-lead" title={shown.join(' · ')}>
-      <span className={`ov-lead-kind kind-${lead.kind}${lead.solved === false ? ' is-failing' : ''}`}>{kind}</span>
-      <span className="ov-lead-title">{title && <b>{title}</b>}{title && shown.length > 1 ? ' · ' : ''}{shown.filter((word) => word !== title).join(' · ')}</span>
+    <span className="ov-lead" title={words.join(' · ') || undefined}>
+      <span className={`ov-lead-kind kind-${lead.kind}${failing ? ' is-failing' : ''}`}>{kind}</span>
+      <span className="ov-lead-title">{title && <b>{title}</b>}{title && words.length > 1 ? ' · ' : ''}{words.length ? words.filter((word) => word !== title).join(' · ') : 'No answer recorded'}</span>
     </span>
   )
 }

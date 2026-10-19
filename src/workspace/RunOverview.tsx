@@ -18,7 +18,7 @@ export function RunOverview({ api, doc, open, print = false }: { api: string; do
   const r = doc.receipt
   if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p></section>
   const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} />
+  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run.spend.billing ?? null} />
 }
 
 /**
@@ -197,7 +197,7 @@ function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['
   </section>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing'] }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -210,6 +210,9 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const decisions = r.decisions.map((decision, i) => ({ ...decision, index: i, blocked: decision.id === 'rerun' ? null : unchecked })).filter((decision) =>
     decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) : hasRelease))
   const equivalent = r.cost.apiEquivalentUsd?.usd ?? null
+  // What was billed: the receipt's reconciled total, else the host's reading of a seat-paid host placement ($0 per call).
+  const billed = r.cost.billedUsd.total.usd ?? billing?.billedUsd ?? null
+  const plan = r.cost.plan ?? (billing?.seat ? `${billing.seat} seat` : null)
   const quota = r.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
   const failures = (r.system?.attempts?.causes ?? []).filter((cause) => cause.cause !== 'completed' && cause.tries > 0)
   const workers = r.system?.workers ?? null
@@ -239,7 +242,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
     <header className={`rr-verdict rr-${r.outcome.status}`}>
       <div className="rr-title-row"><h1 data-field="title" title={r.title}>{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
       <p data-field="outcome.sentence">{r.outcome.sentence}</p>
-      <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(r.cost.billedUsd.total.usd) && <span><Field path="cost.billedUsd.total.usd" value={r.cost.billedUsd.total.usd} format={money} /> billed{r.cost.plan && <> ({r.cost.plan})</>}</span>}{quota && <span data-field="system.attempts.causes">{quota.tries} quota hits</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
+      <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{quota && <span data-field="system.attempts.causes">{quota.tries} quota hits</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
       {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
     </header>
     <RunNow receipt={r} outcome={outcome} settled={settled} />

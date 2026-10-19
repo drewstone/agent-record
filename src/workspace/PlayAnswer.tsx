@@ -1,4 +1,4 @@
-import type { PlayDocument, RunSummary } from '../workspace.js'
+import type { PlayDocument, RunCheck, RunSummary } from '../workspace.js'
 import { stateClass, stateLabel, when } from './data.js'
 import { plain } from './FindingsFeed.js'
 
@@ -6,66 +6,55 @@ const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? ru
 const fileName = (path: string) => path.split('/').filter(Boolean).at(-1) ?? path
 const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 
-type CheckScore = { reached?: number; of?: number; stage?: string | null; value?: number | null; workloads?: { passed: number; total: number } | null }
-type CheckLine = { at?: string | null; tag?: string | null; line?: string | null; solved?: boolean | null; verdict?: string | null; score?: CheckScore | null }
-/** The check fields the host carries on a run summary (R2): its progress outcome's latest check, tag gate and score. */
-type RunOutcome = { latestCheck?: CheckLine | null; gate?: CheckLine | null; score?: (CheckScore & { at?: string | null; tag?: string | null }) | null; solvedLabel?: string | null }
+type CheckRow = NonNullable<RunCheck['latest']>
 
-function outcomeOf(run: RunSummary): RunOutcome | null {
-  const progress = run.progress as { outcome?: RunOutcome | null } | null | undefined
-  return progress?.outcome ?? (run.outcome as RunOutcome | null | undefined) ?? null
-}
-
-/** A run's newest check line: its progress outcome's latest check, else the newest line of its recorded play check. */
-function lastCheck(run: RunSummary): { at: string | null; tag: string | null; line: string } | null {
-  const latest = outcomeOf(run)?.latestCheck
-  if (latest?.line) return { at: latest.at ?? null, tag: latest.tag ?? null, line: latest.line }
+/** A run's newest check line: the host's check summary (R2), else the newest line of its recorded play check. */
+function lastCheck(run: RunSummary): { at: string | null; tag: string | null; verdict: string | null; line: string } | null {
+  const latest = run.check?.latest
+  if (latest?.line) return { at: latest.at ?? null, tag: latest.tag ?? null, verdict: latest.verdict ?? null, line: latest.line }
   const check = run.playCheck
   const line = check?.solved ?? [...(check?.lines ?? [])].reverse().find((item) => /SOLVED/.test(item)) ?? check?.lines.at(-1)
-  return check && line ? { at: check.at, tag: null, line } : null
+  return check && line ? { at: check.at, tag: null, verdict: null, line } : null
 }
 
-const scoreWords = (score: CheckScore) => [
-  score.reached != null && score.of != null ? `stage ${score.reached} of ${score.of}${score.stage ? ` (${score.stage})` : ''}` : null,
-  score.workloads ? `workloads ${score.workloads.passed}/${score.workloads.total}` : null,
+const scoreWords = (score: CheckRow['score']) => [
+  score?.workloads?.passed != null && score.workloads.total ? `${score.workloads.passed}/${score.workloads.total} workloads` : null,
+  score?.reached != null && score.of ? `stage ${score.reached} of ${score.of}${score.stage ? ` (${score.stage})` : ''}` : null,
 ].filter(Boolean).join(', ')
 
-/** The best score any run's checks or tag gate reached, by the Lab's dense value (0 at the first stage, 1 for a pass). */
-function bestScore(runs: RunSummary[]) {
-  let best: { run: RunSummary; tag: string | null; at: string | null; score: CheckScore } | null = null
-  for (const run of runs) {
-    const outcome = outcomeOf(run)
-    for (const candidate of [{ ...outcome?.score, tag: outcome?.score?.tag, at: outcome?.score?.at }, { ...outcome?.gate?.score, tag: outcome?.gate?.tag, at: outcome?.gate?.at }, { ...outcome?.latestCheck?.score, tag: outcome?.latestCheck?.tag, at: outcome?.latestCheck?.at }]) {
-      if (typeof candidate.value !== 'number') continue
-      if (!best || candidate.value > (best.score.value ?? -1)) best = { run, tag: candidate.tag ?? null, at: candidate.at ?? null, score: candidate }
-    }
-  }
-  return best
+/** How good a check's result is, as the host ranks it: solved first, then the stage reached, then the workloads passed. */
+const rank = (row: CheckRow) => [row.verdict === 'solved' ? 1 : 0, row.score?.reached ?? 0, row.score?.workloads?.passed ?? 0]
+const better = (a: CheckRow, b: CheckRow) => {
+  const [x, y] = [rank(a), rank(b)]
+  const i = x.findIndex((value, j) => value !== y[j])
+  return i >= 0 && x[i]! > y[i]!
 }
 
 /**
- * The answer of a play no run has won (R2): its newest check line, the best score its checks reached, and each run's
- * last check line, so a reader sees where the play stands against its check, not one fixed sentence.
+ * The answer of a play no run has won (R2): the newest check line of any run with its run's one-sentence check history,
+ * the best score any run's checks reached, and each run's last check line, so a reader sees where the play stands
+ * against its check, not one fixed sentence.
  */
 function NoWinner({ play }: { play: PlayDocument }) {
   const checks = play.runs.map((run) => ({ run, check: lastCheck(run) })).filter((item): item is { run: RunSummary; check: NonNullable<ReturnType<typeof lastCheck>> } => item.check !== null)
   const newest = [...checks].sort((a, b) => String(b.check.at ?? '').localeCompare(String(a.check.at ?? '')))[0] ?? null
-  const best = bestScore(play.runs)
-  const label = newest ? outcomeOf(newest.run)?.solvedLabel : null
+  let best: { run: RunSummary; row: CheckRow } | null = null
+  for (const run of play.runs) if (run.check?.best && (!best || better(run.check.best, best.row))) best = { run, row: run.check.best }
+  const headline = newest?.run.check?.headline ?? null
   return (
     <section className="play-answer is-none" data-play-answer="none" aria-label="Answer">
       <h3>Answer</h3>
       <p className="faint">No run of this play has won yet{checks.length ? '' : ': no run’s play check passed and no root submitted a winner'}.</p>
       {newest && (
         <p className="play-answer-text" data-newest-check={newest.run.id}>
-          {label && <b>{label} · </b>}{newest.check.line}
-          <span className="faint"> · {shortTag(newest.check.tag) ? <>{shortTag(newest.check.tag)} · </> : null}<a className="mono" href={`/run/${encodeURIComponent(newest.run.id)}`}>{shortRun(play.id, newest.run.id)}</a> · {when(newest.check.at)}</span>
+          {headline ?? <>{shortTag(newest.check.tag) && <b>{shortTag(newest.check.tag)} </b>}{newest.check.line}</>}
+          <span className="faint"> · <a className="mono" href={`/run/${encodeURIComponent(newest.run.id)}`}>{shortRun(play.id, newest.run.id)}</a> · {when(newest.check.at)}</span>
         </p>
       )}
-      {best && scoreWords(best.score) && (
+      {best && scoreWords(best.row.score) && (
         <p className="play-answer-run" data-best-score={best.run.id}>
-          <span className="answer-label">Best score</span> {scoreWords(best.score)}
-          <span className="faint"> · {shortTag(best.tag) ? `${shortTag(best.tag)} · ` : ''}{shortRun(play.id, best.run.id)}{best.at ? ` · ${when(best.at)}` : ''}</span>
+          <span className="answer-label">Best score</span> {scoreWords(best.row.score)}
+          <span className="faint"> · {shortTag(best.row.tag) ? `${shortTag(best.row.tag)} · ` : ''}{best.row.verdict?.replace('-', ' ') ?? 'verdict unknown'}{best.row.checker ? ` under checker ${best.row.checker.slice(0, 8)}` : ''} · {shortRun(play.id, best.run.id)}{best.row.at ? ` · ${when(best.row.at)}` : ''}</span>
         </p>
       )}
       {checks.length > 1 && (

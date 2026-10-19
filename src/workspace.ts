@@ -94,6 +94,10 @@ export const spendSchema = z
       )
       .optional(),
     gaps: z.array(gapSchema),
+    /** API-equivalent dollars (every token at API list price, whoever paid; tangle-tools `api_equivalent`); null when unpriced. */
+    apiEquivalentUsd: usd.optional(),
+    /** How a host-placed run was paid: on a subscription seat with no run key or sandbox nothing is billed per call. */
+    billing: z.object({ placement: z.string(), seat: z.string().nullable(), billedUsd: usd, basis: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -135,6 +139,35 @@ export const playCheckSchema = z
     settle: z.object({ kind: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown()).nullable().optional(),
   })
   .catchall(z.unknown())
+
+/** One check or tag-gate row as the host reads it: when, on which tag and commit, under which checker, its verdict and line. */
+const checkRowSchema = z
+  .object({
+    at: time.nullable().optional(),
+    tag: z.string().nullable().optional(),
+    commit: z.string().nullable().optional(),
+    checker: z.string().nullable().optional(),
+    verdict: z.string().nullable().optional(),
+    line: z.string().nullable().optional(),
+    score: z
+      .object({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullable().optional() })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
+  })
+  .catchall(z.unknown())
+const runCheckSchema = z
+  .object({
+    latest: checkRowSchema.nullable(),
+    best: checkRowSchema.nullable(),
+    passes: z.array(z.object({ tag: z.string().nullable(), checker: z.string().nullable(), count: z.number(), firstAt: time, lastAt: time }).catchall(z.unknown())).optional(),
+    gate: checkRowSchema.nullable().optional(),
+    /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
+    gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
+    headline: z.string().nullable().optional(),
+  })
+  .catchall(z.unknown())
+export type RunCheck = z.infer<typeof runCheckSchema>
 
 export const runSummarySchema = z
   .object({
@@ -179,6 +212,18 @@ export const runSummarySchema = z
      * whole SOLVED line or null, and Runtime's own settle. Absent or null when no check passed.
      */
     playCheck: playCheckSchema.nullable().optional(),
+    /**
+     * Every check of the run whatever it reached (tangle-tools `check_summary`): the newest check (`latest`, its verdict
+     * solved, not-solved or unknown, its line and score), the best one, each tag that passed under each checker, the
+     * newest tag gate, and one sentence (`headline`). Absent from a host that does not compose it; null with no check.
+     */
+    check: runCheckSchema.nullable().optional(),
+    /** How a settled run ended under one name (tangle-tools `run_ending`), for example "cancelled after stall"; null while running. */
+    ending: z
+      .object({ name: z.string(), state: z.string().nullable().optional(), at: time.nullable().optional(), reason: z.string().nullable().optional() })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
     /** The best run of a play only: the deliverables its readout names, each with a link to it on the run page. */
     deliverables: z
       .array(z.object({ id: z.string().nullable(), path: z.string(), present: z.boolean().nullable().optional(), href: z.string() }).catchall(z.unknown()))
@@ -418,7 +463,7 @@ export const playDocumentSchema = z
       })
       .catchall(z.unknown())
       .nullable(),
-    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), xLabel: z.string().optional(), yLabel: z.string().optional(), unit: z.string().optional(), groups: z.array(z.object({ id: z.string(), label: z.string(), fullWindow: z.boolean(), panels: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional(), marks: z.array(z.object({ at: z.number(), kind: z.literal('deadline'), label: z.string() })) })) })) }).nullable().optional(),
+    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), groups: z.array(z.object({ id: z.string(), label: z.string(), fullWindow: z.boolean(), panels: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional(), marks: z.array(z.object({ at: z.number(), kind: z.literal('deadline'), label: z.string() })) })) })) }).nullable().optional(),
     /** The latest run's input. */
     input: playInputSchema.nullable(),
     /** Newest first; versions are folded into their run. */
@@ -1513,11 +1558,10 @@ type Bin = { lo: number; hi: number; n: number }
  * its best result or claim page, a page that states its answer first.
  */
 export interface OverviewLead {
-  title: string | null; kind: 'result' | 'claim' | 'check'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string
-  /** A `check` lead of a run that has not won: false (its latest check line leads), true or absent for a passed check. */
-  solved?: boolean | null
-  /** The best score the play's checks reached, in words (for example "best 15/15 under a3cf95c7"). */
-  best?: string | null
+  /** `progress`: no check passed, so the run's newest check line and its best score lead (tangle-tools `progress_lead`). */
+  title: string | null; kind: 'result' | 'claim' | 'check' | 'progress'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string
+  /** A `progress` lead's newest verdict: solved, not-solved or unknown. */
+  verdict?: string | null
 }
 export interface OverviewRun {
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null

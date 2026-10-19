@@ -141,12 +141,15 @@ export const stateLabel = (state: string | null | undefined) =>
   state ? state.replaceAll('-', ' ') : 'state unknown'
 
 /**
- * One name for how a run ended (M4). The catalog marks a run `stalled` when the keeper's cancellation names a stall
- * (discovery-lab runner/stall.mjs), so a stalled run that settled was cancelled after its stall: "cancelled after stall
- * 03:27Z", the same words on the play, its runs table and the run page. Any other state is its own label.
+ * One name for how a run ended (M4), the same words on the play, its runs table and the run page: the host's
+ * (tangle-tools `run_ending`, for example "cancelled after stall"), a stalled run's with its time. Without it, a run the catalog marks
+ * `stalled` that settled was cancelled after its stall (discovery-lab runner/stall.mjs); any other state is its own label.
  */
-export const endingLabel = (run: { state: string | null | undefined; settledAt?: string | null }) =>
-  run.state === 'stalled' && run.settledAt ? `cancelled after stall ${run.settledAt.slice(11, 16)}Z` : stateLabel(run.state)
+export const endingLabel = (run: { state: string | null | undefined; settledAt?: string | null; ending?: { name: string; at?: string | null } | null }) => {
+  const at = run.ending?.at ?? run.settledAt
+  const name = run.state !== 'running' && run.ending?.name ? run.ending.name : run.state === 'stalled' && at ? 'cancelled after stall' : stateLabel(run.state)
+  return run.state === 'stalled' && at ? `${name} ${at.slice(11, 16)}Z` : name
+}
 
 /** Paid and list price, with unknown kept apart. */
 export function spendParts(spend: Spend | null | undefined) {

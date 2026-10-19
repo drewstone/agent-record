@@ -84,10 +84,12 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const fix = diagnosis ? compact(diagnosis.fix) : ''
   const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
-  const ending = doc.run.state === 'stalled' ? endingLabel(doc.run) : execution.settleKind ?? 'settle kind unknown'
-  const reason = (doc.receipt?.outcome?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
+  const ending = doc.run.ending || doc.run.state === 'stalled' ? endingLabel(doc.run) : execution.settleKind ?? 'settle kind unknown'
+  const reason = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
   const gate = doc.progress?.outcome?.gate
   const blockedGate = gate?.line && gate.verdict && gate.verdict !== 'pass' ? gate : null
+  // The gate's newest verdicts that could not decide (the host's check summary): the prover ran past its limit N times.
+  const undecided = doc.run.check?.gateUnknown?.count ? doc.run.check.gateUnknown : null
   const quota = doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
   const resume = execution.resume.status === 'preserved' || execution.resume.reason || execution.resume.command
   return <section className="run-execution" aria-label="Run status">
@@ -101,7 +103,8 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
         {diagnosis && <span> · {diagnosis.id}: {fixLine}</span>}
       </>}
     </p>
-    {(blockedGate || quota) && <ul className="run-blockers" aria-label="What blocks the run">
+    {(blockedGate || undecided || quota) && <ul className="run-blockers" aria-label="What blocks the run">
+      {undecided && <li data-field="run.check.gateUnknown"><strong>Tag gate undecided {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
       {blockedGate && <li data-field="progress.outcome.gate"><strong>Tag gate {blockedGate.verdict}</strong>{shortTag(blockedGate.tag) && <> on <code>{shortTag(blockedGate.tag)}</code></>}{clock(blockedGate.at) && <> at {clock(blockedGate.at)}</>}: <span className="run-blocker-line">{blockedGate.line}</span></li>}
       {quota && <li data-field="receipt.system.attempts.causes"><strong>{quota.tries} quota hits</strong>: {quota.label ?? 'a 429 ended the turn'}{quota.hours ? ` (${quota.hours} h of turns)` : ''}</li>}
     </ul>}
