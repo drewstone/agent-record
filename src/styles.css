@@ -3333,6 +3333,8 @@
 .agent-record svg .behavior-tick:hover {
   stroke: var(--ar-fg);
   stroke-width: 1.5;
+}
+
 /* Phase 1 of the Magnetar audit (2026-10-19). */
 /* R6, M5: API-equivalent dollars lead; kinds nobody read are one muted line, never a chip of "unknown" or a false $0.00. */
 .ar-ws .spend-chip.equivalent { border-color: color-mix(in srgb, var(--ws-accent) 35%, var(--ar-border)); }
