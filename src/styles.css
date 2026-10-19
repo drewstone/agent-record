@@ -1422,6 +1422,39 @@
 .agent-record .research-observations h3 { font-size:16px; }
 .agent-record .rr-metrics { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
 .agent-record .rr-sources { padding:0;border:0;background:none; }
+.agent-record .rr-section { border-top:1px solid var(--ar-border);padding:20px 0 8px;max-width:110ch; }
+.agent-record .rr-section > h3 { font:600 19px/1.4 var(--ar-font-body);margin:0 0 10px; }
+.agent-record .rr-section > p { margin:6px 0;overflow-wrap:anywhere; }
+.agent-record .rr-lead-verdict .research-summary { font-size:18px;margin:6px 0 10px; }
+.agent-record .rr-source-line { list-style:none;margin:4px 0;padding:0;font-size:12px;color:var(--ar-fg-muted);overflow-wrap:anywhere; }
+.agent-record .rr-source-line code { font:12px/1.6 var(--ar-font-mono); }
+.agent-record .rr-fact-grid { grid-template-columns:repeat(auto-fill,minmax(220px,1fr));padding:8px 0 12px; }
+.agent-record .rr-fact-grid > div { min-width:0;overflow-wrap:anywhere; }
+.agent-record .rr-fact-grid dd { font-size:18px; }
+.agent-record .rr-unknown { color:var(--ar-fg-muted);font-style:italic; }
+.agent-record .rr-comparable[data-comparable='false'] { color:var(--ar-c-run, var(--ar-fg-muted));font-weight:600; }
+.agent-record .rr-data-table { margin:12px 0 18px; }
+.agent-record .rr-data-table figcaption { font-weight:600;margin-bottom:6px; }
+.agent-record .rr-data-table table { border-collapse:collapse;font-size:13px;min-width:100%; }
+.agent-record .rr-data-table :is(th,td) { padding:6px 10px;text-align:left;border-bottom:1px solid var(--ar-border);vertical-align:top; }
+.agent-record .rr-data-table th { white-space:nowrap;color:var(--ar-fg-muted);font-weight:600; }
+.agent-record .rr-data-table td small { display:block;color:var(--ar-fg-muted);font-size:11px;max-width:28ch; }
+.agent-record .rr-runs, .agent-record .rr-rules, .agent-record .rr-unknowns { list-style:none;margin:8px 0;padding:0; }
+.agent-record .rr-run { padding:10px 0;border-bottom:1px solid var(--ar-border); }
+.agent-record .rr-run-head { display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 6px;font-size:14px; }
+.agent-record .rr-run-head a { font:600 14px var(--ar-font-mono); }
+.agent-record .rr-run .outcome-track { flex:none;max-width:calc(100% - 64px); }
+.agent-record .rr-run > .small { margin:4px 0 0;color:var(--ar-fg-muted);overflow-wrap:anywhere; }
+.agent-record .rr-rule { padding:12px 0;border-bottom:1px solid var(--ar-border); }
+.agent-record .rr-rule-head { margin:0; }
+.agent-record .rr-rule [data-rule-state] { display:inline-block;margin-right:6px; }
+.agent-record .rr-rule [data-rule-state='fired'] { color:var(--ar-c-fail); }
+.agent-record .rr-rule [data-rule-state='unrecognised'] { color:var(--ar-c-run, var(--ar-fg-muted)); }
+.agent-record .rr-rule ul { margin:8px 0 0;padding-left:1.1rem; }
+.agent-record .rr-rule li p { margin:4px 0;overflow-wrap:anywhere; }
+.agent-record .rr-unknowns li { padding:8px 0;border-bottom:1px solid var(--ar-border);overflow-wrap:anywhere; }
+.agent-record .rr-unknowns p { margin:2px 0; }
+.ar-ws .play-report-link { font-size:14px;color:var(--ar-c-action); }
 .agent-record .source-results { display:grid; }
 .agent-record .source-results button { display:grid;grid-template-columns:80px 1fr;gap:4px 12px;text-align:left;padding:16px 0;border:0;border-bottom:1px solid var(--ar-border);border-radius:0;background:transparent; }
 .agent-record .source-results strong { font:500 15px/1.5 var(--ar-font-body); }
@@ -3476,18 +3509,18 @@
 .ar-ws .checker-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .ar-ws .checker-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--checker); }
 .ar-ws .checker-legend li[data-current='yes'] b { color: var(--ws-title); }
-.ar-ws .outcome-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ar-fg-muted); }
-.ar-ws .outcome-legend li { display: inline-flex; align-items: center; gap: 5px; }
-.ar-ws .outcome-legend i { width: 10px; height: 10px; border-radius: 2px; }
+:is(.ar-ws, .research-report) .outcome-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ar-fg-muted); }
+:is(.ar-ws, .research-report) .outcome-legend li { display: inline-flex; align-items: center; gap: 5px; }
+:is(.ar-ws, .research-report) .outcome-legend i { width: 10px; height: 10px; border-radius: 2px; }
 .ar-ws .outcome-open { background: var(--ws-hatch) !important; box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
 .ar-ws .ledger-table td, .ar-ws .ledger-table th { padding-top: 4px; padding-bottom: 4px; white-space: nowrap; vertical-align: middle; }
 .ar-ws .ledger-table .ledger-bar { width: 22%; min-width: 150px; }
-.ar-ws .outcome-bar, .ar-ws .wall-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.ar-ws .outcome-track, .ar-ws .wall-track { display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--ws-raised); }
-.ar-ws .outcome-track i, .ar-ws .wall-track i { display: block; height: 100%; min-width: 1px; }
+:is(.ar-ws, .research-report) .outcome-bar, .ar-ws .wall-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
+:is(.ar-ws, .research-report) .outcome-track, .ar-ws .wall-track { display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--ws-raised, var(--ar-bg-alt)); }
+:is(.ar-ws, .research-report) .outcome-track i, .ar-ws .wall-track i { display: block; height: 100%; min-width: 1px; }
 .ar-ws .wall-track i { background: color-mix(in srgb, var(--ar-fg-muted) 55%, transparent); }
 .ar-ws .wall-track .wall-idle { background: var(--ws-hatch); }
-.ar-ws .outcome-total, .ar-ws .wall-bar .num { flex: none; font: 12px var(--ar-font-mono); color: var(--ar-fg-muted); }
+:is(.ar-ws, .research-report) .outcome-total, .ar-ws .wall-bar .num { flex: none; font: 12px var(--ar-font-mono); color: var(--ar-fg-muted); }
 .ar-ws .ledger-fork { font-family: var(--ar-font-mono); }
 .ar-ws .ledger-table .ledger-seat { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .ledger-best { font-size: var(--ar-text-s); }

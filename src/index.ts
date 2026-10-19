@@ -2,7 +2,8 @@
 export { AgentRecord, type AgentRecordProps } from './AgentRecord.js'
 export { ResearchReport, type ResearchReportProps } from './ResearchReport.js'
 export { parseResearchReport, researchReportSchema, reportToLatex } from './report.js'
-export type { ResearchReportData, ResearchPlay, ResearchClaim, ResearchDocument, ResearchMetric, EvidenceReference } from './report.js'
+export type { ResearchReportData, ResearchPlay, ResearchClaim, ResearchDocument, ResearchMetric, EvidenceReference, ResearchRule, ResearchRun, ResearchSection, ResearchTable, ResearchUnknown } from './report.js'
+export { playReportToResearchReport, type PlayReportDocument, type PlayReportFact } from './play-report.js'
 export { parseRecord, recordSchema } from './record.js'
 export type {
   RunRecord,

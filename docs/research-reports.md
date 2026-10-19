@@ -159,6 +159,21 @@ references appear in HTML, JSON and LaTeX. LaTeX includes a document manifest; f
 document bodies remain in the HTML and JSON, so exporting a summary does not pretend
 to reproduce every original file.
 
+## Play report
+
+`playReportToResearchReport` reads the Lab host's `agent-workspace.play-report.v1`
+document (`/api/discovery/plays/<id>/report`) into a report with one play, rendered by
+`ResearchReport`. The play then carries optional fields, in reading order: `verdict`,
+`questionCoverage`, `sections` (how good, built, hardware, limit, pipelines) whose facts
+are `metrics` with a `section` and whose listings are `tables`, then `runs`, `rules` and
+`unknowns`. A null fact reads Unknown with `why` and the `record` that would answer it;
+`comparable: false` marks a value the bar cannot judge. Sources carry `asOf` and show
+inline. `rules[].state` is `fired`, `quiet` or `could-not-evaluate`; any other state
+renders as unrecognised. The `figures` prop places host figures in a section; the
+workspace's `data-mode="report"` puts the play page's bar panels in `how-good`.
+The browser check is `node --test tests/play-report.browser.mjs` after a build, with
+`PLAYWRIGHT_MODULE`, an optional `PLAY_DOCUMENT` and `PLAY_REPORT_EVIDENCE_DIR`.
+
 Single-dollar text is preserved literally so financial figures are not misread as
 formulas. Use double-dollar math for mathematical rendering. Optional retained
 `sourcePath` and `aliases` metadata can resolve original absolute or store-relative
