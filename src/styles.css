@@ -3628,3 +3628,11 @@
   .ar-ws .explore-body { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .explore-search { min-width: 0; flex: 1 1 12em; }
 }
+.ar-ws .explore-fleet-line { margin: 0; font-size: var(--ar-text-m, 15px); line-height: 1.6; }
+.ar-ws .explore-fleet-line .link-button { color: var(--ar-fg); text-decoration: none; }
+.ar-ws .explore-fleet-line .link-button:hover, .ar-ws .explore-fleet-line .link-button:focus-visible { text-decoration: underline; }
+.ar-ws .explore-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; vertical-align: 1px; }
+.ar-ws .explore-compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+@media (max-width: 900px) {
+  .ar-ws .explore-compare-grid { grid-template-columns: minmax(0, 1fr); }
+}
