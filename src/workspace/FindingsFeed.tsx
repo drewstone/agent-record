@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { FeedItem, FindingsFeedDocument } from '../workspace.js'
-import { stateClass, useDocument } from './data.js'
+import { useDocument } from './data.js'
 import { ReviewBadges } from './ScientificReviews.js'
 
 const KINDS = [
@@ -84,7 +84,8 @@ export function FindingsFeed({ api, query = '', program: selectedProgram }: { ap
   )
 }
 
-/** Findings as cards, each opening its run's findings: the play, run and how it ended, the title, the text and its kind. */
+/** Findings as cards, each opening its run's findings: the play and run, the title, the text and its kind. A card no longer
+ * repeats its run's state (X12): eleven cards of one run said "stalled" eleven times; the run's state is on its row. */
 export function FeedCards({ items }: { items: readonly FeedItem[] }) {
   return (
     <ol className="feed-grid">
@@ -93,7 +94,6 @@ export function FeedCards({ items }: { items: readonly FeedItem[] }) {
           <a className="feed-card" href={`/run/${encodeURIComponent(item.runId)}?section=findings`}>
             <span className="feed-meta">
               <span className="mono clamp-1" title={item.runId}>{item.play} · {shortRunId(item.play, item.runId)}</span>
-              <span className={`state-pill ${stateClass(item.state)}`}>{(item.state ?? 'state unknown').replaceAll('-', ' ')}</span>
             </span>
             <span className="feed-title">{item.ledger ? `${short(item.agentLabel)}'s result` : item.title}</span>
             <span className="feed-text clamp-3">{plain(item.text)}</span>

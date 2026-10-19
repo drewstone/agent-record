@@ -12,6 +12,9 @@ export const STATE_COLOR: Record<string, string> = {
   running: '#8b7cf6',
   winner: '#0ea5a0',
   'no-winner': '#c98500',
+  // No agent live and nothing streamed: the run stopped moving (then cancelled). Beside no-winner it passed adjacent CVD
+  // 14.8 and normal 15.8 on #16181f; it is a known ending, so it draws filled.
+  stalled: '#e0c25a',
   'no-record': '#e2508f',
   failed: '#4a90e2',
   // Ended unsettled with its coordinator gone (often stopped to be forked): a neutral, not a failure colour.
@@ -52,7 +55,21 @@ export function Legend({ items }: { items: { name: string; color: string; hollow
   )
 }
 
-export function ChartCard({ title, note, legend, wide, children }: { title: string; note?: ReactNode; legend?: { name: string; color: string }[]; wide?: boolean; children: ReactNode }) {
+/**
+ * True when a chart has nothing to draw: every value is null (nobody measured it), or every value is zero or null while
+ * the usage behind it is unknown (a zero-filled day of unmeasured agents is not a measured zero).
+ */
+export function nothingToDraw(values: ReadonlyArray<number | null | undefined>, usageKnown = true) {
+  const measured = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  return measured.length === 0 || (!usageKnown && measured.every((value) => value === 0))
+}
+
+/**
+ * One chart in a card. Pass `values` (every value the chart draws) and the card renders nothing when they hold nothing to
+ * draw: an empty axis or a row of unmeasured zeros is noise, not a reading. `usageKnown={false}` treats zeros as unmeasured.
+ */
+export function ChartCard({ title, note, legend, wide, values, usageKnown, children }: { title: string; note?: ReactNode; legend?: { name: string; color: string }[]; wide?: boolean; values?: ReadonlyArray<number | null | undefined>; usageKnown?: boolean; children: ReactNode }) {
+  if (values && nothingToDraw(values, usageKnown)) return null
   return (
     <figure className={`ov-card ${wide ? 'wide' : ''}`}>
       <figcaption>

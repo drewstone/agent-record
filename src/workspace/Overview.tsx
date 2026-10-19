@@ -19,13 +19,15 @@ const STALE_MS = 2 * 3_600_000
 const label = (value: string) => value.replaceAll('-', ' ')
 // Cost never mixes kinds: subscription use priced at API rates is not a bill; model API (Router) and sandbox compute are.
 const money = (value: number | null | undefined) => (value === null || value === undefined ? '?' : value ? usd(value) : '—')
-const coveredMoney = (value: number | null | undefined, known: number | undefined, runs: number) =>
-  known === 0 || value == null ? '?' : `${money(value)}${known !== undefined && known < runs ? '+' : ''}`
 const costNote = (kind: string, value: number | null | undefined, known: number | undefined, runs: number) =>
   !known || value == null ? `${kind} not recorded` : `${kind} ${usd(value)}${known < runs ? ` known in ${known}/${runs} runs` : ''}`
-const measuredTotal = (values: (number | null | undefined)[], incomplete: boolean) => {
-  const known = values.filter((value): value is number => typeof value === 'number')
-  return known.length ? `${usd(known.reduce((sum, value) => sum + value, 0))}${incomplete ? '+' : ''}` : 'not recorded'
+/** A play's API-equivalent cost over its week: the runs' receipts when the host read them, else subscription use at API
+ * prices. A zero over runs whose usage is unknown is unknown ('?', never '$0.00'); '+' marks a subtotal with unknown runs. */
+const weekCost = (play: OverviewPlayWeek) => {
+  const value = play.apiEquivalentUsd ?? play.subscriptionUsd ?? play.listUsd
+  const unknown = play.costUnknownRuns ?? 0
+  if (value === null || value === undefined || (unknown >= play.runCount && !value)) return '?'
+  return `${money(value)}${unknown > 0 ? '+' : ''}`
 }
 // Runs whose outcome is not known draw hollow, so they never pass for a near hue with a known outcome
 // (unknown beside no winner, no record beside driver failed).
@@ -48,13 +50,20 @@ function Section({ id, title, tone, aside, children }: { id?: string; title: str
   )
 }
 
-/** What a run found: a passed play check ("check passed") with its SOLVED line or the run's stated answer, else its best page. */
+/**
+ * What a run found: a play check (its verdict, its line and the best score the checks reached), else its best page.
+ * The page's title comes before its text (R12): the title says what the page is, the text is its first lines.
+ */
 function Lead({ lead }: { lead: OverviewLead }) {
-  const text = plain(lead.text) || plain(lead.title) || 'No answer recorded'
+  const title = plain(lead.title)
+  const text = plain(lead.text)
+  const kind = lead.kind === 'check' ? (lead.solved === false ? 'check' : 'check passed') : lead.kind
+  const words = [title, text && text !== title ? text : '', lead.best ?? ''].filter(Boolean)
+  const shown = words.length ? words : ['No answer recorded']
   return (
-    <span className="ov-lead" title={lead.kind === 'check' && lead.title ? `${lead.title}: ${text}` : text}>
-      <span className={`ov-lead-kind kind-${lead.kind}`}>{lead.kind === 'check' ? 'check passed' : lead.kind}</span>
-      <span className="ov-lead-title">{text}</span>
+    <span className="ov-lead" title={shown.join(' · ')}>
+      <span className={`ov-lead-kind kind-${lead.kind}${lead.solved === false ? ' is-failing' : ''}`}>{kind}</span>
+      <span className="ov-lead-title">{title && <b>{title}</b>}{title && shown.length > 1 ? ' · ' : ''}{shown.filter((word) => word !== title).join(' · ')}</span>
     </span>
   )
 }
@@ -107,9 +116,7 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
         )}
       </span>
       <span className={`ov-week-num ${play.lostHours >= 10 ? 'is-warn' : ''}`} data-label="lost">{play.lostHours ? hours(play.lostHours) : '—'}</span>
-      <span className="ov-week-num" data-label="subscription">{money(play.subscriptionUsd ?? play.listUsd)}</span>
-      <span className="ov-week-num" data-label="API" title="Known billed subtotal; + means some runs have no reading">{coveredMoney(play.apiUsd, play.apiKnownRuns, play.runCount)}</span>
-      <span className="ov-week-num" data-label="sandbox" title="Known billed subtotal; + means some runs have no reading">{coveredMoney(play.sandboxUsd, play.sandboxKnownRuns, play.runCount)}</span>
+      <span className="ov-week-num" data-label="API-equivalent" title="Every token at API list price, whoever paid; + means some runs have no reading">{weekCost(play)}</span>
       <span className="ov-week-num ov-week-ago" data-label="last run">{ago(play.lastStartedAt)}</span>
     </li>
   )
@@ -132,8 +139,6 @@ export function OverviewPage({ api }: { api: string }) {
   const days = d.days.slice(-range)
   const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
   const lostByDay = Object.entries(d.runs.lostByDay ?? {}).map(([cause, values], i) => ({ name: label(cause), color: LOSS_COLOR[i] ?? LOSS_COLOR.at(-1)!, values: cut(values) }))
-  const startsByDay = days.map((_, i) => Object.values(runsByDay).reduce((sum, values) => sum + (values[i] ?? 0), 0))
-  const lostPerRun = days.map((_, i) => startsByDay[i] ? lostByDay.reduce((sum, cause) => sum + (cause.values[i] ?? 0), 0) / startsByDay[i]! : null)
   const findingsByDay = Object.fromEntries(Object.entries(d.findings.byDay).map(([k, v]) => [k, cut(v)]))
   const tokensByDay = { input: cut(d.tokens.byDay.input), output: cut(d.tokens.byDay.output), cacheRead: cut(d.tokens.byDay.cacheRead), cacheWrite: cut(d.tokens.byDay.cacheWrite) }
   const state = d.state
@@ -150,7 +155,6 @@ export function OverviewPage({ api }: { api: string }) {
   const infraDay = new Map(infra?.byDay?.map((row) => [row.date, row]))
   const infraValues = (field: 'hostUsd' | 'volumeUsd' | 'snapshotUsd' | 'r2Usd' | 'r2ListUsd' | 'r2StorageListUsd' | 'r2OperationsListUsd' | 'egressBytes' | 'egressUsd') =>
     days.map((day) => infraDay.get(day)?.[field] ?? null)
-  const hasInfra = (field: Parameters<typeof infraValues>[0]) => infraValues(field).some((value) => value !== null)
   const running = d.now ?? []
   const attention = d.attention ?? []
   const week = d.week ?? []
@@ -158,38 +162,8 @@ export function OverviewPage({ api }: { api: string }) {
   const weekRuns = sumOf(week.map((p) => p.runCount))
   const weekResults = sumOf(week.map((p) => p.results))
   const weekClaims = sumOf(week.map((p) => p.claims))
-  const stripDays = d.days.slice(-14)
-  const stripStarts = stripDays.map((_, index) => Object.values(d.runs.byDay).reduce((sum, values) => sum + (values.slice(-14)[index] ?? 0), 0))
-  const points = (values: (number | null)[] | undefined) => (values ?? []).slice(-14).flatMap((value, index) =>
-    value === null ? [] : [[Date.parse(`${stripDays[index]}T12:00:00Z`), value] as [number, number]])
-  const total = (values: (number | null)[] | undefined) => {
-    const last = (values ?? []).slice(-14)
-    return last.some((value) => value !== null) ? { value: sumOf(last), partial: last.some((value) => value === null) } : null
-  }
-  const costMetric = (name: string, values: (number | null)[] | undefined) => {
-    const read = total(values)
-    return { name, value: read ? `${read.partial ? 'known subtotal ' : ''}${usd(read.value)}` : 'not recorded', points: points(values) }
-  }
-  const resultClaim = stripDays.map((_, index) => (d.findings.byDay.result?.slice(-14)[index] ?? 0) + (d.findings.byDay.claim?.slice(-14)[index] ?? 0))
-  const lost = stripDays.map((_, index) => Object.values(d.runs.lostByDay ?? {}).reduce((sum, values) => sum + (values.slice(-14)[index] ?? 0), 0))
-  const seatsByDay = stripDays.map((day) => {
-    const from = Date.parse(`${day}T00:00:00Z`), to = from + 86400_000
-    const seen = Object.values(d.seats.history).map((history) => history.filter(([at]) => at >= from && at < to).at(-1)?.[1])
-    return seen.some((value) => value !== undefined) ? seen.filter((value) => value !== undefined && value >= .95).length : null
-  })
-  const fleetPoints = (d.money.fleetKey.history ?? []).filter(([at]) => at * 1000 >= Date.now() - 14 * 86400_000)
-    .map(([at, spent]) => [at * 1000, d.money.fleetKey.cap ? spent / d.money.fleetKey.cap : 0] as [number, number])
-  const strip = [
-    { name: 'Runs started · 14 d', value: String(sumOf(stripStarts)), points: points(stripStarts) },
-    { name: 'Runs with findings · 14 d', value: d.findings.runsByDay ? `${d.findings.pending ? '≥' : ''}${sumOf(d.findings.runsByDay.slice(-14))}` : 'not recorded', points: points(d.findings.runsByDay) },
-    { name: 'Results + claims · 14 d', value: `${d.findings.pending ? '≥' : ''}${sumOf(resultClaim)}`, points: points(resultClaim) },
-    { name: 'Agent-hours lost · 14 d', value: hours(sumOf(lost)), points: points(lost) },
-    costMetric('Subscription at API prices · 14 d', d.money.costByDay?.subscription),
-    costMetric('Billed API · 14 d', d.money.costByDay?.api),
-    costMetric('Billed sandbox · 14 d', d.money.costByDay?.sandbox),
-    { name: 'Seats at limit · now', value: `${seats.filter((seat) => (seat.d7 ?? 0) >= .95).length} of ${seats.length}`, points: points(seatsByDay) },
-    { name: 'Fleet key used · now', value: d.money.fleetKey.cap && d.money.fleetKey.spent !== null ? pct(d.money.fleetKey.spent / d.money.fleetKey.cap) : 'not recorded', points: fleetPoints },
-  ]
+  const weekCostTotal = week.reduce((sum, play) => sum + (play.apiEquivalentUsd ?? play.subscriptionUsd ?? play.listUsd ?? 0), 0)
+  const weekCostUnknown = week.some((play) => (play.costUnknownRuns ?? 0) > 0)
   return (
     <div className="ws-page ov-page" data-overview>
       <div className="ov-now">
@@ -197,7 +171,9 @@ export function OverviewPage({ api }: { api: string }) {
           <figcaption>
             <span className="ov-card-title">Running now</span>
             <span className="ov-card-sub">
-              {running.length} running · {state.queued} queued · {state.sandboxesRunning ?? '—'} sandboxes ({state.sandboxesByKind.discovery ?? 'unknown'} Discovery)
+              {running.length} running · {state.queued} queued
+              {/* An unread census is left out rather than printed as "— (unknown)"; a census read earlier says how old it is. */}
+              {state.sandboxesRunning != null && <> · {state.sandboxesRunning} sandboxes{state.sandboxesByKind.discovery != null ? ` (${state.sandboxesByKind.discovery} Discovery)` : ''}{state.censusAt ? `, census ${ago(state.censusAt)}` : ''}</>}
             </span>
           </figcaption>
           {running.length ? (
@@ -233,13 +209,6 @@ export function OverviewPage({ api }: { api: string }) {
         </figure>
       </div>
 
-      <section className="ov-consumption" aria-label="Consumption and capacity">
-        {strip.map((item) => <div key={item.name} className="ov-consumption-item">
-          <span>{item.name}</span><strong>{item.value}</strong>
-          <Spark points={item.points} max={Math.max(1, ...item.points.map(([, value]) => value))} />
-        </div>)}
-      </section>
-
       <section className="ov-section" aria-label={`Last ${weekDays} days by play`}>
         <div className="ov-section-head">
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
@@ -250,15 +219,13 @@ export function OverviewPage({ api }: { api: string }) {
           {week.length ? (
             <ol>
               <li className="ov-week-head" aria-hidden="true">
-                <span>play</span><span>runs, newest first</span><span>what it found</span><span>lost</span><span>subscription</span><span>API</span><span>sandbox</span><span>last run</span>
+                <span>play</span><span>runs, newest first</span><span>what it found</span><span>lost</span><span>API-equivalent</span><span>last run</span>
               </li>
               {week.slice(0, weekShown).map((play) => <WeekRow key={play.play} play={play} />)}
               <li className="ov-week-total">
                 <span>{week.length} plays</span><span>{weekRuns} runs</span><span>{weekResults} results · {weekClaims} claims</span>
                 <span className="ov-week-num">{hours(sumOf(week.map((p) => p.lostHours)))}</span>
-                <span className="ov-week-num">{usd(sumOf(week.map((p) => p.subscriptionUsd ?? p.listUsd)))}</span>
-                <span className="ov-week-num" title="Known billed subtotal; + means some runs have no reading">{measuredTotal(week.map((p) => p.apiUsd), week.some((p) => (p.apiKnownRuns ?? 0) < p.runCount))}</span>
-                <span className="ov-week-num" title="Known billed subtotal; + means some runs have no reading">{measuredTotal(week.map((p) => p.sandboxUsd), week.some((p) => (p.sandboxKnownRuns ?? 0) < p.runCount))}</span>
+                <span className="ov-week-num" title="Known subtotal; + means some runs have no reading">{weekCostTotal ? `${usd(weekCostTotal)}${weekCostUnknown ? '+' : ''}` : '?'}</span>
                 <span />
               </li>
             </ol>
@@ -268,7 +235,7 @@ export function OverviewPage({ api }: { api: string }) {
           {week.length > weekShown && (
             <button type="button" className="filter-chip ov-week-all" onClick={() => setWeekShown(week.length)}>Show all {week.length} plays</button>
           )}
-          <p className="ov-note">Each chip is a run in its end state, hollow when the outcome is not known; smoke and archived runs are left out. Subscription is seat use priced at API rates and never billed; API is model spend billed through Router; sandbox is compute billed to the runs' keys; ? is not recorded, — is none.</p>
+          <p className="ov-note">Each chip is a run in its end state, hollow when the outcome is not known; smoke and archived runs are left out. API-equivalent prices every token at API list rates, whoever paid (a subscription seat bills nothing); ? is not recorded, + a subtotal with runs unread. Billed model API and sandbox compute are on each play's Spend tab.</p>
         </div>
       </section>
 
@@ -292,45 +259,43 @@ export function OverviewPage({ api }: { api: string }) {
           <span className="ov-loss-total-scope">{d.runs.scope ?? 'All indexed and current live runs started in the last 30 UTC days'}</span>
         </div>
         <div className="ov-run-trends">
-          <ChartCard title="Runs started per day, by how they ended" legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
+          <ChartCard title="Runs started per day, by how they ended" values={Object.values(runsByDay).flat()} legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
             <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
           </ChartCard>
-          <ChartCard title="Agent-hours lost per day, by cause" legend={lostByDay.map(({ name, color }) => ({ name, color }))} note={`Top five causes over ${range} days, plus other. Grouped by the day each run started.`}>
-            {lostByDay.length ? <DayBars days={days} series={lostByDay} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
-          </ChartCard>
-          <ChartCard title="Lost hours per run started" note="Daily lost hours divided by all catalog runs started that day. A day without a start has no rate.">
-            {lostByDay.length ? <DayBars days={days} series={[{ name: 'lost hours per run', color: SERIES[0], values: lostPerRun }]} format={hours} /> : <p className="ov-empty">Loss by cause has not been composed yet.</p>}
+          <ChartCard title="Agent-hours lost per day, by cause" values={lostByDay.flatMap((cause) => cause.values)} legend={lostByDay.map(({ name, color }) => ({ name, color }))} note={`Top five causes over ${range} days, plus other. Grouped by the day each run started.`}>
+            <DayBars days={days} series={lostByDay} format={hours} />
           </ChartCard>
         </div>
         <ChartCard
           title="Findings written per day"
+          values={Object.values(findingsByDay).flat()}
           legend={[{ name: 'results', color: SERIES[0] }, { name: 'claims', color: SERIES[2] }, { name: 'checks', color: SERIES[3] }]}
           note="Knowledge pages the agents wrote, by the day they wrote them (runs whose findings are derived)."
         >
           <DayBars days={days} series={[{ name: 'results', color: SERIES[0], values: findingsByDay.result ?? [] }, { name: 'claims', color: SERIES[2], values: findingsByDay.claim ?? [] }, { name: 'checks', color: SERIES[3], values: findingsByDay.check ?? [] }]} />
         </ChartCard>
-        <ChartCard title="Why runs failed" note="Root cause of each driver-failed or failed run, 30 days.">
+        <ChartCard title="Why runs failed" values={d.runs.causes.map(([, n]) => n)} note="Root cause of each driver-failed or failed run, 30 days.">
           <HBars rows={d.runs.causes.map(([cause, n]) => ({ label: label(cause), value: n }))} color="var(--ar-c-fail)" />
         </ChartCard>
-        <ChartCard title="Agents per run" note={`Depth: ${d.runs.depth.map(([k, n]) => `${k} → ${n}`).join(' · ')}`}>
+        <ChartCard title="Agents per run" values={d.runs.agentsHistogram.map((bin) => bin.n)} note={`Depth: ${d.runs.depth.map(([k, n]) => `${k} → ${n}`).join(' · ')}`}>
           <Histogram bins={d.runs.agentsHistogram} unit="agents" format={(v) => String(Math.round(v))} />
         </ChartCard>
       </Section>
 
       <Section title="Model work" tone="tone-info">
-        <ChartCard title="Input and output tokens per day" legend={[{ name: 'output', color: SERIES[1] }, { name: 'input', color: SERIES[0] }]} note="By the day each run started. Input excludes cache reads and writes.">
+        <ChartCard title="Input and output tokens per day" values={[...tokensByDay.input, ...tokensByDay.output]} usageKnown={measured === agents} legend={[{ name: 'output', color: SERIES[1] }, { name: 'input', color: SERIES[0] }]} note="By the day each run started. Input excludes cache reads and writes.">
           <DayBars days={days} series={[{ name: 'output', color: SERIES[1], values: tokensByDay.output }, { name: 'input', color: SERIES[0], values: tokensByDay.input }]} />
         </ChartCard>
-        <ChartCard title="Cache reads and writes per day" legend={[{ name: 'cache reads', color: SERIES[3] }, { name: 'cache writes', color: SERIES[2] }]} note="The same context re-read each turn: most of the tokens, a fraction of the price.">
+        <ChartCard title="Cache reads and writes per day" values={[...tokensByDay.cacheRead, ...tokensByDay.cacheWrite]} usageKnown={measured === agents} legend={[{ name: 'cache reads', color: SERIES[3] }, { name: 'cache writes', color: SERIES[2] }]} note="The same context re-read each turn: most of the tokens, a fraction of the price.">
           <DayBars days={days} series={[{ name: 'cache reads', color: SERIES[3], values: tokensByDay.cacheRead }, { name: 'cache writes', color: SERIES[2], values: tokensByDay.cacheWrite }]} />
         </ChartCard>
-        <ChartCard title="Output tokens per agent" note="How much each measured agent wrote, on a log scale.">
+        <ChartCard title="Output tokens per agent" values={tokens.agentOutputHistogram.map((bin) => bin.n)} note="How much each measured agent wrote, on a log scale.">
           <Histogram bins={tokens.agentOutputHistogram} unit="output tokens" color={SERIES[1]} />
         </ChartCard>
-        <ChartCard title="Usage recorded, by harness" note={`${measured} of ${agents} agents (${pct(agents ? measured / agents : null)}) recorded token usage; the rest are unmeasured, not zero.`}>
+        <ChartCard title="Usage recorded, by harness" values={tokens.harness.map((h) => h.measured)} usageKnown={false} note={`${measured} of ${agents} agents (${pct(agents ? measured / agents : null)}) recorded token usage; the rest are unmeasured, not zero.`}>
           <HBars rows={tokens.harness.map((h) => ({ label: h.harness, value: h.agents, note: `${h.measured} measured · ${usd(h.list)} list` }))} format={(v) => `${v} agents`} color={SERIES[4]} />
         </ChartCard>
-        <ChartCard title="Plays by output tokens" wide note="30 days. Subscription is seat use at API prices (not billed); API and sandbox are billed.">
+        <ChartCard title="Plays by output tokens" values={tokens.topPlays.map((p) => p.output)} usageKnown={false} wide note="30 days. Subscription is seat use at API prices (not billed); API and sandbox are billed.">
           <HBars
             rows={tokens.topPlays.map((p) => ({ label: p.play, value: p.output, note: `${p.runs} runs · ${p.claims} claims · subscription ${usd(p.subscription ?? p.list)} at API prices · ${costNote('API', p.api, p.apiKnown, p.runs)} · ${costNote('sandbox', p.sandbox, p.sandboxKnown, p.runs)} · ${compact(p.cacheRead)} cache reads`, href: `/play/${encodeURIComponent(p.play)}` }))}
             color={SERIES[1]}
@@ -340,7 +305,7 @@ export function OverviewPage({ api }: { api: string }) {
       </Section>
 
       <Section id="money" title="Money" tone="tone-warn">
-        <ChartCard title={`Cost by kind, ${range} days`} note={costRuns ? `${costRuns.counted} catalog runs in 30 days; ${costRuns.snapshots} spend snapshots. Router recorded for ${costRuns.api}, sandbox compute for ${costRuns.sandbox}; other amounts are unknown, not zero.` : undefined}>
+        <ChartCard title={`Cost by kind, ${range} days`} values={[costRuns?.api ? sumOf(cut(cost?.api)) : null, costRuns?.sandbox ? sumOf(cut(cost?.sandbox)) : null, costRuns?.subscription ? sumOf(cut(cost?.subscription)) : null]} note={costRuns ? `${costRuns.counted} catalog runs in 30 days; ${costRuns.snapshots} spend snapshots. Router recorded for ${costRuns.api}, sandbox compute for ${costRuns.sandbox}; other amounts are unknown, not zero.` : undefined}>
           <dl className="ov-costs">
             <div><dt>Billed: model API (Router), measured subtotal</dt><dd>{costRuns?.api ? usd(sumOf(cut(cost?.api))) : '?'}</dd></div>
             <div><dt>Billed: sandbox compute, measured subtotal</dt><dd>{costRuns?.sandbox ? usd(sumOf(cut(cost?.sandbox))) : '?'}</dd></div>
@@ -348,7 +313,7 @@ export function OverviewPage({ api }: { api: string }) {
             {sumOf(cost?.otherList) > 0 && <div><dt>API-key agents at list price</dt><dd>{usd(sumOf(cut(cost?.otherList)))}</dd></div>}
           </dl>
         </ChartCard>
-        <ChartCard title="Infrastructure billed to Discovery" note={infra ? `${infra.window.from?.slice(0, 10) ?? 'unknown start'}–${infra.window.to.slice(0, 10)} · measured ${ago(infra.generatedAt)}. Missing sources remain unknown.` : 'Infrastructure cost readings have not arrived.'}>
+        <ChartCard title="Infrastructure billed to Discovery" values={infra ? [infra.totals.hostUsd, infra.totals.volumeUsd, infra.totals.snapshotUsd, infra.totals.r2Usd, infra.totals.egressUsd, infra.totals.r2ListUsd] : []} note={infra ? `${infra.window.from?.slice(0, 10) ?? 'unknown start'}–${infra.window.to.slice(0, 10)} · measured ${ago(infra.generatedAt)}. Missing sources remain unknown.` : 'Infrastructure cost readings have not arrived.'}>
           <dl className="ov-costs">
             <div><dt>Hosts</dt><dd>{money(infra?.totals.hostUsd)}</dd></div>
             <div><dt>Hetzner volumes, including traces</dt><dd>{money(infra?.totals.volumeUsd)}</dd></div>
@@ -361,58 +326,58 @@ export function OverviewPage({ api }: { api: string }) {
           {infra?.totals.r2DownloadBytesLowerBound != null ? <p className="ov-note">R2 download lower bound: {bytes(infra.totals.r2DownloadBytesLowerBound)}; R2 egress itself is free.</p> : null}
           {infra?.gaps?.length ? <p className="ov-note">Unmeasured: {infra.gaps.map((gap) => gap.detail).join(' · ')}</p> : null}
         </ChartCard>
-        <ChartCard title="Provider bill reconciliation" note={infra?.reconciliation?.reason ?? 'No same-period provider bill is available.'}>
+        <ChartCard title="Provider bill reconciliation" values={[infra?.reconciliation?.billedUsd, infra?.reconciliation?.priorBillEvidence?.length || null]} note={infra?.reconciliation?.reason ?? 'No same-period provider bill is available.'}>
           <dl className="ov-costs">
             <div><dt>Discovery billed allocation, {infra?.reconciliation?.period ?? 'current period'}</dt><dd>{money(infra?.reconciliation?.billedUsd)}</dd></div>
             <div><dt>Prior bill evidence</dt><dd>{infra?.reconciliation?.priorBillEvidence?.length ?? 0} lines</dd></div>
           </dl>
           {infra?.reconciliation?.priorBillEvidence?.map((bill, i) => <p className="ov-note" key={`${bill.vendor}:${bill.item}:${i}`}>{bill.vendor}: {money(bill.monthlyUsd)}/month · {bill.asOf} · {bill.item}</p>)}
         </ChartCard>
-        <ChartCard title="Hosts with Discovery sidecars" note="Provider list price and outbound counters are host-wide; Discovery share and egress charges are unknown.">
+        <ChartCard title="Hosts with Discovery sidecars" values={(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => host.monthlyUsd)} note="Provider list price and outbound counters are host-wide; Discovery share and egress charges are unknown.">
           <dl className="ov-costs">
             {(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => <div key={host.id}><dt>{host.name ?? host.id} · {host.discoverySidecars} sidecars · {bytes(host.outgoingBytes)} outbound</dt><dd>{money(host.monthlyUsd)}/mo</dd></div>)}
           </dl>
         </ChartCard>
-        <ChartCard title="Host allocation per day" note="Measured Discovery share of host fixed cost. A missing day has no allocation.">
-          {hasInfra('hostUsd') ? <DayBars days={days} series={[{ name: 'host', color: SERIES[2], values: infraValues('hostUsd') }]} format={usd} missing="No reading" /> : <p className="ov-empty">No attributed host reading.</p>}
+        <ChartCard title="Host allocation per day" values={infraValues('hostUsd')} note="Measured Discovery share of host fixed cost. A missing day has no allocation.">
+          <DayBars days={days} series={[{ name: 'host', color: SERIES[2], values: infraValues('hostUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="Storage charge per day" legend={[{ name: 'volumes', color: SERIES[1] }, { name: 'snapshots', color: SERIES[2] }, { name: 'R2', color: SERIES[4] }]} note="Billed storage categories; missing provider readings are unknown.">
-          {hasInfra('volumeUsd') || hasInfra('snapshotUsd') || hasInfra('r2Usd') ? <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" /> : <p className="ov-empty">No attributed billed storage reading.</p>}
+        <ChartCard title="Storage charge per day" values={[...infraValues('volumeUsd'), ...infraValues('snapshotUsd'), ...infraValues('r2Usd')]} legend={[{ name: 'volumes', color: SERIES[1] }, { name: 'snapshots', color: SERIES[2] }, { name: 'R2', color: SERIES[4] }]} note="Billed storage categories; missing provider readings are unknown.">
+          <DayBars days={days} series={[{ name: 'volumes', color: SERIES[1], values: infraValues('volumeUsd') }, { name: 'snapshots', color: SERIES[2], values: infraValues('snapshotUsd') }, { name: 'R2', color: SERIES[4], values: infraValues('r2Usd') }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="R2 at list rates per day" legend={[{ name: 'storage', color: SERIES[4] }, { name: 'operations', color: SERIES[2] }]} note="Direct Discovery bucket. Before the account free tier, retrieval charges and invoice rounding; not a billed amount.">
+        <ChartCard title="R2 at list rates per day" values={[...infraValues('r2StorageListUsd'), ...infraValues('r2OperationsListUsd')]} legend={[{ name: 'storage', color: SERIES[4] }, { name: 'operations', color: SERIES[2] }]} note="Direct Discovery bucket. Before the account free tier, retrieval charges and invoice rounding; not a billed amount.">
           <DayBars days={days} series={[{ name: 'storage', color: SERIES[4], values: infraValues('r2StorageListUsd') }, { name: 'operations', color: SERIES[2], values: infraValues('r2OperationsListUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="Egress bytes per day" note="Outbound traffic attributed to Discovery where a source records it.">
-          {hasInfra('egressBytes') ? <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" /> : <p className="ov-empty">No attributed outbound-byte reading.</p>}
+        <ChartCard title="Egress bytes per day" values={infraValues('egressBytes')} note="Outbound traffic attributed to Discovery where a source records it.">
+          <DayBars days={days} series={[{ name: 'outbound', color: SERIES[3], values: infraValues('egressBytes') }]} format={bytes} missing="No reading" />
         </ChartCard>
-        <ChartCard title="Egress charges per day" note={`Measured outbound charges: ${bytes(infra?.totals.egressBytes)} total bytes. Bytes without a tariff have unknown cost.`}>
-          {hasInfra('egressUsd') ? <DayBars days={days} series={[{ name: 'egress', color: SERIES[3], values: infraValues('egressUsd') }]} format={usd} missing="No reading" /> : <p className="ov-empty">No attributed egress charge reading.</p>}
+        <ChartCard title="Egress charges per day" values={infraValues('egressUsd')} note={`Measured outbound charges: ${bytes(infra?.totals.egressBytes)} total bytes. Bytes without a tariff have unknown cost.`}>
+          <DayBars days={days} series={[{ name: 'egress', color: SERIES[3], values: infraValues('egressUsd') }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="Billed per day" legend={[{ name: 'model API', color: SERIES[3] }, { name: 'sandbox compute', color: SERIES[1] }]} note="What was charged: model calls through Router and sandbox compute on the runs' keys.">
+        <ChartCard title="Billed per day" values={[...cut(cost?.api), ...cut(cost?.sandbox ?? d.money.paidByDay)]} usageKnown={Boolean(costRuns?.api || costRuns?.sandbox)} legend={[{ name: 'model API', color: SERIES[3] }, { name: 'sandbox compute', color: SERIES[1] }]} note="What was charged: model calls through Router and sandbox compute on the runs' keys.">
           <DayBars days={days} series={[{ name: 'model API', color: SERIES[3], values: cut(cost?.api) }, { name: 'sandbox compute', color: SERIES[1], values: cut(cost?.sandbox ?? d.money.paidByDay) }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="Subscription use at API prices, per day" note="Seat use (Claude, Codex, Kimi, Gemini) priced at API list rates; covered by the seats, never billed.">
+        <ChartCard title="Subscription use at API prices, per day" values={cut(cost?.subscription ?? d.money.listByDay)} usageKnown={Boolean(costRuns?.subscription)} note="Seat use (Claude, Codex, Kimi, Gemini) priced at API list rates; covered by the seats, never billed.">
           <DayBars days={days} series={[{ name: 'subscription at API prices', color: SERIES[0], values: cut(cost?.subscription ?? d.money.listByDay) }]} format={usd} missing="No reading" />
         </ChartCard>
-        <ChartCard title="Subscription use at API prices, per run" note="30 days; not billed.">
+        <ChartCard title="Subscription use at API prices, per run" values={d.money.runListHistogram.map((bin) => bin.n)} note="30 days; not billed.">
           <Histogram bins={d.money.runListHistogram} unit="at API prices per run" format={usd} />
         </ChartCard>
-        <ChartCard title="Discovery fleet key" note={`${usd(d.money.fleetKey.debits48h)} debited in the last 48 h.`}>
+        <ChartCard title="Discovery fleet key" values={[d.money.fleetKey.spent]} note={`${usd(d.money.fleetKey.debits48h)} debited in the last 48 h.`}>
           <Meter used={d.money.fleetKey.spent} total={d.money.fleetKey.cap} format={usd} />
         </ChartCard>
-        <ChartCard title="Autoscaled hosts, monthly price" note="14 days, from the fleet cost pass every ten minutes.">
+        <ChartCard title="Autoscaled hosts, monthly price" values={history.map((h) => h[4])} note="14 days, from the fleet cost pass every ten minutes.">
           <Lines series={[{ name: 'monthly $', color: SERIES[0], points: history.map((h) => [h[0], h[4]] as [number, number]) }]} format={usd} />
         </ChartCard>
       </Section>
 
       <Section id="sandboxes" title="Sandboxes" tone="tone-neutral">
-        <ChartCard title="Boxes running and parked" legend={[{ name: 'running', color: SERIES[0] }, { name: 'parked', color: SERIES[1] }]} note="14 days. Parked boxes hold a host slot without running.">
+        <ChartCard title="Boxes running and parked" values={history.flatMap((h) => [h[1], h[2]])} legend={[{ name: 'running', color: SERIES[0] }, { name: 'parked', color: SERIES[1] }]} note="14 days. Parked boxes hold a host slot without running.">
           <Lines series={[{ name: 'running', color: SERIES[0], points: history.map((h) => [h[0], h[1]] as [number, number]) }, { name: 'parked', color: SERIES[1], points: history.map((h) => [h[0], h[2]] as [number, number]) }]} />
         </ChartCard>
-        <ChartCard title="Why boxes stay" note="Boxes by the reason they are held, with the median hours parked.">
+        <ChartCard title="Why boxes stay" values={d.fleet.waste.map((w) => w.boxes)} note="Boxes by the reason they are held, with the median hours parked.">
           <HBars rows={d.fleet.waste.map((w) => ({ label: w.label, value: w.boxes, note: w.hours ? `${compact(w.hours)} h median` : undefined, color: w.waste ? 'var(--ar-c-run)' : SERIES[0] }))} format={(v) => `${v} boxes`} />
         </ChartCard>
-        <ChartCard title="Hosts" wide note={`${d.fleet.totals.hosts ?? hosts.length} hosts · autoscaled ${usd(d.fleet.totals.autoscaledMonthlyUsd)} a month · Hetzner cloud ${usd(d.fleet.totals.hetznerCloudMonthlyUsd)} a month`}>
+        <ChartCard title="Hosts" values={hosts.map((h) => h.capacity)} wide note={`${d.fleet.totals.hosts ?? hosts.length} hosts · autoscaled ${usd(d.fleet.totals.autoscaledMonthlyUsd)} a month · Hetzner cloud ${usd(d.fleet.totals.hetznerCloudMonthlyUsd)} a month`}>
           <div className="ov-hosts">
             {hosts.map((h) => (
               <div key={h.name} className="ov-host">
@@ -425,26 +390,26 @@ export function OverviewPage({ api }: { api: string }) {
             ))}
           </div>
         </ChartCard>
-        <ChartCard title="Reaper, last hour">
+        <ChartCard title="Reaper, last hour" values={Object.values(d.fleet.reaper)}>
           <HBars rows={Object.entries(d.fleet.reaper).map(([k, v]) => ({ label: label(k.replaceAll('_', ' ')), value: v }))} color={SERIES[2]} />
         </ChartCard>
       </Section>
 
       <Section title="Storage" tone="tone-neutral">
-        <ChartCard title="Traces volume" note={d.storage.volume?.path}>
+        <ChartCard title="Traces volume" values={[d.storage.volume?.used]} note={d.storage.volume?.path}>
           <Meter used={d.storage.volume?.used} total={d.storage.volume?.total} format={bytes} />
           <p className="ov-note">Record files: {bytes(d.storage.recordsBytes)}</p>
         </ChartCard>
-        <ChartCard title="Run directories by program" note="30 days, the size the catalog recorded for each run.">
+        <ChartCard title="Run directories by program" values={d.storage.byProgram.map(([, size]) => size)} note="30 days, the size the catalog recorded for each run.">
           <HBars rows={d.storage.byProgram.map(([program, size]) => ({ label: program, value: size }))} format={bytes} color={SERIES[2]} />
         </ChartCard>
-        <ChartCard title="Run directory size">
+        <ChartCard title="Run directory size" values={d.storage.runSizeHistogram.map((bin) => bin.n)}>
           <Histogram bins={d.storage.runSizeHistogram} unit="per run" format={bytes} color={SERIES[2]} />
         </ChartCard>
       </Section>
 
       <Section id="seats" title="Subscription seats" tone="tone-info">
-        <ChartCard title="Weekly and 5-hour use per seat" wide note="Utilization the provider reports for each seat; the line is the weekly use since sampling began.">
+        <ChartCard title="Weekly and 5-hour use per seat" values={seats.flatMap((seat) => [seat.d7, seat.h5])} wide note="Utilization the provider reports for each seat; the line is the weekly use since sampling began.">
           <ol className="ov-seats">
             {seats.map((seat) => (
               <li key={`${seat.tool}:${seat.email}`}>

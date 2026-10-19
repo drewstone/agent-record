@@ -129,6 +129,8 @@ export const stateClass = (state: string | null | undefined) => {
     case 'missing':
       return 'state-fail'
     case 'no-winner':
+    case 'stalled':
+    case 'cancelled':
     case 'abandoned':
       return 'state-warn'
     default:
@@ -137,6 +139,14 @@ export const stateClass = (state: string | null | undefined) => {
 }
 export const stateLabel = (state: string | null | undefined) =>
   state ? state.replaceAll('-', ' ') : 'state unknown'
+
+/**
+ * One name for how a run ended (M4). The catalog marks a run `stalled` when the keeper's cancellation names a stall
+ * (discovery-lab runner/stall.mjs), so a stalled run that settled was cancelled after its stall: "cancelled after stall
+ * 03:27Z", the same words on the play, its runs table and the run page. Any other state is its own label.
+ */
+export const endingLabel = (run: { state: string | null | undefined; settledAt?: string | null }) =>
+  run.state === 'stalled' && run.settledAt ? `cancelled after stall ${run.settledAt.slice(11, 16)}Z` : stateLabel(run.state)
 
 /** Paid and list price, with unknown kept apart. */
 export function spendParts(spend: Spend | null | undefined) {

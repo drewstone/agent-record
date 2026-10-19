@@ -22,7 +22,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { duration, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
+import { duration, endingLabel, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -33,7 +33,7 @@ import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable } from './workspace/RunTable.js'
-import { RunReceiptView } from './workspace/RunOverview.js'
+import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript, RunExecution } from './workspace/LiveTranscript.js'
@@ -42,7 +42,7 @@ import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
+import { apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -385,6 +385,12 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   const input: PlayInput | null = selectedRun && selectedRun !== doc?.input?.runId ? (runDoc.data?.input ?? null) : (doc?.input ?? null)
   const open = (runId: string, dimension?: string) =>
     go(`/run/${encodeURIComponent(runId)}${dimension ? `?tab=assessments&dim=${encodeURIComponent(dimension)}` : ''}`)
+  // The play's API-equivalent dollars, run by run, and how many of its started runs the total prices (M5).
+  const coverage = useMemo(() => {
+    const started = (doc?.runs ?? []).filter((run) => run.startedAt)
+    const priced = started.map((run) => apiEquivalent(run.spend).usd).filter((usd): usd is number => usd !== null)
+    return { usd: priced.length ? priced.reduce((sum, usd) => sum + usd, 0) : null, priced: priced.length, runs: started.length }
+  }, [doc])
   const headlines = useMemo(() => {
     const map = new Map<string, PlayDocument['assessments']>()
     for (const row of doc?.assessments ?? []) map.set(row.runId, [...(map.get(row.runId) ?? []), row])
@@ -400,13 +406,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             </div>
             <PlayStanding play={doc} />
             {(doc.frontier?.statement || doc.charter) && <p className="ws-charter">{doc.frontier?.statement ?? doc.charter}</p>}
-            <div className="ws-facts">
-              {doc.program && <span><b>Program</b> {doc.program}</span>}
-              {doc.line && <span><b>Line</b> {doc.line}</span>}
-              {doc.frontier?.target && <span><b>Target</b> {doc.frontier.target}</span>}
-              {doc.frontier?.asOf && <span><b>Frontier as of</b> {doc.frontier.asOf}</span>}
-            </div>
-            <SpendSummary spend={doc.spend} />
+            <PlayFacts play={doc} />
+            <SpendSummary spend={doc.spend} coverage={coverage} />
           </header>
           <Tabs
             label="Play"
@@ -415,7 +416,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             tabs={[['results', 'Results'], ['story', 'Story'], ['runs', 'Runs'], ['versions', 'Versions'], ['profiles', 'Profiles'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
           />
           <div className="ws-content" role="tabpanel">
-            {tab === 'story' && <RunLineage api={api} play={doc} selected={params.get('at')} onSelect={(id) => update({ at: id ?? undefined }, true)} />}
+            {tab === 'story' && <RunLineage play={doc} selected={params.get('at')} onSelect={(id) => update({ at: id ?? undefined }, true)} />}
             {tab === 'results' && (
               <div className="ws-section play-results" data-section="results">
                 <PlayAnswer play={doc} />
@@ -482,9 +483,10 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                   <section className="ws-section gaps">
                     <h3>Missing evidence</h3>
                     <ul className="gap-list">
-                      {view!.gaps.map((gap, i) => (
-                        <li key={i}>
-                          <code>{gap.code}</code> {gap.runId && <span className="mono">{shortRun(doc.id, gap.runId)}</span>} {gap.detail}
+                      {gapCauses(view!.gaps).map((cause) => (
+                        <li key={cause.code}>
+                          <code>{cause.code}</code>{' '}
+                          {cause.runs.length > 1 ? `${cause.runs.length} runs: ${cause.runs.map((run) => shortRun(doc.id, run)).join(', ')}` : <>{cause.runs[0] && <span className="mono">{shortRun(doc.id, cause.runs[0])} </span>}{cause.detail}</>}
                         </li>
                       ))}
                     </ul>
@@ -511,7 +513,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 </Status>
               </section>
             )}
-            {tab === 'spend' && <PlaySpend play={doc} onOpen={open} catalogue={dimensionMap(dimensions.data)} />}
+            {tab === 'spend' && <PlaySpend play={doc} coverage={coverage} onOpen={open} catalogue={dimensionMap(dimensions.data)} />}
             {tab === 'assessments' && (
               <section className="ws-section">
                 <AssessmentMatrix play={view!} dimensions={dimensions.data} onOpen={open} />
@@ -524,7 +526,21 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   )
 }
 
-/** One adverse label per headline dimension. */
+/**
+ * The play's facts that the title does not already say (X11): its program and line only when they are not the title split
+ * at the hyphen, and its frontier's target and date.
+ */
+function PlayFacts({ play }: { play: PlayDocument }) {
+  const split = play.program && play.line && [play.id, play.title].includes(`${play.program}-${play.line}`)
+  const facts = [
+    !split && play.program && <span key="program"><b>Program</b> {play.program}</span>,
+    !split && play.line && <span key="line"><b>Line</b> {play.line}</span>,
+    play.frontier?.target && <span key="target"><b>Target</b> {play.frontier.target}</span>,
+    play.frontier?.asOf && <span key="asof"><b>Frontier as of</b> {play.frontier.asOf}</span>,
+  ].filter(Boolean)
+  return facts.length ? <div className="ws-facts">{facts}</div> : null
+}
+
 /**
  * The play's standing as two facts: its best result (the newest run that won: its play check passed, or its root
  * submitted) and its latest run with how it is going.
@@ -553,7 +569,7 @@ function PlayStanding({ play }: { play: PlayDocument }) {
       {latest && (
         <a className="play-fact" href={`/run/${encodeURIComponent(latest.id)}`} data-latest={latest.id}>
           <span className="answer-label">Latest run</span>
-          <span className={`state-pill ${stateClass(latest.state)}`}>{stateLabel(latest.state)}</span>
+          <span className={`state-pill ${stateClass(latest.state)}`}>{endingLabel(latest)}</span>
           <span className="mono">{shortRun(play.id, latest.id)}</span>
           <span className="faint">{when(latest.startedAt)}</span>
         </a>
@@ -587,6 +603,14 @@ function RunsTable({
 }) {
   // The column shows when any run's record states what it is for (the catalog reads it from the run input).
   const purposes = play.runs.some((run) => run.purpose)
+  // A dollar column shows only when some run has a reading for it (X14); a zero beside unknown usage is no reading (R6).
+  const costs = new Map(play.runs.map((run) => [run.id, { equivalent: apiEquivalent(run.spend), subscription: knownSubscription(run.spend) }]))
+  const shown = {
+    equivalent: play.runs.some((run) => costs.get(run.id)!.equivalent.usd !== null),
+    subscription: play.runs.some((run) => costs.get(run.id)!.subscription !== null),
+    api: play.runs.some((run) => run.spend.apiUsd !== null),
+    sandbox: play.runs.some((run) => run.spend.sandboxUsd !== null),
+  }
   return (
     <div className="table-scroll">
       <table className="data-table runs-table" data-runs>
@@ -598,9 +622,10 @@ function RunsTable({
             <th>Started</th>
             <th>Duration</th>
             <th>Agents</th>
-            <th className="num" title="Subscription model use at API prices; not billed">Subscription use</th>
-            <th className="num" title="Model API charges billed through Router">Model API</th>
-            <th className="num" title="Billed sandbox compute">Sandbox compute</th>
+            {shown.equivalent && <th className="num" title="Every token at API list price, whoever paid; not a bill">API-equivalent</th>}
+            {shown.subscription && <th className="num" title="Subscription model use at API prices; not billed">Subscription use</th>}
+            {shown.api && <th className="num" title="Model API charges billed through Router">Model API</th>}
+            {shown.sandbox && <th className="num" title="Billed sandbox compute">Sandbox compute</th>}
             <th>Conversation</th>
             <th>Flags</th>
           </tr>
@@ -627,15 +652,23 @@ function RunsTable({
                   {run.purpose ? <div className="run-purpose-text">{run.purpose}</div> : <span className="faint">not stated</span>}
                 </td>
               )}
-              <td><span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>{run.reason && <small className="faint"> {run.reason}</small>}</td>
+              <td className="run-state">
+                <span className={`state-pill ${stateClass(run.state)}`}>{endingLabel(run)}</span>
+                {run.reason && run.reason !== run.state && <small className="faint clamp-1" title={run.reason}>{run.reason}</small>}
+              </td>
               <td>{when(run.startedAt)}</td>
               <td>{duration(run.durationMs)}</td>
               <td>{run.nodes ?? '—'}{run.depth !== null && run.nodes ? <small className="faint"> depth {run.depth}</small> : null}</td>
-              <td className={`num ${run.spend.subscriptionUsd === null ? 'unknown' : ''}`}>
-                {money(run.spend.subscriptionUsd)}{!run.spend.subscriptionKnown && run.spend.subscriptionUsd !== null ? '+' : ''}
-              </td>
-              <td className={`num ${run.spend.apiUsd === null ? 'unknown' : ''}`}>{money(run.spend.apiUsd)}</td>
-              <td className={`num ${run.spend.sandboxUsd === null ? 'unknown' : ''}`}>{money(run.spend.sandboxUsd)}</td>
+              {shown.equivalent && (() => {
+                const value = costs.get(run.id)!.equivalent
+                return <td className={`num ${value.usd === null ? 'unknown' : ''}`}>{money(value.usd)}{value.partial ? '+' : ''}</td>
+              })()}
+              {shown.subscription && (() => {
+                const value = costs.get(run.id)!.subscription
+                return <td className={`num ${value === null ? 'unknown' : ''}`}>{money(value)}{!run.spend.subscriptionKnown && value !== null ? '+' : ''}</td>
+              })()}
+              {shown.api && <td className={`num ${run.spend.apiUsd === null ? 'unknown' : ''}`}>{money(run.spend.apiUsd)}</td>}
+              {shown.sandbox && <td className={`num ${run.spend.sandboxUsd === null ? 'unknown' : ''}`}>{money(run.spend.sandboxUsd)}</td>}
               <td>
                 {run.record.capture ? (
                   <CaptureBar capture={run.record.capture} />
@@ -673,14 +706,29 @@ function CaptureBar({ capture }: { capture: { complete: number; lossy: number; a
 const wasteLabel = (dimension: string, catalogue: ReturnType<typeof dimensionMap>) =>
   `${dimension} ${catalogue.get(dimension)?.key.replaceAll('_', ' ') ?? ''}`.trim()
 
-function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (runId: string) => void; catalogue: ReturnType<typeof dimensionMap> }) {
+/** Gaps grouped by cause (X13): one line per cause with the runs it covers, instead of one line per run and gap. */
+function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
+  const causes = new Map<string, { code: string; runs: string[]; detail: string; count: number }>()
+  for (const gap of gaps) {
+    const cause = causes.get(gap.code) ?? { code: gap.code, runs: [], detail: gap.detail, count: 0 }
+    cause.count += 1
+    if (gap.runId && !cause.runs.includes(gap.runId)) cause.runs.push(gap.runId)
+    causes.set(gap.code, cause)
+  }
+  return [...causes.values()]
+}
+
+function PlaySpend({ play, coverage, onOpen, catalogue }: { play: PlayDocument; coverage: { usd: number | null; priced: number; runs: number }; onOpen: (runId: string) => void; catalogue: ReturnType<typeof dimensionMap> }) {
   return (
     <div className="ws-section spend-view">
-      <SpendSummary spend={play.spend} />
+      <SpendSummary spend={play.spend} coverage={coverage} />
       <h3>By run</h3>
       <SpendBars
-        rows={play.runs.map((run) => ({ label: shortRun(play.id, run.id), subscription: run.spend.subscriptionUsd, api: run.spend.apiUsd,
-          sandbox: run.spend.sandboxUsd, subscriptionKnown: run.spend.subscriptionKnown, href: run.id }))}
+        rows={play.runs.map((run) => {
+          const equivalent = apiEquivalent(run.spend)
+          return { label: shortRun(play.id, run.id), subscription: knownSubscription(run.spend), api: run.spend.apiUsd, sandbox: run.spend.sandboxUsd,
+            subscriptionKnown: run.spend.subscriptionKnown, href: run.id, note: equivalent.usd !== null ? `${money(equivalent.usd)}${equivalent.partial ? '+' : ''} API-equivalent` : undefined }
+        })}
         onOpen={(row) => row.href && onOpen(row.href)}
       />
       {byModel(play.spend).length > 0 && (
@@ -700,7 +748,12 @@ function PlaySpend({ play, onOpen, catalogue }: { play: PlayDocument; onOpen: (r
         <>
           <h3>Unknown spend</h3>
           <ul className="gap-list">
-            {play.spend.gaps.map((gap, i) => <li key={i}><code title={gap.code}>{spendGapLabel(gap.code)}</code> {gap.runId && <span className="mono">{shortRun(play.id, gap.runId)}</span>} {gap.detail}</li>)}
+            {gapCauses(play.spend.gaps).map((cause) => (
+              <li key={cause.code} title={cause.runs.length > 1 ? undefined : cause.detail}>
+                <code title={cause.code}>{spendGapLabel(cause.code)}</code>{' '}
+                {cause.runs.length > 1 ? `${cause.runs.length} runs: ${cause.runs.map((run) => shortRun(play.id, run)).join(', ')}` : <>{cause.runs[0] && <span className="mono">{shortRun(play.id, cause.runs[0])} </span>}{cause.detail}</>}
+              </li>
+            ))}
           </ul>
         </>
       )}
@@ -836,6 +889,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
         <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
+        <DetailBar doc={doc} section={null} counts={overviewCounts(doc, index)} onOpen={open} onBack={() => undefined} />
         <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
@@ -852,11 +906,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
         : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
     </p>
   )
-  const counts: Partial<Record<RunSection, number>> = {
-    findings: doc.findings?.items.filter((item) => item.kind === 'result' || item.kind === 'claim').length,
-    agents: index?.actors.filter((node) => node.kind !== 'finding').length,
-    outputs: doc.finalOutput?.files.length,
-  }
+  const counts = overviewCounts(doc, index)
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
       <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
@@ -1013,21 +1063,33 @@ function RunPage({ api, id }: { api: string; id: string }) {
   )
 }
 
+/** The counts the detail bar shows beside its views. */
+function overviewCounts(doc: RunDocument, index: RecordIndex | null): Partial<Record<RunSection, number>> {
+  return {
+    findings: doc.findings?.items.filter((item) => item.kind === 'result' || item.kind === 'claim').length,
+    agents: index?.actors.filter((node) => node.kind !== 'finding').length,
+    outputs: doc.finalOutput?.files.length,
+  }
+}
+
 /**
  * A detail view's bar: back to the run's overview, the run and its state, and the other detail views. The overview
  * answers the run's questions; these are the evidence behind each answer (conversations, the commit and profile graphs,
  * ledgers, assessments, capture and input), one click from the section that names them.
  */
-function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument; section: RunSection; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void; onBack: () => void }) {
+function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument; section: RunSection | null; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void; onBack: () => void }) {
   const run = doc.run
   const views = DETAIL_VIEWS.filter(([value]) => value !== 'findings' || section === 'findings' || !!doc.findings?.total)
+  // On the overview the bar is the way to each detail view (B4); in a detail view it leads back first.
   return (
-    <nav className="run-tabs detail-bar" aria-label="Detail views">
-      <button type="button" className="run-tab detail-back" onClick={onBack} data-section-tab="overview">
-        ← Overview
-      </button>
+    <nav className="run-tabs detail-bar" aria-label="Detail views" data-detail-bar={section ?? 'overview'}>
+      {section !== null && (
+        <button type="button" className="run-tab detail-back" onClick={onBack} data-section-tab="overview">
+          ← Overview
+        </button>
+      )}
       <span className="detail-run mono" title={run.id}>
-        {shortRun(run.play, run.id)} <span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>
+        {shortRun(run.play, run.id)} <span className={`state-pill ${stateClass(run.state)}`}>{endingLabel(run)}</span>
       </span>
       <span className="detail-views">
         {views.map(([value, label]) => (
@@ -1438,8 +1500,10 @@ function RunPanels({
           .filter((item) => item.kind !== 'finding')
           .map((item) => {
             const spend = doc.spend.nodes[item.id]
-            return { label: item.label, subscription: spend?.subscriptionUsd ?? null, api: spend?.apiUsd ?? null,
-              sandbox: spend?.sandboxUsd ?? null, subscriptionKnown: spend?.subscriptionKnown, href: item.id }
+            const equivalent = apiEquivalent(spend)
+            return { label: item.label, subscription: knownSubscription(spend), api: spend?.apiUsd ?? null,
+              sandbox: spend?.sandboxUsd ?? null, subscriptionKnown: spend?.subscriptionKnown, href: item.id,
+              note: equivalent.usd !== null ? `${money(equivalent.usd)}${equivalent.partial ? '+' : ''} API-equivalent` : undefined }
           })}
         onOpen={(row) => row.href && onSelectAgent(row.href)}
       />
@@ -1534,6 +1598,9 @@ function ReceiptPage({ api, id }: { api: string; id: string }) {
   const [runId, tag] = id.split('@')
   const url = `${api}/runs/${encodeURIComponent(runId!)}/receipt${tag ? `/${encodeURIComponent(tag)}` : ''}/receipt.json`
   const doc = useDocument<RunReceipt>(url)
+  // The print view states the outcome too (B5): the run's progress outcome when the run document has one, else the
+  // verdict the receipt's own check recorded.
+  const run = useDocument<RunDocument>(`${api}/runs/${encodeURIComponent(runId!)}`)
   if (!doc.data) return <p role="status">{doc.error ?? 'Loading receipt…'}</p>
-  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print /></div>
+  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} /></div>
 }

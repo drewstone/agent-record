@@ -115,7 +115,8 @@ export const recordStatusSchema = z
 
 // `abandoned`: the run never settled and Runtime reports its coordinator gone (discovery-lab run catalog); a run whose
 // cancellation Runtime acknowledged reads `failed` with the cancellation as its reason.
-const runState = z.enum(['running', 'winner', 'no-winner', 'failed', 'driver-failed', 'abandoned', 'no-record', 'unknown'])
+// `stalled`: no agent live and nothing streamed past the keeper's wake (the catalog's stalled cause); the operator then cancels it.
+const runState = z.enum(['running', 'winner', 'no-winner', 'stalled', 'failed', 'driver-failed', 'abandoned', 'no-record', 'unknown'])
 const runKey = z
   .object({ id: z.string(), name: z.string(), capUsd: usd, spentUsd: usd, final: z.boolean() })
   .catchall(z.unknown())
@@ -417,7 +418,7 @@ export const playDocumentSchema = z
       })
       .catchall(z.unknown())
       .nullable(),
-    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), groups: z.array(z.object({ id: z.string(), label: z.string(), fullWindow: z.boolean(), panels: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional(), marks: z.array(z.object({ at: z.number(), kind: z.literal('deadline'), label: z.string() })) })) })) }).nullable().optional(),
+    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), xLabel: z.string().optional(), yLabel: z.string().optional(), unit: z.string().optional(), groups: z.array(z.object({ id: z.string(), label: z.string(), fullWindow: z.boolean(), panels: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional(), marks: z.array(z.object({ at: z.number(), kind: z.literal('deadline'), label: z.string() })) })) })) }).nullable().optional(),
     /** The latest run's input. */
     input: playInputSchema.nullable(),
     /** Newest first; versions are folded into their run. */
@@ -520,6 +521,29 @@ export const progressBriefSchema = z
   })
   .catchall(z.unknown())
 
+/** A check's dense score: the stage it reached of how many, its public workloads, and the Lab's 0–1 value. */
+const checkScoreSchema = z
+  .object({
+    stage: z.string().nullable().optional(),
+    reached: z.number().nullable().optional(),
+    of: z.number().nullable().optional(),
+    workloads: z.object({ passed: z.number(), total: z.number() }).nullable().optional(),
+    value: z.number().nullable().optional(),
+  })
+  .catchall(z.unknown())
+/** One check or tag-gate line: when, on which tag, its first failing line, its verdict and score. */
+const checkLineSchema = z
+  .object({
+    at: z.string().nullable().optional(),
+    tag: z.string().nullable().optional(),
+    line: z.string().nullable().optional(),
+    stage: z.string().nullable().optional(),
+    solved: z.boolean().nullable().optional(),
+    verdict: z.string().nullable().optional(),
+    score: checkScoreSchema.nullable().optional(),
+  })
+  .catchall(z.unknown())
+
 /**
  * The run's progress as data (discovery-lab `runner/run-progress.mjs`, `discovery.run-progress`): who worked when, each
  * agent's API-equivalent dollars, and the run's spend and files written over time. The briefs draw their record charts
@@ -587,6 +611,12 @@ export const runProgressSchema = z
         solvedLabel: z.string().nullable().optional(),
         /** That goal audit's verdict and when it ruled, or for 'unaudited' when it last tried; null when the run states no goal. */
         goalAudit: z.object({ verdict: z.enum(['consistent', 'contradiction', 'unaudited']).nullable(), at: time.nullable() }).catchall(z.unknown()).nullable().optional(),
+        /** The newest check's line and score, the newest tag gate's verdict, line and score, and the score shown
+         * (discovery-lab `runner/run-progress.mjs` outcomeOf). A gate verdict is pass, fail or unknown (a prover past its
+         * time limit). */
+        latestCheck: checkLineSchema.nullable().optional(),
+        gate: checkLineSchema.nullable().optional(),
+        score: checkScoreSchema.extend({ at: z.string().nullable().optional(), tag: z.string().nullable().optional(), source: z.string().nullable().optional() }).nullable().optional(),
         /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
         disputes: z
           .array(
@@ -894,7 +924,8 @@ export const runDocumentSchema = z
       lastAttempt: z.object({ error: z.string().nullable(), classification: z.string().nullable(), madeProgress: z.boolean().nullable().optional(), retryInMs: z.number().nullable().optional(), at: z.string().nullable().optional() }).nullable(),
       diagnoses: z.array(z.object({ id: z.string(), title: z.string().optional(), fix: z.string() })),
       diagnosisError: z.string().nullable().optional(),
-      resume: z.object({ status: z.enum(['preserved', 'unavailable', 'unknown']), command: z.string().nullable(), reason: z.string() }),
+      /** `reason` is null where resuming does not apply (a host-placed run has no source sandbox). */
+      resume: z.object({ status: z.enum(['preserved', 'unavailable', 'unknown']), command: z.string().nullable(), reason: z.string().nullable() }),
       runnerTail: z.string().nullable().optional(),
     }).optional(),
   })
@@ -1481,7 +1512,13 @@ type Bin = { lo: number; hi: number; n: number }
  * A run's lead finding on the overview: a passed play check (`check`: its SOLVED line, else the run's stated answer), else
  * its best result or claim page, a page that states its answer first.
  */
-export interface OverviewLead { title: string | null; kind: 'result' | 'claim' | 'check'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string }
+export interface OverviewLead {
+  title: string | null; kind: 'result' | 'claim' | 'check'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string
+  /** A `check` lead of a run that has not won: false (its latest check line leads), true or absent for a passed check. */
+  solved?: boolean | null
+  /** The best score the play's checks reached, in words (for example "best 15/15 under a3cf95c7"). */
+  best?: string | null
+}
 export interface OverviewRun {
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
   results: number; claims: number; findingsPending?: boolean; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
@@ -1494,6 +1531,8 @@ export interface OverviewPlayWeek {
   results: number; claims: number; findingsPending?: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
   subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null; costUnknownRuns?: number
   apiKnownRuns?: number; sandboxKnownRuns?: number
+  /** The runs' API-equivalent dollars (each run receipt's cost.apiEquivalentUsd): every token at list price, whoever paid. */
+  apiEquivalentUsd?: number | null
 }
 export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
 

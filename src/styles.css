@@ -2664,15 +2664,8 @@
 .ar-ws .ov-light.tone-warn { background: var(--ar-c-run); }
 .ar-ws .ov-light.tone-info { background: var(--ar-fg-muted); }
 /* Now: the running runs beside what needs a person. */
-.ar-ws .ov-now { display: flex; flex-wrap: wrap; gap: 1em; align-items: stretch; }
-.ar-ws .ov-consumption { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: .45em; }
-.ar-ws .ov-consumption-item { display: grid; grid-template-rows: auto auto 2em; gap: .2em; min-width: 0; padding: .55em .65em;
-  border: 1px solid var(--ar-border); border-radius: 7px; background: var(--ws-panel); }
-.ar-ws .ov-consumption-item > span { color: var(--ar-fg-muted); font-size: .72em; line-height: 1.2; }
-.ar-ws .ov-consumption-item > strong { font: 650 1.05em var(--ar-font-mono); color: var(--ar-fg); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.ar-ws .ov-consumption-item .ov-spark { width: 100%; height: 2em; }
-@media (max-width: 1400px) { .ar-ws .ov-consumption { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .ar-ws .ov-consumption { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Each card is as tall as what it holds (B9): Running now with one run no longer stretches to the height of Needs you. */
+.ar-ws .ov-now { display: flex; flex-wrap: wrap; gap: 1em; align-items: flex-start; }
 .ar-ws .ov-now-runs { flex: 3 1 min(100%, 36em); }
 .ar-ws .ov-attention { flex: 2 1 min(100%, 24em); }
 @media (max-width: 700px) {
@@ -2692,7 +2685,9 @@
 .ar-ws .ov-lead { display: flex; gap: .5em; align-items: baseline; min-width: 0; }
 .ar-ws .ov-lead-kind { flex: none; padding: .2em .45em; border-radius: 4px; font: 600 .7em/1.2 var(--ar-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg); background: color-mix(in srgb, var(--ar-c-ok) 24%, transparent); }
 .ar-ws .ov-lead-kind.kind-claim { background: color-mix(in srgb, var(--ar-c-run) 24%, transparent); }
-.ar-ws .ov-lead-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ar-fg); }
+.ar-ws .ov-lead-title { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--ar-fg-muted); overflow-wrap: anywhere; }
+.ar-ws .ov-lead-title b { color: var(--ar-fg); font-weight: 600; }
+.ar-ws .ov-lead-kind.is-failing { background: color-mix(in srgb, var(--ar-c-fail) 24%, transparent); }
 .ar-ws .ov-attention ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .15em; }
 .ar-ws .ov-attention li > a, .ar-ws .ov-attention li > div { display: flex; gap: .7em; align-items: baseline; padding: .45em .5em; border-radius: 6px; color: var(--ar-fg); text-decoration: none; }
 .ar-ws .ov-attention li > a:hover, .ar-ws .ov-attention li > a:focus-visible { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
@@ -2709,13 +2704,11 @@
   .ar-ws .ov-attention-text { display: block; min-width: 0; overflow-wrap: anywhere; font-size: .92em; line-height: 1.2; }
   .ar-ws .ov-attention-text small { display: block; margin-top: .12em; line-height: 1.2; }
   .ar-ws .ov-attention-text small:first-of-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ar-ws .ov-consumption-item { padding: .3em .45em; grid-template-rows: auto auto 1.25em; }
-  .ar-ws .ov-consumption-item .ov-spark { height: 1.25em; }
   .ar-ws .ov-week li:not(.ov-week-head):not(.ov-week-total) { line-height: 1.3; padding-block: .2em; }
 }
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
 .ar-ws .ov-week { gap: .6em; }
-.ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1.1fr) minmax(6em, .8fr) minmax(0, 2.4fr) repeat(5, max-content); column-gap: 1.1em; }
+.ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1fr) minmax(6em, .7fr) minmax(0, 3.2fr) repeat(3, max-content); column-gap: 1.1em; }
 .ar-ws .ov-week li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; row-gap: .15em; padding: .38em .5em; border-top: 1px solid var(--ar-border); border-radius: 0; }
 .ar-ws .ov-week li:hover { background: var(--ar-hover, var(--ar-bg-alt)); }
 .ar-ws .ov-week li.is-running { background: color-mix(in srgb, var(--ws-accent) 8%, transparent); }
@@ -2748,11 +2741,11 @@
 @media (max-width: 760px) {
   .ar-ws .ov-page, .ar-ws .ov-section { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .ov-card { overflow-wrap: anywhere; }
-  .ar-ws .ov-week ol { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: .8em; }
+  .ar-ws .ov-week ol { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: .8em; }
   .ar-ws .ov-week .ov-week-head { display: none; }
   .ar-ws .ov-week-play, .ar-ws .ov-week-runs, .ar-ws .ov-week-found { grid-column: 1 / -1; }
   .ar-ws .ov-week-num { text-align: left; font-size: .85em; white-space: normal; }
-  .ar-ws .ov-week li:not(.ov-week-total) .ov-week-num::before { content: attr(data-label); display: block; font: .78em var(--ar-font-body); color: var(--ar-fg-faint); }
+  .ar-ws .ov-week li:not(.ov-week-total) .ov-week-num::before { content: attr(data-label); display: block; font: .78em var(--ar-font-body); color: var(--ar-fg-faint); white-space: nowrap; }
 }
 .ar-ws .ov-section { display: grid; gap: .7em; }
 /* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
@@ -3323,3 +3316,43 @@
 .agent-record .run-execution p { margin: 0 0 8px; }
 .agent-record .run-execution-next { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .agent-record .run-execution pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; }
+
+/* Phase 1 of the Magnetar audit (2026-10-19). */
+/* R6, M5: API-equivalent dollars lead; kinds nobody read are one muted line, never a chip of "unknown" or a false $0.00. */
+.ar-ws .spend-chip.equivalent { border-color: color-mix(in srgb, var(--ws-accent) 35%, var(--ar-border)); }
+.ar-ws .spend-unread { color: var(--ar-fg-faint); }
+/* B10: a run's ending reason is one line; the whole reason is its tooltip. */
+.ar-ws .runs-table .run-state { max-width: 24rem; white-space: normal; }
+.ar-ws .runs-table .run-state small { margin-top: 2px; overflow-wrap: anywhere; }
+/* R2: a play without a winner lists each run's last check line. */
+.ar-ws .play-check-runs { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 4px; font-size: var(--ar-text-s); }
+.ar-ws .play-check-runs li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.ar-ws .play-check-runs .clamp-1 { color: var(--ar-fg-muted); overflow-wrap: anywhere; }
+/* M4: what blocks the run, under its status. */
+.agent-record .run-blockers { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 4px; font-size: var(--ar-text-s); }
+.agent-record .run-blockers strong { color: var(--ar-c-run); }
+.agent-record .run-blocker-line { font-family: var(--ar-font-mono); overflow-wrap: anywhere; }
+.ar-ws .rr-now-passes { margin: 0 0 10px; color: var(--ar-c-run); overflow-wrap: anywhere; }
+.ar-ws .rr-behavior-line { border-top: 1px solid var(--ar-border); padding-top: 14px; font-size: var(--ar-text-s); overflow-wrap: anywhere; }
+/* X16: the run input's knowledge seed and budget, one line each. */
+.ar-ws .input-line { margin: 0 0 10px; font-size: var(--ar-text-s); color: var(--ar-fg); overflow-wrap: anywhere; }
+.ar-ws .input-line b { color: var(--ar-fg-muted); font-weight: 600; margin-right: 6px; }
+/* B4: the run overview's section bar sits under the status, not stuck over the receipt. */
+.ar-ws .ws-run[data-section="overview"] > .detail-bar { position: static; box-shadow: none; }
+@media (max-width: 700px) {
+  /* B1: on a phone the page's own gutters, the section frames and wrapped tab rows took the first screen and left cards 284 px
+     wide. The host page already pads the viewer; sections lose their side padding and frame, and tabs scroll in one row. */
+  .ar-ws .ws-page { padding: 8px 0 24px; gap: 10px; }
+  .ar-ws .ws-head { padding: 10px 12px; gap: 6px; }
+  .ar-ws .ws-content > .ws-section, .ar-ws .ws-content > .play-results, .ar-ws .ws-content > .spend-view { padding: 10px 0; border-width: 1px 0 0; border-radius: 0; background: transparent; }
+  .ar-ws .ws-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0; }
+  .ar-ws .ws-tabs::-webkit-scrollbar { display: none; }
+  .ar-ws .ws-tabs button { flex: none; padding: 8px 10px; }
+  .ar-ws .play-fact { padding: 4px 8px; }
+  .ar-ws .feed-card { padding: 12px; }
+  /* B2: the run page fits 390 px: no side padding of its own, and no chart or command wider than the column. */
+  .ar-ws .rr-page { padding: 12px 0; }
+  .agent-record .run-execution { padding: 12px 0; }
+  .ar-ws .rr-page .rr-chart, .ar-ws .rr-page .tgc-figure, .ar-ws .rr-page svg { max-width: 100%; min-width: 0; }
+  .ar-ws .detail-bar { flex-wrap: nowrap; overflow-x: auto; }
+}

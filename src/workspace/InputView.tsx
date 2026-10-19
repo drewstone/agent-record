@@ -27,6 +27,31 @@ function Long({ title, text }: { title: string; text: string | null }) {
 const bytes = (value: number) =>
   value < 1024 ? `${value} B` : value < 1024 * 1024 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`
 
+/** A budget in words (X16): "48 h, no iteration or token cap". A cap at or past Number.MAX_SAFE_INTEGER is no cap. */
+function budgetText(budget: Record<string, unknown>) {
+  const capped = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value < Number.MAX_SAFE_INTEGER
+  const parts: string[] = []
+  if (typeof budget.deadlineMs === 'number') parts.push(`${new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(budget.deadlineMs / 3_600_000)} h`)
+  const caps = [['maxIterations', 'iteration'], ['maxTokens', 'token']] as const
+  const none = caps.filter(([key]) => key in budget && !capped(budget[key])).map(([, word]) => word)
+  for (const [key, word] of caps) if (capped(budget[key])) parts.push(`at most ${new Intl.NumberFormat('en-US').format(budget[key] as number)} ${word}s`)
+  if (none.length) parts.push(`no ${none.join(' or ')} cap`)
+  for (const [key, value] of Object.entries(budget)) if (key !== 'deadlineMs' && !caps.some(([cap]) => cap === key)) parts.push(`${key} ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`)
+  return parts.join(', ')
+}
+
+/** Knowledge recorded as the retriever's configuration (a JSON seed and store paths) is one line, not a page of internals. */
+function knowledgeLine(text: string | null) {
+  if (!text) return null
+  try {
+    const value = JSON.parse(text) as { retrieverVersion?: string; seed?: { digest?: string; directory?: string } }
+    if (!value || typeof value !== 'object') return null
+    return [value.seed?.digest && `seed ${value.seed.digest.slice(0, 12)}`, value.seed?.directory && `from ${value.seed.directory}`, value.retrieverVersion && `retriever ${value.retrieverVersion}`].filter(Boolean).join(' · ') || null
+  } catch {
+    return null
+  }
+}
+
 function Value({ value }: { value: unknown }) {
   if (value === null || value === undefined) return <span className="faint">not set</span>
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return <span>{String(value)}</span>
@@ -110,7 +135,7 @@ function InputBody({ input, api, changed }: { input: PlayInput | null; api: stri
           <Long title="Objective" text={input.objective} />
           <Long title="Instruction" text={input.instruction} />
           <Long title="Completion" text={input.completion} />
-          <Long title="Knowledge" text={input.knowledge} />
+          {knowledgeLine(input.knowledge) ? <p className="input-line" data-input="knowledge"><b>Knowledge</b> {knowledgeLine(input.knowledge)}</p> : <Long title="Knowledge" text={input.knowledge} />}
           {acceptance && (
             <section className="input-block" data-input="acceptance">
               <h4>Acceptance</h4>
@@ -142,12 +167,7 @@ function InputBody({ input, api, changed }: { input: PlayInput | null; api: stri
               )}
             </section>
           )}
-          {input.budget && (
-            <section className="input-block" data-input="budget">
-              <h4>Budget</h4>
-              <Value value={input.budget} />
-            </section>
-          )}
+          {input.budget && <p className="input-line" data-input="budget"><b>Budget</b> {budgetText(input.budget)}</p>}
           {input.continuation && (
             <details className="input-details">
               <summary>Continuation</summary>
