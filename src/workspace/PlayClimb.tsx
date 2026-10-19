@@ -14,6 +14,7 @@ import {
   metricValue,
   type PlayBarMetric,
   type PlayHead,
+  rulingWords,
   shortRun,
   shortTag,
   targetWords,
@@ -69,10 +70,13 @@ export function releaseAxis(play: Play, climb: Climb) {
     const at = runOf.flatMap((run, i) => (run === group.runId ? [i] : []))
     if (!at.length) return []
     const glyph = group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
+    // A run that only scored its untagged workspace has no tag counts to state.
+    const tagged = Boolean(group.checked || group.published)
     const counts = [
-      group.checked !== null && group.checked !== undefined ? `${group.checked} checked` : null,
-      group.published !== null && group.published !== undefined ? `${group.published} published` : null,
+      tagged && group.checked !== null && group.checked !== undefined ? `${group.checked} checked` : null,
+      tagged && group.published !== null && group.published !== undefined ? `${group.published} published` : null,
       group.withheld ? `${group.withheld} withheld` : null,
+      group.noTag ? `${group.noTag} untagged` : null,
     ].filter(Boolean)
     const lineage = group.lineage?.kind === 'fork' && group.lineage.parentRun ? `forked from ${shortRun(play.id, group.lineage.parentRun)}${group.lineage.parentTag ? `@${shortTag(group.lineage.parentTag)}` : ''}` : group.lineage?.kind === 'wrong-base' ? `wrong base ${group.lineage.why ?? ''}` : null
     const label = [`${glyph ? `${glyph} ` : ''}${shortRun(play.id, group.runId) || group.label}`, ...counts, lineage, group.unscored ? 'no score line' : null, runSpan(group.from, group.to)].filter(Boolean).join(' · ')
@@ -163,7 +167,9 @@ function climbFigure(play: Play, climb: Climb) {
     const label = ruling.verdict === 'rejected' ? `check stands ${clock}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} ${clock}`
     marks.push({ at: x, label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
   }
-  const ticks = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: item.label.toUpperCase() } : item))
+  const lines = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: item.label.toUpperCase() } : item))
+  // A check without stages scores pass or fail: name the floor too, or the plot reads as one line of SOLVED.
+  const ticks = lines.length && lines.every((item) => item.at === 1) ? [{ at: 0, label: 'NOT SOLVED' }, ...lines] : lines
   return timeSeries(series, {
     id: `climb-${play.id}`,
     x: { label: 'Release', domain: axis.domain, categories: axis.categories },
@@ -196,7 +202,7 @@ export function PlayClimb({ play }: { play: Play }) {
               <i aria-hidden="true" />
               <b>{checker.label}</b>
               <span className="faint">
-                {checker.ruling ? ` ${checker.ruling.label ?? checker.ruling.reason ?? checker.ruling.by ?? 'ruling'} ${utc(checker.ruling.at) ?? ''}` : ' as pressed'}
+                {checker.ruling ? ` ${rulingWords(checker.ruling)}` : ' as pressed'}
                 {` · ${checker.rows ?? counted.get(checker.label) ?? counted.get(checker.sha256) ?? 0} rows`}
                 {checker.current ? ' · current' : ''}
               </span>

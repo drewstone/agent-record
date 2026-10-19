@@ -183,7 +183,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                   <td className="num">
                     <Cost row={row} />
                   </td>
-                  <td className="ledger-seat" title={row.seatKind ?? undefined}>
+                  <td className="ledger-seat" title={[row.seat, row.seatKind].filter(Boolean).join(' · ') || undefined}>
                     {row.seat ?? <span className="faint">—</span>}
                   </td>
                   {full && (

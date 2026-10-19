@@ -42,7 +42,8 @@ export function PlayReleases({ play }: { play: Play }) {
   }, [releases])
   if (!releases.length) return <p className="ws-status">No release tag has been recorded for this play.</p>
   const never = play.standing?.releases?.neverChecked ?? releases.filter((release) => (release.state ?? 'published') === 'published' && !Object.keys(release.checks ?? {}).length && !release.gate).length
-  const columns = `64px 56px 84px 140px repeat(${checkers.length || 1}, minmax(52px, .5fr)) minmax(120px, 1.2fr) repeat(${metrics.length}, minmax(76px, .7fr)) 64px 64px`
+  // repeat(0, …) is invalid CSS and voids the whole template, so a play without a bar has no metric columns at all.
+  const columns = `64px 56px 84px 140px repeat(${checkers.length || 1}, minmax(52px, .5fr)) minmax(120px, 1.2fr)${metrics.length ? ` repeat(${metrics.length}, minmax(76px, .7fr))` : ''} 64px 64px`
   return (
     <section className="ws-section play-releases" data-play-releases aria-label="Releases">
       <p className="faint">
@@ -101,7 +102,7 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
         <a href={`/run/${encodeURIComponent(release.runId)}`}>{shortRun(play.id, release.runId)}</a>
       </span>
       <span className="mono faint" title={[release.commit, release.taggedAt ? `tagged ${utc(release.taggedAt)}` : null, RELEASE_STATE[release.state ?? 'published']].filter(Boolean).join('\n')}>
-        {release.commit?.slice(0, 8) ?? '—'}
+        {release.commit?.slice(0, 7) ?? '—'}
       </span>
       <span className={`verdict-cell tone-${tone(release.gate?.verdict)}`} title={release.gate?.line ?? undefined}>
         {release.gate ? (

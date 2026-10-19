@@ -20,7 +20,8 @@ interface Team {
 }
 
 const time = (value: unknown) => (typeof value === 'number' ? value : typeof value === 'string' ? Date.parse(value) : NaN)
-const PAGE = 4
+/** Two teams on the first screen of the Standing tab; more on request. */
+const PAGE = 2
 
 /** The receipt names a child lane `<parent>:<child>`; a lane without a recorded parent hangs from that, else from the root. */
 const parentOf = (id: string, ids: Set<string>) => {
@@ -85,7 +86,8 @@ function TeamPanel({ play, team, hoursAxis }: { play: Play; team: Team; hoursAxi
  * depth 1, with attempt ticks by outcome and quota walls as blocked bands. Loads when scrolled into view.
  */
 export function PlayTeams({ api, play }: { api: string; play: Play }) {
-  const rows = play.ledger?.rows ?? []
+  // An index group's runs are unrelated plays: a team view across them says nothing.
+  const rows = play.standing?.status === 'group' ? [] : (play.ledger?.rows ?? [])
   // An unknown agent count (null) is not one agent: its receipt timeline says how the run staffed itself.
   const multi = rows.filter((row) => row.agents === null || row.agents === undefined || row.agents >= 2)
   const single = rows.filter((row) => row.agents === 1)
@@ -116,7 +118,7 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
           ) : teams.error ? (
             <p className="ws-status" role="alert">Teams are unavailable: {teams.error}</p>
           ) : (
-            (teams.data ?? []).map((team) => <TeamPanel key={team.runId} play={play} team={team} hoursAxis={hoursAxis} />)
+            (teams.data ?? []).filter((team) => team.missing || team.lanes?.length).map((team) => <TeamPanel key={team.runId} play={play} team={team} hoursAxis={hoursAxis} />)
           )}
         </div>
       )}
@@ -133,7 +135,7 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
             return (
               <li key={row.runId}>
                 <a className="mono" href={`/run/${encodeURIComponent(row.runId)}`}>{shortRun(play.id, row.runId)}</a> root only
-                {row.triesByOutcome ? ` · ${tries} attempts${top && tries ? (top[1] === tries ? `, all ${top[0]}` : `, most ${top[0]}`) : ''}` : ''}
+                {tries ? ` · ${tries} attempts${top ? (top[1] === tries ? `, all ${top[0]}` : `, most ${top[0]}`) : ''}` : ''}
                 {row.ending?.word ? ` · ${row.ending.word}` : ''}
               </li>
             )

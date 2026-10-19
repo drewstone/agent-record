@@ -12,6 +12,7 @@ import {
   type PlayBlocker,
   type PlayHead as Head,
   RELEASE_STATE,
+  rulingWords,
   shortRun,
   shortTag,
   span,
@@ -89,7 +90,7 @@ function CheckRows({ play }: { play: Play }) {
         {current?.ruling && (
           <span className="faint goal-ruling clamp-1" title={[current.ruling.label, current.ruling.reason].filter(Boolean).join('\n')}>
             {' '}
-            {current.ruling.label ?? current.ruling.reason ?? `${current.ruling.by ?? ''} ruling`} · {utc(current.ruling.at)}
+            {rulingWords(current.ruling)}
           </span>
         )}
       </h4>
@@ -179,7 +180,7 @@ function GoalBlock({ play }: { play: Play }) {
   const precondition = (play.bar?.metrics ?? []).find((metric) => metric.precondition)
   const marks = metrics.map((metric) => (metric.best ? null : metric.nearest)).filter(Boolean)
   return (
-    <section className="goal-block" aria-label="Goal">
+    <section className={`goal-block${metrics.length ? '' : ' no-bar'}`} aria-label="Goal">
       <CheckRows play={play} />
       {metrics.length > 0 && (
         <div className="goal-bar">

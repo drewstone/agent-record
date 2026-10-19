@@ -161,6 +161,8 @@ export const playClimbSchema = z
           checked: n.optional(),
           published: n.optional(),
           withheld: n.optional(),
+          superseded: n.optional(),
+          noTag: n.optional(),
           unscored: z.boolean().optional(),
           lineage: lineage.optional(),
           summary: s.optional(),
@@ -411,6 +413,14 @@ export function checkerIndex(checkers: readonly PlayChecker[] | undefined, id: s
   if (!found) return undefined
   if (found === current) return 0
   return checkers.filter((item) => item !== current).indexOf(found) + 1
+}
+
+/** A ruling as one phrase: its label (else reason, else who ruled) and its time, never the time twice. */
+export function rulingWords(ruling: { label?: string | null; reason?: string | null; by?: string | null; at?: string | null } | null | undefined): string | null {
+  if (!ruling) return null
+  const text = ruling.label ?? ruling.reason ?? (ruling.by ? `${ruling.by} ruling` : 'ruling')
+  const at = utc(ruling.at)
+  return at && !text.includes(at) && !text.includes(at.slice(6)) ? `${text} ${at}` : text
 }
 
 /** The hover text of a checker: its label, ruling and digest. */

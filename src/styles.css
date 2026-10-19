@@ -1643,7 +1643,7 @@
 .ar-ws .ws-tabs button { font: 600 var(--ar-text-m) var(--ar-font-body); padding: 9px 14px; border-radius: 6px 6px 0 0; color: var(--ar-fg-muted); background: transparent; }
 .ar-ws .ws-tabs [aria-selected='true'] { color: var(--ar-fg); background: transparent; box-shadow: inset 0 -2px var(--ws-frame); }
 .ar-ws .ws-content { display: grid; gap: 14px; min-width: 0; }
-.ar-ws .ws-section { background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.ar-ws .ws-section { background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 14px 16px; min-width: 0; --chart-canvas: var(--ws-panel); }
 .ar-ws .ws-section > h3:first-child { margin-top: 0; }
 .ar-ws .gap-list { margin: 0; padding-left: 18px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); display: grid; gap: 4px; }
 .ar-ws .gap-list code { color: var(--ar-c-run); font-size: var(--ar-text-s); }
@@ -3302,8 +3302,8 @@
 .ar-ws .rr-comparison > section > table td, .ar-ws .rr-comparison > section > table th { padding:8px; overflow-wrap:anywhere; }
 .ar-ws .rr-comparison small { display:block; color:var(--ar-fg-muted); }
 
-/* Bind the chart package's semantic roles to this renderer's host theme. */
-.ar-ws .rr-page, .ar-ws .rr-comparison {
+/* Bind the chart package's semantic roles to this renderer's host theme, once for every workspace page. */
+.agent-record.ar-ws {
   --chart-accent:var(--ar-c-action); --chart-ink:var(--ar-fg); --chart-ink-muted:var(--ar-fg-muted);
   --chart-canvas:var(--ar-bg); --chart-muted:var(--ar-fg-faint); --chart-shade:var(--ar-bg-alt);
   --chart-grid:var(--ar-border); --chart-rule:var(--ar-border-strong); --chart-pass:var(--ar-c-ok);
@@ -3388,7 +3388,7 @@
 .ar-ws .play-verdict { font-family: var(--ar-font-mono); font-weight: 700; letter-spacing: .02em; color: var(--ar-c-run); }
 .ar-ws .play-verdict.verdict-solved { color: var(--ar-c-ok); }
 .ar-ws .play-verdict.verdict-not-solved { color: var(--ar-c-fail); }
-.ar-ws .play-goal-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 12px; min-width: 0; }
+.ar-ws .play-goal-grid { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 12px; min-width: 0; }
 .ar-ws .goal-block { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 4px 20px; padding: 10px 14px; border: 1px solid var(--ar-border); border-radius: 8px; min-width: 0; }
 .ar-ws .goal-block h4, .ar-ws .live-box h4 { margin: 0 0 6px; font: 600 var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .goal-rows, .ar-ws .bar-rows { margin: 0; display: grid; gap: 3px; font-size: var(--ar-text-s); }
@@ -3451,6 +3451,7 @@
 .ar-ws .wall-track .wall-idle { background: var(--ws-hatch); }
 .ar-ws .outcome-total, .ar-ws .wall-bar .num { flex: none; font: 12px var(--ar-font-mono); color: var(--ar-fg-muted); }
 .ar-ws .ledger-fork { font-family: var(--ar-font-mono); }
+.ar-ws .ledger-table .ledger-seat { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .ledger-best { font-size: var(--ar-text-s); }
 .ar-ws .ledger-best.verdict-solved { color: var(--ar-c-ok); }
 .ar-ws .unpriced { display: inline-block; padding: 0 6px; border-radius: 3px; background: var(--ws-hatch); color: var(--ar-fg-muted); font-size: 13px; }
@@ -3459,6 +3460,9 @@
 .ar-ws .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 1fr)); gap: 10px 16px; }
 .ar-ws .team-panel { margin: 0; min-width: 0; }
 .ar-ws .team-panel figcaption { font-size: var(--ar-text-s); margin-bottom: 4px; }
+/* A 27-agent team would run a page tall: the panel scrolls inside 640 px. */
+.ar-ws .team-panel .tgc-timeline-view { max-height: 640px; overflow-y: auto; overscroll-behavior: contain; }
+.ar-ws .goal-block.no-bar { grid-template-columns: minmax(0, 1fr); }
 .ar-ws .team-single { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
 .ar-ws .finding-group { margin: 0 0 6px; }
 .ar-ws .finding-group > summary { cursor: pointer; padding: 4px 0; font-size: var(--ar-text-s); }
@@ -3519,5 +3523,5 @@
   .ar-ws .finding-row { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .finding-meta { white-space: normal; }
   .ar-ws .ledger-table .ledger-bar { min-width: 120px; }
-  .ar-ws .play-standing-tab > .ws-section, .ar-ws .play-setup > .ws-section, .ar-ws .ws-content > .play-releases { padding: 10px 0; border-width: 1px 0 0; border-radius: 0; background: transparent; }
+  .ar-ws .play-standing-tab > .ws-section, .ar-ws .play-setup > .ws-section, .ar-ws .ws-content > .play-releases { padding: 10px 0; border-width: 1px 0 0; border-radius: 0; background: transparent; --chart-canvas: var(--ar-bg); }
 }
