@@ -116,6 +116,7 @@ export function AgentRecord({
             chosen?.runId === record.runId ? chosen : { runId: record.runId }
           }
           onChange={change}
+          behaviors={behaviors}
         />
       ) : (
         <p className="chat-empty" role="status">
@@ -131,11 +132,13 @@ function RecordView({
   record,
   selection,
   onChange,
+  behaviors,
 }: {
   records: readonly RunRecord[]
   record: RunRecord
   selection: RecordSelection
   onChange: (selection: RecordSelection) => void
+  behaviors?: readonly BehaviorReport[]
 }) {
   const uid = useId()
   const index = useMemo(() => indexRecord(record), [record])
