@@ -333,14 +333,14 @@ export function Conversation({
   const estimate = useCallback(
     (row: ConversationRow) =>
       row.kind === 'polls'
-        ? 48
+        ? 36
         : row.kind === 'hollow'
-          ? 34
+          ? 26
           : isLifecycle(row.event)
-            ? 34
+            ? 26
             : !textOf(row.event) && callsOf(row.event).length
-              ? 8 + 40 * callsOf(row.event).length
-              : 150,
+              ? 4 + 26 * callsOf(row.event).length
+              : 120,
     [],
   )
   const renderHollow = (row: Extract<ConversationRow, { kind: 'hollow' }>) => {
