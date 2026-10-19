@@ -59,7 +59,8 @@ const verdictGlyph = (verdict: string | null | undefined) =>
 function Provenance({ play, best }: { play: Play; best: PlayBest | null | undefined }) {
   if (!best) return null
   const glyph = verdictGlyph(best.verdict)
-  const release = best.state ?? (typeof best.release === 'string' ? best.release : null)
+  // A workspace row has no release: it reads as its verdict.
+  const release = best.state ?? (typeof best.release === 'string' && best.release !== 'workspace' ? best.release : null)
   return (
     <span className="goal-prov" title={[best.line, best.lastAt ?? best.at ? `last ${utc(best.lastAt ?? best.at)}` : null].filter(Boolean).join('\n') || undefined}>
       <b className="mono">{shortTag(best.tag) ?? 'workspace'}</b>
@@ -153,6 +154,18 @@ function CheckRows({ play }: { play: Play }) {
         <>
           <StageLadder play={play} best={best} />
           <dl className="goal-rows">
+            {!best.of && best.progress !== null && best.progress !== undefined && best.progress > 0 && best.progress < 1 && (
+              <div title={best.line ?? undefined}>
+                <dt>progress</dt>
+                <dd className="goal-progress">
+                  <span className="progress-track" aria-hidden="true">
+                    <i style={{ width: `${(best.progress * 100).toFixed(1)}%` }} />
+                  </span>
+                  <b>{best.progress < 0.1 ? (best.progress * 100).toFixed(1) : Math.round(best.progress * 100)}%</b>
+                  {/(\d[\d,]*) of (\d[\d,]*) cells covered/.exec(best.line ?? '') && <span className="faint"> {/(\d[\d,]*) of (\d[\d,]*) cells covered/.exec(best.line ?? '')![0]}</span>}
+                </dd>
+              </div>
+            )}
             <div className="goal-best">
               <dt>best</dt>
               <dd>
