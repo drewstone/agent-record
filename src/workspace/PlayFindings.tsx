@@ -7,7 +7,7 @@ type Play = PlayDocument & PlayHead
 /** The host's groups (tangle-tools joined_findings), each with words that are true of every row in it. */
 const GROUPS = [
   ['verified', 'Verified by the current check', 'A commit it cites is solved, or its contract held, under the current checker.'],
-  ['contradicted', 'Contradicted', 'Every check row on what it cites failed.'],
+  ['contradicted', 'Contradicted', 'No check or gate held what it cites, and at least one failed it.'],
   ['mixed', 'Checked, not settled', 'A check or the gate held what it cites under one checker; another failed it.'],
   ['undecided', 'Undecided', 'Every row on the commits it cites is undecided.'],
   ['unchecked', 'Unchecked agent claims', 'No check row matches anything it cites.'],
