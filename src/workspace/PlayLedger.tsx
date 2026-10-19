@@ -2,7 +2,7 @@ import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
 import { money, tokens } from './data.js'
-import { checkerLabel, ENDING_GLYPH, type PlayHead, type PlayLedgerRow, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
+import { checkerLabel, checksByRun, ENDING_GLYPH, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 
 type Play = PlayDocument & PlayHead
 type SortKey = 'newest' | 'wall' | 'agent' | 'cost' | 'score'
@@ -55,18 +55,36 @@ function WallBar({ row, max }: { row: PlayLedgerRow; max: number }) {
   )
 }
 
-function Best({ play, row }: { play: Play; row: PlayLedgerRow }) {
+/**
+ * A run's best check. A pass under a checker the play has since replaced reads as that, muted, never as the run's
+ * standing; a run whose check prints no score reads as its rows and verdicts, never as "no check".
+ */
+function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: RunChecks | undefined }) {
   const best = row.best ?? null
-  if (!best) return <span className="faint">no check</span>
+  if (!best) {
+    if (!checks?.rows) return <span className="faint">no check ran</span>
+    const verdicts = [...new Set(checks.lines.flatMap((line) => line.verdicts))]
+    const top = checks.lines[0]
+    return (
+      <span className="ledger-best is-unscored" title={[`${checks.rows} rows under ${checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')}; the check prints no score`, top ? `most: ${top.count}× ${top.reason}` : null].filter(Boolean).join('\n')}>
+        {checks.solved ? `solved ×${checks.solved}` : verdicts.length === 1 ? verdictWord(verdicts[0]) : 'not solved'} <span className="num">×{checks.rows}</span>
+        <span className="faint"> {checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')} · no score</span>
+      </span>
+    )
+  }
   const stage = best.reached !== null && best.reached !== undefined && best.of ? `${best.reached}/${best.of}` : null
   const workloads = best.workloads?.total ? `${best.workloads.passed}/${best.workloads.total}` : null
+  const current = play.checkers?.find((item) => item.current)?.label ?? null
+  const label = best.checker ? checkerLabel(play.checkers, best.checker) : null
+  const superseded = !!(current && label && label !== current && best.verdict === 'solved')
   return (
-    <span className={`ledger-best verdict-${best.verdict ?? 'none'}`} title={[best.line, stageWords(best), best.checker ? checkerLabel(play.checkers, best.checker) : null].filter(Boolean).join('\n')}>
-      {verdictWord(best.verdict)}
-      {stage && <span className="num"> · {stage}</span>}
+    <span className={`ledger-best verdict-${best.verdict ?? 'none'}${superseded ? ' is-superseded' : ''}`} title={[best.line, stageWords(best), label, superseded ? `superseded by ${current}` : null].filter(Boolean).join('\n')}>
+      {superseded ? `passed ${label}` : verdictWord(best.verdict)}
+      {stage && !superseded && <span className="num"> · {stage}</span>}
       {workloads && <span className="num"> · {workloads}</span>}
-      {best.checker && <span className="faint"> {checkerLabel(play.checkers, best.checker)}</span>}
+      {!superseded && label && <span className="faint"> {label}</span>}
       {best.tag && <span className="faint mono"> {shortTag(best.tag)}</span>}
+      {superseded && <span className="faint"> (superseded)</span>}
     </span>
   )
 }
@@ -94,6 +112,7 @@ const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
 export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: boolean; onOpen?: (runId: string) => void }) {
   const ledger = play.ledger ?? null
   const [sort, setSort] = useState<SortKey>('newest')
+  const checks = useMemo(() => checksByRun(play.climb), [play.climb])
   const rows = useMemo(() => {
     const list = [...(ledger?.rows ?? [])]
     const agentHours = (row: PlayLedgerRow) => Object.values(row.hoursByOutcome ?? {}).reduce((sum, value) => sum + value, 0) + (row.open?.hours ?? 0)
@@ -107,6 +126,19 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
   const maxWall = Math.max(1, ...ledger.rows.map((row) => row.wallHours ?? 0))
   const maxAgent = Math.max(1, ...ledger.rows.map((row) => Object.values(row.hoursByOutcome ?? {}).reduce((sum, value) => sum + value, 0) + (row.open?.hours ?? 0)))
   const present = new Set(ledger.rows.flatMap((row) => Object.entries(row.hoursByOutcome ?? {}).filter(([, value]) => value > 0).map(([key]) => key)))
+  // A column no run has a value for is left out, never drawn as a column of dashes (an index group of 3,518 runs
+  // records no attempts, checks, prices or seats; its ledger is run, ending and wall time).
+  const has = {
+    agent: ledger.rows.some((row) => Object.values(row.hoursByOutcome ?? {}).some((value) => value > 0) || row.open?.hours),
+    done: ledger.rows.some((row) => row.completedShare !== null && row.completedShare !== undefined),
+    tries: ledger.rows.some((row) => Object.values(row.triesByOutcome ?? {}).some((value) => value > 0)),
+    best: ledger.rows.some((row) => row.best || checks.get(row.runId)?.rows),
+    cost: ledger.rows.some((row) => row.cost?.apiUsd !== null && row.cost?.apiUsd !== undefined),
+    seat: ledger.rows.some((row) => row.seat),
+    tokens: ledger.rows.some((row) => row.tokens && (row.tokens.in || row.tokens.out)),
+    agents: ledger.rows.some((row) => row.agents !== null && row.agents !== undefined),
+    model: ledger.rows.some((row) => row.model || row.harness),
+  }
   const head = (key: SortKey, label: string, title?: string) => (
     <th aria-sort={sort === key ? 'descending' : undefined} title={title}>
       <button type="button" className="link-button sort-button" onClick={() => setSort(sort === key ? 'newest' : key)}>
@@ -140,15 +172,15 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
               <th>Run</th>
               <th>Ending</th>
               {head('wall', 'Wall time', 'Hours from start to settle on one axis; hatched where no agent was live')}
-              {head('agent', 'Agent-hours by outcome', 'Agent-hours on one axis, stacked by how each attempt ended')}
-              <th className="num" title="Share of agent-hours in completed turns">Done</th>
-              <th className="num">Tries</th>
-              {head('score', 'Best check')}
-              {head('cost', 'API-equiv.')}
-              <th>Seat</th>
-              {full && <th className="num">Tokens in / out</th>}
-              {full && <th className="num">Agents</th>}
-              {full && <th>Model · harness</th>}
+              {has.agent && head('agent', 'Agent-hours by outcome', 'Agent-hours on one axis, stacked by how each attempt ended')}
+              {has.done && <th className="num" title="Share of agent-hours in completed turns">Done</th>}
+              {has.tries && <th className="num">Tries</th>}
+              {has.best && head('score', 'Best check')}
+              {has.cost && head('cost', 'API-equiv.')}
+              {has.seat && <th>Seat</th>}
+              {full && has.tokens && <th className="num">Tokens in / out</th>}
+              {full && has.agents && <th className="num">Agents</th>}
+              {full && has.model && <th>Model · harness</th>}
             </tr>
           </thead>
           <tbody>
@@ -171,34 +203,51 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                   <td className="ledger-bar">
                     <WallBar row={row} max={maxWall} />
                   </td>
-                  <td className="ledger-bar">
-                    <OutcomeBar row={row} max={maxAgent} />
-                  </td>
+                  {has.agent && (
+                    <td className="ledger-bar">
+                      <OutcomeBar row={row} max={maxAgent} />
+                    </td>
+                  )}
+                  {has.done && (
                   <td className="num" title={row.contractBlockedShare !== null && row.contractBlockedShare !== undefined ? `contract-blocked ${Math.round(row.contractBlockedShare * 100)}% of its time` : undefined}>
                     {row.completedShare !== null && row.completedShare !== undefined ? `${Math.round(row.completedShare * 100)}%` : '—'}
                   </td>
-                  <td className="num">{tries ? tries : <span className="faint">—</span>}</td>
-                  <td>
-                    <Best play={play} row={row} />
-                  </td>
-                  <td className="num">
-                    <Cost row={row} />
-                  </td>
+                  )}
+                  {has.tries && <td className="num">{tries ? tries : <span className="faint">—</span>}</td>}
+                  {has.best && (
+                    <td>
+                      <Best play={play} row={row} checks={checks.get(row.runId)} />
+                    </td>
+                  )}
+                  {has.cost && (
+                    <td className="num">
+                      <Cost row={row} />
+                    </td>
+                  )}
+                  {has.seat && (
                   <td className="ledger-seat" title={[row.seat, row.seatKind].filter(Boolean).join(' · ') || undefined}>
-                    {row.seat ?? <span className="faint">—</span>}
+                    {row.seat ? (
+                      <>
+                        {seatWords(row.seat)}
+                        {row.seatKind && <span className="faint"> {row.seatKind === 'subscription' ? 'sub' : row.seatKind}</span>}
+                      </>
+                    ) : (
+                      <span className="faint">—</span>
+                    )}
                   </td>
-                  {full && (
+                  )}
+                  {full && has.tokens && (
                     <td className="num" title={row.tokens?.known !== null && row.tokens?.known !== undefined ? `${row.tokens.known} agents with known usage` : undefined}>
                       {row.tokens ? `${tokens(row.tokens.in)} / ${tokens(row.tokens.out)}` : '—'}
                     </td>
                   )}
-                  {full && (
+                  {full && has.agents && (
                     <td className="num">
                       {row.agents ?? '—'}
                       {row.depth !== null && row.depth !== undefined && row.agents ? <small className="faint"> d{row.depth}</small> : null}
                     </td>
                   )}
-                  {full && <td className="faint">{[row.model, row.harness].filter(Boolean).join(' · ') || '—'}</td>}
+                  {full && has.model && <td className="faint">{[row.model, row.harness].filter(Boolean).join(' · ') || '—'}</td>}
                 </tr>
               )
             })}

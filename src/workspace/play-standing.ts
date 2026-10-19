@@ -84,6 +84,27 @@ export const playBarSchema = z
   .object({ path: s.optional(), digest: s.optional(), source: s.optional(), condition: s.optional(), checkCondition: s.optional(), metrics: z.array(playBarMetricSchema) })
   .catchall(z.unknown())
 
+/** Each `T+Nh` clause of a run's prediction: when it fell due and what was measured by then (null while due). */
+const killCheckpointsSchema = z.array(
+  z
+    .object({
+      label: z.string(),
+      at: s.optional(),
+      clause: s.optional(),
+      due: z.boolean().optional(),
+      measured: z
+        .object({
+          publishedTags: n.optional(),
+          bestStage: z.union([z.string(), z.object({ reached: n.optional(), of: n.optional(), stage: s.optional(), tag: s.optional() }).catchall(z.unknown())]).nullable().optional(),
+          checksOnCommit: n.optional(),
+        })
+        .catchall(z.unknown())
+        .nullable()
+        .optional(),
+    })
+    .catchall(z.unknown()),
+)
+
 export const playStandingSchema = z
   .object({
     status: z.string(),
@@ -92,7 +113,23 @@ export const playStandingSchema = z
     bestCurrent: playBestSchema.nullable().optional(),
     bestEver: playBestSchema.nullable().optional(),
     releases: z.object({ published: n, checked: n, withheld: n, superseded: n, passingCurrent: n, neverChecked: n }).partial().catchall(z.unknown()).nullable().optional(),
-    lastEnding: z.object({ runId: z.string(), run: s.optional(), word: z.string(), glyph: s.optional(), at: s.optional(), reason: s.optional() }).catchall(z.unknown()).nullable().optional(),
+    lastEnding: z
+      .object({
+        runId: z.string(),
+        run: s.optional(),
+        word: z.string(),
+        glyph: s.optional(),
+        at: s.optional(),
+        reason: s.optional(),
+        startedAt: s.optional(),
+        wallHours: n.optional(),
+        // What blocked the last run when it ended, and its prediction's kill checkpoints with what was measured by each.
+        blocker: playBlockerSchema.nullable().optional(),
+        killCheckpoints: killCheckpointsSchema.optional(),
+      })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
     cost: z
       .object({
         apiEquivalentUsd: n.optional(),
@@ -119,27 +156,7 @@ export const playLiveSchema = z
     elapsedMs: n.optional(),
     word: s.optional(),
     blocker: playBlockerSchema.nullable().optional(),
-    killCheckpoints: z
-      .array(
-        z
-          .object({
-            label: z.string(),
-            at: s.optional(),
-            clause: s.optional(),
-            due: z.boolean().optional(),
-            measured: z
-              .object({
-                publishedTags: n.optional(),
-                bestStage: z.union([z.string(), z.object({ reached: n.optional(), of: n.optional(), stage: s.optional(), tag: s.optional() }).catchall(z.unknown())]).nullable().optional(),
-                checksOnCommit: n.optional(),
-              })
-              .catchall(z.unknown())
-              .nullable()
-              .optional(),
-          })
-          .catchall(z.unknown()),
-      )
-      .optional(),
+    killCheckpoints: killCheckpointsSchema.optional(),
   })
   .catchall(z.unknown())
 
@@ -387,6 +404,9 @@ export const shortRun = (play: string, run: string | null | undefined) => {
   const rest = run.startsWith(play + '-') ? run.slice(play.length + 1) : run
   return /^\d{6}(\d{2}[a-z])$/.exec(rest)?.[1] ?? rest
 }
+/** A seat by its model, without the provider path: `glm-5.3-flash-free` for `opencode/glm-5.3-flash-free`. */
+export const seatWords = (seat: string | null | undefined) => (seat ? (seat.split('/').pop() ?? seat) : null)
+
 /** A tag without its run prefix: `rc14`. */
 export const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 
@@ -506,4 +526,82 @@ export function gapWords(metric: PlayBarMetric, value: number | null | undefined
   const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
   const better = (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low)
   return better ? `${times}× past the bar` : `${times}× ${value < low ? 'below' : 'above'} the bar`
+}
+
+/** A check line without its verdict word, digests or the tail after ` | `: the words that say why, for grouping. */
+export const lineReason = (line: string | null | undefined) =>
+  (line ?? '')
+    .replace(/^(NOT SOLVED|SOLVED|UNKNOWN|UNDECIDED)\s*:\s*/i, '')
+    .replace(/\b[0-9a-f]{7,64}\b/g, '…')
+    .split(/\s\|\s/)[0]!
+    .trim()
+
+export interface RunCheckLine {
+  reason: string
+  line: string
+  count: number
+  verdicts: string[]
+  checkers: string[]
+  tags: string[]
+  firstAt: string | null
+  lastAt: string | null
+}
+export interface RunChecks {
+  runId: string
+  rows: number
+  solved: number
+  scored: number
+  checkers: string[]
+  lines: RunCheckLine[]
+}
+
+/**
+ * Every check and gate row of each run, from the climb's marks and strip, with its lines grouped by reason (most rows
+ * first). A run whose check prints no SCORE line still says what it failed on; nothing here is a score.
+ */
+export function checksByRun(climb: PlayClimb | null | undefined): Map<string, RunChecks> {
+  const out = new Map<string, RunChecks>()
+  if (!climb) return out
+  const runOf = new Map(climb.columns.map((column) => [column.id, column.runId]))
+  const tagOf = new Map(climb.columns.map((column) => [column.id, shortTag(column.tag)]))
+  const rows = [
+    ...climb.marks.map((mark) => ({ ...mark, runId: runOf.get(mark.columnId) ?? null, scored: mark.progress !== null })),
+    ...(climb.strip ?? []).map((item) => ({ ...item, scored: false })),
+  ]
+  for (const row of rows) {
+    if (!row.runId || row.verdict === 'superseded') continue
+    let run = out.get(row.runId)
+    if (!run) out.set(row.runId, (run = { runId: row.runId, rows: 0, solved: 0, scored: 0, checkers: [], lines: [] }))
+    const count = row.count ?? 1
+    run.rows += count
+    if (row.verdict === 'solved') run.solved += count
+    if (row.scored) run.scored += count
+    if (row.checker && !run.checkers.includes(row.checker)) run.checkers.push(row.checker)
+    const reason = lineReason(row.line) || verdictWord(row.verdict)
+    let line = run.lines.find((item) => item.reason === reason)
+    if (!line) run.lines.push((line = { reason, line: row.line ?? reason, count: 0, verdicts: [], checkers: [], tags: [], firstAt: null, lastAt: null }))
+    line.count += count
+    if (!line.verdicts.includes(row.verdict)) line.verdicts.push(row.verdict)
+    if (row.checker && !line.checkers.includes(row.checker)) line.checkers.push(row.checker)
+    const tag = row.columnId ? tagOf.get(row.columnId) : null
+    if (tag && !line.tags.includes(tag)) line.tags.push(tag)
+    const first = row.firstAt ?? null
+    const last = row.lastAt ?? row.firstAt ?? null
+    if (first && (!line.firstAt || first < line.firstAt)) line.firstAt = first
+    if (last && (!line.lastAt || last > line.lastAt)) line.lastAt = last
+  }
+  for (const run of out.values()) run.lines.sort((a, b) => b.count - a.count || String(b.lastAt).localeCompare(String(a.lastAt)))
+  return out
+}
+
+/** A run of release tags as a range when they are rcN: `rc3–rc12 (8)`; else the first two and a count. */
+export function tagsWords(tags: string[]): string | null {
+  if (!tags.length) return null
+  const numbered = tags.map((tag) => /^rc(\d+)$/.exec(tag)).filter((match): match is RegExpExecArray => match !== null).map((match) => Number(match[1]))
+  if (numbered.length === tags.length) {
+    const lo = Math.min(...numbered)
+    const hi = Math.max(...numbered)
+    return lo === hi ? `rc${lo}` : `rc${lo}–rc${hi}${tags.length > 2 ? ` (${tags.length})` : ''}`
+  }
+  return tags.length <= 2 ? tags.join(', ') : `${tags.slice(0, 2).join(', ')} +${tags.length - 2}`
 }

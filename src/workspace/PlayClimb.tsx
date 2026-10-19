@@ -1,12 +1,13 @@
 import { type ChartBand, type ChartMark, type MultiplePanel, smallMultiples, type TimePoint, type TimeSeriesRow, timeSeries, type XCategory, type YTarget } from '@tangle-network/charts'
 import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
 import {
   checkerIndex,
   checkerLabel,
   checkerTitle,
+  checksByRun,
   compactNumber,
   displayUnit,
   ENDING_GLYPH,
@@ -17,6 +18,7 @@ import {
   rulingWords,
   shortRun,
   shortTag,
+  tagsWords,
   targetWords,
   utc,
   verdictWord,
@@ -95,7 +97,7 @@ const stageAt = (climb: Climb) => {
   }
 }
 
-function climbFigure(play: Play, climb: Climb) {
+function climbFigure(play: Play, climb: Climb, width: number) {
   const axis = releaseAxis(play, climb)
   const rows = new Map<string, TimeSeriesRow & { order: number }>()
   const row = (checker: string | null | undefined, runId: string) => {
@@ -186,6 +188,9 @@ function climbFigure(play: Play, climb: Climb) {
     markers: { circle: 'check', diamond: 'gate' },
     bands: axis.bands,
     marks,
+    // The checker legend above the plot names every series; the verdict key under it stays.
+    legend: false,
+    width,
   })
 }
 
@@ -231,12 +236,65 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
   )
 }
 
+/**
+ * What each run's checks said, newest run first: its rows, the checkers that ran, and its lines grouped by reason with
+ * their counts and the releases they were said of. A check without a SCORE line has no height on the climb; this is
+ * where its record still reads, such as 17c moving from "magnetar.json is missing" to the prover failing on keccak.
+ */
+function ChecksSaid({ play, climb }: { play: Play; climb: Climb }) {
+  const byRun = useMemo(() => checksByRun(climb), [climb])
+  const [open, setOpen] = useState<string | null>(null)
+  const runs = [...climb.groups].reverse().map((group) => byRun.get(group.runId)).filter((run): run is NonNullable<typeof run> => !!run && run.rows > 0)
+  if (!runs.length) return null
+  return (
+    <div className="checks-said" data-checks-said>
+      <h4>What the checks said</h4>
+      <ol>
+        {runs.map((run) => {
+          // In the order each line was first said, so a run reads as what its checks failed on over time; the newest
+          // lines are where it ended, so those show first and earlier ones on request.
+          const lines = [...run.lines].sort((a, b) => String(a.firstAt).localeCompare(String(b.firstAt)))
+          const shown = open === run.runId ? lines : lines.slice(-4)
+          return (
+            <li key={run.runId} data-run={run.runId}>
+              <p className="checks-said-run">
+                <a className="mono" href={`/run/${encodeURIComponent(run.runId)}`}>{shortRun(play.id, run.runId)}</a>
+                <span className="faint">
+                  {' '}
+                  {run.rows} {run.rows === 1 ? 'row' : 'rows'} under {run.checkers.map((checker) => checkerLabel(play.checkers, checker)).join(', ') || 'an unrecorded checker'}
+                  {run.solved ? ` · ${run.solved} solved` : ' · none solved'}
+                  {run.scored < run.rows ? ` · ${run.rows - run.scored} without a score` : ''}
+                </span>
+              </p>
+              <ul>
+                {shown.map((line) => (
+                  <li key={line.reason} title={[line.line, line.firstAt ? `${utc(line.firstAt)} to ${utc(line.lastAt)}` : null, line.verdicts.map(verdictWord).join(', ')].filter(Boolean).join('\n')}>
+                    <b className="num">{line.count}×</b>
+                    <span className="checks-said-reason">{line.reason}</span>
+                    <span className="faint mono">{tagsWords(line.tags) ?? ''}</span>
+                  </li>
+                ))}
+              </ul>
+              {lines.length > 4 && (
+                <button type="button" className="link-button" onClick={() => setOpen(open === run.runId ? null : run.runId)}>
+                  {open === run.runId ? 'only the last 4' : `${lines.length - 4} earlier ${lines.length - 4 === 1 ? 'line' : 'lines'}`}
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
 export function PlayClimb({ play }: { play: Play }) {
   const climb = play.climb ?? null
   // Partial progress on any row makes a climb; a check that only passes or fails is a verdict strip.
   const graded = !!climb && climb.marks.some((mark) => mark.progress !== null && mark.progress > 0.001 && mark.progress < 0.999)
-  const figure = useMemo(() => (climb && graded ? climbFigure(play, climb) : null), [play, climb, graded])
-  if (!climb || (graded && !figure) || (!graded && !climb.marks.length && !(climb.strip ?? []).length)) return null
+  // Drawn at the section's measured width, so the climb's labels and marks keep their set size on a wide page.
+  const figure = useCallback((width: number) => climbFigure(play, climb!, width), [play, climb])
+  if (!climb || (!graded && !climb.marks.length && !(climb.strip ?? []).length)) return null
   const counted = new Map<string, number>()
   for (const mark of [...climb.marks, ...(climb.strip ?? [])]) counted.set(mark.checker ?? '', (counted.get(mark.checker ?? '') ?? 0) + (mark.count ?? 1))
   return (
@@ -264,7 +322,8 @@ export function PlayClimb({ play }: { play: Play }) {
           ))}
         </ul>
       )}
-      {graded && figure ? <FigureView figure={figure} /> : <VerdictStrip play={play} climb={climb} />}
+      {graded ? <FigureView figure={figure} /> : <VerdictStrip play={play} climb={climb} />}
+      <ChecksSaid play={play} climb={climb} />
     </section>
   )
 }
@@ -301,46 +360,9 @@ export function PlayAgainstBar({ play }: { play: Play }) {
   const bar = play.bar ?? null
   const figure = useMemo(() => {
     if (!climb || !bar || !play.barSeries?.length) return null
-    const axis = releaseAxis(play, climb)
-    const metrics = bar.metrics.filter((metric) => !metric.precondition)
-    const panels = metrics.flatMap((metric): MultiplePanel[] => {
-      const series = play.barSeries!.find((item) => item.metric === metric.id)
-      if (!series) return []
-      const shown = displayUnit(metric.unit)
-      const points: TimePoint[] = series.points
-        .map((point) => ({ point, x: axis.index.get(point.columnId) }))
-        .filter((item): item is { point: (typeof series.points)[number]; x: number } => item.x !== undefined && (metric.scale !== 'log' || item.point.value > 0))
-        .sort((a, b) => a.x - b.x)
-        .map(({ point, x }) => {
-          const failing = /fail|not-solved/.test(point.verdict ?? '')
-          return {
-            x,
-            y: point.value * shown.factor,
-            verdict: markVerdict(point.verdict),
-            comparable: point.comparable === undefined ? null : point.comparable,
-            ...(failing && point.comparable !== false ? { glyph: 'cross' as const } : {}),
-            annotation: [metricValue(point.value, metric.unit), verdictWord(point.verdict), point.note, point.basis ? `from ${point.basis}` : null].filter(Boolean).join(' · '),
-          }
-        })
-      const domain = domainOf(metric, points.map((point) => point.y!).filter((value) => value !== null))
-      const label = `${metric.label}${metric.direction ? (metric.direction === 'up' ? ' ↑' : ' ↓') : ''}`
-      if (!points.length) return [{ id: metric.id, label, unit: shown.unit, domain, missing: { why: series.missing?.why ?? 'not measured on any checked release' } }]
-      return [{ id: metric.id, label, unit: shown.unit, domain, points, scale: metric.scale ?? 'linear', targets: targetsOf(metric), format: compactNumber }]
-    })
-    if (!panels.length) return null
-    // Two panels a row: the wide render is 720 px, and four in a row leave each about 168 px for its release labels.
-    return smallMultiples(panels, {
-      id: `bar-${play.id}`,
-      x: { label: 'Release', domain: axis.domain, categories: axis.categories },
-      y: { label: 'Measured value', unit: panels[0]!.unit ?? '', domain: [0, 1] },
-      shared: 'x',
-      noun: 'metric',
-      columns: Math.min(2, panels.length),
-      connect: false,
-      markers: { circle: 'check', diamond: 'gate' },
-    })
+    return (width: number) => barFigure(play, climb, bar, width)
   }, [play, climb, bar])
-  if (!figure) return null
+  if (!figure || !barPanels(play).length) return null
   return (
     <section className="ws-section play-bar" data-play-bar aria-label="Against the bar">
       <header className="section-head">
@@ -353,4 +375,49 @@ export function PlayAgainstBar({ play }: { play: Play }) {
       <FigureView figure={figure} />
     </section>
   )
+}
+
+/** The bar metrics that have a series to draw (precondition metrics are the check's job, not a panel). */
+const barPanels = (play: Play) => (play.bar?.metrics ?? []).filter((metric) => !metric.precondition && play.barSeries?.some((item) => item.metric === metric.id))
+
+function barFigure(play: Play, climb: Climb, bar: NonNullable<Play['bar']>, width: number) {
+  const axis = releaseAxis(play, climb)
+  const metrics = bar.metrics.filter((metric) => !metric.precondition)
+  const panels = metrics.flatMap((metric): MultiplePanel[] => {
+    const series = play.barSeries!.find((item) => item.metric === metric.id)
+    if (!series) return []
+    const shown = displayUnit(metric.unit)
+    const points: TimePoint[] = series.points
+      .map((point) => ({ point, x: axis.index.get(point.columnId) }))
+      .filter((item): item is { point: (typeof series.points)[number]; x: number } => item.x !== undefined && (metric.scale !== 'log' || item.point.value > 0))
+      .sort((a, b) => a.x - b.x)
+      .map(({ point, x }) => {
+        const failing = /fail|not-solved/.test(point.verdict ?? '')
+        return {
+          x,
+          y: point.value * shown.factor,
+          verdict: markVerdict(point.verdict),
+          comparable: point.comparable === undefined ? null : point.comparable,
+          ...(failing && point.comparable !== false ? { glyph: 'cross' as const } : {}),
+          annotation: [metricValue(point.value, metric.unit), verdictWord(point.verdict), point.note, point.basis ? `from ${point.basis}` : null].filter(Boolean).join(' · '),
+        }
+      })
+    const domain = domainOf(metric, points.map((point) => point.y!).filter((value) => value !== null))
+    const label = `${metric.label}${metric.direction ? (metric.direction === 'up' ? ' ↑' : ' ↓') : ''}`
+    if (!points.length) return [{ id: metric.id, label, unit: shown.unit, domain, missing: { why: series.missing?.why ?? 'not measured on any checked release' } }]
+    return [{ id: metric.id, label, unit: shown.unit, domain, points, scale: metric.scale ?? 'linear', targets: targetsOf(metric), format: compactNumber }]
+  })
+  if (!panels.length) return { id: `bar-${play.id}`, refused: 'No bar metric was measured on a checked release.' }
+  // Four panels a row once each has about 280 px for its release labels; two below that.
+  return smallMultiples(panels, {
+    id: `bar-${play.id}`,
+    x: { label: 'Release', domain: axis.domain, categories: axis.categories },
+    y: { label: 'Measured value', unit: panels[0]!.unit ?? '', domain: [0, 1] },
+    shared: 'x',
+    noun: 'metric',
+    columns: Math.min(width >= 1120 ? 4 : 2, panels.length),
+    connect: false,
+    markers: { circle: 'check', diamond: 'gate' },
+    width,
+  })
 }
