@@ -1031,6 +1031,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
               assessments={assessments.data}
               dimensions={dimensions.data}
               gaps={nodes.record?.coverage.gaps ?? []}
+              stats={nodes.stats}
               onSelectAgent={selectAgent}
             />
           ) : (
@@ -1466,6 +1467,7 @@ function RunPanels({
   assessments,
   dimensions,
   gaps,
+  stats,
   onSelectAgent,
 }: {
   section: 'spend' | 'assessments' | 'coverage'
@@ -1477,6 +1479,7 @@ function RunPanels({
   assessments: AssessmentsDocument | undefined
   dimensions: DimensionsDocument | undefined
   gaps: RecordGap[]
+  stats: Record<string, NodeStats>
   onSelectAgent: (id: string) => void
 }) {
   const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
@@ -1495,7 +1498,7 @@ function RunPanels({
   }
   if (section === 'assessments')
     return <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => update({ dim: dimension }, true)} onCite={cite} />
-  if (section === 'coverage') return <Coverage index={index} doc={doc} gaps={gaps} onSelect={onSelectAgent} />
+  if (section === 'coverage') return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
   return (
     <div className="spend-tab">
       <h3>Agents in this run</h3>
@@ -1558,8 +1561,14 @@ function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: str
   )
 }
 
-function Coverage({ index, doc, gaps: recordGaps, onSelect }: { index: RecordIndex; doc: RunDocument; gaps: RecordGap[]; onSelect: (id: string) => void }) {
+/**
+ * Each agent's capture and state. `index` holds only the selected agent's part, so whether an agent's usage was measured
+ * comes from the nodes part's per-agent stats, as in the agents table; on magnetar-rust-20261018b the event scan alone
+ * printed "no usage recorded" for the 14 workers whose 62.5M tokens the record holds.
+ */
+function Coverage({ index, doc, gaps: recordGaps, stats, onSelect }: { index: RecordIndex; doc: RunDocument; gaps: RecordGap[]; stats: Record<string, NodeStats>; onSelect: (id: string) => void }) {
   const gaps = [...recordGaps, ...doc.spend.gaps]
+  const measured = (id: string) => measuredUsage(index, id) || (!!stats[id] && (stats[id]!.tokens !== null || stats[id]!.listUsd !== null))
   return (
     <div className="coverage-tab" data-coverage>
       <table className="data-table">
@@ -1575,7 +1584,7 @@ function Coverage({ index, doc, gaps: recordGaps, onSelect }: { index: RecordInd
                 <td className="mono">{capture?.channel ?? '—'}</td>
                 <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{capture?.status ?? 'unknown'}</span></td>
                 <td className="mono faint">{capture?.reason ?? ''}</td>
-                <td>{agentState(node, measuredUsage(index, node.id), doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === node.id)?.status ?? 'running') : null)}</td>
+                <td>{agentState(node, measured(node.id), doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === node.id)?.status ?? 'running') : null)}</td>
               </tr>
             )
           })}
