@@ -270,9 +270,17 @@ function climbTimeFigure(play: Play, climb: Climb, width: number, window: [numbe
       series.points.push({ ...base, x: Math.min(last, hi), count: item.count, ...(tag && y !== null ? { label: tag } : {}) })
     } else series.points.push({ ...base, ...(item.count && item.count > 1 ? { count: item.count } : {}), ...(tag && y !== null ? { label: tag } : {}) })
   }
+  // Rows recorded in the same millisecond (a check and a gate on one tag) are spread by a millisecond each, so a
+  // series' times stay strictly increasing; at any drawn scale they sit on the same minute.
+  const increasing = (points: TimePoint[]) => {
+    const sorted = points.sort((a, b) => a.x - b.x)
+    for (let i = 1; i < sorted.length; i++) if (sorted[i]!.x <= sorted[i - 1]!.x) sorted[i] = { ...sorted[i]!, x: sorted[i - 1]!.x + 1 }
+    return sorted.filter((point) => point.x <= hi)
+  }
   const series = [...rows.values()]
     .filter((item) => item.points.length)
-    .map((item) => ({ ...item, points: item.points.sort((a, b) => a.x - b.x) }))
+    .map((item) => ({ ...item, points: increasing(item.points) }))
+    .filter((item) => item.points.length)
     .sort((a, b) => (a.colorIndex ?? 9) - (b.colorIndex ?? 9) || a.order - b.order)
   const bands: ChartBand[] = climb.groups.flatMap((group) => {
     const from = ms(group.from)

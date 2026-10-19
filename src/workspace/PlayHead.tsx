@@ -266,11 +266,9 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
         ) : (
           <span className="faint">not measured</span>
         )}
+        {gap && <span className={`bar-gap${best ? '' : ' bar-gap-candidate'}`} title={best ? undefined : 'A plain ratio to the bar for a value that does not count toward it (see the mark beside it)'}>{gap}</span>}
       </dd>
-      <dd className="bar-target">
-        {target ? <>bar {target}</> : <span className="faint">no target</span>}
-        {gap && <span className={`bar-gap${best ? '' : ' bar-gap-candidate'}`} title={best ? undefined : 'A plain ratio to the bar for a value that does not count toward it (see the mark beside it)'}> · {gap}</span>}
-      </dd>
+      <dd className="bar-target">{target ? <>bar {target}</> : <span className="faint">no target</span>}</dd>
       <dd className="bar-track-cell">
         <BarTrack metric={metric} value={shown?.value ?? null} mark={mark} />
       </dd>
