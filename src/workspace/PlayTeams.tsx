@@ -77,6 +77,23 @@ function TeamPanel({ play, team, hoursAxis }: { play: Play; team: Team; hoursAxi
         <span className="faint"> · {lanes.length} agents</span>
       </figcaption>
       {team.missing ? <p className="faint">{team.missing.why}</p> : Number.isFinite(start) ? <TimelineView lanes={lanes} options={options} defaultCollapsed={folded} /> : <p className="faint">No start time recorded.</p>}
+      {lanes.length > 0 && (
+        <p className="team-agents faint" aria-label="Open an agent's conversation">
+          Open{' '}
+          {lanes.map((lane, i) => {
+            const role = typeof (lane as { profile?: unknown }).profile === 'string' ? String((lane as { profile?: unknown }).profile) : (lane.label.split(' · ')[0] ?? lane.id)
+            const node = lane.id === team.runId || lane.id === 'root' || lane.id.endsWith('-root') ? 'root' : lane.id
+            return (
+              <span key={lane.id}>
+                {i > 0 && ' · '}
+                <a href={`/run/${encodeURIComponent(team.runId)}?agent=${encodeURIComponent(node)}`} title={`${lane.label} (${node})`}>
+                  {node === 'root' ? 'root' : role === node ? role : `${role} (${node})`}
+                </a>
+              </span>
+            )
+          })}
+        </p>
+      )}
     </figure>
   )
 }

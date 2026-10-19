@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
-import { playFindingFields, playPageFields } from './workspace/play-standing.js'
+import { playBlockerSchema, playFindingFields, playPageFields } from './workspace/play-standing.js'
 
 /**
  * Documents served by a run workspace API (`/api/discovery/*` on the Tangle wall).
@@ -166,6 +166,9 @@ const runCheckSchema = z
     /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
     gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
     headline: z.string().nullable().optional(),
+    counts: z.object({ checks: z.number(), known: z.number(), solved: z.number() }).partial().catchall(z.unknown()).nullable().optional(),
+    /** The play's checkers as its page labels them (v1..vN with the ruling that made each), by digest prefix. */
+    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional() }).catchall(z.unknown())).optional(),
   })
   .catchall(z.unknown())
 export type RunCheck = z.infer<typeof runCheckSchema>
@@ -639,6 +642,9 @@ export const runProgressSchema = z
     ),
     /** When each record the document reads last changed. */
     sources: z.record(z.string(), time.nullable()).optional(),
+    /** What holds a live run, and what blocked an ended run just before it ended (discovery-lab `blockerOf`). */
+    blocker: playBlockerSchema.nullable().optional(),
+    endBlocker: playBlockerSchema.nullable().optional(),
     /**
      * The run's outcome first (discovery-lab `runner/run-progress.mjs` outcomeOf): whether the play's check is solved,
      * the first line its latest failing check printed and when, and the minutes since any agent's stream last moved.

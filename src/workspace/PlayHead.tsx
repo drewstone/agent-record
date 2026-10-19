@@ -8,7 +8,6 @@ import {
   gapWords,
   metricValue,
   type PlayBarMetric,
-  ratioWords,
   type PlayBest,
   type PlayBlocker,
   type PlayHead as Head,
@@ -181,19 +180,53 @@ function CheckRows({ play }: { play: Play }) {
                 </dd>
               </div>
             )}
-            {releases && releases.published !== null && releases.published !== undefined && (
-              <div title={`Published releases that pass ${current?.label ?? 'the current check'}, of the published releases; ${releases.checked ?? 'an unrecorded number'} were ever checked, ${releases.withheld ?? 0} withheld by the gate, ${releases.superseded ?? 0} superseded`}>
-                <dt>releases</dt>
-                <dd>
-                  <b>{releases.passingCurrent ?? 0} of {releases.published}</b> <span className="faint">published pass {current?.label ?? 'the check'}</span>
-                </dd>
-              </div>
-            )}
+            {releases && releases.published !== null && releases.published !== undefined && <ReleasesRow releases={releases} label={releases.checker ?? current?.label ?? null} />}
           </dl>
         </>
       ) : (
         <p className="faint">{current ? `${current.label} has not run on a commit yet.` : 'No check has run on a commit yet.'}</p>
       )}
+    </div>
+  )
+}
+
+type Releases = NonNullable<NonNullable<Play['standing']>['releases']>
+
+/**
+ * Published releases under the current checker, with the denominator the checker actually read: `1 checked under v4
+ * (rc14) · 0 pass · 106 never checked under v4`, never `0 of 107` when 102 of those tags only an earlier checker read.
+ */
+function ReleasesRow({ releases, label }: { releases: Releases; label: string | null }) {
+  const checker = label ?? 'the current check'
+  const hover = [
+    `${releases.published} published releases (tags in the play repository); ${releases.checked ?? 'an unrecorded number'} were ever checked, ${releases.withheld ?? 0} withheld by the gate, ${releases.superseded ?? 0} superseded.`,
+    releases.checkedCurrent !== null && releases.checkedCurrent !== undefined
+      ? `Under ${checker}: ${releases.checkedCurrent} published checked${releases.checkedCurrentTags?.length ? ` (${releases.checkedCurrentTags.join(', ')})` : ''}, ${releases.passingCurrent ?? 0} pass, ${releases.neverCheckedCurrent ?? '?'} never checked.`
+      : null,
+    releases.source ? `Source: ${releases.source}.` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (releases.checkedCurrent === null || releases.checkedCurrent === undefined)
+    return (
+      <div title={hover}>
+        <dt>releases</dt>
+        <dd>
+          <b>{releases.passingCurrent ?? 0} of {releases.published}</b> <span className="faint">published pass {checker}</span>
+        </dd>
+      </div>
+    )
+  const tags = releases.checkedCurrentTags ?? []
+  return (
+    <div title={hover} data-releases-checked={releases.checkedCurrent}>
+      <dt>releases</dt>
+      <dd className="releases-row">
+        <b>
+          {releases.checkedCurrent} checked under {checker}
+          {tags.length > 0 && tags.length <= 3 ? ` (${tags.map((tag) => shortTag(tag)).join(', ')})` : ''} · {releases.passingCurrent ?? 0} pass
+        </b>
+        {releases.neverCheckedCurrent ? <span className="faint"> · {releases.neverCheckedCurrent} published never checked under {checker}</span> : null}
+      </dd>
     </div>
   )
 }
@@ -236,10 +269,15 @@ function BarTrack({ metric, value, mark }: { metric: PlayBarMetric; value: numbe
   )
 }
 
-/** A target without the unit its value already shows: `7.2M–8.7M`, `≈ 599 KiB`. */
-const targetShort = (metric: PlayBarMetric) => {
-  const words = targetWords(metric)
-  return words && metric.unit && !/^(b|bytes|kib)$/i.test(metric.unit) ? words.replace(` ${metric.unit}`, '') : words
+/**
+ * Why a candidate does not count, in the few words the row has room for: the host's `short` (`failing candidate (4/15)`,
+ * `not comparable: 1-bit declared`), else words from its mark. A value that does not count never gets a ratio to the bar:
+ * "2369× below" read as beating the paper for a 2^12-cycle, 1-bit run.
+ */
+function candidateWords(nearest: NonNullable<PlayBarMetric['nearest']>, mark: '' | '✕' | '*' | '?') {
+  if (nearest.short) return nearest.short
+  const workloads = nearest.workloads?.total ? ` (${nearest.workloads.passed ?? '?'}/${nearest.workloads.total})` : ''
+  return mark === '✕' ? `failing candidate${workloads}` : mark === '?' ? 'comparability unknown' : (nearest.why ?? 'not comparable')
 }
 
 /** One bar metric: the best comparable value, else the nearest candidate marked failing (✕), not comparable (*) or of unknown comparability (?). */
@@ -247,14 +285,14 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
   const best = metric.best ?? null
   const nearest = best ? null : (metric.nearest ?? null)
   const mark = nearest ? (nearest.comparable === null || nearest.comparable === undefined ? '?' : nearest.verdict && /fail|not-solved/.test(nearest.verdict) ? '✕' : '*') : ''
-  const target = targetShort(metric)
-  // A comparable value states its distance to the bar; a candidate that does not count states a plain ratio, with the
-  // mark beside its value saying why it does not count.
-  const gap = best ? gapWords(metric, best.value) : nearest ? ratioWords(metric, nearest.value) : null
+  const target = targetWords(metric)
+  // Only a comparable, passing value states its distance to the bar; a candidate that does not count says why instead.
+  const gap = best ? gapWords(metric, best.value) : null
+  const why = nearest ? candidateWords(nearest, mark) : null
   const shown = best ?? nearest
-  const why = nearest ? [`No release passes; nearest candidate ${shortTag(nearest.tag)} (${shortRun(play.id, nearest.runId)})`, nearest.why].filter(Boolean).join('\n') : (metric.missing?.why ?? undefined)
+  const hover = nearest ? [`No release passes; nearest candidate ${shortTag(nearest.tag)} (${shortRun(play.id, nearest.runId)})`, nearest.why].filter(Boolean).join('\n') : (metric.missing?.why ?? undefined)
   return (
-    <div className="bar-row" data-bar-metric={metric.id} data-comparable={best ? 'yes' : nearest ? String(nearest.comparable) : 'none'} title={why}>
+    <div className="bar-row" data-bar-metric={metric.id} data-comparable={best ? 'yes' : nearest ? String(nearest.comparable) : 'none'} title={hover}>
       <dt>
         {metric.label} <span className="faint" aria-label={metric.direction === 'up' ? 'higher is better' : 'lower is better'}>{metric.direction === 'up' ? '↑' : '↓'}</span>
       </dt>
@@ -266,7 +304,8 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
         ) : (
           <span className="faint">not measured</span>
         )}
-        {gap && <span className={`bar-gap${best ? '' : ' bar-gap-candidate'}`} title={best ? undefined : 'A plain ratio to the bar for a value that does not count toward it (see the mark beside it)'}>{gap}</span>}
+        {gap && <span className="bar-gap">{gap}</span>}
+        {why && <span className="bar-gap bar-gap-candidate" data-candidate-why>{why}</span>}
       </dd>
       <dd className="bar-target">{target ? <>bar {target}</> : <span className="faint">no target</span>}</dd>
       <dd className="bar-track-cell">

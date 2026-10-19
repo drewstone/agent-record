@@ -3442,7 +3442,8 @@
 .ar-ws .bar-nearest { font-family: var(--ar-font-mono); color: var(--ar-fg-muted); }
 .ar-ws .bar-target { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
 .ar-ws .bar-gap { color: var(--ar-fg); }
-.ar-ws .bar-caption { grid-column: 1 / -1; margin: 8px 0 0; font-size: 12px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The caption says why values do not count and under what conditions the play measures: it wraps, never cut. */
+.ar-ws .bar-caption { grid-column: 1 / -1; margin: 8px 0 0; font-size: 12px; line-height: 1.4; white-space: normal; }
 .ar-ws .checker-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--ar-fg); font-family: var(--ar-font-mono); font-weight: 650; }
 .ar-ws .checker-chip::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--checker); }
 .ar-ws .live-box { padding: 10px 14px; border: 1px solid var(--ar-border); border-left: 3px solid var(--ar-border-strong); border-radius: 8px; min-width: 0; font-size: var(--ar-text-s); }
@@ -3501,6 +3502,8 @@
 .ar-ws .team-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .ar-ws .team-panel { margin: 0; min-width: 0; }
 .ar-ws .team-panel figcaption { font-size: var(--ar-text-s); margin-bottom: 4px; }
+.ar-ws .team-agents { margin: 4px 0 0; font-size: 12px; line-height: 1.6; }
+.ar-ws .run-end-blocker { margin: 6px 0 2px; }
 /* A 27-agent team would run a page tall: the panel scrolls inside 640 px. */
 .ar-ws .team-panel .tgc-timeline-view { max-height: 640px; overflow-y: auto; overscroll-behavior: contain; }
 .ar-ws .goal-block.no-bar { grid-template-columns: minmax(0, 1fr); }
@@ -3661,7 +3664,8 @@
 .ar-ws .climb-brush-tick.tone-ok { background: var(--ar-c-ok); }
 .ar-ws .climb-brush-tick.tone-fail { background: var(--ar-c-fail); opacity: .55; }
 .ar-ws .climb-brush-window { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--ar-c-info) 22%, transparent); border-left: 2px solid var(--ar-c-info); border-right: 2px solid var(--ar-c-info); pointer-events: none; }
-.ar-ws .bar-gap-candidate { color: var(--ar-fg-muted); }
+.ar-ws .bar-gap-candidate { color: var(--ar-fg-muted); font-weight: 500; font-size: 12px; }
+.ar-ws .releases-row { white-space: normal; }
 
 /* ---------- One agent's attempts as beads on a string (run page, under the replay) ---------- */
 .ar-ws .bead-string { display: grid; gap: 4px; padding: 6px 14px 8px; border-bottom: 1px solid var(--ar-border); }

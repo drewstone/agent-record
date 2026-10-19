@@ -4,14 +4,17 @@ import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } fro
 
 type Play = PlayDocument & PlayHead
 
+/** The host's groups (tangle-tools joined_findings), each with words that are true of every row in it. */
 const GROUPS = [
   ['verified', 'Verified by the current check', 'A commit it cites is solved, or its contract held, under the current checker.'],
-  ['contradicted', 'Contradicted', 'A commit it cites has a failing row.'],
+  ['contradicted', 'Contradicted', 'Every check row on what it cites failed.'],
+  ['mixed', 'Checked, not settled', 'A check or the gate held what it cites under one checker; another failed it.'],
   ['undecided', 'Undecided', 'Every row on the commits it cites is undecided.'],
-  ['unchecked', 'Unchecked agent claims', 'No check ran on anything it cites.'],
+  ['unchecked', 'Unchecked agent claims', 'No check row matches anything it cites.'],
 ] as const
 
-const groupOf = (item: FeedItem) => (GROUPS.some(([id]) => id === item.group) ? (item.group as string) : 'unchecked')
+// A group this renderer does not know is shown as checked-not-settled, never as unchecked: it has evidence.
+const groupOf = (item: FeedItem) => (GROUPS.some(([id]) => id === item.group) ? (item.group as string) : item.commits?.length ? 'mixed' : 'unchecked')
 const tone = (verdict: string | null | undefined) => (verdict === 'solved' || verdict === 'contract-held' ? 'ok' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown')
 
 function Row({ play, item }: { play: Play; item: FeedItem }) {

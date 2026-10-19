@@ -884,7 +884,11 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const index = nodes.index
   const streamNode = requested ?? id
   const archivedCapture = recordReady && !run.data?.execution?.alive && ['archive', 'none'].includes(run.data?.run.location?.kind ?? '') && openedLiveStream.current !== streamNode
-  const streamConversation = !!run.data?.execution && !archivedCapture && !capturedStreams.has(streamNode) && !['timeline', 'usage'].includes(params.get('tab') ?? '')
+  // A settled run with a record opens its agents from the record: the agent rail with each agent's bead string, not the
+  // root's last 200 stream events (18b's Conversations showed 18:34-18:55Z while its root streamed until 02:42Z). Only a
+  // live run, or an agent the record does not hold, reads the stream.
+  const settledRecord = !run.data?.execution?.alive && recordReady && (!index || index.nodes.has(index.canonical(streamNode)))
+  const streamConversation = !!run.data?.execution && !settledRecord && !archivedCapture && !capturedStreams.has(streamNode) && !['timeline', 'usage'].includes(params.get('tab') ?? '')
   useEffect(() => {
     if (section === 'agents' && streamConversation && run.data?.execution?.alive) openedLiveStream.current = streamNode
     else if (section !== 'agents' || !streamConversation) openedLiveStream.current = null
