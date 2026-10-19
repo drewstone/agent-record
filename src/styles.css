@@ -1588,6 +1588,8 @@
 .ar-ws .state-warn { color: var(--ar-c-run); }
 .ar-ws .state-pill.state-warn { background: color-mix(in srgb, var(--ar-c-run) 16%, transparent); }
 .ar-ws .state-unknown { color: var(--ar-fg-muted); }
+.ar-ws .state-notsolved { color: var(--chart-ending-not-solved, var(--ar-fg-muted)); }
+.ar-ws .state-pill.state-notsolved { background: color-mix(in srgb, var(--chart-ending-not-solved, var(--ar-fg-muted)) 16%, transparent); }
 
 /* spend */
 .ar-ws .spend-summary { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }

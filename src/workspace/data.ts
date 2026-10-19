@@ -132,11 +132,15 @@ export const stateClass = (state: string | null | undefined) => {
     case 'no-record':
     case 'missing':
       return 'state-fail'
-    case 'no-winner':
+    // Amber is stalled only; a run that ended without a pass is the slate "not solved", a cancelled one neutral grey,
+    // as @tangle-network/charts ENDING_COLORS draws them on the overview and the explorer.
     case 'stalled':
+      return 'state-warn'
+    case 'no-winner':
+      return 'state-notsolved'
     case 'cancelled':
     case 'abandoned':
-      return 'state-warn'
+      return 'state-unknown'
     default:
       return 'state-unknown'
   }
