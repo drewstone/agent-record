@@ -554,6 +554,7 @@ function PlayBarTable({ play }: { play: Play }) {
         {bar.source}
         {bar.path && <> · <code>{bar.path}</code></>}
       </p>
+      <div className="table-scroll">
       <table className="data-table">
         <thead>
           <tr>
@@ -579,6 +580,7 @@ function PlayBarTable({ play }: { play: Play }) {
           ))}
         </tbody>
       </table>
+      </div>
       {(bar.condition || bar.checkCondition) && (
         <p className="faint">
           {bar.condition && <>The bar: {bar.condition}. </>}

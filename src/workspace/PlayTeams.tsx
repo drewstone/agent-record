@@ -103,7 +103,8 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
   }, [visible])
   const ids = multi.slice(0, shown).map((row) => row.runId)
   const teams = useDocument<Team[]>(visible && ids.length ? `${api}/plays/${encodeURIComponent(play.id)}/teams?runs=${ids.map(encodeURIComponent).join(',')}` : null)
-  if (!multi.length && !single.length) return null
+  // An index group has no play file and no teams to compare (3.10).
+  if (play.standing?.status === 'group' || (!multi.length && !single.length)) return null
   const hoursAxis = Math.max(1, ...multi.slice(0, shown).map((row) => row.wallHours ?? 0))
   return (
     <section ref={box} className="ws-section play-teams" data-play-teams aria-label="Team shape">
@@ -128,6 +129,10 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
         </button>
       )}
       {single.length > 0 && (
+        <details className="team-single-group" open={single.length <= 4}>
+          <summary className="faint">
+            {single.length} {single.length === 1 ? 'run' : 'runs'} ran a root only
+          </summary>
         <ul className="team-single faint">
           {single.map((row) => {
             const tries = Object.values(row.triesByOutcome ?? {}).reduce((sum, value) => sum + value, 0)
@@ -141,6 +146,7 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
             )
           })}
         </ul>
+        </details>
       )}
     </section>
   )

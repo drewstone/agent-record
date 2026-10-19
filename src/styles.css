@@ -3525,3 +3525,11 @@
   .ar-ws .ledger-table .ledger-bar { min-width: 120px; }
   .ar-ws .play-standing-tab > .ws-section, .ar-ws .play-setup > .ws-section, .ar-ws .ws-content > .play-releases { padding: 10px 0; border-width: 1px 0 0; border-radius: 0; background: transparent; --chart-canvas: var(--ar-bg); }
 }
+.ar-ws .verdict-strip { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.ar-ws .verdict-strip li { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.ar-ws .verdict-strip-run { font-size: var(--ar-text-s); }
+.ar-ws .verdict-strip-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ar-ws .verdict-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; border-radius: 4px; font: 12px/1.8 var(--ar-font-mono); background: var(--ws-raised); box-shadow: inset 2px 0 0 var(--checker); }
+.ar-ws .verdict-chip.tone-ok { color: var(--ar-c-ok); }
+.ar-ws .verdict-chip.tone-fail { color: var(--ar-c-fail); }
+.ar-ws .verdict-chip.tone-unknown { color: var(--ar-c-run); }

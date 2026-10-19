@@ -14,8 +14,9 @@ const notes = (row: PlayLedgerRow) => (typeof row.outcomeNotes === 'string' ? [r
 function OutcomeBar({ row, max }: { row: PlayLedgerRow; max: number }) {
   const by = row.hoursByOutcome ?? null
   const open = row.open?.hours ?? 0
-  if (!by && !open) return <span className="faint">attempts not recorded</span>
   const total = Object.values(by ?? {}).reduce((sum, value) => sum + value, 0)
+  // No hours recorded is not zero hours.
+  if (!total && !open) return <span className="faint">attempts not recorded</span>
   const parts = OUTCOME_ORDER.filter((outcome) => (by?.[outcome] ?? 0) > 0)
   const title = [
     ...parts.map((outcome) => `${OUTCOME_WORD[outcome]} ${by![outcome]!.toFixed(2)} h${row.triesByOutcome?.[outcome] !== undefined ? ` · ${row.triesByOutcome[outcome]} tries` : ''}`),
@@ -176,7 +177,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                   <td className="num" title={row.contractBlockedShare !== null && row.contractBlockedShare !== undefined ? `contract-blocked ${Math.round(row.contractBlockedShare * 100)}% of its time` : undefined}>
                     {row.completedShare !== null && row.completedShare !== undefined ? `${Math.round(row.completedShare * 100)}%` : '—'}
                   </td>
-                  <td className="num">{row.triesByOutcome ? tries : '—'}</td>
+                  <td className="num">{tries ? tries : <span className="faint">—</span>}</td>
                   <td>
                     <Best play={play} row={row} />
                   </td>

@@ -40,7 +40,7 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
               title={[`commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null].filter(Boolean).join('\n')}
             >
               {commit.tag ? <b>{shortTag(commit.tag)}</b> : <>commit {commit.sha.slice(0, 7)}</>}
-              {commit.run && <> ({commit.run})</>} {verdictWord(commit.verdict)}
+              {commit.run && <> ({shortRun(play.id, commit.run)})</>} {verdictWord(commit.verdict)}
               {typeof commit.workloads === 'object' && commit.workloads?.total ? ` ${commit.workloads.passed}/${commit.workloads.total}` : ''}
               {commit.checker && <> · {checkerLabel(play.checkers, commit.checker)}</>}
             </span>

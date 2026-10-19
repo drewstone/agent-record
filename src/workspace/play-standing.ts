@@ -201,7 +201,20 @@ export const playClimbSchema = z
     strip: z
       .array(
         z
-          .object({ columnId: s.optional(), runId: z.string(), kind: z.string(), checker: s.optional(), verdict: z.string(), count: n.optional(), firstAt: s.optional(), lastAt: s.optional(), line: s.optional(), source: s.optional() })
+          .object({
+            columnId: s.optional(),
+            runId: z.string(),
+            kind: z.string(),
+            checker: s.optional(),
+            verdict: z.string(),
+            count: n.optional(),
+            firstAt: s.optional(),
+            lastAt: s.optional(),
+            line: s.optional(),
+            source: s.optional(),
+            // The score an undecided gate printed before it timed out: drawn in the hover, never on the axis.
+            score: z.object({ stage: s.optional(), reached: n.optional(), of: n.optional(), workloads: z.object({ passed: n.optional(), total: n.optional() }).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+          })
           .catchall(z.unknown()),
       )
       .optional(),

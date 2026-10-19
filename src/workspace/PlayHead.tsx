@@ -26,13 +26,13 @@ import { checkerColor } from '@tangle-network/charts'
 
 type Play = PlayDocument & Head
 
-/** The play's goal: the composer's first paragraph (at most 220 characters), else the play input's objective. */
+/**
+ * The play's goal exactly as the composer serves it from the play file's # Goal. A null goal (an index group, a play
+ * without a goal section) draws no goal line: a run's objective is never shown as the play's goal.
+ */
 function goalOf(play: Play): { text: string; full: string | null } | null {
-  if (play.goal?.text) return { text: play.goal.text, full: play.goal.full && play.goal.full !== play.goal.text ? play.goal.full : null }
-  const objective = play.input?.objective?.trim()
-  if (!objective) return null
-  const first = objective.split(/\n\s*\n/)[0]!.replace(/^Drew, [^:]{1,40}: "[^"]*"\.?\s*/, '').trim()
-  return first.length > 220 ? { text: `${first.slice(0, 219).trimEnd()}…`, full: objective } : { text: first, full: first !== objective ? objective : null }
+  if (!play.goal?.text) return null
+  return { text: play.goal.text, full: play.goal.full && play.goal.full !== play.goal.text ? play.goal.full : null }
 }
 
 /** The standing sentence with its verdict clause in bold, as the composer wrote it. */
@@ -61,7 +61,7 @@ function Provenance({ play, best }: { play: Play; best: PlayBest | null | undefi
   const glyph = verdictGlyph(best.verdict)
   return (
     <span className="goal-prov" title={[best.line, best.lastAt ?? best.at ? `last ${utc(best.lastAt ?? best.at)}` : null].filter(Boolean).join('\n') || undefined}>
-      <b className="mono">{shortTag(best.tag) ?? 'no tag'}</b>
+      <b className="mono">{shortTag(best.tag) ?? 'workspace'}</b>
       {best.runId && <span className="faint"> ({shortRun(play.id, best.runId)})</span>}
       {glyph && <span className={`goal-glyph glyph-${glyph === '✓' ? 'ok' : glyph === '✕' ? 'fail' : 'unknown'}`}> {glyph}</span>}
       {best.state && best.state !== 'published' && <span className="faint"> {RELEASE_STATE[best.state] ?? best.state}</span>}
@@ -117,7 +117,7 @@ function CheckRows({ play }: { play: Play }) {
             <div>
               <dt>newest</dt>
               <dd>
-                {verdictWord(best.verdict)} <Provenance play={play} best={best} />
+                <Provenance play={play} best={best} />
               </dd>
             </div>
           )}
@@ -331,7 +331,7 @@ function Goal({ play }: { play: Play }) {
   const [open, setOpen] = useState(false)
   if (!goal) return null
   return (
-    <div className="play-goal" data-goal-source={play.goal?.source ?? 'input.objective'}>
+    <div className="play-goal" data-goal-source={play.goal?.source ?? 'composer'}>
       <p className={open ? '' : 'clamp-2'}>{open && goal.full ? goal.full : goal.text}</p>
       {goal.full && (
         <button type="button" className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>

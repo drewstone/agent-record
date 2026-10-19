@@ -138,7 +138,14 @@ function climbFigure(play: Play, climb: Climb) {
       ...(item.count && item.count > 1 ? { count: item.count } : {}),
       ...timeOf(item),
       marker: item.kind === 'gate' ? 'diamond' : 'circle',
-      annotation: [`${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}, no score`, item.line, item.source].filter(Boolean).join(' · '),
+      annotation: [
+        `${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}, no score`,
+        item.score?.workloads?.total ? `printed ${item.score.workloads.passed ?? '?'}/${item.score.workloads.total} workloads before it stopped` : null,
+        item.line,
+        item.source,
+      ]
+        .filter(Boolean)
+        .join(' · '),
     })
   }
   const series = [...rows.values()]
@@ -183,17 +190,64 @@ function climbFigure(play: Play, climb: Climb) {
 }
 
 /** The climb (chart a): check progress per checked release, grouped by run, one colour per checker. */
+/**
+ * A check that grades only pass or fail (no partial progress on any row) has no climb to draw: its releases read as one
+ * verdict strip per run, each release's verdict under each checker with its count, the line on hover.
+ */
+function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
+  const rows = [...climb.marks, ...(climb.strip ?? [])]
+  return (
+    <ol className="verdict-strip" data-verdict-strip>
+      {climb.groups.map((group) => {
+        const columns = climb.columns.filter((column) => column.runId === group.runId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        const glyph = group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
+        return (
+          <li key={group.runId}>
+            <a className="mono verdict-strip-run" href={`/run/${encodeURIComponent(group.runId)}`} title={runSpan(group.from, group.to)}>
+              {glyph} {shortRun(play.id, group.runId)}
+            </a>
+            <span className="verdict-strip-chips">
+              {columns.length === 0 && <span className="faint">no release checked</span>}
+              {columns.flatMap((column) =>
+                rows
+                  .filter((row) => row.columnId === column.id)
+                  .map((row, i) => (
+                    <span
+                      key={`${column.id}:${i}`}
+                      className={`verdict-chip tone-${markVerdict(row.verdict) === 'pass' ? 'ok' : markVerdict(row.verdict) === 'fail' ? 'fail' : 'unknown'}`}
+                      style={{ ['--checker' as string]: checkerColor(checkerIndex(play.checkers, row.checker) ?? 9) }}
+                      title={[`${row.kind === 'gate' ? 'tag gate' : 'check'} under ${checkerLabel(play.checkers, row.checker)}: ${verdictWord(row.verdict)}`, row.line, utc(row.lastAt ?? row.firstAt)].filter(Boolean).join('\n')}
+                    >
+                      {markVerdict(row.verdict) === 'pass' ? '✓' : markVerdict(row.verdict) === 'fail' ? '✕' : '?'} {shortTag(column.tag) ?? 'workspace'}
+                      {row.count && row.count > 1 ? ` ×${row.count}` : ''}
+                    </span>
+                  )),
+              )}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function PlayClimb({ play }: { play: Play }) {
   const climb = play.climb ?? null
-  const figure = useMemo(() => (climb ? climbFigure(play, climb) : null), [play, climb])
-  if (!climb || !figure) return null
+  // Partial progress on any row makes a climb; a check that only passes or fails is a verdict strip.
+  const graded = !!climb && climb.marks.some((mark) => mark.progress !== null && mark.progress > 0.001 && mark.progress < 0.999)
+  const figure = useMemo(() => (climb && graded ? climbFigure(play, climb) : null), [play, climb, graded])
+  if (!climb || (graded && !figure) || (!graded && !climb.marks.length && !(climb.strip ?? []).length)) return null
   const counted = new Map<string, number>()
   for (const mark of [...climb.marks, ...(climb.strip ?? [])]) counted.set(mark.checker ?? '', (counted.get(mark.checker ?? '') ?? 0) + (mark.count ?? 1))
   return (
     <section className="ws-section play-climb" data-play-climb aria-label="Climb">
       <header className="section-head">
         <h3>Climb</h3>
-        <p className="faint">Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are undecided; ◆ is a tag gate.</p>
+        <p className="faint">
+          {graded
+            ? 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are undecided; ◆ is a tag gate.'
+            : 'This check passes or fails without partial progress: each run’s checked releases with their verdicts.'}
+        </p>
       </header>
       {play.checkers && play.checkers.length > 0 && (
         <ul className="checker-legend" aria-label="Checkers">
@@ -210,7 +264,7 @@ export function PlayClimb({ play }: { play: Play }) {
           ))}
         </ul>
       )}
-      <FigureView figure={figure} />
+      {graded && figure ? <FigureView figure={figure} /> : <VerdictStrip play={play} climb={climb} />}
     </section>
   )
 }
