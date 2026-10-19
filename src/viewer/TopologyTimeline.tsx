@@ -43,9 +43,17 @@ function buildLanes(record: RunRecord): TimelineLane[] {
   for (const node of record.nodes) {
     if (node.kind === 'session') continue
     const events = eventsByNode.get(node.id) ?? []
-    if (!events.length) continue
     const times = events.map((event) => ms(event.at)).filter(Number.isFinite)
-    if (!times.length) continue
+    // Structural nodes (workflow parents, mentions) may carry no events but still
+    // anchor the tree — their children reference them as parents. Include them
+    // with a zero-duration span at their recorded start, or skip only when they
+    // are both eventless and childless.
+    if (!times.length) {
+      const hasChildren = record.nodes.some((other) => other.parent === node.id)
+      const startFallback = node.start ? ms(node.start) : undefined
+      if (!hasChildren || startFallback === undefined || !Number.isFinite(startFallback)) continue
+      times.push(startFallback)
+    }
     const start = Math.min(...times)
     const end = Math.max(...times)
     const parent = nodeById.get(node.parent ?? '')
