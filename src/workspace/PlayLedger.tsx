@@ -8,10 +8,11 @@ type Play = PlayDocument & PlayHead
 type SortKey = 'newest' | 'wall' | 'agent' | 'cost' | 'score'
 
 const OUTCOME_WORD: Record<string, string> = { ok: 'ok', quota: 'quota', lost: 'lost', 'rate-limit': 'rate limit', oom: 'OOM', refused: 'refused', aborted: 'aborted', other: 'other' }
-const notes = (row: PlayLedgerRow) => (typeof row.outcomeNotes === 'string' ? [row.outcomeNotes] : Array.isArray(row.outcomeNotes) ? row.outcomeNotes : row.outcomeNotes ? Object.entries(row.outcomeNotes).map(([key, value]) => `${key}: ${value}`) : [])
+type OutcomeRow = Pick<PlayLedgerRow, 'hoursByOutcome' | 'triesByOutcome' | 'open' | 'outcomeBasis' | 'outcomeNotes'>
+const notes = (row: OutcomeRow) => (typeof row.outcomeNotes === 'string' ? [row.outcomeNotes] : Array.isArray(row.outcomeNotes) ? row.outcomeNotes : row.outcomeNotes ? Object.entries(row.outcomeNotes).map(([key, value]) => `${key}: ${value}`) : [])
 
 /** A run's agent-hours stacked by attempt outcome on the ledger's shared axis; an open turn is a hatched tail. */
-function OutcomeBar({ row, max }: { row: PlayLedgerRow; max: number }) {
+export function OutcomeBar({ row, max }: { row: OutcomeRow; max: number }) {
   const by = row.hoursByOutcome ?? null
   const open = row.open?.hours ?? 0
   const total = Object.values(by ?? {}).reduce((sum, value) => sum + value, 0)

@@ -517,6 +517,9 @@ export function PlayHeader({ play, fallback }: { play: Play; fallback?: React.Re
     <header className="ws-head play-head" data-play-head data-standing={standing?.status ?? 'none'}>
       <div className="ws-title-row">
         <h1>{play.title}</h1>
+        <a className="play-report-link" href={`/play/${encodeURIComponent(play.id)}/report`} data-play-report-link>
+          Report
+        </a>
       </div>
       <Goal play={play} />
       {standing ? <Sentence text={standing.sentence} status={standing.status} /> : fallback}

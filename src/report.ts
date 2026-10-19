@@ -28,6 +28,8 @@ export const evidenceReferenceSchema = z
     line: z.number().int().positive().optional(),
     eventId: z.string().min(1).optional(),
     excerpt: z.string().optional(),
+    /** When the source record last said this. */
+    asOf: time.optional(),
   })
   .catchall(z.unknown())
   .refine(
@@ -65,6 +67,10 @@ const questionSchema = z
     status: z.enum(['observed', 'unavailable', 'not_applicable']),
     answer: z.string().optional(),
     evidence: z.array(evidenceReferenceSchema),
+    asOf: time.optional(),
+    /** Why the answer, or part of it, is unknown, and the record that would answer it. */
+    why: z.string().optional(),
+    record: z.string().optional(),
   })
   .superRefine((question, ctx) => {
     if (question.status === 'observed' && !question.evidence.length)
@@ -107,7 +113,74 @@ export const researchMetricSchema = z.object({
   unit: z.string().optional(),
   coverage: z.string().optional(),
   source: evidenceReferenceSchema.optional(),
+  /** The play section this fact belongs to; without one it is listed under measurements. */
+  section: z.string().optional(),
+  /** False when the value cannot be compared with the bar; `note` says why. */
+  comparable: z.boolean().nullable().optional(),
+  note: z.string().optional(),
+  /** For a null value: why it is unknown, and the record that would answer it. */
+  why: z.string().optional(),
+  record: z.string().optional(),
 }).catchall(z.unknown())
+
+/** A play section: its order in the report, its title and one computed sentence. */
+export const researchSectionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  summary: z.string().optional(),
+})
+
+/** A table cell; a null text is unknown, never zero. */
+const cellSchema = z.object({
+  text: z.string().nullable(),
+  comparable: z.boolean().nullable().optional(),
+  note: z.string().optional(),
+  href: z.string().optional(),
+})
+
+export const researchTableSchema = z.object({
+  id: z.string().min(1),
+  section: z.string().min(1),
+  title: z.string().min(1),
+  columns: z.array(z.string()),
+  rows: z.array(z.array(cellSchema)),
+  source: evidenceReferenceSchema.optional(),
+})
+
+/** One rule the producer checks against the records, with every instance it fired on. */
+export const researchRuleSchema = z.object({
+  id: z.string().min(1),
+  question: z.string(),
+  /** `fired`, `quiet` or `could-not-evaluate`; any other state renders as unrecognised. */
+  state: z.string(),
+  threshold: z.string().optional(),
+  instances: z.array(z.object({
+    sentence: z.string(),
+    value: z.string().nullable().optional(),
+    evidence: z.array(evidenceReferenceSchema),
+  })),
+})
+
+export const researchUnknownSchema = z.object({
+  field: z.string().min(1),
+  why: z.string(),
+  record: z.string(),
+})
+
+export const researchRunSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  href: z.string().optional(),
+  ending: z.string().nullable(),
+  reason: z.string().nullable().optional(),
+  wallHours: z.number().nullable(),
+  agentHours: researchMetricSchema,
+  /** Attempt hours by outcome; null when the run recorded no attempts. */
+  hoursByOutcome: z.record(z.string(), z.number()).nullable(),
+  triesByOutcome: z.record(z.string(), z.number()).nullable().optional(),
+  best: z.string().nullable().optional(),
+  cost: z.string().nullable().optional(),
+})
 
 /** Versioned editorial annotations sit beside records; they never change recorded events. */
 export const researchReportSchema = z
@@ -147,6 +220,14 @@ export const researchReportSchema = z
           record: recordSchema.optional(),
           documents: z.array(researchDocumentSchema).default([]),
           metrics: z.array(researchMetricSchema).default([]),
+          // Play report fields (agent-workspace.play-report.v1 through playReportToResearchReport); all optional.
+          href: z.string().optional(),
+          verdict: z.object({ sentence: z.string(), status: z.string().nullable(), evidence: z.array(evidenceReferenceSchema) }).optional(),
+          sections: z.array(researchSectionSchema).optional(),
+          tables: z.array(researchTableSchema).optional(),
+          runs: z.array(researchRunSchema).optional(),
+          rules: z.array(researchRuleSchema).optional(),
+          unknowns: z.array(researchUnknownSchema).optional(),
         })
         .catchall(z.unknown()),
     ),
@@ -242,6 +323,11 @@ export type ResearchMetric = z.infer<typeof researchMetricSchema>
 export type ResearchClaim = ResearchPlay['claims'][number]
 export type EvidenceReference = z.infer<typeof evidenceReferenceSchema>
 export type QuestionCoverage = z.infer<typeof questionSchema>
+export type ResearchSection = z.infer<typeof researchSectionSchema>
+export type ResearchTable = z.infer<typeof researchTableSchema>
+export type ResearchRule = z.infer<typeof researchRuleSchema>
+export type ResearchUnknown = z.infer<typeof researchUnknownSchema>
+export type ResearchRun = z.infer<typeof researchRunSchema>
 
 export function parseResearchReport(value: unknown): ResearchReportData {
   return researchReportSchema.parse(value)
