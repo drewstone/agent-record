@@ -98,7 +98,7 @@ function CheckRows({ play }: { play: Play }) {
           {stageWords(best) && (
             <div>
               <dt>stage</dt>
-              <dd>
+              <dd title={best.line ?? undefined}>
                 <b>{best.reached} of {best.of}</b>
                 {best.stage && <span className="faint"> {best.stage}</span>} <Provenance play={play} best={best} />
               </dd>
@@ -191,7 +191,7 @@ function GoalBlock({ play }: { play: Play }) {
               <BarRow key={metric.id} play={play} metric={metric} />
             ))}
           </dl>
-          <p className="faint bar-caption">
+          <p className="faint bar-caption" title={[play.bar?.condition && `The bar: ${play.bar.condition}`, play.bar?.checkCondition && `The check measures: ${play.bar.checkCondition}`].filter(Boolean).join('\n') || undefined}>
             {marks.length === metrics.length && marks.length > 0 && <>No release passes; each value is the nearest candidate · </>}
             {marks.some((item) => item!.comparable === false && !/fail|not-solved/.test(item!.verdict ?? '')) && <>* not comparable{precondition ? ` (${precondition.label} below ${targetWords(precondition) ?? 'its bar'})` : ''} · </>}
             {marks.some((item) => item!.verdict && /fail|not-solved/.test(item!.verdict)) && <>✕ from a failing candidate · </>}
@@ -221,14 +221,13 @@ export function BlockerChip({ blocker }: { blocker: PlayBlocker }) {
       <p>
         <b className="blocker-class">{BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')}</b>
         {age && <b className="blocker-age"> {age}</b>}
-        {blocker.evidence && <span className="blocker-evidence" title={blocker.evidence}> · {blocker.evidence}</span>}
+        {blocker.evidence && (
+          <span className="blocker-evidence" title={[blocker.evidence, blocker.source && `source: ${blocker.source}`, blocker.owner && `owner: ${blocker.owner}`].filter(Boolean).join('\n')}>
+            {' '}
+            · {blocker.evidence}
+          </span>
+        )}
       </p>
-      {(blocker.source || blocker.owner) && (
-        <p className="faint blocker-source">
-          {blocker.source && <code>{blocker.source}</code>}
-          {blocker.owner && <> · {blocker.owner}</>}
-        </p>
-      )}
       {blocker.also?.map((item) => (
         <p key={item.class} className="blocker-also" data-blocker-also={item.class} title={item.source ?? undefined}>
           also <b>{BLOCKER_WORD[item.class] ?? item.class.replaceAll('-', ' ')}</b>

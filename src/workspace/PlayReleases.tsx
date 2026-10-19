@@ -42,7 +42,7 @@ export function PlayReleases({ play }: { play: Play }) {
   }, [releases])
   if (!releases.length) return <p className="ws-status">No release tag has been recorded for this play.</p>
   const never = play.standing?.releases?.neverChecked ?? releases.filter((release) => (release.state ?? 'published') === 'published' && !Object.keys(release.checks ?? {}).length && !release.gate).length
-  const columns = `minmax(64px, .7fr) minmax(70px, .7fr) 84px 110px repeat(${checkers.length || 1}, minmax(64px, .6fr)) minmax(120px, 1.2fr) repeat(${metrics.length}, minmax(70px, .7fr)) 56px minmax(84px, .8fr)`
+  const columns = `64px 56px 84px 140px repeat(${checkers.length || 1}, minmax(52px, .5fr)) minmax(120px, 1.2fr) repeat(${metrics.length}, minmax(76px, .7fr)) 64px 64px`
   return (
     <section className="ws-section play-releases" data-play-releases aria-label="Releases">
       <p className="faint">
@@ -98,7 +98,7 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
         <b>{shortTag(release.tag)}</b>
       </span>
       <span className="mono">
-        <a href={`/run/${encodeURIComponent(release.runId)}`}>{release.run ?? shortRun(play.id, release.runId)}</a>
+        <a href={`/run/${encodeURIComponent(release.runId)}`}>{shortRun(play.id, release.runId)}</a>
       </span>
       <span className="mono faint" title={[release.commit, release.taggedAt ? `tagged ${utc(release.taggedAt)}` : null, RELEASE_STATE[release.state ?? 'published']].filter(Boolean).join('\n')}>
         {release.commit?.slice(0, 8) ?? '—'}
@@ -106,7 +106,7 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
       <span className={`verdict-cell tone-${tone(release.gate?.verdict)}`} title={release.gate?.line ?? undefined}>
         {release.gate ? (
           <>
-            {glyph(release.gate.verdict)} {release.gate.verdict ?? 'no verdict'}
+            {glyph(release.gate.verdict)} {verdictWord(release.gate.verdict)}
             {release.gate.count && release.gate.count > 1 ? ` ×${release.gate.count}` : ''}
           </>
         ) : (
@@ -155,8 +155,8 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
         {take?.enabled ? (
           <a href={`/run/${encodeURIComponent(release.runId)}/receipt/${encodeURIComponent(shortTag(release.tag) ?? release.tag)}/`}>Take →</a>
         ) : (
-          <span className="faint" title={take?.why ?? 'Not solved under the current check'}>
-            not takeable
+          <span className="faint" title={`Not takeable: ${take?.why ?? 'not solved under the current check'}`}>
+            —
           </span>
         )}
       </span>

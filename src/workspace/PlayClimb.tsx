@@ -1,4 +1,4 @@
-import { type ChartBand, type ChartMark, isRefusal, type MultiplePanel, smallMultiples, type TimePoint, type TimeSeriesRow, timeSeries, type XCategory, type YTarget } from '@tangle-network/charts'
+import { type ChartBand, type ChartMark, type MultiplePanel, smallMultiples, type TimePoint, type TimeSeriesRow, timeSeries, type XCategory, type YTarget } from '@tangle-network/charts'
 import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { useMemo } from 'react'
@@ -126,10 +126,11 @@ function climbFigure(play: Play, climb: Climb) {
   for (const item of climb.strip ?? []) {
     const x = item.columnId ? axis.index.get(item.columnId) : undefined
     if (x === undefined) continue
+    // A superseded gate carries no verdict: the table lists it as not measured and the strip leaves it out.
     row(item.checker, item.runId).points.push({
       x,
       y: null,
-      verdict: markVerdict(item.verdict),
+      ...(item.verdict === 'superseded' ? {} : { verdict: markVerdict(item.verdict) }),
       ...(item.count && item.count > 1 ? { count: item.count } : {}),
       ...timeOf(item),
       marker: item.kind === 'gate' ? 'diamond' : 'circle',
@@ -144,7 +145,7 @@ function climbFigure(play: Play, climb: Climb) {
   for (const gap of climb.gaps ?? []) {
     const x = axis.index.get(gap.afterColumnId)
     if (x === undefined || x >= axis.categories.length - 1) continue
-    marks.push({ at: x + 0.5, label: `${gap.hours >= 10 ? Math.round(gap.hours) : gap.hours.toFixed(1)} h`, kind: 'event' })
+    marks.push({ at: x + 0.5, label: `${gap.hours >= 10 ? Math.round(gap.hours) : gap.hours.toFixed(1)} h`, kind: 'event', source: 'gap' })
   }
   for (const ruling of climb.rulings ?? []) {
     // A ruling sits at the first column its new checker scored; a rejected ruling at the column checked just before it.
@@ -161,12 +162,14 @@ function climbFigure(play: Play, climb: Climb) {
     const label = ruling.verdict === 'rejected' ? `check stands ${clock}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} · ${ruling.by ?? 'ruling'} ${clock}`
     marks.push({ at: x, label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
   }
-  const ticks = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1)
+  const ticks = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: item.label.toUpperCase() } : item))
   return timeSeries(series, {
     id: `climb-${play.id}`,
     x: { label: 'Release', domain: axis.domain, categories: axis.categories },
-    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [0, 1], ...(ticks.length ? { ticks } : {}), strip: 'undecided / unscored' },
+    // Headroom above SOLVED keeps ruling heads off the solved marks.
+    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}), strip: 'no score' },
     formatY: stageAt(climb),
+    markers: { circle: 'check', diamond: 'gate' },
     bands: axis.bands,
     marks,
   })
@@ -235,11 +238,11 @@ function targetsOf(metric: PlayBarMetric): YTarget[] {
 export function PlayAgainstBar({ play }: { play: Play }) {
   const climb = play.climb ?? null
   const bar = play.bar ?? null
-  const figures = useMemo(() => {
+  const figure = useMemo(() => {
     if (!climb || !bar || !play.barSeries?.length) return null
     const axis = releaseAxis(play, climb)
     const metrics = bar.metrics.filter((metric) => !metric.precondition)
-    const panels = metrics.flatMap((metric): (MultiplePanel & { metric: PlayBarMetric; format?: (value: number) => string })[] => {
+    const panels = metrics.flatMap((metric): MultiplePanel[] => {
       const series = play.barSeries!.find((item) => item.metric === metric.id)
       if (!series) return []
       const shown = displayUnit(metric.unit)
@@ -260,25 +263,23 @@ export function PlayAgainstBar({ play }: { play: Play }) {
         })
       const domain = domainOf(metric, points.map((point) => point.y!).filter((value) => value !== null))
       const label = `${metric.label}${metric.direction ? (metric.direction === 'up' ? ' ↑' : ' ↓') : ''}`
-      if (!points.length) return [{ id: metric.id, label, unit: shown.unit, domain, missing: { why: series.missing?.why ?? 'not measured on any checked release' }, metric }]
-      return [{ id: metric.id, label, unit: shown.unit, domain, points, scale: metric.scale ?? 'linear', targets: targetsOf(metric), format: compactNumber, metric }]
+      if (!points.length) return [{ id: metric.id, label, unit: shown.unit, domain, missing: { why: series.missing?.why ?? 'not measured on any checked release' } }]
+      return [{ id: metric.id, label, unit: shown.unit, domain, points, scale: metric.scale ?? 'linear', targets: targetsOf(metric), format: compactNumber }]
     })
     if (!panels.length) return null
-    const options = (unit: string) => ({
+    // Two panels a row: the wide render is 720 px, and four in a row leave each about 168 px for its release labels.
+    return smallMultiples(panels, {
       id: `bar-${play.id}`,
       x: { label: 'Release', domain: axis.domain, categories: axis.categories },
-      y: { label: 'Measured value', unit, domain: [0, 1] as [number, number] },
-      shared: 'x' as const,
+      y: { label: 'Measured value', unit: panels[0]!.unit ?? '', domain: [0, 1] },
+      shared: 'x',
       noun: 'metric',
-      columns: Math.min(4, panels.length),
+      columns: Math.min(2, panels.length),
       connect: false,
+      markers: { circle: 'check', diamond: 'gate' },
     })
-    const together = smallMultiples(panels, options(panels[0]!.unit ?? ''))
-    // A charts release without per-panel units refuses mixed units: draw one figure per metric then.
-    if (!isRefusal(together) || !/unit/i.test(together.refused)) return [together]
-    return panels.map((panel) => smallMultiples([panel], { ...options(panel.unit ?? ''), id: `bar-${play.id}-${panel.id}`, columns: 1 }))
   }, [play, climb, bar])
-  if (!figures) return null
+  if (!figure) return null
   return (
     <section className="ws-section play-bar" data-play-bar aria-label="Against the bar">
       <header className="section-head">
@@ -288,11 +289,7 @@ export function PlayAgainstBar({ play }: { play: Play }) {
           {bar?.condition && bar.checkCondition ? ` Bar: ${bar.condition}. Ours: ${bar.checkCondition}.` : ''}
         </p>
       </header>
-      <div className={`play-bar-figures count-${figures.length}`}>
-        {figures.map((figure) => (
-          <FigureView key={isRefusal(figure) ? figure.id : figure.id} figure={figure} />
-        ))}
-      </div>
+      <FigureView figure={figure} />
     </section>
   )
 }
