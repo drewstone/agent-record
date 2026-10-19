@@ -159,7 +159,8 @@ function climbFigure(play: Play, climb: Climb) {
     const x = first.length ? Math.min(...first) : before
     if (x === undefined) continue
     const clock = utc(ruling.at)?.slice(6) ?? ''
-    const label = ruling.verdict === 'rejected' ? `check stands ${clock}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} · ${ruling.by ?? 'ruling'} ${clock}`
+    // The mark's source names who ruled; the label says what changed and when.
+    const label = ruling.verdict === 'rejected' ? `check stands ${clock}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} ${clock}`
     marks.push({ at: x, label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
   }
   const ticks = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: item.label.toUpperCase() } : item))
