@@ -41,10 +41,26 @@ function NoWinner({ play }: { play: PlayDocument }) {
   let best: { run: RunSummary; row: CheckRow } | null = null
   for (const run of play.runs) if (run.check?.best && (!best || better(run.check.best, best.row))) best = { run, row: run.check.best }
   const headline = newest?.run.check?.headline ?? null
+  // A check that passed under a checker since amended is a pass, not "no winner": name it with its checker and times.
+  const passes = play.runs.flatMap((run) => (run.check?.passes ?? []).map((pass) => ({ run, pass })))
   return (
     <section className="play-answer is-none" data-play-answer="none" aria-label="Answer">
       <h3>Answer</h3>
-      <p className="faint">No run of this play has won yet{checks.length ? '' : ': no run’s play check passed and no root submitted a winner'}.</p>
+      {passes.length ? (
+        <p className="play-answer-passes" data-check-passes={passes.length}>
+          Not solved under the current check. Earlier passes:{' '}
+          {passes.map(({ run, pass }, index) => (
+            <span key={`${run.id}:${pass.tag}:${pass.checker}`}>
+              {index ? '; ' : ''}
+              <b>{shortTag(pass.tag) ?? 'a version'}</b> ({shortRun(play.id, run.id)}) passed {pass.count}× under checker {(pass.checker ?? 'unrecorded').slice(0, 8)},{' '}
+              {pass.count > 1 ? `${when(pass.firstAt)} to ${when(pass.lastAt)}` : when(pass.firstAt)}
+            </span>
+          ))}
+          .
+        </p>
+      ) : (
+        <p className="faint">No run of this play has won yet{checks.length ? '' : ': no run’s play check passed and no root submitted a winner'}.</p>
+      )}
       {newest && (
         <p className="play-answer-text" data-newest-check={newest.run.id}>
           {headline ?? <>{shortTag(newest.check.tag) && <b>{shortTag(newest.check.tag)} </b>}{newest.check.line}</>}
