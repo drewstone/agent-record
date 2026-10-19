@@ -3662,3 +3662,16 @@
 .ar-ws .climb-brush-tick.tone-fail { background: var(--ar-c-fail); opacity: .55; }
 .ar-ws .climb-brush-window { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--ar-c-info) 22%, transparent); border-left: 2px solid var(--ar-c-info); border-right: 2px solid var(--ar-c-info); pointer-events: none; }
 .ar-ws .bar-gap-candidate { color: var(--ar-fg-muted); }
+
+/* ---------- One agent's attempts as beads on a string (run page, under the replay) ---------- */
+.ar-ws .bead-string { display: grid; gap: 4px; padding: 6px 14px 8px; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .bead-track { position: relative; height: 18px; margin: 0 6px; }
+.ar-ws .bead-track::before { content: ''; position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: color-mix(in srgb, var(--ar-fg-muted) 25%, transparent); }
+.ar-ws .bead-span { position: absolute; top: 7px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ar-fg-muted) 65%, transparent); }
+.ar-ws .bead-span:not(.state-work) { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ar-fg-muted) 55%, transparent) 0 2px, transparent 2px 4px); }
+.ar-ws .bead-cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--ar-c-info); }
+.ar-ws .bead { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px; padding: 0; border: 0; border-radius: 50%; background: var(--bead); box-shadow: 0 0 0 2px var(--ws-panel); cursor: pointer; opacity: .55; }
+.ar-ws .bead.is-past { opacity: 1; }
+.ar-ws .bead:hover, .ar-ws .bead:focus-visible { transform: scale(1.35); outline: none; box-shadow: 0 0 0 2px var(--ws-panel), 0 0 0 3px var(--ar-fg); }
+.ar-ws .bead-summary { margin: 0; font-size: 12px; }
+.ar-ws .bead-key { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; vertical-align: 0; }

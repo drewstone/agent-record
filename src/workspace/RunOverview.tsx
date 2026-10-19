@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { FigureView, HBars, Meter } from '@tangle-network/charts/react'
-import { timeline, timeSeries } from '@tangle-network/charts'
+import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
 import type { RunDocument, RunProgress } from '../workspace.js'
 import type { NodeStats } from './RunTable.js'
@@ -83,18 +83,60 @@ function contractState(d: ContractDelivery) {
 /** The outside goal audit of the passing check (discovery-lab runner/goal-audit.mjs), as the Now line words it. */
 const GOAL_AUDIT = { consistent: 'goal audit consistent', contradiction: 'goal audit found a contradiction', unaudited: 'goal audit not ruled yet' } as const
 
+/**
+ * The run's check progress over time, one series per checker so an amended check's first low score never reads as the
+ * work regressing: each checker is named by the ruling that made it (the Lab's `play.rulings`), the y axis by the
+ * check's own stage names, and the figure is drawn at its panel's width.
+ */
+function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDelivery[], width: number) {
+  const digestOf = (point: ScorePoint) => (typeof point.checker === 'string' ? point.checker : (point.checker?.sha256 ?? null))
+  const rulings = (((r.system?.play as { rulings?: unknown } | null | undefined)?.rulings ?? []) as Array<{ at?: string; by?: string; verdict?: string; newDigest?: string | null }>).filter((item) => item.verdict === 'upheld' && item.newDigest)
+  const order: string[] = []
+  for (const point of [...scores].sort((a, b) => a.at.localeCompare(b.at))) {
+    const digest = digestOf(point) ?? 'unrecorded'
+    if (!order.includes(digest)) order.push(digest)
+  }
+  const nameOf = (digest: string, index: number) => {
+    const ruling = rulings.find((item) => item.newDigest && digest.startsWith(item.newDigest.slice(0, 8)))
+    return ruling ? `after the ${ruling.by ?? ''} ruling ${ruling.at ? clock(ruling.at) : ''}`.replace(/\s+/g, ' ').trim() : index === 0 ? 'check as pressed' : `checker ${index + 1}`
+  }
+  const stages = new Map<number, string>()
+  for (const point of scores) {
+    const of = point.score?.of
+    if (of && point.score?.stage && point.score.reached) stages.set(Math.round(((point.score.reached - 1) / of) * 1000) / 1000, point.score.stage)
+  }
+  const ticks = [...stages.entries()].sort((a, b) => a[0] - b[0]).map(([at, label]) => ({ at, label }))
+  const rows = order.map((digest, index) => ({
+    id: `checker-${index}`,
+    label: nameOf(digest, index),
+    colorIndex: order.length - 1 - index,
+    points: scores
+      .filter((point) => (digestOf(point) ?? 'unrecorded') === digest)
+      // A row recorded n times sits at its first time: the first time that checker scored that release.
+      .map((point) => ({ x: Date.parse(typeof point.firstAt === 'string' ? point.firstAt : point.at), y: point.solved ? 1 : point.progress!, ...(point.tag ? { label: shortTag(point.tag) ?? undefined } : {}) }))
+      .sort((a, b) => a.x - b.x)
+      .filter((point, i, list) => i === 0 || point.x > list[i - 1]!.x),
+  })).filter((row) => row.points.length)
+  const times = rows.flatMap((row) => row.points.map((point) => point.x))
+  const [first, last] = [Math.min(...times), Math.max(...times)]
+  const stageAt = (value: number) => (value >= 1 ? 'solved' : ([...ticks].reverse().find((tick) => tick.at <= value + 1e-9)?.label ?? `${Math.round(value * 100)}%`))
+  return timeSeries(rows, {
+    id: `stage-${r.runId}`,
+    x: { label: 'UTC', domain: first === last ? [first - 60_000, last + 60_000] : [first, last] },
+    y: { label: 'Check progress', unit: '', domain: [0, 1], ...(ticks.length ? { ticks: [...ticks, { at: 1, label: 'SOLVED' }] } : {}) },
+    formatX: (at) => new Date(at).toISOString().slice(11, 16),
+    formatY: stageAt,
+    marks: contract.map((d) => ({ at: Date.parse(d.at), label: `line sent on ${shortTag(d.tag) ?? '?'}`, kind: 'event' as const })).filter((mark) => mark.at >= first && mark.at <= last),
+    width,
+  })
+}
+
 function RunNow({ receipt: r, outcome, settled }: { receipt: RunReceipt; outcome: Outcome | null; settled: boolean }) {
   const scores = (r.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
   const contract = r.contract ?? []
   const disputes = outcome?.disputes ?? []
   if (!outcome && scores.length === 0 && contract.length === 0) return null
-  const times = scores.map((point) => Date.parse(point.at))
-  const [first, last] = [Math.min(...times), Math.max(...times)]
-  const figure = scores.length === 0 ? null : timeSeries([{ id: 'score', label: 'Stage score', points: scores.map((point) => ({ x: Date.parse(point.at), y: point.solved ? 1 : point.progress! })) }], {
-    x: { label: 'UTC', domain: first === last ? [first - 60_000, last + 60_000] : [first, last] }, y: { label: 'Stage score', unit: 'share of stages', domain: [0, 1] },
-    formatX: (at) => new Date(at).toISOString().slice(11, 16), formatY: (value) => value.toFixed(2),
-    marks: contract.map((d) => ({ at: Date.parse(d.at), label: `line sent on ${shortTag(d.tag) ?? '?'}`, kind: 'event' as const })),
-  })
+  const figure = scores.length === 0 ? null : (width: number) => stageFigure(r, scores, contract, width)
   const verdict = outcome?.solvedLabel ?? (outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : 'No check verdict yet')
   const audit = outcome?.goalAudit ?? null
   const tone = audit?.verdict === 'unaudited' ? 'unaudited' : outcome?.solved === true ? 'passed' : outcome?.solved === false ? 'failing' : 'unknown'
@@ -234,7 +276,12 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
     finally { setPending(null) }
   }
   const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value)
-  const lanes = r.timeline.lanes.map((lane) => ({ ...lane, spans: lane.spans.map((span) => ({ ...span, start: Date.parse(span.start), end: span.end === null ? null : Date.parse(span.end), note: span.note ?? undefined })) }))
+  // Each lane's recorded attempts draw as ticks in the shared outcome palette; an outcome the palette does not name is "other".
+  const lanes = r.timeline.lanes.map(({ ticks, ...lane }) => ({
+    ...lane,
+    spans: lane.spans.map((span) => ({ ...span, start: Date.parse(span.start), end: span.end === null ? null : Date.parse(span.end), note: span.note ?? undefined })),
+    ...(ticks?.length ? { ticks: ticks.filter((tick) => Number.isFinite(Date.parse(tick.at))).map((tick) => ({ at: Date.parse(tick.at), outcome: (OUTCOME_ORDER as readonly string[]).includes(tick.outcome) ? (tick.outcome as TickOutcome) : 'other', ...(tick.cause ? { note: tick.cause } : {}) })) } : {}),
+  }))
   const marks = r.timeline.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind }))
   const figure = timeline(lanes, { measure: 'Recorded agent time', ...(r.timeline.end ? { now: Date.parse(r.timeline.end) } : {}), marks })
   const versionFigure = r.versions?.rows.length && r.versions.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
