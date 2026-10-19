@@ -37,6 +37,15 @@ interface PlotProps {
   navigate: (direction: number) => void
 }
 
+export interface BehaviorMark {
+  behavior: string
+  axis: string
+  confidence: number
+  at: number
+  eventId?: string
+  quote?: string
+}
+
 export function Timeline({
   index,
   cutoff,
@@ -48,19 +57,23 @@ export function Timeline({
   events,
   zoom,
   marks,
+  behaviors,
   baseWidth = 940,
 }: PlotProps & {
   events: RecordEvent[]
   zoom: number
   /** Assessment flags drawn above the events they cite. */
   marks?: ReadonlyMap<string, readonly { polarity: string; title: string }[]>
+  /** Behavior-battery verdicts drawn as a lane under the actor lanes. */
+  behaviors?: readonly BehaviorMark[]
   baseWidth?: number
 }) {
   const width = baseWidth * zoom,
     // Lane labels at the meta size (15px Geist Mono): 20 characters fit the left gutter.
     left = 200,
     step = 30,
-    height = Math.max(85, 48 + index.actors.length * step)
+    behaviorLane = behaviors?.length ? 26 : 0,
+    height = Math.max(85, 48 + index.actors.length * step) + behaviorLane
   const span = Math.max(index.end - index.start, 1)
   const x = (at: number) =>
     left + ((at - index.start) / span) * (width - left - 20)
@@ -216,7 +229,33 @@ export function Timeline({
             No events match this filter.
           </text>
         )}
-      </svg>
+                  {behaviors && behaviors.length > 0 && (
+              <g data-behavior-lane>
+                <text x={left - 7} y={height - 9} textAnchor="end" className="axis-label">behaviors</text>
+                {behaviors.map((mark, i) => (
+                  <rect
+                    key={`${mark.behavior}:${i}`}
+                    x={x(mark.at) - 3}
+                    y={height - 20}
+                    width={6}
+                    height={14}
+                    rx={2}
+                    className={`behavior-tick axis-${mark.axis}`}
+                    opacity={0.35 + 0.65 * mark.confidence}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${mark.behavior} (${Math.round(mark.confidence * 100)}%)${mark.quote ? `: ${mark.quote.slice(0, 60)}` : ''}`}
+                    onMouseEnter={(e) => showTooltip(e, mark.behavior, [`${Math.round(mark.confidence * 100)}% confidence · ${mark.axis}`, ...(mark.quote ? [mark.quote.slice(0, 90)] : [])])}
+                    onMouseLeave={hideTooltip}
+                    onFocus={(e) => showTooltip(e, mark.behavior, [`${Math.round(mark.confidence * 100)}% confidence · ${mark.axis}`])}
+                    onBlur={hideTooltip}
+                    onClick={() => mark.eventId && inspect(index.byEvent.get(mark.eventId)!, true)}
+                    onKeyDown={(e) => activate(e, () => mark.eventId && inspect(index.byEvent.get(mark.eventId)!, true))}
+                  />
+                ))}
+              </g>
+            )}
+    </svg>
     </div>
   )
 }

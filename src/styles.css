@@ -3323,3 +3323,21 @@
 .agent-record .run-execution p { margin: 0 0 8px; }
 .agent-record .run-execution-next { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .agent-record .run-execution pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; }
+
+/* Behavior-battery lane under the timeline: one tick per cited yes-verdict. */
+.agent-record svg .behavior-tick {
+  cursor: pointer;
+}
+.agent-record svg .behavior-tick.axis-alignment {
+  fill: var(--ar-c-info);
+}
+.agent-record svg .behavior-tick.axis-efficiency {
+  fill: var(--ar-c-ok);
+}
+.agent-record svg .behavior-tick.axis-affect {
+  fill: var(--ar-c-run);
+}
+.agent-record svg .behavior-tick:hover {
+  stroke: var(--ar-fg);
+  stroke-width: 1.5;
+}
