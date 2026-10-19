@@ -583,6 +583,10 @@ export const runProgressSchema = z
          * `runner/run-progress.mjs` outcomeOf); null when it has a check or nothing holds it.
          */
         checkWait: z.object({ tag: z.string().nullable(), publishedAt: time.nullable(), since: time.nullable(), reason: z.string().nullable() }).catchall(z.unknown()).nullable().optional(),
+        /** The verdict to lead with (discovery-lab #2111): 'SOLVED (unaudited)' until the outside goal audit of the passing check rules. */
+        solvedLabel: z.string().nullable().optional(),
+        /** That goal audit's verdict and when it ruled, or for 'unaudited' when it last tried; null when the run states no goal. */
+        goalAudit: z.object({ verdict: z.enum(['consistent', 'contradiction', 'unaudited']).nullable(), at: time.nullable() }).catchall(z.unknown()).nullable().optional(),
         /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
         disputes: z
           .array(

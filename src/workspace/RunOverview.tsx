@@ -49,6 +49,9 @@ function contractState(d: ContractDelivery) {
  * first failing line), the play check's dense score over versions, and each contract line sent to the fleet with its
  * acknowledgements and the commit that fixed it. Every value is the Lab's; this only lays them out.
  */
+/** The outside goal audit of the passing check (discovery-lab runner/goal-audit.mjs), as the Now line words it. */
+const GOAL_AUDIT = { consistent: 'goal audit consistent', contradiction: 'goal audit found a contradiction', unaudited: 'goal audit not ruled yet' } as const
+
 function RunNow({ receipt: r, outcome }: { receipt: RunReceipt; outcome: Outcome | null }) {
   const scores = (r.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
   const contract = r.contract ?? []
@@ -61,12 +64,15 @@ function RunNow({ receipt: r, outcome }: { receipt: RunReceipt; outcome: Outcome
     formatX: (at) => new Date(at).toISOString().slice(11, 16), formatY: (value) => value.toFixed(2),
     marks: contract.map((d) => ({ at: Date.parse(d.at), label: `line sent on ${shortTag(d.tag) ?? '?'}`, kind: 'event' as const })),
   })
-  const verdict = outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : 'No check verdict yet'
+  const verdict = outcome?.solvedLabel ?? (outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : 'No check verdict yet')
+  const audit = outcome?.goalAudit ?? null
+  const tone = audit?.verdict === 'unaudited' ? 'unaudited' : outcome?.solved === true ? 'passed' : outcome?.solved === false ? 'failing' : 'unknown'
   return <section className="rr-now" aria-labelledby="rr-now-title" data-section="now">
     <h2 id="rr-now-title">Now</h2>
-    {outcome && <p className={`rr-now-verdict rr-now-${outcome.solved === true ? 'passed' : outcome.solved === false ? 'failing' : 'unknown'}`} data-field="progress.outcome.solved">
-      <strong>{verdict}</strong>
+    {outcome && <p className={`rr-now-verdict rr-now-${tone}`} data-field="progress.outcome.solved">
+      <strong data-field="progress.outcome.solvedLabel">{verdict}</strong>
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
+      {audit?.verdict && <span data-field="progress.outcome.goalAudit"> · {GOAL_AUDIT[audit.verdict]}{audit.at && ` ${audit.verdict === 'unaudited' ? 'last tried' : 'at'} ${clock(audit.at)}`}</span>}
       {outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
     </p>}
     {outcome?.checkWait && <p className="rr-now-wait" data-field="progress.outcome.checkWait">

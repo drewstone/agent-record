@@ -62,3 +62,15 @@ test('a live run whose newest version waits for its check says which version and
   assert.match(words, /rc7 is not checked yet · published 07:32 UTC · the host is stood down: GTR memory 102\/121 GB used \(since 07:37 UTC\)/)
   assert.doesNotMatch(text(page({ ...failing, checkWait: null })), /not checked yet/)
 })
+
+// discovery-lab #2111, 2026-10-19: a pass whose goal audit could not run reads 'SOLVED (unaudited)' until the audit rules;
+// magnetar-rust-20261018b's check passed rc14 declaring 1-bit security against a 120-bit goal.
+test('a passed check leads with its solved label and the goal audit behind it', () => {
+  const unaudited = text(page({ ...passed, solvedLabel: 'SOLVED (unaudited)', goalAudit: { verdict: 'unaudited', at: '2026-10-18T02:11:00.000Z' } }))
+  assert.match(unaudited, /SOLVED \(unaudited\) · checked 01:56 UTC on rc3 · goal audit not ruled yet last tried 02:11 UTC/)
+  assert.doesNotMatch(unaudited, /Check passed/)
+  const contradicted = page({ ...passed, solved: false, solvedLabel: 'check passed; goal audit found a contradiction', goalAudit: { verdict: 'contradiction', at: '2026-10-18T02:26:00.000Z' } })
+  assert.match(text(contradicted), /check passed; goal audit found a contradiction · checked 01:56 UTC on rc3 · goal audit found a contradiction at 02:26 UTC/)
+  assert.match(contradicted, /rr-now-failing/)
+  assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /NowSOLVED · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
+})
