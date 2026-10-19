@@ -145,6 +145,7 @@ function RecordView({
   // Behavior-battery yes-verdicts for the active record, positioned at their cited events.
   const behaviorMarks = useMemo(() => {
     const report = behaviors?.find((item) => item.runId === record?.runId)
+    if (typeof console !== 'undefined' && behaviors?.length) console.log('[behavior-lane] report found:', !!report, 'record.runId:', record?.runId, 'behaviors runIds:', behaviors.map(b => b.runId).join(','))
     if (!report) return undefined
     const AXIS: Record<string, string> = {
       alignment: 'alignment', efficiency: 'efficiency', affect: 'affect',
