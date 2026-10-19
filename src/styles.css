@@ -3240,6 +3240,7 @@
 .ar-ws .rr-now-verdict { margin:0 0 10px; }
 .ar-ws .rr-now-passed strong { color:var(--ar-c-ok); }
 .ar-ws .rr-now-failing strong { color:var(--ar-c-fail); }
+.ar-ws .rr-now-unaudited strong { color:var(--ar-c-run); }
 .ar-ws .rr-now-scores { overflow-wrap:anywhere; }
 .ar-ws .rr-now-wait { margin:0 0 10px; overflow-wrap:anywhere; }
 .ar-ws .rr-now-wait strong { color:var(--ar-c-run); }
