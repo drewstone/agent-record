@@ -37,9 +37,9 @@ const runSpan = (from: string | null | undefined, to: string | null | undefined)
   return a && b ? (a.slice(0, 5) === b.slice(0, 5) ? `${a.slice(0, 11)}–${b.slice(6)}` : `${a}–${b}`) : (a ?? '')
 }
 
-/** A column's axis label: its tag, or the span of releases the gate only superseded (`rc8–rc12`). */
+/** A column's axis label: its tag, or the span of releases the gate only superseded (`rc8–12`). */
 const columnLabel = (column: Climb['columns'][number]) =>
-  column.tags && column.tags.length > 1 ? `${shortTag(column.tags[0]) ?? ''}–${shortTag(column.tags.at(-1)) ?? ''}` : (shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'))
+  column.tags && column.tags.length > 1 ? `${shortTag(column.tags[0]) ?? ''}–${(shortTag(column.tags.at(-1)) ?? '').replace(/^rc/, '')}` : (shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'))
 
 /**
  * The release axis the climb and the bar panels share: one column per checked release, in tag order, grouped by run.
