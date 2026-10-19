@@ -6,12 +6,18 @@ import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
-import { PlayCharts } from './workspace/PlayCharts.js'
-import { RunLineage } from './workspace/RunLineage.js'
+import { PlayHeader } from './workspace/PlayHead.js'
+import { PlayAgainstBar, PlayClimb } from './workspace/PlayClimb.js'
+import { PlayLedger } from './workspace/PlayLedger.js'
+import { PlayTeams } from './workspace/PlayTeams.js'
+import { PlayFindings } from './workspace/PlayFindings.js'
+import { PlayReleases } from './workspace/PlayReleases.js'
+import { inlinedPlayHead, type PlayHead, targetWords } from './workspace/play-standing.js'
 import { OverviewPage } from './workspace/Overview.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
+type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
 import { withPrompts } from './viewer/prompts.js'
 import type { EventFlag } from './viewer/Conversation.js'
@@ -333,22 +339,40 @@ function PlaysPage({ api }: { api: string }) {
 // ---------------------------------------------------------------------------------------------------------
 // /play/<id>
 // ---------------------------------------------------------------------------------------------------------
-/** The play's tabs: its answer first (the best run, its check and deliverable), then its results and claims, then charts across its runs; then its runs and versions. */
-type PlayTab = 'results' | 'story' | 'runs' | 'versions' | 'profiles' | 'input' | 'spend' | 'assessments'
+/** The play's tabs: where it stands against its goal and bar first, then its releases, runs, findings and setup. */
+type PlayTab = 'standing' | 'releases' | 'runs' | 'findings' | 'setup'
+/** Old tab URLs land where their content went (section 2): the Story and Results on Standing, Spend on Runs, and so on. */
+const PLAY_TAB_REDIRECTS: Record<string, { tab: PlayTab; patch?: Record<string, string> }> = {
+  results: { tab: 'standing' },
+  story: { tab: 'standing' },
+  versions: { tab: 'releases' },
+  spend: { tab: 'runs' },
+  input: { tab: 'setup' },
+  profiles: { tab: 'setup' },
+  assessments: { tab: 'runs', patch: { judged: '1' } },
+}
 
 function PlayPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
-  const play = useDocument<PlayDocument>(`${api}/plays/${encodeURIComponent(id)}`)
-  const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
-  const tab = (['results', 'story', 'runs', 'versions', 'profiles', 'input', 'spend', 'assessments'] as const).find((value) => value === params.get('tab')) ?? 'results'
-  const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(id)}/profiles`)
+  const play = useDocument<Play>(`${api}/plays/${encodeURIComponent(id)}`)
+  // The head the host inlined in the shell paints the first screen before the play document arrives (B3).
+  const inlined = useMemo(() => inlinedPlayHead(id), [id])
+  const requested = params.get('tab') ?? 'standing'
+  const redirect = PLAY_TAB_REDIRECTS[requested]
+  useEffect(() => {
+    if (redirect) update({ tab: redirect.tab === 'standing' ? undefined : redirect.tab, ...(redirect.patch ?? {}) }, true)
+  }, [redirect, update])
+  const tab: PlayTab = redirect?.tab ?? ((['standing', 'releases', 'runs', 'findings', 'setup'] as const).find((value) => value === requested) ?? 'standing')
+  const judged = params.get('judged') === '1'
+  const dimensions = useDocument<DimensionsDocument>(judged ? `${api}/dimensions` : null)
+  // Assessments and the play's text and check script leave the default payload; their tabs ask for them.
+  const extra = useDocument<Play>(tab === 'setup' ? `${api}/plays/${encodeURIComponent(id)}?include=setup` : judged ? `${api}/plays/${encodeURIComponent(id)}?include=assessments` : null)
+  const profiles = useDocument<ProfileGraphDocument>(tab === 'setup' ? `${api}/plays/${encodeURIComponent(id)}/profiles` : null)
   const graph = profiles.data ?? null
   const selectedRun = params.get('run')
   const showHidden = params.get('show') === 'all'
   const doc = play.data
-  // Failed runs are a health signal: the play keeps them in view, and holds back only tests and archived runs.
   const split = useMemo(() => splitRuns(doc?.runs ?? [], showHidden, ['failed']), [doc, showHidden])
-  // What the runs tab draws: every run, or only those the default filter shows (with their lineage and gaps).
   const view = useMemo(() => {
     if (!doc || showHidden || !split.hidden) return doc
     const hidden = new Set(doc.runs.filter((run) => run.hidden).map((run) => run.id))
@@ -362,7 +386,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
       gaps: doc.gaps.filter((gap) => !gap.runId || !hidden.has(gap.runId)),
     }
   }, [doc, showHidden, split])
-  // Every run as a version, compared with the one before it; the canvas draws those the filter shows.
   const versions = useMemo(() => (doc ? versionsOf(doc, graph) : []), [doc, graph])
   const shownVersions = useMemo(() => {
     const shownIds = new Set((view?.runs ?? []).map((run) => run.id))
@@ -379,106 +402,80 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   const select = (next: Selection) =>
     update(next.kind === 'version' ? { v: next.runId, profile: undefined } : { v: next.runId, profile: graph?.nodes.find((node) => node.digest === next.digest)?.short })
   const latestDigest = doc?.input?.digest ?? null
-  // The profiles canvas draws every run of the play, the ones the default filter hides included: lineage needs them.
   const playScope = useMemo(() => ({ kind: 'play' as const, play: id, runs: (doc?.runs ?? []).map((run) => run.id) }), [id, doc])
-  const runDoc = useDocument<RunDocument>(tab === 'input' && selectedRun && selectedRun !== doc?.input?.runId ? `${api}/runs/${encodeURIComponent(selectedRun)}` : null)
-  const input: PlayInput | null = selectedRun && selectedRun !== doc?.input?.runId ? (runDoc.data?.input ?? null) : (doc?.input ?? null)
+  const runDoc = useDocument<RunDocument>(tab === 'setup' && selectedRun && selectedRun !== doc?.input?.runId ? `${api}/runs/${encodeURIComponent(selectedRun)}` : null)
+  const setupInput = extra.data?.input ?? doc?.input ?? null
+  const input: PlayInput | null = selectedRun && selectedRun !== doc?.input?.runId ? (runDoc.data?.input ?? null) : setupInput
   const open = (runId: string, dimension?: string) =>
     go(`/run/${encodeURIComponent(runId)}${dimension ? `?tab=assessments&dim=${encodeURIComponent(dimension)}` : ''}`)
-  // The play's API-equivalent dollars, run by run, and how many of its started runs the total prices (M5).
-  const coverage = useMemo(() => {
-    const started = (doc?.runs ?? []).filter((run) => run.startedAt)
-    const priced = started.map((run) => apiEquivalent(run.spend).usd).filter((usd): usd is number => usd !== null)
-    return { usd: priced.length ? priced.reduce((sum, usd) => sum + usd, 0) : null, priced: priced.length, runs: started.length }
-  }, [doc])
+  const assessments = extra.data?.assessments ?? doc?.assessments ?? []
   const headlines = useMemo(() => {
     const map = new Map<string, PlayDocument['assessments']>()
-    for (const row of doc?.assessments ?? []) map.set(row.runId, [...(map.get(row.runId) ?? []), row])
+    for (const row of assessments) map.set(row.runId, [...(map.get(row.runId) ?? []), row])
     return map
-  }, [doc])
+  }, [assessments])
+  const releaseCount = doc?.standing?.releases?.published ?? doc?.releases?.length ?? null
+  const withheld = doc?.standing?.releases?.withheld ?? null
+  const findingCount = doc?.findings?.length ?? 0
+  const runCount = doc?.ledger?.runsTotal ?? doc?.runs.length ?? 0
+  if (!doc && inlined && play.loading)
+    return <PlayHeader play={{ ...(inlined as Play), id, title: id, runs: [] } as Play} />
   return (
     <Status loading={play.loading} error={play.error && `This play is unavailable: ${play.error}`}>
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
-          <header className="ws-head">
-            <div className="ws-title-row">
-              <h1>{doc.title}</h1>
-            </div>
-            <PlayStanding play={doc} />
-            {(doc.frontier?.statement || doc.charter) && <p className="ws-charter">{doc.frontier?.statement ?? doc.charter}</p>}
-            <PlayFacts play={doc} />
-            <SpendSummary spend={doc.spend} coverage={coverage} />
-          </header>
+          <PlayHeader play={doc} fallback={<PlayStanding play={doc} />} />
           <Tabs
             label="Play"
             value={tab}
-            onChange={(next) => update({ tab: next === 'results' ? undefined : next })}
-            tabs={[['results', 'Results'], ['story', 'Story'], ['runs', 'Runs'], ['versions', 'Versions'], ['profiles', 'Profiles'], ['input', 'Input'], ['spend', 'Spend'], ['assessments', 'Assessments']] as const}
+            onChange={(next) => update({ tab: next === 'standing' ? undefined : next, judged: undefined })}
+            tabs={[
+              ['standing', 'Standing'],
+              ['releases', releaseCount ? `Releases ${releaseCount}${withheld ? ` · ${withheld} withheld` : ''}` : 'Releases'],
+              ['runs', `Runs ${runCount}`],
+              ['findings', findingCount ? `Findings ${findingCount}` : 'Findings'],
+              ['setup', 'Setup'],
+            ] as const}
           />
           <div className="ws-content" role="tabpanel">
-            {tab === 'story' && <RunLineage play={doc} selected={params.get('at')} onSelect={(id) => update({ at: id ?? undefined }, true)} />}
-            {tab === 'results' && (
-              <div className="ws-section play-results" data-section="results">
-                <PlayAnswer play={doc} />
-                <h3>What this play found</h3>
-                {doc.findings?.length ? (
-                  <FeedCards items={doc.findings} />
+            {tab === 'standing' && (
+              <div className="play-standing-tab" data-section="standing">
+                {!doc.standing && <PlayAnswer play={doc} />}
+                <PlayClimb play={doc} />
+                <PlayAgainstBar play={doc} />
+                <PlayLedger play={doc} onOpen={open} />
+                <PlayTeams api={api} play={doc} />
+                <PlayFindings play={doc} limit={6} onMore={() => update({ tab: 'findings' })} />
+              </div>
+            )}
+            {tab === 'releases' && <PlayReleases play={doc} />}
+            {tab === 'findings' && (doc.findings?.length ? <PlayFindings play={doc} /> : <p className="ws-status">No result or claim has been written by this play&rsquo;s runs yet.</p>)}
+            {tab === 'runs' && (
+              <>
+                {doc.ledger ? (
+                  <PlayLedger play={doc} full onOpen={open} />
                 ) : (
-                  <p className="ws-status">No result or claim has been derived from this play&rsquo;s runs yet. Each run&rsquo;s pages are under its Findings.</p>
+                  <>
+                    <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
+                    <section className="ws-section">
+                      <RunsTable play={view!} latestDigest={latestDigest} headlines={headlines} headline={dimensions.data ? new Set(dimensions.data.dimensions.filter((item) => item.headline).map((item) => item.id)) : null} onOpen={open} />
+                    </section>
+                  </>
                 )}
-                <PlayCharts play={doc} />
-                {doc.lineage.edges.some((edge) => edge.kind !== 'version') && (
-                  <p className="play-story-link">
-                    <button type="button" className="link-button" onClick={() => update({ tab: 'story' })}>
-                      How its {doc.runs.length} runs connect
-                      {(doc.lineage.forks?.length ?? 0) > 0 ? `: ${doc.lineage.forks!.length} forks` : ''}
-                      {(doc.lineage.releases?.length ?? 0) > 0 ? `, ${doc.lineage.releases!.length} releases of the deliverable` : ''} →
+                {judged ? (
+                  <section className="ws-section" data-section="judged">
+                    <h3>Judged dimensions</h3>
+                    <Status loading={extra.loading} error={extra.error}>
+                      {assessments.length ? <AssessmentMatrix play={{ ...view!, assessments }} dimensions={dimensions.data} onOpen={open} /> : <p className="faint">No judged dimension resolves for this play&rsquo;s runs.</p>}
+                    </Status>
+                  </section>
+                ) : (
+                  <p className="faint play-judged-link">
+                    <button type="button" className="link-button" onClick={() => update({ judged: '1' })}>
+                      Judged dimensions →
                     </button>
                   </p>
                 )}
-              </div>
-            )}
-            {tab === 'versions' && (
-              <>
-                <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
-                <div className="lineage-layout" data-section="versions">
-                  <section className="lineage-pane" aria-label="Version graph">
-                    <p className="faint lineage-key">
-                      Newest first, in the same graph as a run's versions: each run's registered profile with its state, its judges and what changed from the
-                      version before it, what the versions supersede outside this play, and the profiles the selected version's agents wrote, one lane per
-                      spawn depth. A run's own pages and profiles, version by version, are on its run page under Versions.
-                    </p>
-                    {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
-                    <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />
-                  </section>
-                  <aside className="inspector-pane" aria-label="Inspector">
-                    <Inspector api={api} play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
-                  </aside>
-                </div>
-                <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
-              </>
-            )}
-            {tab === 'profiles' && (
-              <section className="ws-section" data-section="profiles" aria-label="Profiles">
-                {graph ? (
-                  <ProfileCanvas
-                    api={api}
-                    doc={graph}
-                    scope={playScope}
-                    selected={params.get('profile')}
-                    onSelect={(short) => update({ profile: short ?? undefined })}
-                  />
-                ) : (
-                  <p className="ws-status" role={profiles.error ? 'alert' : 'status'}>{profiles.error ? `Profile versions are unavailable: ${profiles.error}` : 'Loading profile versions…'}</p>
-                )}
-              </section>
-            )}
-            {tab === 'runs' && (
-              <>
-                <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
-                <section className="ws-section">
-                  <RunsTable play={view!} latestDigest={latestDigest} headlines={headlines} headline={dimensions.data ? new Set(dimensions.data.dimensions.filter((item) => item.headline).map((item) => item.id)) : null} onOpen={open} />
-                </section>
                 {view!.gaps.length > 0 && (
                   <section className="ws-section gaps">
                     <h3>Missing evidence</h3>
@@ -494,30 +491,50 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 )}
               </>
             )}
-            {tab === 'input' && (
-              <section className="ws-section">
-                <div className="input-run-picker">
-                  <label className="ui-field">
-                    <span className="ui-label">Run</span>
-                    <select value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
-                      {doc.runs.map((run) => (
-                        <option key={run.id} value={run.id}>
-                          {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <Status loading={runDoc.loading} error={runDoc.error}>
-                  <InputView input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} />
-                </Status>
-              </section>
-            )}
-            {tab === 'spend' && <PlaySpend play={doc} coverage={coverage} onOpen={open} catalogue={dimensionMap(dimensions.data)} />}
-            {tab === 'assessments' && (
-              <section className="ws-section">
-                <AssessmentMatrix play={view!} dimensions={dimensions.data} onOpen={open} />
-              </section>
+            {tab === 'setup' && (
+              <div className="play-setup" data-section="setup">
+                <PlayBarTable play={doc} />
+                <section className="ws-section">
+                  <h3>Input</h3>
+                  <div className="input-run-picker">
+                    <label className="ui-field">
+                      <span className="ui-label">Run</span>
+                      <select value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
+                        {doc.runs.map((run) => (
+                          <option key={run.id} value={run.id}>
+                            {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <Status loading={runDoc.loading} error={runDoc.error}>
+                    <InputView input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} />
+                  </Status>
+                </section>
+                <section className="ws-section" data-section="versions">
+                  <h3>Profile versions</h3>
+                  <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
+                  <div className="lineage-layout">
+                    <section className="lineage-pane" aria-label="Version graph">
+                      {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
+                      <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />
+                    </section>
+                    <aside className="inspector-pane" aria-label="Inspector">
+                      <Inspector api={api} play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
+                    </aside>
+                  </div>
+                  <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
+                </section>
+                {graph && (
+                  <details className="ws-section" data-section="profiles">
+                    <summary>
+                      <b>Profiles</b> <span className="faint">every profile the play&rsquo;s runs registered or wrote</span>
+                    </summary>
+                    <ProfileCanvas api={api} doc={graph} scope={playScope} selected={params.get('profile')} onSelect={(short) => update({ profile: short ?? undefined })} />
+                  </details>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -526,19 +543,52 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   )
 }
 
-/**
- * The play's facts that the title does not already say (X11): its program and line only when they are not the title split
- * at the hyphen, and its frontier's target and date.
- */
-function PlayFacts({ play }: { play: PlayDocument }) {
-  const split = play.program && play.line && [play.id, play.title].includes(`${play.program}-${play.line}`)
-  const facts = [
-    !split && play.program && <span key="program"><b>Program</b> {play.program}</span>,
-    !split && play.line && <span key="line"><b>Line</b> {play.line}</span>,
-    play.frontier?.target && <span key="target"><b>Target</b> {play.frontier.target}</span>,
-    play.frontier?.asOf && <span key="asof"><b>Frontier as of</b> {play.frontier.asOf}</span>,
-  ].filter(Boolean)
-  return facts.length ? <div className="ws-facts">{facts}</div> : null
+/** The play's bar as declared (`bar.json`): each metric's target, stretch and direction, the source and both conditions. */
+function PlayBarTable({ play }: { play: Play }) {
+  const bar = play.bar ?? null
+  if (!bar) return null
+  return (
+    <section className="ws-section play-bar-table" data-section="bar">
+      <h3>Bar</h3>
+      <p className="faint">
+        {bar.source}
+        {bar.path && <> · <code>{bar.path}</code></>}
+      </p>
+      <div className="table-scroll">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Target</th>
+            <th>Stretch</th>
+            <th>Better</th>
+            <th>Scale</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bar.metrics.map((metric) => (
+            <tr key={metric.id}>
+              <td>
+                {metric.label}
+                {metric.precondition && <span className="chip">precondition</span>}
+              </td>
+              <td>{targetWords(metric) ?? '—'}</td>
+              <td>{metric.stretch ? `${metric.stretch.min ?? ''}${metric.stretch.max ? `–${metric.stretch.max}` : ''} ${metric.stretch.label ?? ''}`.trim() : '—'}</td>
+              <td>{metric.direction === 'up' ? 'higher' : metric.direction === 'down' ? 'lower' : '—'}</td>
+              <td>{metric.scale ?? 'linear'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+      {(bar.condition || bar.checkCondition) && (
+        <p className="faint">
+          {bar.condition && <>The bar: {bar.condition}. </>}
+          {bar.checkCondition && <>The check measures: {bar.checkCondition}.</>}
+        </p>
+      )}
+    </section>
+  )
 }
 
 /**
@@ -718,52 +768,6 @@ function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
   return [...causes.values()]
 }
 
-function PlaySpend({ play, coverage, onOpen, catalogue }: { play: PlayDocument; coverage: { usd: number | null; priced: number; runs: number }; onOpen: (runId: string) => void; catalogue: ReturnType<typeof dimensionMap> }) {
-  return (
-    <div className="ws-section spend-view">
-      <SpendSummary spend={play.spend} coverage={coverage} />
-      <h3>By run</h3>
-      <SpendBars
-        rows={play.runs.map((run) => {
-          const equivalent = apiEquivalent(run.spend)
-          return { label: shortRun(play.id, run.id), subscription: knownSubscription(run.spend), api: run.spend.apiUsd, sandbox: run.spend.sandboxUsd,
-            subscriptionKnown: run.spend.subscriptionKnown, href: run.id, note: equivalent.usd !== null ? `${money(equivalent.usd)}${equivalent.partial ? '+' : ''} API-equivalent` : undefined }
-        })}
-        onOpen={(row) => row.href && onOpen(row.href)}
-      />
-      {byModel(play.spend).length > 0 && (
-        <>
-          <h3>By model</h3>
-          <p className="faint">The Router bill cannot be split by model.</p>
-          <SpendBars rows={byModel(play.spend)} />
-        </>
-      )}
-      <SeatWeeksPanel spend={play.spend} />
-      <p className="faint">Activity and waste price recorded model usage at API rates; they do not allocate charges.</p>
-      <div className="breakdown-grid">
-        <BreakdownTable title="By activity" rows={(play.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-        <BreakdownTable title="Waste" rows={(play.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
-      </div>
-      {play.spend.gaps.length > 0 && (
-        <>
-          <h3>Unknown spend</h3>
-          <ul className="gap-list">
-            {gapCauses(play.spend.gaps).map((cause) => (
-              <li key={cause.code} title={cause.runs.length > 1 ? undefined : cause.detail}>
-                <code title={cause.code}>{spendGapLabel(cause.code)}</code>{' '}
-                {cause.runs.length > 1 ? `${cause.runs.length} runs: ${cause.runs.map((run) => shortRun(play.id, run)).join(', ')}` : <>{cause.runs[0] && <span className="mono">{shortRun(play.id, cause.runs[0])} </span>}{cause.detail}</>}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------------------------------------
-// /run/<id>
-// ---------------------------------------------------------------------------------------------------------
 const SPEEDS = [1, 4, 16, 64, 256, 1024, 4096]
 /** The selected agent's own views; the run's spend, assessments, input and coverage are sections of the run page. */
 type AgentTab = 'messages' | 'timeline' | 'usage'

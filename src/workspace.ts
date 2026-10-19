@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
+import { playFindingFields, playPageFields } from './workspace/play-standing.js'
 
 /**
  * Documents served by a run workspace API (`/api/discovery/*` on the Tangle wall).
@@ -439,6 +440,7 @@ export const feedItemSchema = z
     sha256: z.string(),
     artifacts: z.array(z.object({ path: z.string(), storePath: z.string(), href: z.string() })).optional(),
     reviews: z.array(scientificReviewSchema).optional(),
+    ...playFindingFields,
   })
   .catchall(z.unknown())
 
@@ -463,7 +465,6 @@ export const playDocumentSchema = z
       })
       .catchall(z.unknown())
       .nullable(),
-    comparison: z.object({ headline: z.string(), fullWindowArms: z.number(), x: z.tuple([z.number(), z.number()]), y: z.tuple([z.number(), z.number()]), source: z.string(), groups: z.array(z.object({ id: z.string(), label: z.string(), fullWindow: z.boolean(), panels: z.array(z.object({ id: z.string(), label: z.string(), unit: z.string(), windowHours: z.number(), fullWindow: z.boolean(), source: z.string(), totalCells: z.number().nullable(), points: z.array(z.object({ x: z.number(), y: z.number().nullable() })).optional(), missing: z.object({ why: z.string() }).optional(), end: z.object({ at: z.number(), kind: z.literal('died'), label: z.string() }).optional(), marks: z.array(z.object({ at: z.number(), kind: z.literal('deadline'), label: z.string() })) })) })) }).nullable().optional(),
     /** The latest run's input. */
     input: playInputSchema.nullable(),
     /** Newest first; versions are folded into their run. */
@@ -495,8 +496,12 @@ export const playDocumentSchema = z
     gaps: z.array(gapSchema),
     /** The newest run that won (its root submitted, or its play check passed): the play's best result, a separate fact from its latest run. */
     best: z.string().nullable().optional(),
-    /** The play's results and claims, newest run first, each run's result ledgers first. */
+    /**
+     * The play's results and claims, newest run first; a B1 host adds to each what the current check says of the commits
+     * it cites (group: verified, contradicted, undecided or unchecked), its writer and time, and its duplicates.
+     */
     findings: z.array(feedItemSchema).optional(),
+    ...playPageFields,
   })
   .catchall(z.unknown())
 

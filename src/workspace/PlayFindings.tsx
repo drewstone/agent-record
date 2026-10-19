@@ -1,0 +1,97 @@
+import type { FeedItem, PlayDocument } from '../workspace.js'
+import { plain } from './FindingsFeed.js'
+import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
+
+type Play = PlayDocument & PlayHead
+
+const GROUPS = [
+  ['verified', 'Verified by the current check', 'A commit it cites is solved, or its contract held, under the current checker.'],
+  ['contradicted', 'Contradicted', 'A commit it cites has a failing row.'],
+  ['undecided', 'Undecided', 'Every row on the commits it cites is undecided.'],
+  ['unchecked', 'Unchecked agent claims', 'No check ran on anything it cites.'],
+] as const
+
+const groupOf = (item: FeedItem) => (GROUPS.some(([id]) => id === item.group) ? (item.group as string) : 'unchecked')
+const tone = (verdict: string | null | undefined) => (verdict === 'solved' || verdict === 'contract-held' ? 'ok' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown')
+
+function Row({ play, item }: { play: Play; item: FeedItem }) {
+  const title = plain(item.title) || plain(item.text).slice(0, 140) || 'Untitled page'
+  const writer = item.writer ?? item.agentLabel ?? null
+  const at = item.writtenAt ?? null
+  const href = item.href ?? `/run/${encodeURIComponent(item.runId)}?section=findings`
+  return (
+    <li className="finding-row" data-finding={item.id ?? item.sha256} data-group={groupOf(item)}>
+      <a className="finding-title" href={href} title={plain(item.text).slice(0, 600) || undefined}>
+        {title}
+      </a>
+      <span className="finding-meta faint">
+        <span className="chip kind-chip">{item.kind}</span>
+        <span className="mono">{shortRun(play.id, item.runId)}</span>
+        {writer && <> · {writer}</>}
+        {at ? <> · {utc(at)}</> : !item.writtenAt && item.at ? <span title="The page's time as the record states it, not the commit that wrote it"> · {utc(item.at)}</span> : null}
+        {item.duplicates && item.duplicates.length > 0 && <span className="chip" title="Pages that say the same thing, folded here"> +{item.duplicates.length} alike</span>}
+      </span>
+      {item.commits && item.commits.length > 0 && (
+        <span className="finding-commits">
+          {item.commits.map((commit) => (
+            <span
+              key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`}
+              className={`commit-chip tone-${tone(commit.verdict)}`}
+              title={[`commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null].filter(Boolean).join('\n')}
+            >
+              {commit.tag ? <b>{shortTag(commit.tag)}</b> : <>commit {commit.sha.slice(0, 7)}</>}
+              {commit.run && <> ({shortRun(play.id, commit.run)})</>} {verdictWord(commit.verdict)}
+              {typeof commit.workloads === 'object' && commit.workloads?.total ? ` ${commit.workloads.passed}/${commit.workloads.total}` : ''}
+              {commit.checker && <> · {checkerLabel(play.checkers, commit.checker)}</>}
+            </span>
+          ))}
+        </span>
+      )}
+    </li>
+  )
+}
+
+/**
+ * What the play found, ranked by its check (3.7): pages whose cited commits the current check confirms, contradicts or
+ * has not decided, then claims no check touched, folded. `limit` keeps the top rows for the Standing tab.
+ */
+export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: number; onMore?: () => void }) {
+  const items = play.findings ?? []
+  if (!items.length) return null
+  const ordered = GROUPS.flatMap(([id]) => items.filter((item) => groupOf(item) === id))
+  const shown = limit ? ordered.slice(0, limit) : ordered
+  const counts = new Map(GROUPS.map(([id]) => [id, items.filter((item) => groupOf(item) === id).length]))
+  return (
+    <section className="ws-section play-findings" data-play-findings aria-label="Findings">
+      <header className="section-head">
+        <h3>Findings</h3>
+        <p className="faint">
+          {GROUPS.filter(([id]) => counts.get(id))
+            .map(([id, label]) => `${counts.get(id)} ${label.toLowerCase()}`)
+            .join(' · ')}
+        </p>
+      </header>
+      {GROUPS.map(([id, label, why]) => {
+        const rows = shown.filter((item) => groupOf(item) === id)
+        if (!rows.length) return null
+        return (
+          <details key={id} className={`finding-group group-${id}`} open={id !== 'unchecked' || !limit}>
+            <summary>
+              <b>{label}</b> <span className="faint">{counts.get(id)} · {why}</span>
+            </summary>
+            <ul>
+              {rows.map((item) => (
+                <Row key={item.id ?? item.sha256} play={play} item={item} />
+              ))}
+            </ul>
+          </details>
+        )
+      })}
+      {limit && ordered.length > limit && onMore && (
+        <button type="button" className="link-button" onClick={onMore}>
+          All {ordered.length} findings →
+        </button>
+      )}
+    </section>
+  )
+}
