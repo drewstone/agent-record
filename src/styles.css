@@ -316,9 +316,13 @@
   width: 5rem;
 }
 .agent-record .timeline-scroll {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-block: 1px solid var(--ar-border);
   margin: 0.3rem 0.85rem 0;
+  /* Many agents make the SVG tall; scroll the lane area, never the page. */
+  max-height: min(60vh, 600px);
 }
 .agent-record svg {
   display: block;
