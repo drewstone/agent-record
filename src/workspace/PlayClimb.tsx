@@ -235,17 +235,18 @@ function timeExtent(climb: Climb): [number, number] | null {
 function climbTimeFigure(play: Play, climb: Climb, width: number, window: [number, number]) {
   const axis = releaseAxis(play, climb)
   const labelOf = new Map(axis.bands.map((band) => [axis.runOf[band.from], band.label]))
-  const rows = new Map<string, TimeSeriesRow & { order: number }>()
+  const rows = new Map<string, TimeSeriesRow & { order: number; runId: string }>()
   const row = (checker: string | null | undefined, runId: string) => {
     const key = `${checker ?? 'none'}:${runId}`
     let found = rows.get(key)
     if (!found) {
-      found = { id: key, label: `${checkerLabel(play.checkers, checker)} · ${shortRun(play.id, runId)}`, points: [], colorIndex: checkerIndex(play.checkers, checker), order: rows.size }
+      found = { id: key, label: `${checkerLabel(play.checkers, checker)} · ${shortRun(play.id, runId)}`, points: [], colorIndex: checkerIndex(play.checkers, checker), order: rows.size, runId }
       rows.set(key, found)
     }
     return found
   }
   const runOfColumn = new Map(climb.columns.map((column) => [column.id, column]))
+  const groupEnd = new Map(climb.groups.map((group) => [group.runId, group.to]))
   const [lo, hi] = window
   for (const item of timedRows(climb)) {
     const column = item.columnId ? runOfColumn.get(item.columnId) : undefined
@@ -272,14 +273,23 @@ function climbTimeFigure(play: Play, climb: Climb, width: number, window: [numbe
   }
   // Rows recorded in the same millisecond (a check and a gate on one tag) are spread by a millisecond each, so a
   // series' times stay strictly increasing; at any drawn scale they sit on the same minute.
-  const increasing = (points: TimePoint[]) => {
+  // A release checked again after its run ended (a settle check, a re-check hours later) is not joined across other
+  // runs' hours: the line breaks five minutes after the run's end and the later check stands alone.
+  const increasing = (points: TimePoint[], runId: string) => {
     const sorted = points.sort((a, b) => a.x - b.x)
-    for (let i = 1; i < sorted.length; i++) if (sorted[i]!.x <= sorted[i - 1]!.x) sorted[i] = { ...sorted[i]!, x: sorted[i - 1]!.x + 1 }
-    return sorted.filter((point) => point.x <= hi)
+    const end = ms(groupEnd.get(runId))
+    const out: TimePoint[] = []
+    for (const point of sorted) {
+      const previous = out.at(-1)
+      if (previous && end !== undefined && previous.x <= end + 300_000 && point.x > end + 300_000 && end + 300_000 > previous.x) out.push({ x: end + 300_000, y: null })
+      const at = out.at(-1)
+      out.push(at && point.x <= at.x ? { ...point, x: at.x + 1 } : point)
+    }
+    return out.filter((point) => point.x <= hi)
   }
   const series = [...rows.values()]
     .filter((item) => item.points.length)
-    .map((item) => ({ ...item, points: increasing(item.points) }))
+    .map(({ runId, ...item }) => ({ ...item, points: increasing(item.points, runId) }))
     .filter((item) => item.points.length)
     .sort((a, b) => (a.colorIndex ?? 9) - (b.colorIndex ?? 9) || a.order - b.order)
   const bands: ChartBand[] = climb.groups.flatMap((group) => {

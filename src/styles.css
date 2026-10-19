@@ -3435,7 +3435,7 @@
 .ar-ws .goal-bar .bar-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 22px; }
 .ar-ws .bar-row { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); grid-template-areas: 'label target' 'value value' 'track track'; gap: 0 10px; align-items: baseline; min-width: 0; }
 .ar-ws .bar-row dt { grid-area: label; }
-.ar-ws .bar-row .bar-value { grid-area: value; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ar-ws .bar-row .bar-value { grid-area: value; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 8px; white-space: normal; overflow: visible; }
 .ar-ws .bar-row .bar-value .bar-gap { flex: none; font-size: 13px; font-weight: 600; }
 .ar-ws .bar-row .bar-target { grid-area: target; text-align: right; }
 .ar-ws .bar-row .bar-track-cell { grid-area: track; margin-top: 2px; }
