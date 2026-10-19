@@ -295,6 +295,22 @@ export const playsDocumentSchema = z
           latestRun: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable(),
           /** Its best result: the newest run that won (its root submitted, or its play check passed); null before one did. */
           best: z.string().nullable().optional(),
+          /**
+           * Where the play stands, as its own page states it (tangle-tools play_standing_brief): the standing sentence,
+           * the best under the current check, the last run's ending and the API-equivalent. Null before its page is composed.
+           */
+          standing: z
+            .object({
+              status: z.string().nullable().optional(),
+              sentence: z.string().nullable().optional(),
+              best: z.record(z.string(), z.unknown()).nullable().optional(),
+              bestEver: z.record(z.string(), z.unknown()).nullable().optional(),
+              lastEnding: z.object({ runId: z.string().nullable().optional(), run: z.string().nullable().optional(), word: z.string().nullable().optional(), glyph: z.string().nullable().optional(), at: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+              cost: z.object({ apiEquivalentUsd: z.number().nullable().optional(), provenance: z.string().nullable().optional(), priced: z.number().nullable().optional(), started: z.number().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+            })
+            .catchall(z.unknown())
+            .nullable()
+            .optional(),
           runCount: z.number().int().nonnegative(),
           /** Runs by why they are hidden by default; `shown` counts the rest. */
           counts: z

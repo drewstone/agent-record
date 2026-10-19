@@ -2648,6 +2648,7 @@
    (useWidth), so plot height, margins and marks follow the type. */
 .ar-ws .ov-page { font-size: 16px; gap: 1.3em; --chart-live-fg: var(--ar-fg); --chart-live-muted: var(--ar-fg-muted); --chart-live-faint: var(--ar-fg-faint); --chart-live-raised: var(--ar-raised, var(--ar-bg-alt)); --chart-live-border: var(--ar-border-strong); --chart-live-hover: var(--ar-hover, var(--ar-bg-alt)); --chart-live-font-mono: var(--ar-font-mono); --chart-live-surface: var(--ws-panel); --chart-live-danger: var(--ar-c-fail); --chart-live-warning: var(--ar-c-run); }
 .ar-ws .research-frontiers { display: grid; gap: .6em; padding: .8em 0; }
+.ar-ws .plays-table .plays-standing { min-width: 26em; max-width: 44em; white-space: normal; font-size: var(--ar-text-s); line-height: 1.35; }
 .ar-ws .research-frontier-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22em), 1fr)); gap: .55em; }
 .ar-ws .research-frontier { display: grid; gap: .25em; min-width: 0; padding: .65em .85em; border: 1px solid var(--ar-border); border-radius: 7px;
   color: var(--ar-fg); background: var(--ws-panel); text-decoration: none; }
@@ -2661,6 +2662,7 @@
 .ar-ws .ov-toolbar .filter-chip { font-size: .9em; padding: .3em .9em; }
 .ar-ws .ov-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4em 1em; }
 .ar-ws .ov-card-sub { font-size: .85em; color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .ov-stale { margin-left: 8px; font-size: 12px; color: var(--ar-c-run); }
 .ar-ws .ov-quiet { margin: 0; color: var(--ar-fg-muted); }
 .ar-ws .ov-light { display: inline-block; flex: none; width: .65em; height: .65em; border-radius: 50%; background: var(--ar-fg-faint); }
 .ar-ws .ov-light.tone-live { background: var(--ws-accent); box-shadow: 0 0 0 .22em color-mix(in srgb, var(--ws-accent) 22%, transparent); }

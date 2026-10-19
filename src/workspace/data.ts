@@ -13,7 +13,8 @@ const STALE_RETRIES = 6
  * new one arrives, so a run being written never blanks between versions. A response marked stale is refetched until it is current.
  */
 export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false) {
-  const [state, setState] = useState<{ data?: T; error?: string; status?: number; loading: boolean }>({ loading: !!url })
+  // `stale`: the server sent its last composed copy while it recomposes (X-Workspace-Stale); a page says how old it is.
+  const [state, setState] = useState<{ data?: T; error?: string; status?: number; loading: boolean; stale?: boolean }>({ loading: !!url })
   const etag = useRef<string | null>(null)
   const shown = useRef<string | null | undefined>(undefined)
   useEffect(() => {
@@ -37,7 +38,10 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         })
         if (!alive) return
         stale = response.headers.get('X-Workspace-Stale') === '1'
-        if (response.status === 304) return
+        if (response.status === 304) {
+          setState((current) => (current.stale === stale ? current : { ...current, stale }))
+          return
+        }
         if (!response.ok) {
           let reason = `HTTP ${response.status}`
           try {
@@ -51,7 +55,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         }
         etag.current = response.headers.get('ETag')
         const data = (await response.json()) as T
-        if (alive) setState({ data, loading: false, status: response.status })
+        if (alive) setState({ data, loading: false, status: response.status, stale })
       } catch (error) {
         if (alive && !controller.signal.aborted)
           setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
