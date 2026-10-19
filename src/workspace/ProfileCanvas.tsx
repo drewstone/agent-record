@@ -234,7 +234,7 @@ function CanvasPane({
           ))}
         </div>
       </div>
-      <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move along the lineage, Enter opens · 0 fits</p>
+      <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move along the lineage, Enter opens · press 0 to fit</p>
     </section>
   )
 }

@@ -129,6 +129,8 @@ export const stateClass = (state: string | null | undefined) => {
     case 'missing':
       return 'state-fail'
     case 'no-winner':
+    case 'stalled':
+    case 'cancelled':
     case 'abandoned':
       return 'state-warn'
     default:
@@ -137,6 +139,17 @@ export const stateClass = (state: string | null | undefined) => {
 }
 export const stateLabel = (state: string | null | undefined) =>
   state ? state.replaceAll('-', ' ') : 'state unknown'
+
+/**
+ * One name for how a run ended (M4), the same words on the play, its runs table and the run page: the host's
+ * (tangle-tools `run_ending`, for example "cancelled after stall"), a stalled run's with its time. Without it, a run the catalog marks
+ * `stalled` that settled was cancelled after its stall (discovery-lab runner/stall.mjs); any other state is its own label.
+ */
+export const endingLabel = (run: { state: string | null | undefined; settledAt?: string | null; ending?: { name: string; at?: string | null } | null }) => {
+  const at = run.ending?.at ?? run.settledAt
+  const name = run.state !== 'running' && run.ending?.name ? run.ending.name : run.state === 'stalled' && at ? 'cancelled after stall' : stateLabel(run.state)
+  return run.state === 'stalled' && at ? `${name} ${at.slice(11, 16)}Z` : name
+}
 
 /** Paid and list price, with unknown kept apart. */
 export function spendParts(spend: Spend | null | undefined) {

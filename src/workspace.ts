@@ -94,6 +94,10 @@ export const spendSchema = z
       )
       .optional(),
     gaps: z.array(gapSchema),
+    /** API-equivalent dollars (every token at API list price, whoever paid; tangle-tools `api_equivalent`); null when unpriced. */
+    apiEquivalentUsd: usd.optional(),
+    /** How a host-placed run was paid: on a subscription seat with no run key or sandbox nothing is billed per call. */
+    billing: z.object({ placement: z.string(), seat: z.string().nullable(), billedUsd: usd, basis: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
   })
   .catchall(z.unknown())
 
@@ -115,7 +119,8 @@ export const recordStatusSchema = z
 
 // `abandoned`: the run never settled and Runtime reports its coordinator gone (discovery-lab run catalog); a run whose
 // cancellation Runtime acknowledged reads `failed` with the cancellation as its reason.
-const runState = z.enum(['running', 'winner', 'no-winner', 'failed', 'driver-failed', 'abandoned', 'no-record', 'unknown'])
+// `stalled`: no agent live and nothing streamed past the keeper's wake (the catalog's stalled cause); the operator then cancels it.
+const runState = z.enum(['running', 'winner', 'no-winner', 'stalled', 'failed', 'driver-failed', 'abandoned', 'no-record', 'unknown'])
 const runKey = z
   .object({ id: z.string(), name: z.string(), capUsd: usd, spentUsd: usd, final: z.boolean() })
   .catchall(z.unknown())
@@ -134,6 +139,35 @@ export const playCheckSchema = z
     settle: z.object({ kind: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown()).nullable().optional(),
   })
   .catchall(z.unknown())
+
+/** One check or tag-gate row as the host reads it: when, on which tag and commit, under which checker, its verdict and line. */
+const checkRowSchema = z
+  .object({
+    at: time.nullable().optional(),
+    tag: z.string().nullable().optional(),
+    commit: z.string().nullable().optional(),
+    checker: z.string().nullable().optional(),
+    verdict: z.string().nullable().optional(),
+    line: z.string().nullable().optional(),
+    score: z
+      .object({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullable().optional() })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
+  })
+  .catchall(z.unknown())
+const runCheckSchema = z
+  .object({
+    latest: checkRowSchema.nullable(),
+    best: checkRowSchema.nullable(),
+    passes: z.array(z.object({ tag: z.string().nullable(), checker: z.string().nullable(), count: z.number(), firstAt: time, lastAt: time }).catchall(z.unknown())).optional(),
+    gate: checkRowSchema.nullable().optional(),
+    /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
+    gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
+    headline: z.string().nullable().optional(),
+  })
+  .catchall(z.unknown())
+export type RunCheck = z.infer<typeof runCheckSchema>
 
 export const runSummarySchema = z
   .object({
@@ -178,6 +212,18 @@ export const runSummarySchema = z
      * whole SOLVED line or null, and Runtime's own settle. Absent or null when no check passed.
      */
     playCheck: playCheckSchema.nullable().optional(),
+    /**
+     * Every check of the run whatever it reached (tangle-tools `check_summary`): the newest check (`latest`, its verdict
+     * solved, not-solved or unknown, its line and score), the best one, each tag that passed under each checker, the
+     * newest tag gate, and one sentence (`headline`). Absent from a host that does not compose it; null with no check.
+     */
+    check: runCheckSchema.nullable().optional(),
+    /** How a settled run ended under one name (tangle-tools `run_ending`), for example "cancelled after stall"; null while running. */
+    ending: z
+      .object({ name: z.string(), state: z.string().nullable().optional(), at: time.nullable().optional(), reason: z.string().nullable().optional() })
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
     /** The best run of a play only: the deliverables its readout names, each with a link to it on the run page. */
     deliverables: z
       .array(z.object({ id: z.string().nullable(), path: z.string(), present: z.boolean().nullable().optional(), href: z.string() }).catchall(z.unknown()))
@@ -520,6 +566,29 @@ export const progressBriefSchema = z
   })
   .catchall(z.unknown())
 
+/** A check's dense score: the stage it reached of how many, its public workloads, and the Lab's 0–1 value. */
+const checkScoreSchema = z
+  .object({
+    stage: z.string().nullable().optional(),
+    reached: z.number().nullable().optional(),
+    of: z.number().nullable().optional(),
+    workloads: z.object({ passed: z.number(), total: z.number() }).nullable().optional(),
+    value: z.number().nullable().optional(),
+  })
+  .catchall(z.unknown())
+/** One check or tag-gate line: when, on which tag, its first failing line, its verdict and score. */
+const checkLineSchema = z
+  .object({
+    at: z.string().nullable().optional(),
+    tag: z.string().nullable().optional(),
+    line: z.string().nullable().optional(),
+    stage: z.string().nullable().optional(),
+    solved: z.boolean().nullable().optional(),
+    verdict: z.string().nullable().optional(),
+    score: checkScoreSchema.nullable().optional(),
+  })
+  .catchall(z.unknown())
+
 /**
  * The run's progress as data (discovery-lab `runner/run-progress.mjs`, `discovery.run-progress`): who worked when, each
  * agent's API-equivalent dollars, and the run's spend and files written over time. The briefs draw their record charts
@@ -587,6 +656,12 @@ export const runProgressSchema = z
         solvedLabel: z.string().nullable().optional(),
         /** That goal audit's verdict and when it ruled, or for 'unaudited' when it last tried; null when the run states no goal. */
         goalAudit: z.object({ verdict: z.enum(['consistent', 'contradiction', 'unaudited']).nullable(), at: time.nullable() }).catchall(z.unknown()).nullable().optional(),
+        /** The newest check's line and score, the newest tag gate's verdict, line and score, and the score shown
+         * (discovery-lab `runner/run-progress.mjs` outcomeOf). A gate verdict is pass, fail or unknown (a prover past its
+         * time limit). */
+        latestCheck: checkLineSchema.nullable().optional(),
+        gate: checkLineSchema.nullable().optional(),
+        score: checkScoreSchema.extend({ at: z.string().nullable().optional(), tag: z.string().nullable().optional(), source: z.string().nullable().optional() }).nullable().optional(),
         /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
         disputes: z
           .array(
@@ -894,7 +969,8 @@ export const runDocumentSchema = z
       lastAttempt: z.object({ error: z.string().nullable(), classification: z.string().nullable(), madeProgress: z.boolean().nullable().optional(), retryInMs: z.number().nullable().optional(), at: z.string().nullable().optional() }).nullable(),
       diagnoses: z.array(z.object({ id: z.string(), title: z.string().optional(), fix: z.string() })),
       diagnosisError: z.string().nullable().optional(),
-      resume: z.object({ status: z.enum(['preserved', 'unavailable', 'unknown']), command: z.string().nullable(), reason: z.string() }),
+      /** `reason` is null where resuming does not apply (a host-placed run has no source sandbox). */
+      resume: z.object({ status: z.enum(['preserved', 'unavailable', 'unknown']), command: z.string().nullable(), reason: z.string().nullable() }),
       runnerTail: z.string().nullable().optional(),
     }).optional(),
   })
@@ -1481,7 +1557,12 @@ type Bin = { lo: number; hi: number; n: number }
  * A run's lead finding on the overview: a passed play check (`check`: its SOLVED line, else the run's stated answer), else
  * its best result or claim page, a page that states its answer first.
  */
-export interface OverviewLead { title: string | null; kind: 'result' | 'claim' | 'check'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string }
+export interface OverviewLead {
+  /** `progress`: no check passed, so the run's newest check line and its best score lead (tangle-tools `progress_lead`). */
+  title: string | null; kind: 'result' | 'claim' | 'check' | 'progress'; agentLabel?: string | null; at?: string | null; text?: string; sha256?: string | null; runId?: string
+  /** A `progress` lead's newest verdict: solved, not-solved or unknown. */
+  verdict?: string | null
+}
 export interface OverviewRun {
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
   results: number; claims: number; findingsPending?: boolean; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
@@ -1494,6 +1575,8 @@ export interface OverviewPlayWeek {
   results: number; claims: number; findingsPending?: number; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number; lastStartedAt: string | null; lastActiveAt: string | null
   subscriptionUsd?: number; apiUsd?: number | null; sandboxUsd?: number | null; costUnknownRuns?: number
   apiKnownRuns?: number; sandboxKnownRuns?: number
+  /** The runs' API-equivalent dollars (each run receipt's cost.apiEquivalentUsd): every token at list price, whoever paid. */
+  apiEquivalentUsd?: number | null
 }
 export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
 
