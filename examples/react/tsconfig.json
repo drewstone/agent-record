@@ -1,5 +1,13 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["vite/client"] },
+  "compilerOptions": {
+    "rootDir": "../..",
+    "noEmit": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@drewstone/agent-record": ["../../src/index.ts"],
+      "@drewstone/agent-record/adapters/*": ["../../src/adapters/*.ts"]
+    }
+  },
   "include": ["src.tsx", "vite.config.ts"]
 }
