@@ -366,8 +366,12 @@ export const span = (ms: number | null | undefined) => {
 
 export const hours = (value: number | null | undefined, digits = 1) => (value === null || value === undefined || !Number.isFinite(value) ? null : `${value.toFixed(digits)} h`)
 
-/** A run id without its play prefix: `20261018b`. */
-export const shortRun = (play: string, run: string | null | undefined) => (!run ? '' : run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
+/** A run id without its play prefix: `20261018b`; a dated run reads as its day and letter, `18b`, as the pages say it. */
+export const shortRun = (play: string, run: string | null | undefined) => {
+  if (!run) return ''
+  const rest = run.startsWith(play + '-') ? run.slice(play.length + 1) : run
+  return /^\d{6}(\d{2}[a-z])$/.exec(rest)?.[1] ?? rest
+}
 /** A tag without its run prefix: `rc14`. */
 export const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 
@@ -439,8 +443,21 @@ export function metricValue(value: number | null | undefined, unit: string): str
     if (value >= 1024) return `${(value / 1024).toFixed(1)} MiB`
     return `${Math.round(value)} KiB`
   }
-  const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: value >= 100 ? 0 : 2 }).format(value)
-  return `${compact} ${unit}`.trim()
+  return `${compactNumber(value)} ${unit}`.trim()
+}
+
+/** Three significant digits, compact above ten thousand: 202K, 7.2M, 319, 14.9. */
+export const compactNumber = (value: number) =>
+  Math.abs(value) >= 10_000
+    ? new Intl.NumberFormat('en-US', { notation: 'compact', maximumSignificantDigits: 3 }).format(value)
+    : new Intl.NumberFormat('en-US', { maximumSignificantDigits: 3 }).format(value)
+
+/** The unit a metric's figure reads in, and the factor from its recorded unit: bytes as KiB, KiB as MiB. */
+export function displayUnit(unit: string): { unit: string; factor: number } {
+  const u = unit.toLowerCase()
+  if (u === 'bytes' || u === 'b') return { unit: 'KiB', factor: 1 / 1024 }
+  if (u === 'kib') return { unit: 'MiB', factor: 1 / 1024 }
+  return { unit, factor: 1 }
 }
 
 /** A target as written: `7.2M–8.7M c/s`, `≈ 599 KiB`, `≥ 120 bits`. */

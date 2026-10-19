@@ -339,9 +339,7 @@ function PlaysPage({ api }: { api: string }) {
 // ---------------------------------------------------------------------------------------------------------
 // /play/<id>
 // ---------------------------------------------------------------------------------------------------------
-/** The play's tabs: its answer first (the best run, its check and deliverable), then its results and claims, then charts across its runs; then its runs and versions. */
-type PlayTab = 'results' | 'story' | 'runs' | 'versions' | 'profiles' | 'input' | 'spend' | 'assessments'
-
+/** The play's tabs: where it stands against its goal and bar first, then its releases, runs, findings and setup. */
 type PlayTab = 'standing' | 'releases' | 'runs' | 'findings' | 'setup'
 /** Old tab URLs land where their content went (section 2): the Story and Results on Standing, Spend on Runs, and so on. */
 const PLAY_TAB_REDIRECTS: Record<string, { tab: PlayTab; patch?: Record<string, string> }> = {

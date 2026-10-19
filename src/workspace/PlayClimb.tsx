@@ -7,6 +7,8 @@ import {
   checkerIndex,
   checkerLabel,
   checkerTitle,
+  compactNumber,
+  displayUnit,
   ENDING_GLYPH,
   markVerdict,
   metricValue,
@@ -68,11 +70,12 @@ export function releaseAxis(play: Play, climb: Climb) {
     if (!at.length) return []
     const glyph = group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
     const counts = [
-      group.checked !== null && group.checked !== undefined && group.published !== null && group.published !== undefined ? `${group.checked} of ${group.published} tags checked` : null,
+      group.checked !== null && group.checked !== undefined ? `${group.checked} checked` : null,
+      group.published !== null && group.published !== undefined ? `${group.published} published` : null,
       group.withheld ? `${group.withheld} withheld` : null,
     ].filter(Boolean)
     const lineage = group.lineage?.kind === 'fork' && group.lineage.parentRun ? `forked from ${shortRun(play.id, group.lineage.parentRun)}${group.lineage.parentTag ? `@${shortTag(group.lineage.parentTag)}` : ''}` : group.lineage?.kind === 'wrong-base' ? `wrong base ${group.lineage.why ?? ''}` : null
-    const label = [`${glyph ? `${glyph} ` : ''}${group.label}`, runSpan(group.from, group.to), ...counts, lineage, group.unscored ? 'no score line' : null].filter(Boolean).join(' · ')
+    const label = [`${glyph ? `${glyph} ` : ''}${shortRun(play.id, group.runId) || group.label}`, ...counts, lineage, group.unscored ? 'no score line' : null, runSpan(group.from, group.to)].filter(Boolean).join(' · ')
     return [{ from: at[0]!, to: at.at(-1)!, label, kind: 'group' as const }]
   })
   return { index, categories, domain, bands, runOf }
@@ -154,8 +157,9 @@ function climbFigure(play: Play, climb: Climb) {
       .find((x): x is number => x !== undefined)
     const x = first.length ? Math.min(...first) : before
     if (x === undefined) continue
-    const label = ruling.verdict === 'rejected' ? `check stands · ${utc(ruling.at)}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} · ${ruling.by ?? 'ruling'} ${utc(ruling.at)}${ruling.reason || ruling.line ? `: ${ruling.reason ?? ruling.line}` : ''}`
-    marks.push({ at: x, label: label.length > 90 ? `${label.slice(0, 89)}…` : label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
+    const clock = utc(ruling.at)?.slice(6) ?? ''
+    const label = ruling.verdict === 'rejected' ? `check stands ${clock}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} · ${ruling.by ?? 'ruling'} ${clock}`
+    marks.push({ at: x, label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
   }
   const ticks = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1)
   return timeSeries(series, {
@@ -203,7 +207,8 @@ export function PlayClimb({ play }: { play: Play }) {
 
 /** A metric's y domain from its points and targets, padded; log domains stay positive. */
 function domainOf(metric: PlayBarMetric, values: number[]): [number, number] {
-  const bounds = [...values, metric.target?.min, metric.target?.max, metric.target?.approx, metric.stretch?.min, metric.stretch?.max].filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && (metric.scale !== 'log' || value > 0))
+  const { factor } = displayUnit(metric.unit)
+  const bounds = [...values, ...[metric.target?.min, metric.target?.max, metric.target?.approx, metric.stretch?.min, metric.stretch?.max].map((value) => (typeof value === 'number' ? value * factor : value))].filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && (metric.scale !== 'log' || value > 0))
   if (!bounds.length) return metric.scale === 'log' ? [1, 10] : [0, 1]
   const lo = Math.min(...bounds)
   const hi = Math.max(...bounds)
@@ -215,13 +220,14 @@ function targetsOf(metric: PlayBarMetric): YTarget[] {
   const out: YTarget[] = []
   const t = metric.target
   const word = targetWords(metric)
+  const { factor } = displayUnit(metric.unit)
   if (t) {
     const from = t.min ?? t.approx ?? t.max
     const to = t.max ?? t.approx ?? t.min
-    if (typeof from === 'number' && typeof to === 'number') out.push({ from, to, label: `bar ${word ?? ''}`.trim(), kind: 'target' })
+    if (typeof from === 'number' && typeof to === 'number') out.push({ from: from * factor, to: to * factor, label: word ? `bar ${word}` : 'bar', kind: 'target' })
   }
   const st = metric.stretch
-  if (st && (typeof st.min === 'number' || typeof st.max === 'number')) out.push({ from: (st.min ?? st.max)!, to: (st.max ?? st.min)!, label: st.label ?? 'stretch', kind: 'stretch' })
+  if (st && (typeof st.min === 'number' || typeof st.max === 'number')) out.push({ from: (st.min ?? st.max)! * factor, to: (st.max ?? st.min)! * factor, label: 'stretch', kind: 'stretch' })
   return out
 }
 
@@ -233,9 +239,10 @@ export function PlayAgainstBar({ play }: { play: Play }) {
     if (!climb || !bar || !play.barSeries?.length) return null
     const axis = releaseAxis(play, climb)
     const metrics = bar.metrics.filter((metric) => !metric.precondition)
-    const panels = metrics.flatMap((metric): (MultiplePanel & { metric: PlayBarMetric })[] => {
+    const panels = metrics.flatMap((metric): (MultiplePanel & { metric: PlayBarMetric; format?: (value: number) => string })[] => {
       const series = play.barSeries!.find((item) => item.metric === metric.id)
       if (!series) return []
+      const shown = displayUnit(metric.unit)
       const points: TimePoint[] = series.points
         .map((point) => ({ point, x: axis.index.get(point.columnId) }))
         .filter((item): item is { point: (typeof series.points)[number]; x: number } => item.x !== undefined && (metric.scale !== 'log' || item.point.value > 0))
@@ -244,7 +251,7 @@ export function PlayAgainstBar({ play }: { play: Play }) {
           const failing = /fail|not-solved/.test(point.verdict ?? '')
           return {
             x,
-            y: point.value,
+            y: point.value * shown.factor,
             verdict: markVerdict(point.verdict),
             comparable: point.comparable === undefined ? null : point.comparable,
             ...(failing && point.comparable !== false ? { glyph: 'cross' as const } : {}),
@@ -253,8 +260,8 @@ export function PlayAgainstBar({ play }: { play: Play }) {
         })
       const domain = domainOf(metric, points.map((point) => point.y!).filter((value) => value !== null))
       const label = `${metric.label}${metric.direction ? (metric.direction === 'up' ? ' ↑' : ' ↓') : ''}`
-      if (!points.length) return [{ id: metric.id, label, unit: metric.unit, domain, missing: { why: series.missing?.why ?? 'not measured on any checked release' }, metric }]
-      return [{ id: metric.id, label, unit: metric.unit, domain, points, scale: metric.scale ?? 'linear', targets: targetsOf(metric), format: (value: number) => metricValue(value, metric.unit).replace(new RegExp(` ${metric.unit}$`), ''), metric }]
+      if (!points.length) return [{ id: metric.id, label, unit: shown.unit, domain, missing: { why: series.missing?.why ?? 'not measured on any checked release' }, metric }]
+      return [{ id: metric.id, label, unit: shown.unit, domain, points, scale: metric.scale ?? 'linear', targets: targetsOf(metric), format: compactNumber, metric }]
     })
     if (!panels.length) return null
     const options = (unit: string) => ({

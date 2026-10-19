@@ -159,7 +159,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                 <tr key={row.runId} data-run={row.runId} className={onOpen ? 'clickable' : undefined} onClick={onOpen ? () => onOpen(row.runId) : undefined}>
                   <td className="mono ledger-run">
                     <a href={`/run/${encodeURIComponent(row.runId)}`} onClick={(event) => onOpen && event.preventDefault()}>
-                      {row.label ?? shortRun(play.id, row.runId)}
+                      {shortRun(play.id, row.runId)}
                     </a>
                     {fork && <small className="faint ledger-fork" title={row.lineage?.commit ? `commit ${row.lineage.commit}` : undefined}> {fork}</small>}
                     {full && row.inputDiffers && <span className="chip" title={`Input differs: ${row.inputDiffers}`}>{row.inputDiffers}</span>}

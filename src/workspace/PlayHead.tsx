@@ -86,7 +86,12 @@ function CheckRows({ play }: { play: Play }) {
         ) : (
           'Check'
         )}
-        {current?.ruling && <span className="faint goal-ruling"> {current.ruling.label ?? current.ruling.reason ?? `${current.ruling.by ?? ''} ruling`} · {utc(current.ruling.at)}</span>}
+        {current?.ruling && (
+          <span className="faint goal-ruling clamp-1" title={[current.ruling.label, current.ruling.reason].filter(Boolean).join('\n')}>
+            {' '}
+            {current.ruling.label ?? current.ruling.reason ?? `${current.ruling.by ?? ''} ruling`} · {utc(current.ruling.at)}
+          </span>
+        )}
       </h4>
       {best ? (
         <dl className="goal-rows">
@@ -136,9 +141,9 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
   const best = metric.best ?? null
   const nearest = best ? null : (metric.nearest ?? null)
   const mark = nearest ? (nearest.comparable === null || nearest.comparable === undefined ? '?' : nearest.verdict && /fail|not-solved/.test(nearest.verdict) ? '✕' : '*') : ''
-  const shown = best ?? nearest
   const target = targetWords(metric)
-  const gap = shown ? gapWords(metric, shown.value) : null
+  // A distance is stated only for a comparable value: a 1-bit or failing candidate is no measure of the gap to the bar.
+  const gap = best ? gapWords(metric, best.value) : null
   return (
     <div className="bar-row" data-bar-metric={metric.id} data-comparable={best ? 'yes' : nearest ? String(nearest.comparable) : 'none'}>
       <dt title={metric.label}>{metric.label}</dt>
@@ -148,12 +153,9 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
             <b>{metricValue(best.value, metric.unit)}</b> <span className="mono faint">{shortTag(best.tag)}</span>
           </>
         ) : nearest ? (
-          <>
-            <span className="faint">{metric.best === null ? 'no passing release · ' : ''}</span>
-            <span className={`bar-nearest mark-${mark === '✕' ? 'fail' : 'na'}`} title={nearest.why ?? undefined}>
-              {shortTag(nearest.tag)} {metricValue(nearest.value, metric.unit)} {mark}
-            </span>
-          </>
+          <span className={`bar-nearest mark-${mark === '✕' ? 'fail' : 'na'}`} title={[`No release passes; nearest candidate ${shortTag(nearest.tag)} (${shortRun(play.id, nearest.runId)})`, nearest.why].filter(Boolean).join('\n')}>
+            {shortTag(nearest.tag)} {metricValue(nearest.value, metric.unit)} {mark}
+          </span>
         ) : (
           <span className="faint" title={metric.missing?.why ?? undefined}>not measured</span>
         )}
@@ -166,7 +168,7 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
         ) : (
           <span className="faint">no target</span>
         )}
-        {gap && <span className={`bar-gap ${best ? '' : 'faint'}`}> · {gap}</span>}
+        {gap && <span className="bar-gap"> · {gap}</span>}
       </dd>
     </div>
   )
@@ -190,6 +192,7 @@ function GoalBlock({ play }: { play: Play }) {
             ))}
           </dl>
           <p className="faint bar-caption">
+            {marks.length === metrics.length && marks.length > 0 && <>No release passes; each value is the nearest candidate · </>}
             {marks.some((item) => item!.comparable === false && !/fail|not-solved/.test(item!.verdict ?? '')) && <>* not comparable{precondition ? ` (${precondition.label} below ${targetWords(precondition) ?? 'its bar'})` : ''} · </>}
             {marks.some((item) => item!.verdict && /fail|not-solved/.test(item!.verdict)) && <>✕ from a failing candidate · </>}
             {marks.some((item) => item!.comparable === null || item!.comparable === undefined) && <>? comparability unknown · </>}
@@ -216,7 +219,8 @@ export function BlockerChip({ blocker }: { blocker: PlayBlocker }) {
   return (
     <div className={`blocker-chip severity-${blocker.severity}`} data-blocker={blocker.class}>
       <p>
-        <b className="blocker-class">{BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')}{age ? ` ${age}` : ''}</b>
+        <b className="blocker-class">{BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')}</b>
+        {age && <b className="blocker-age"> {age}</b>}
         {blocker.evidence && <span className="blocker-evidence" title={blocker.evidence}> · {blocker.evidence}</span>}
       </p>
       {(blocker.source || blocker.owner) && (
@@ -259,8 +263,8 @@ function LiveBox({ play }: { play: Play }) {
         Live · <a className="mono" href={`/run/${encodeURIComponent(live.runId)}`}>{live.run ?? shortRun(play.id, live.runId)}</a>
         <span className="faint">
           {' '}
-          {live.word ?? 'running'}
-          {live.elapsedMs !== null && live.elapsedMs !== undefined ? ` · T+${span(live.elapsedMs)}` : ''}
+          {live.word && live.word !== 'live' ? `${live.word} · ` : ''}
+          {live.elapsedMs !== null && live.elapsedMs !== undefined ? `T+${span(live.elapsedMs)}` : ''}
         </span>
       </h4>
       {live.blocker ? <BlockerChip blocker={live.blocker} /> : <p className="faint">No blocker recorded.</p>}
