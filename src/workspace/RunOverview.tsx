@@ -259,6 +259,8 @@ function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['
   </section>
 }
 
+const RUN_CONTROLS = new Set(['wrapup', 'stop'])
+
 export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -269,8 +271,9 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const checkedCommits = new Set([r.check?.commit, ...(r.system?.play?.scores ?? []).map((point) => point.commit)].filter(Boolean))
   const chosenChecked = r.chosen.checked ?? (r.chosen.commit ? checkedCommits.has(r.chosen.commit) : false)
   const unchecked = hasRelease && !chosenChecked ? `No play check ran on ${shortTag(r.chosen.tag)} (${r.chosen.commit!.slice(0, 8)}), so there is no checked version to act on.` : null
-  const decisions = r.decisions.map((decision, i) => ({ ...decision, index: i, blocked: decision.id === 'rerun' ? null : unchecked })).filter((decision) =>
-    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) : hasRelease))
+  // A live run's controls (wrapup, stop) act on the run, not on a version, so they need no checked release.
+  const decisions = r.decisions.map((decision, i) => ({ ...decision, index: i, blocked: decision.id === 'rerun' || RUN_CONTROLS.has(decision.id) ? null : unchecked })).filter((decision) =>
+    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) : RUN_CONTROLS.has(decision.id) || hasRelease))
   const equivalent = r.cost.apiEquivalentUsd?.usd ?? null
   // What was billed: the receipt's reconciled total, else the host's reading of a seat-paid host placement ($0 per call).
   const billed = r.cost.billedUsd.total.usd ?? billing?.billedUsd ?? null
@@ -326,7 +329,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       </div>
       <aside>
         {decisions.length > 0 && <section aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2><div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
-          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
+          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { if (decision.id !== 'stop' || window.confirm(`Stop ${r.runId} now? ${decision.consequence}`)) void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
           {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}
           {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
         </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
