@@ -18,7 +18,7 @@ export function RunOverview({ api, doc, open, print = false }: { api: string; do
   const r = doc.receipt
   if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p></section>
   const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run.spend.billing ?? null} />
+  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} />
 }
 
 /**
