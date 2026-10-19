@@ -85,7 +85,7 @@ const FIXED: Record<string, Record<string, string>> = {
     ended: 'var(--ar-c-info)',
     stalled: 'var(--ar-c-run)',
     cancelled: 'var(--chart-category-other)',
-    live: 'var(--ar-c-action)',
+    live: 'var(--chart-outcome-refused)',
     'never started': 'color-mix(in srgb, var(--chart-category-other) 45%, transparent)',
   },
   outcome: {
@@ -93,7 +93,7 @@ const FIXED: Record<string, Record<string, string>> = {
     'not solved': 'var(--ar-c-info)',
     failed: 'var(--ar-c-run)',
     'infrastructure failure': 'var(--ar-c-fail)',
-    'live or stalled': 'var(--ar-c-action)',
+    'live or stalled': 'var(--chart-outcome-refused)',
     'no outcome recorded': 'color-mix(in srgb, var(--chart-category-other) 45%, transparent)',
   },
 }
@@ -123,12 +123,15 @@ function lensOf(values: string[], named: string[] | null, lens: string) {
     values.forEach((value, i) => (colors[i] = slot.get(value) ?? known.length))
     return { categories, named: known, slot, colors, palette, fixed: true }
   }
-  const pick = (named ?? categories.filter((item) => item.value !== 'none' && item.value !== 'not labelled').slice(0, 3).map((item) => item.value)).slice(0, 3)
+  const pick = (named ?? categories.filter((item) => !UNNAMED.has(item.value)).slice(0, 3).map((item) => item.value)).slice(0, 3)
   const slot = new Map(pick.map((value, i) => [value, i]))
   const colors = new Uint8Array(values.length)
   values.forEach((value, i) => (colors[i] = slot.get(value) ?? 3))
   return { categories, named: pick, slot, colors, palette: DOT_MAP_CATEGORIES, fixed: false }
 }
+
+/** Categories that say nothing was recorded: never one of the three named in colour unless clicked. */
+const UNNAMED = new Set(['none', 'not recorded', 'not labelled', 'unclustered'])
 
 /** A Wilson score interval at 95%: the solve rate's uncertainty for n runs, never a bare percentage. */
 function wilson(k: number, n: number) {
@@ -149,6 +152,13 @@ export function ExplorePage({ api }: { api: string }) {
   const [only, setOnly] = useState<string | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.innerWidth < 700)
+  // The map lays its rectangles out at the canvas's own size, so they fill it at every width.
+  const [mapWidth, setMapWidth] = useState(0)
+  const mapRef = useCallback((element: HTMLElement | null) => {
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => setMapWidth(Math.floor(entry!.contentRect.width / 16) * 16))
+    observer.observe(element)
+  }, [])
   useEffect(() => {
     const changed = () => setPhone(window.innerWidth < 700)
     window.addEventListener('resize', changed)
@@ -194,7 +204,7 @@ export function ExplorePage({ api }: { api: string }) {
     if (!runs) return [] as string[]
     const field = (name: string) => {
       const k = col(runs, name)
-      return runOfPoint.map((r) => String(runs.rows[r]?.[k] ?? 'none'))
+      return runOfPoint.map((r) => String(runs.rows[r]?.[k] ?? 'not recorded'))
     }
     if (lens === 'cluster' && agents) {
       const ci = col(agents, 'cluster')
@@ -232,7 +242,14 @@ export function ExplorePage({ api }: { api: string }) {
         x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y)
       })
       const labels: DotMapLabel[] = (data?.semantic?.clusters ?? []).filter((cluster) => cluster.labelled !== false && cluster.label && cluster.x !== null && cluster.y !== null).slice(0, 30).map((cluster) => ({ x: cluster.x!, y: -cluster.y!, text: cluster.label! }))
-      return { positions, radii: (x1 - x0) / 900, extent: [x0, y0, x1, y1] as const, rects: undefined, labels, order: null as Int32Array | null }
+      // Fit the middle 98% of agents: UMAP leaves a few far outliers that would otherwise shrink every cluster to a speck.
+      // They stay on the map; zooming out (or double-click after a pan) reaches them.
+      const xs = Array.from({ length: agents.rows.length }, (_, i) => positions[i * 2]!).sort((a, b) => a - b)
+      const ys = Array.from({ length: agents.rows.length }, (_, i) => positions[i * 2 + 1]!).sort((a, b) => a - b)
+      const q = (list: number[], p: number) => list[Math.min(list.length - 1, Math.max(0, Math.floor(list.length * p)))]!
+      const fit = xs.length > 50 ? ([q(xs, 0.01), q(ys, 0.01), q(xs, 0.99), q(ys, 0.99)] as const) : ([x0, y0, x1, y1] as const)
+      const pad = Math.max(fit[2] - fit[0], fit[3] - fit[1]) * 0.04
+      return { positions, radii: (fit[2] - fit[0]) / 280, extent: [fit[0] - pad, fit[1] - pad, fit[2] + pad, fit[3] + pad] as const, rects: undefined, labels, order: null as Int32Array | null }
     }
     const pi = col(runs, 'play')
     const byPlay = new Map<string, number[]>()
@@ -252,7 +269,7 @@ export function ExplorePage({ api }: { api: string }) {
     const order = new Int32Array(runs.rows.length)
     let k = 0
     for (const group of groups) for (const member of group.members) order[k++] = member
-    const box: [number, number] = phone ? [360, 900] : [1300, 640]
+    const box: [number, number] = [Math.max(280, mapWidth || (phone ? 340 : 1000)), phone ? 520 : 640]
     const dots = unitDotLayout(groups.map((group): DotGroup => ({ id: group.id, label: group.label, count: group.members.length })), box[0], box[1], { header: phone ? 14 : 16, maxRadius: 7 })
     // unitDotLayout places items in group order; map them back to run rows.
     const positions = new Float32Array(runs.rows.length * 2)
@@ -272,7 +289,7 @@ export function ExplorePage({ api }: { api: string }) {
     }
     const rects: DotMapRect[] = dots.rects.map((rect) => ({ x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, label: rect.label, note: fmtInt(rect.count) }))
     return { positions, radii, extent: [0, 0, box[0], box[1]] as const, rects, labels: undefined, order }
-  }, [runs, agents, layout, colored.colors, data, phone])
+  }, [runs, agents, layout, colored.colors, data, phone, mapWidth])
 
   const dimmed = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -345,7 +362,7 @@ export function ExplorePage({ api }: { api: string }) {
         </div>
       </header>
       <div className="explore-body">
-        <section className="ws-section explore-map" aria-label="Map">
+        <section className="ws-section explore-map" aria-label="Map" ref={mapRef}>
           <DotMap
             positions={geometry.positions}
             radii={geometry.radii}
@@ -356,10 +373,10 @@ export function ExplorePage({ api }: { api: string }) {
             labels={geometry.labels}
             dimmed={dimmed}
             selected={sel}
-            minPixelRadius={layout === 'agents' ? 1.6 : 1.2}
+            minPixelRadius={layout === 'agents' ? 2 : 1.2}
             onSelect={setSelected}
             describe={describe}
-            height={phone ? 440 : 640}
+            height={phone ? 520 : 640}
             ariaLabel={layout === 'agents' ? `${agents?.rows.length ?? 0} agents placed by what their transcripts say, coloured by ${lensTitle(lens)}` : `${runs.rows.length} runs grouped by play, coloured by ${lensTitle(lens)}`}
           />
           <p className="faint explore-hint">Scroll to zoom, drag to pan, double-click to fit; click a dot for its run.{layout === 'agents' ? ' Nearby agents said similar things (EmbeddingGemma, UMAP, HDBSCAN); labels name the largest clusters.' : ' One rectangle per play, sized by its runs; the 40 largest plays are drawn on their own.'}</p>
@@ -387,6 +404,12 @@ export function ExplorePage({ api }: { api: string }) {
               <h3>{selAgent ? 'Agent' : 'Run'}</h3>
               <p className="mono explore-selected-id">
                 <a href={`/run/${encodeURIComponent(String(selRow[0]))}${selAgent ? `?agent=${encodeURIComponent(selAgent)}` : ''}`}>{String(selRow[0])}{selAgent ? ` · ${selAgent}` : ''}</a>
+              </p>
+              <p className="explore-selected-actions">
+                <a href={`/run/${encodeURIComponent(String(selRow[0]))}${selAgent ? `?agent=${encodeURIComponent(selAgent)}` : ''}`}>Open {selAgent ? 'its transcript' : 'the run'} →</a>
+                {layout === 'agents' && query !== String(selRow[0]) && (
+                  <button type="button" className="link-button" onClick={() => { setQuery(String(selRow[0])); setOnly(null) }}>Only this run&rsquo;s agents</button>
+                )}
               </p>
               <dl className="explore-facts">
                 <dt>play</dt>
@@ -484,7 +507,7 @@ function Compare({ runs, runOfPoint, values, lens, lensTitle, unit }: { runs: Ta
     runOfPoint.forEach((r, i) => {
       const row = runs.rows[r]
       if (!row) return
-      const key = by === lens ? values[i]! : String(row[hi] ?? 'none')
+      const key = by === lens ? values[i]! : String(row[hi] ?? 'not recorded')
       const g = groups.get(key) ?? { research: 0, solved: 0, started: 0, infra: 0, hours: [] }
       const state = String(row[k] ?? '')
       if (RESEARCH.has(state)) {
@@ -503,7 +526,7 @@ function Compare({ runs, runOfPoint, values, lens, lensTitle, unit }: { runs: Ta
   const rate = (pick: 'solve' | 'infra') =>
     rows.map(([label, g]): RateRow => {
       const n = pick === 'solve' ? g.research : g.started
-      const k = pick === 'solve' ? g.solved : g.infra
+      const k = pick === 'solve' ? g.solved : g.started - g.infra
       const sorted = [...g.hours].sort((a, b) => a - b)
       return {
         id: `${pick}:${label}`,
@@ -521,14 +544,14 @@ function Compare({ runs, runOfPoint, values, lens, lensTitle, unit }: { runs: Ta
       }
     })
   const solve = useCallback(() => rankedRates(rate('solve'), { id: 'explore-solve', measure: 'solve rate', nouns: { attempt: unit, setup: byTitle.toLowerCase() } }), [rows, unit, byTitle])
-  const infra = useCallback(() => rankedRates(rate('infra'), { id: 'explore-infra', measure: 'infrastructure failure rate', nouns: { attempt: unit, setup: byTitle.toLowerCase() } }), [rows, unit, byTitle])
+  const infra = useCallback(() => rankedRates(rate('infra'), { id: 'explore-verdict', measure: 'research verdict rate (not lost to infrastructure)', nouns: { attempt: unit, setup: byTitle.toLowerCase() } }), [rows, unit, byTitle])
   if (!rows.length) return null
   return (
     <section className="ws-section explore-compare" aria-label="Compare cohorts" data-explore-compare>
       <header className="section-head">
         <h3>Compare by {byTitle.toLowerCase()}</h3>
         <p className="faint">
-          Solve rate over {unit === 'agent' ? 'agents whose runs' : 'runs that'} reached a research verdict (solved, not solved or failed), and infrastructure failure rate over {unit === 'agent' ? 'agents whose runs started' : 'runs that started'}, with 95% Wilson intervals; the ten largest cohorts. Under five, the count prints without a bar.{by !== lens ? ' Colour by another lens to compare by it.' : ''}
+          Left: solve rate over {unit === 'agent' ? 'agents whose runs' : 'runs that'} reached a research verdict (solved, not solved or failed); &ldquo;passed&rdquo; is solved. Right: the share of {unit === 'agent' ? 'agents whose runs started' : 'started runs'} that reached a research verdict rather than an infrastructure failure (the driver lost the run); &ldquo;passed&rdquo; is reached a verdict. 95% Wilson intervals; the ten largest cohorts; under five, the count prints without a bar.{by !== lens ? ' Colour by another lens to compare by it.' : ''}
         </p>
       </header>
       <div className="explore-compare-grid">

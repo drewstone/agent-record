@@ -3636,3 +3636,5 @@
 @media (max-width: 900px) {
   .ar-ws .explore-compare-grid { grid-template-columns: minmax(0, 1fr); }
 }
+.ar-ws .explore-compare .tgc-view-plot svg { max-width: 100%; height: auto; }
+.ar-ws .explore-selected-actions { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
