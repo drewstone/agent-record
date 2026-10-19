@@ -503,6 +503,20 @@ export function displayUnit(unit: string): { unit: string; factor: number } {
   return { unit, factor: 1 }
 }
 
+/**
+ * A metric's display unit sized to its bar: a peak-memory bar of about 6 GiB reads in GiB (ticks 0.01, 0.1, 1, 10 GiB),
+ * not as "6.0K MiB"; a bar under a gibibyte keeps `displayUnit`.
+ */
+export function displayUnitFor(metric: PlayBarMetric): { unit: string; factor: number } {
+  const u = metric.unit.toLowerCase()
+  const bounds = [metric.target?.min, metric.target?.max, metric.target?.approx, metric.stretch?.min, metric.stretch?.max].filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  const big = bounds.length ? Math.max(...bounds) : 0
+  if (u === 'kib' && big >= 1024 * 1024) return { unit: 'GiB', factor: 1 / 1024 / 1024 }
+  if ((u === 'bytes' || u === 'b') && big >= 1024 * 1024 * 1024) return { unit: 'GiB', factor: 1 / 1024 / 1024 / 1024 }
+  if ((u === 'bytes' || u === 'b') && big >= 1024 * 1024) return { unit: 'MiB', factor: 1 / 1024 / 1024 }
+  return displayUnit(metric.unit)
+}
+
 /** A target as written: `7.2M–8.7M c/s`, `≈ 599 KiB`, `≥ 120 bits`. */
 export function targetWords(metric: PlayBarMetric): string | null {
   const t = metric.target
@@ -526,6 +540,22 @@ export function gapWords(metric: PlayBarMetric, value: number | null | undefined
   const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
   const better = (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low)
   return better ? `${times}× past the bar` : `${times}× ${value < low ? 'below' : 'above'} the bar`
+}
+
+/**
+ * How far a candidate that does not count toward the bar (failing, or measured under other conditions) sits from it,
+ * as a plain ratio with no verdict: `36× below`, `25× above`. Never "past the bar": the arrow beside the metric says
+ * which way is better, and the mark beside the value says why it does not count.
+ */
+export function ratioWords(metric: PlayBarMetric, value: number | null | undefined): string | null {
+  const t = metric.target
+  if (!t || value === null || value === undefined || !(value > 0)) return null
+  const low = t.min ?? t.approx ?? t.max ?? null
+  const high = t.max ?? t.approx ?? t.min ?? null
+  if (low === null || high === null) return null
+  if (value >= low && value <= high) return 'inside the bar’s range'
+  const ratio = value < low ? low / value : value / high
+  return `${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}× ${value < low ? 'below' : 'above'}`
 }
 
 /** A check line without its verdict word, digests or the tail after ` | `: the words that say why, for grouping. */
