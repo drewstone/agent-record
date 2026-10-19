@@ -854,6 +854,13 @@ function sectionOf(params: URLSearchParams): RunSection | null {
  */
 function RunPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
+  // `?agent=<name>` (the Lab fold's agent name: root, s3, s3:s0), the link the explorer and the Lab's computed-column
+  // disagreements write, opens that agent's conversation: it becomes `section=agents&node=<run>:<name>` in place.
+  const linkedAgent = params.get('agent')
+  useEffect(() => {
+    if (!linkedAgent) return
+    update({ agent: undefined, section: 'agents', node: linkedAgent === 'root' ? id : `${id}:${linkedAgent}` }, true)
+  }, [linkedAgent, id])
   const [poll, setPoll] = useState<number | undefined>(undefined)
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
   // A saved grade changes the run's document; asking under a new query fetches it again (the host ignores the query).
