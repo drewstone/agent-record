@@ -14,6 +14,7 @@ import {
   UsageChart,
 } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
+import { TopologyTimeline } from './viewer/TopologyTimeline.js'
 import {
   eventMatches,
   eventSource,
