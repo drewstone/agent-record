@@ -2,7 +2,7 @@ import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
 import { money, tokens } from './data.js'
-import { checkerLabel, ENDING_GLYPH, type PlayHead, type PlayLedgerRow, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
+import { checkerLabel, checksByRun, ENDING_GLYPH, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 
 type Play = PlayDocument & PlayHead
 type SortKey = 'newest' | 'wall' | 'agent' | 'cost' | 'score'
@@ -55,18 +55,36 @@ function WallBar({ row, max }: { row: PlayLedgerRow; max: number }) {
   )
 }
 
-function Best({ play, row }: { play: Play; row: PlayLedgerRow }) {
+/**
+ * A run's best check. A pass under a checker the play has since replaced reads as that, muted, never as the run's
+ * standing; a run whose check prints no score reads as its rows and verdicts, never as "no check".
+ */
+function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: RunChecks | undefined }) {
   const best = row.best ?? null
-  if (!best) return <span className="faint">no check</span>
+  if (!best) {
+    if (!checks?.rows) return <span className="faint">no check ran</span>
+    const verdicts = [...new Set(checks.lines.flatMap((line) => line.verdicts))]
+    const top = checks.lines[0]
+    return (
+      <span className="ledger-best is-unscored" title={[`${checks.rows} rows under ${checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')}; the check prints no score`, top ? `most: ${top.count}× ${top.reason}` : null].filter(Boolean).join('\n')}>
+        {checks.solved ? `solved ×${checks.solved}` : verdicts.length === 1 ? verdictWord(verdicts[0]) : 'not solved'} <span className="num">×{checks.rows}</span>
+        <span className="faint"> {checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')} · no score</span>
+      </span>
+    )
+  }
   const stage = best.reached !== null && best.reached !== undefined && best.of ? `${best.reached}/${best.of}` : null
   const workloads = best.workloads?.total ? `${best.workloads.passed}/${best.workloads.total}` : null
+  const current = play.checkers?.find((item) => item.current)?.label ?? null
+  const label = best.checker ? checkerLabel(play.checkers, best.checker) : null
+  const superseded = !!(current && label && label !== current && best.verdict === 'solved')
   return (
-    <span className={`ledger-best verdict-${best.verdict ?? 'none'}`} title={[best.line, stageWords(best), best.checker ? checkerLabel(play.checkers, best.checker) : null].filter(Boolean).join('\n')}>
-      {verdictWord(best.verdict)}
-      {stage && <span className="num"> · {stage}</span>}
+    <span className={`ledger-best verdict-${best.verdict ?? 'none'}${superseded ? ' is-superseded' : ''}`} title={[best.line, stageWords(best), label, superseded ? `superseded by ${current}` : null].filter(Boolean).join('\n')}>
+      {superseded ? `passed ${label}` : verdictWord(best.verdict)}
+      {stage && !superseded && <span className="num"> · {stage}</span>}
       {workloads && <span className="num"> · {workloads}</span>}
-      {best.checker && <span className="faint"> {checkerLabel(play.checkers, best.checker)}</span>}
+      {!superseded && label && <span className="faint"> {label}</span>}
       {best.tag && <span className="faint mono"> {shortTag(best.tag)}</span>}
+      {superseded && <span className="faint"> (superseded)</span>}
     </span>
   )
 }
@@ -94,6 +112,7 @@ const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
 export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: boolean; onOpen?: (runId: string) => void }) {
   const ledger = play.ledger ?? null
   const [sort, setSort] = useState<SortKey>('newest')
+  const checks = useMemo(() => checksByRun(play.climb), [play.climb])
   const rows = useMemo(() => {
     const list = [...(ledger?.rows ?? [])]
     const agentHours = (row: PlayLedgerRow) => Object.values(row.hoursByOutcome ?? {}).reduce((sum, value) => sum + value, 0) + (row.open?.hours ?? 0)
@@ -179,13 +198,20 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                   </td>
                   <td className="num">{tries ? tries : <span className="faint">—</span>}</td>
                   <td>
-                    <Best play={play} row={row} />
+                    <Best play={play} row={row} checks={checks.get(row.runId)} />
                   </td>
                   <td className="num">
                     <Cost row={row} />
                   </td>
                   <td className="ledger-seat" title={[row.seat, row.seatKind].filter(Boolean).join(' · ') || undefined}>
-                    {row.seat ?? <span className="faint">—</span>}
+                    {row.seat ? (
+                      <>
+                        {seatWords(row.seat)}
+                        {row.seatKind && <span className="faint"> {row.seatKind === 'subscription' ? 'sub' : row.seatKind}</span>}
+                      </>
+                    ) : (
+                      <span className="faint">—</span>
+                    )}
                   </td>
                   {full && (
                     <td className="num" title={row.tokens?.known !== null && row.tokens?.known !== undefined ? `${row.tokens.known} agents with known usage` : undefined}>

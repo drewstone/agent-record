@@ -3388,27 +3388,57 @@
 .ar-ws .play-verdict { font-family: var(--ar-font-mono); font-weight: 700; letter-spacing: .02em; color: var(--ar-c-run); }
 .ar-ws .play-verdict.verdict-solved { color: var(--ar-c-ok); }
 .ar-ws .play-verdict.verdict-not-solved { color: var(--ar-c-fail); }
-.ar-ws .play-goal-grid { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 12px; min-width: 0; }
-.ar-ws .goal-block { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 4px 20px; padding: 10px 14px; border: 1px solid var(--ar-border); border-radius: 8px; min-width: 0; }
+.ar-ws .play-goal-grid { display: grid; grid-template-columns: minmax(0, 2.7fr) minmax(300px, 1fr); gap: 12px; min-width: 0; }
+.ar-ws .goal-block { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(0, 1.35fr); gap: 4px 24px; padding: 10px 14px; border: 1px solid var(--ar-border); border-radius: 8px; min-width: 0; }
 .ar-ws .goal-block h4, .ar-ws .live-box h4 { margin: 0 0 6px; font: 600 var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .goal-rows, .ar-ws .bar-rows { margin: 0; display: grid; gap: 3px; font-size: var(--ar-text-s); }
-.ar-ws .goal-rows > div { display: grid; grid-template-columns: 8em minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.ar-ws .goal-rows > div { display: grid; grid-template-columns: 7.6em minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .ar-ws .goal-rows dt, .ar-ws .bar-row dt { color: var(--ar-fg-muted); }
 .ar-ws .goal-rows dd, .ar-ws .bar-row dd { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .goal-rows b, .ar-ws .bar-value b { font-family: var(--ar-font-mono); font-variant-numeric: tabular-nums; }
 .ar-ws .goal-check h4 { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .ar-ws .goal-check .checker-chip { flex: none; }
 .ar-ws .goal-ruling { display: block; flex: 1; min-width: 0; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* charts draws at 720 px; a full-width plot at 1440 scales its type to twice that, so the play's figures stop at 1040 px. */
-.ar-ws .play-climb .tgc-view-wide svg, .ar-ws .play-bar .tgc-view-wide svg { max-width: 1040px; }
+/* The current check as a ladder of its stages: passed cells in the checker's hue, the stopping stage filled to its partial
+   progress with a fail ring, SOLVED last; a pass under an earlier checker is a dashed ring on SOLVED. */
+.ar-ws .stage-ladder { display: flex; gap: 3px; margin: 2px 0 8px; padding: 0; list-style: none; min-width: 0; }
+.ar-ws .stage-ladder li { flex: 1 1 0; min-width: 0; display: grid; gap: 3px; }
+.ar-ws .stage-ladder li.stage-solved { flex: .8 1 0; }
+.ar-ws .stage-ladder i { display: block; height: 10px; border-radius: 2px; background: var(--ws-raised); box-shadow: inset 0 0 0 1px var(--ar-border); }
+.ar-ws .stage-ladder li[data-state='passed'] i { background: color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent); box-shadow: none; }
+.ar-ws .stage-ladder li[data-state='failed'] i { background: linear-gradient(90deg, color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent) var(--fill, 0%), var(--ws-raised) var(--fill, 0%)); box-shadow: inset 0 0 0 1.5px var(--ar-c-fail); }
+.ar-ws .stage-ladder li[data-earlier='yes'] i { box-shadow: inset 0 0 0 1.5px var(--ar-c-run); background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ar-c-run) 30%, transparent) 3px 5px); }
+.ar-ws .stage-ladder span { font-size: 11px; line-height: 1.2; color: var(--ar-fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-ws .stage-ladder li[data-state='failed'] span { color: var(--ar-fg); }
+.ar-ws .stage-ladder li[data-earlier='yes'] span { color: var(--ar-c-run); }
+.ar-ws .goal-check { --checker: var(--ar-c-info); }
+.ar-ws .workload-dots { display: inline-flex; align-items: center; gap: 8px; }
+.ar-ws .workload-dots > span { display: inline-flex; gap: 2px; }
+.ar-ws .workload-dots i { width: 7px; height: 10px; border-radius: 1.5px; background: var(--ws-raised); box-shadow: inset 0 0 0 1px var(--ar-border); }
+.ar-ws .workload-dots i[data-passed='yes'] { background: color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent); box-shadow: none; }
+/* Distance to the bar: one track per metric on its own log scale, the target shaded, the stretch dashed, the value a mark. */
+.ar-ws .bar-track-cell { overflow: visible !important; }
+.ar-ws .bar-track { position: relative; display: block; height: 14px; margin: 0 6px; }
+.ar-ws .bar-track::before { content: ''; position: absolute; left: 0; right: 0; top: 6px; height: 2px; border-radius: 1px; background: var(--ar-border); }
+.ar-ws .bar-track .bar-gapline { position: absolute; top: 6px; height: 0; border-top: 2px dashed color-mix(in srgb, var(--ar-fg-muted) 70%, transparent); }
+.ar-ws .bar-track .bar-target { position: absolute; top: 2px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--ar-c-ok) 45%, transparent); }
+.ar-ws .bar-track .bar-stretch { position: absolute; top: 1px; height: 12px; border-radius: 2px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-ok) 70%, transparent); background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ar-c-ok) 18%, transparent) 3px 5px); }
+.ar-ws .bar-track .bar-dot { position: absolute; top: 2px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--ar-fg); box-shadow: 0 0 0 2px var(--ws-panel); }
+.ar-ws .bar-track .bar-dot.mark-fail { background: var(--ws-panel); box-shadow: inset 0 0 0 2px var(--ar-c-fail); }
+.ar-ws .bar-track .bar-dot.mark-na { background: var(--ws-panel); box-shadow: inset 0 0 0 2px var(--ar-fg-muted); }
 .ar-ws .goal-glyph.glyph-fail, .ar-ws .bar-nearest.mark-fail { color: var(--ar-c-fail); }
 .ar-ws .goal-glyph.glyph-ok { color: var(--ar-c-ok); }
 .ar-ws .goal-glyph.glyph-unknown { color: var(--ar-c-run); }
-.ar-ws .bar-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; align-items: baseline; }
+.ar-ws .goal-bar .bar-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 22px; }
+.ar-ws .bar-row { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); grid-template-areas: 'label target' 'value value' 'track track'; gap: 0 10px; align-items: baseline; min-width: 0; }
+.ar-ws .bar-row dt { grid-area: label; }
+.ar-ws .bar-row .bar-value { grid-area: value; }
+.ar-ws .bar-row .bar-target { grid-area: target; text-align: right; }
+.ar-ws .bar-row .bar-track-cell { grid-area: track; margin-top: 2px; }
 .ar-ws .bar-nearest { font-family: var(--ar-font-mono); color: var(--ar-fg-muted); }
 .ar-ws .bar-target { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
 .ar-ws .bar-gap { color: var(--ar-fg); }
-.ar-ws .bar-caption { grid-column: 1 / -1; margin: 6px 0 0; font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ar-ws .bar-caption { grid-column: 1 / -1; margin: 8px 0 0; font-size: 12px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .checker-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--ar-fg); font-family: var(--ar-font-mono); font-weight: 650; }
 .ar-ws .checker-chip::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--checker); }
 .ar-ws .live-box { padding: 10px 14px; border: 1px solid var(--ar-border); border-left: 3px solid var(--ar-border-strong); border-radius: 8px; min-width: 0; font-size: var(--ar-text-s); }
@@ -3454,10 +3484,15 @@
 .ar-ws .ledger-table .ledger-seat { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .ledger-best { font-size: var(--ar-text-s); }
 .ar-ws .ledger-best.verdict-solved { color: var(--ar-c-ok); }
+.ar-ws .ledger-best.is-superseded, .ar-ws .ledger-best.is-unscored { color: var(--ar-fg-muted); }
+.ar-ws .ending-reason { margin-top: 4px !important; font-size: 13px; }
+.ar-ws .live-box .nowrap { white-space: nowrap; }
+.ar-ws .kill-checkpoints li[data-missed='yes'] { color: var(--ar-c-fail); }
 .ar-ws .unpriced { display: inline-block; padding: 0 6px; border-radius: 3px; background: var(--ws-hatch); color: var(--ar-fg-muted); font-size: 13px; }
 .ar-ws .sort-button { color: inherit; text-decoration: none; font-weight: inherit; }
 .ar-ws .ledger-older { margin: 6px 0 0; font-size: 13px; }
-.ar-ws .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 1fr)); gap: 10px 16px; }
+/* One team per row: each timeline is drawn at the section's width, its lanes and ticks at their set size. */
+.ar-ws .team-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .ar-ws .team-panel { margin: 0; min-width: 0; }
 .ar-ws .team-panel figcaption { font-size: var(--ar-text-s); margin-bottom: 4px; }
 /* A 27-agent team would run a page tall: the panel scrolls inside 640 px. */
@@ -3513,12 +3548,15 @@
   .ar-ws .goal-check { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
   .ar-ws .goal-rows { display: flex; flex-wrap: wrap; gap: 0 12px; }
   .ar-ws .goal-rows > div { display: inline-flex; gap: 4px; }
-  .ar-ws .goal-rows .goal-prov, .ar-ws .goal-rows .faint { display: none; }
+  .ar-ws .goal-rows .goal-prov, .ar-ws .goal-rows .faint, .ar-ws .goal-rows .goal-best { display: none; }
+  .ar-ws .goal-bar .bar-rows { display: flex; }
   .ar-ws .goal-bar { margin-top: 4px; }
   .ar-ws .goal-bar h4 { display: none; }
   .ar-ws .bar-rows { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; }
   .ar-ws .bar-row { display: flex; flex: none; gap: 5px; white-space: nowrap; }
-  .ar-ws .bar-row .bar-gap, .ar-ws .bar-caption { display: none; }
+  .ar-ws .bar-row .bar-gap, .ar-ws .bar-caption, .ar-ws .bar-row .bar-track-cell { display: none; }
+  .ar-ws .stage-ladder { flex-basis: 100%; margin: 2px 0 4px; }
+  .ar-ws .stage-ladder span { font-size: 10px; }
   .ar-ws .play-cost { display: none; }
   .ar-ws .finding-row { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .finding-meta { white-space: normal; }
@@ -3526,6 +3564,16 @@
   .ar-ws .play-standing-tab > .ws-section, .ar-ws .play-setup > .ws-section, .ar-ws .ws-content > .play-releases { padding: 10px 0; border-width: 1px 0 0; border-radius: 0; background: transparent; --chart-canvas: var(--ar-bg); }
 }
 .ar-ws .verdict-strip { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+/* What the checks said: each run's check lines grouped by reason, so a check without a score still reads. */
+.ar-ws .checks-said { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ar-border); }
+.ar-ws .checks-said h4 { margin: 0 0 6px; font: 600 var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
+.ar-ws .checks-said > ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 10px 24px; }
+.ar-ws .checks-said-run { margin: 0 0 3px; font-size: var(--ar-text-s); }
+.ar-ws .checks-said ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 1px; }
+.ar-ws .checks-said ul li { display: grid; grid-template-columns: 3.2em minmax(0, 1fr) auto; gap: 8px; align-items: baseline; font-size: 13px; }
+.ar-ws .checks-said ul b { font: 600 12px var(--ar-font-mono); text-align: right; color: var(--ar-fg); }
+.ar-ws .checks-said-reason { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ar-fg); }
+.ar-ws .checks-said .link-button { font-size: 12px; margin-left: 3.6em; }
 .ar-ws .verdict-strip li { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .ar-ws .verdict-strip-run { font-size: var(--ar-text-s); }
 .ar-ws .verdict-strip-chips { display: flex; flex-wrap: wrap; gap: 4px; }
