@@ -8,6 +8,7 @@ import {
   gapWords,
   metricValue,
   type PlayBarMetric,
+  ratioWords,
   type PlayBest,
   type PlayBlocker,
   type PlayHead as Head,
@@ -247,8 +248,9 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
   const nearest = best ? null : (metric.nearest ?? null)
   const mark = nearest ? (nearest.comparable === null || nearest.comparable === undefined ? '?' : nearest.verdict && /fail|not-solved/.test(nearest.verdict) ? '✕' : '*') : ''
   const target = targetShort(metric)
-  // A distance is stated in words only for a comparable value; the track still shows where a candidate sits.
-  const gap = best ? gapWords(metric, best.value) : null
+  // A comparable value states its distance to the bar; a candidate that does not count states a plain ratio, with the
+  // mark beside its value saying why it does not count.
+  const gap = best ? gapWords(metric, best.value) : nearest ? ratioWords(metric, nearest.value) : null
   const shown = best ?? nearest
   const why = nearest ? [`No release passes; nearest candidate ${shortTag(nearest.tag)} (${shortRun(play.id, nearest.runId)})`, nearest.why].filter(Boolean).join('\n') : (metric.missing?.why ?? undefined)
   return (
@@ -267,7 +269,7 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
       </dd>
       <dd className="bar-target">
         {target ? <>bar {target}</> : <span className="faint">no target</span>}
-        {gap && <span className="bar-gap"> · {gap}</span>}
+        {gap && <span className={`bar-gap${best ? '' : ' bar-gap-candidate'}`} title={best ? undefined : 'A plain ratio to the bar for a value that does not count toward it (see the mark beside it)'}> · {gap}</span>}
       </dd>
       <dd className="bar-track-cell">
         <BarTrack metric={metric} value={shown?.value ?? null} mark={mark} />
@@ -318,8 +320,11 @@ const ago = (since: string | null | undefined, until?: string | null) => (since 
  * A run's blocker in one line: severity, class and age, its evidence and its source; every other class beneath. For a
  * run that has ended, `until` is its end, so the age is how long the block lasted rather than time since.
  */
-export function BlockerChip({ blocker, until }: { blocker: PlayBlocker; until?: string | null }) {
-  const age = ago(blocker.since, until)
+export function BlockerChip({ blocker, until, wallHours }: { blocker: PlayBlocker; until?: string | null; wallHours?: number | null }) {
+  const lasted = blocker.since ? (until ? new Date(until).valueOf() : Date.now()) - new Date(blocker.since).valueOf() : null
+  // On a run that has ended, a block that lasted (nearly) the whole run says so instead of repeating the run's hours.
+  const whole = until && wallHours && lasted !== null && lasted >= wallHours * 3_600_000 * 0.9
+  const age = whole ? 'the whole run' : ago(blocker.since, until)
   return (
     <div className={`blocker-chip severity-${blocker.severity}`} data-blocker={blocker.class}>
       <p>
@@ -392,10 +397,10 @@ function LiveBox({ play }: { play: Play }) {
             {wall !== null ? ` after ${wall >= 10 ? Math.round(wall) : wall.toFixed(1)} h` : ''}
           </span>
         </h4>
-        {blocker && <BlockerChip blocker={blocker} until={ending.at} />}
-        {ending.reason && (
+        {blocker && <BlockerChip blocker={blocker} until={ending.at} wallHours={wall} />}
+        {ending.reason && !blocker && (
           <p className="faint ending-reason clamp-2" title={ending.reason}>
-            ended: {ending.reason}
+            ended: {ending.reason.replaceAll('-', ' ')}
           </p>
         )}
         <Checkpoints items={ending.killCheckpoints ?? []} />
