@@ -11,7 +11,9 @@
  * that holds it, in this order; the others are listed as sources and never duplicated as events:
  *   0. live     while a node has not settled: its Sandbox session events recorded so far (evidence/live-stream/)
  *   1. native   Claude Code session .jsonl files, each from its longest stored copy: a turn's retained-harness-transcript
- *               archive or the run's latest native-index capture (both under --native/<hex>/)
+ *               archive or the run's latest native-index capture (both under --native/<hex>/); else the OpenCode store
+ *               (.local/share/opencode/opencode.db) in the node's latest native-index capture, its root sessions read
+ *               as the rows a trajectory holds
  *   2. oc       OpenCode native-trajectory.json (bridge-native roots)
  *   3. pi       trace/pi-sessions/**, joined when sha256(JSON.stringify(first user text)) == spawned taskDigest
  *   4. part     output blob parts at the node's outRefs, collapsed to the final state of each part id
@@ -27,18 +29,20 @@
  *
  * Sources: every input file, native file and clipped body has a `sources[]` entry. Its sha256 covers exactly
  * the bytes a source route serves: the whole file, one physical line (`line`), or the resolved JSON value
- * (`pointer`; a string's UTF-8 bytes, otherwise its JSON text). Paths under the native cache start with
+ * (`pointer`; a string's UTF-8 bytes, otherwise its JSON text). In an OpenCode store (SQLite) the pointer
+ * `/part/<id>/data` names the data column of the part row with that id. Paths under the native cache start with
  * `native:<hex>/`. A clipped body keeps the first three quarters and the last quarter of `maxText` bytes;
  * `detail.clip.sha256` names the source entry holding the full text.
  */
 import { createHash } from 'node:crypto'
-import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs'
+import { closeSync, copyFileSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { recordSchema } from '../record.js'
 import { projectPartEvents } from './part-events.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
 
-export const ADAPTER_VERSION = '2.6.0'
+export const ADAPTER_VERSION = '2.7.0'
 export { ID_SCHEME }
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
 
@@ -204,6 +208,7 @@ const hexOf = (digest: unknown) =>
 // A Claude Code main session file inside a harness home; subagent transcripts under `<session>/subagents/` are not.
 const CLAUDE_SESSION = /(^|\/)\.claude\/projects\/[^/]+\/[^/]+\.jsonl$/
 const sessionKey = (path: string) => (CLAUDE_SESSION.test(path) ? path.slice(path.lastIndexOf('.claude/projects/')) : null)
+const OPENCODE_STORE = /(^|\/)\.local\/share\/opencode\/opencode\.db$/
 const NATIVE_INDEX = 'evidence/native-index.jsonl'
 // Each running node's Sandbox session events, one JSON line per event as delivered (discovery-lab runner/live-stream.mjs).
 const LIVE_STREAM = 'evidence/live-stream'
@@ -798,8 +803,7 @@ export class Ingest {
       const held = copies.get(key)
       if (!held || bytes > held.bytes) copies.set(key, { rel, abs, hex, sessionId, bytes, order: held?.order ?? order++ })
     }
-    const cacheDir = (hex: string) =>
-      this.nativeRoot ? [hex, `sha256-${hex}`, `sha256:${hex}`].map((name) => join(this.nativeRoot!, name)).find((path) => existsSync(path)) : undefined
+    const cacheDir = (hex: string) => this.nativeCacheDir(hex)
 
     for (const ref of node.transcriptRefs) {
       const blob = this.blob(ref)
@@ -863,6 +867,33 @@ export class Ingest {
       return found
     }
     return missing ? 'not-cached' : null
+  }
+
+  nativeCacheDir(hex: string) {
+    return this.nativeRoot ? [hex, `sha256-${hex}`, `sha256:${hex}`].map((name) => join(this.nativeRoot!, name)).find((path) => existsSync(path)) : undefined
+  }
+
+  /**
+   * The OpenCode store in a node's latest native-index copy, and the ids of its root sessions: one SQLite store holds
+   * every session of its HOME (a subagent's session names its parent, and is not this node's conversation).
+   */
+  nativeStore(node: NodeDraft): { rel: string; abs: string; sessionIds: string[] } | null {
+    const indexed = this.nativeIndex().get(node.id)
+    const hex = hexOf(indexed?.snapshot?.archive)
+    const dir = hex ? this.nativeCacheDir(hex) : undefined
+    const sessions = (Array.isArray(indexed?.native?.sessions) ? indexed.native.sessions : []).filter(
+      (session: Json) => typeof session?.path === 'string' && OPENCODE_STORE.test(session.path) && typeof session.sandboxSessionId === 'string' && typeof session.rootScope === 'string',
+    )
+    if (!dir || !sessions.length) return null
+    const at = (session: Json) => ['workspace/__retention__/sessions', session.sandboxSessionId, 'native', ...(typeof session.sourceId === 'string' ? [session.sourceId] : []), session.rootScope, session.path].join('/')
+    const relInside = at(sessions[0])
+    const abs = join(dir, relInside)
+    if (!existsSync(abs)) {
+      this.gaps.push({ nodeId: node.id, code: 'no-transcript:native-file-missing', detail: `${relInside} is not in archive ${hex}` })
+      return null
+    }
+    const sessionIds = sessions.filter((session: Json) => at(session) === relInside && !session.parentNativeSessionId && typeof session.nativeSessionId === 'string').map((session: Json) => session.nativeSessionId as string)
+    return { rel: `native:${hex}/${relInside}`, abs, sessionIds }
   }
 
   /** The latest stored copy per node in `evidence/native-index.jsonl` (a torn last line from a crash is skipped). */
@@ -1104,6 +1135,52 @@ export class Ingest {
     if (!Array.isArray(doc?.messages) || !Array.isArray(doc?.parts)) return false
     if (!this.claim(entry.sha256, node.id, rel)) return false
     this.fileSource(rel)
+    this.projectOpenCode(node, doc, rel, entry.sha256, (part, index) => pointerOf('parts', index, 'data'))
+    return true
+  }
+
+  /**
+   * An OpenCode store from the native index, as the rows a trajectory holds: its root sessions, their messages and
+   * parts. The store is opened from a private copy, because opening it can checkpoint its write-ahead log and so change
+   * the cached bytes the record cites. Each part's anchor names its row (`/part/<id>/data`).
+   */
+  readOpenCodeStore(node: NodeDraft, store: { rel: string; abs: string; sessionIds: string[] }) {
+    const entry = this.file(store.rel, store.abs)
+    if (!store.sessionIds.length || !this.claim(entry.sha256, node.id, store.rel)) return false
+    const sqlite = process.getBuiltinModule?.('node:sqlite') as typeof import('node:sqlite') | undefined
+    if (!sqlite) {
+      this.gaps.push({ nodeId: node.id, code: 'no-transcript:opencode-store-unreadable', detail: 'this Node has no node:sqlite' })
+      return false
+    }
+    const copy = mkdtempSync(join(tmpdir(), 'agent-record-opencode-'))
+    let doc: Json
+    try {
+      for (const suffix of ['', '-wal', '-shm']) if (existsSync(store.abs + suffix)) copyFileSync(store.abs + suffix, join(copy, `opencode.db${suffix}`))
+      const db = new sqlite.DatabaseSync(join(copy, 'opencode.db'), { readOnly: true })
+      try {
+        const ids = JSON.stringify(store.sessionIds)
+        const where = 'session_id IN (SELECT value FROM json_each(?))'
+        doc = {
+          session: db.prepare('SELECT * FROM session WHERE id IN (SELECT value FROM json_each(?)) ORDER BY time_created, id').all(ids),
+          messages: db.prepare(`SELECT id, session_id, time_created, data FROM message WHERE ${where} ORDER BY time_created, id`).all(ids),
+          parts: db.prepare(`SELECT id, message_id, session_id, time_created, data FROM part WHERE ${where} ORDER BY time_created, id`).all(ids),
+        }
+      } finally {
+        db.close()
+      }
+    } catch (error) {
+      this.gaps.push({ nodeId: node.id, code: 'no-transcript:opencode-store-unreadable', detail: `${this.sourcePath(store.rel)}: ${String((error as Error)?.message ?? error).slice(0, 200)}` })
+      return false
+    } finally {
+      rmSync(copy, { recursive: true, force: true })
+    }
+    this.fileSource(store.rel, store.abs)
+    this.projectOpenCode(node, doc, store.rel, entry.sha256, (part) => pointerOf('part', str(part.id), 'data'))
+    return true
+  }
+
+  /** Project an OpenCode trajectory's rows (session, messages, parts) onto `node`; `pointer` anchors each part. */
+  projectOpenCode(node: NodeDraft, doc: Json, rel: string, sha256: string, pointer: (part: Json, index: number) => string) {
     const session = Array.isArray(doc.session) ? doc.session[0] : doc.session
     if (session?.model) {
       try {
@@ -1139,9 +1216,9 @@ export class Ingest {
       }
       const message = roles.get(part.message_id) ?? {}
       const role = message.role === 'user' ? 'user' : 'assistant'
-      const pointer = pointerOf('parts', index, 'data')
-      const source = { path: rel, sha256: entry.sha256, pointer }
-      const full = () => this.pointerSource(rel, pointer, part.data)
+      const anchor = pointer(part, index)
+      const source = { path: rel, sha256, pointer: anchor }
+      const full = () => this.pointerSource(rel, anchor, part.data)
       const at = isoAt(data?.time?.start ?? part.time_created) ?? node.start
       if (!at) {
         untimed++
@@ -1882,6 +1959,8 @@ export class Ingest {
         this.readNative(node, native)
         continue
       }
+      const store = this.nativeStore(node)
+      if (store && this.readOpenCodeStore(node, store)) continue
       if (native === 'not-cached')
         this.gaps.push({ nodeId: node.id, code: 'archived-not-ingested', detail: 'A native transcript archive exists but is not in the native cache' })
       if (node.id === this.rootId && existsSync(join(runDir, 'native-trajectory.json')) && this.readOpenCode(node)) continue
