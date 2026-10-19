@@ -3686,3 +3686,7 @@
 .agent-record .assignment-source { margin-top: 0.5rem; }
 .agent-record .assignment-source summary { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg-faint); cursor: pointer; }
 .agent-record .assignment-source pre { margin: 0.35rem 0 0; font-size: var(--ar-text-s); }
+
+.agent-record .topology-tree { border-block: 1px solid var(--ar-border); margin: 0.3rem 0.85rem; }
+.agent-record .topology-tree > summary { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg-muted); padding: 0.4rem 0; cursor: pointer; }
+.agent-record .topology-tree[open] > summary { margin-bottom: 0.5rem; }
