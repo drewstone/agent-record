@@ -1045,7 +1045,7 @@
   gap: 0.45rem;
   padding: 0.36rem 0.5rem;
   font: var(--ar-text-s) var(--ar-font-mono);
-  min-height: 31px;
+  min-height: 22px;
 }
 .agent-record .tool-execution > summary::before {
   display: none;
@@ -1459,11 +1459,11 @@
 .agent-record .activity-prose > :last-child { margin-bottom:0; }
 .agent-record .activity-prose pre { max-width:100%;overflow:auto;padding:12px;background:var(--ar-bg-sink);font:12px/1.6 var(--ar-font-mono); }
 .agent-record .activity-prose code { font-family:var(--ar-font-mono);font-size:.88em; }
-.agent-record .tool-stack { margin:6px 0; }
-.agent-record .tool-execution { border:0;border-top:1px solid var(--ar-border);border-radius:0;background:none; }
-.agent-record .tool-execution > summary { min-height:38px; }
-.agent-record .execution-detail { padding:4px 0 16px; }
-.agent-record .execution-input,.agent-record .execution-output { border:0;padding:12px 0;background:none; }
+.agent-record .tool-stack { margin:2px 0; }
+.agent-record .tool-execution { border:0;border-radius:0;background:none; }
+.agent-record .tool-execution > summary { min-height:22px; }
+.agent-record .execution-detail { padding:2px 0 8px; }
+.agent-record .execution-input,.agent-record .execution-output { border:0;padding:6px 0;background:none; }
 .agent-record .execution-preview { font-family:var(--ar-font-body); }
 .agent-record .structured-fields { margin:0; }
 .agent-record .structured-fields > div { display:grid;grid-template-columns:minmax(100px,160px) minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--ar-border); }
@@ -1875,7 +1875,7 @@
 /* Collapsed polls, withheld thinking, and absent captures: quiet rows that say what the record lacks. */
 .agent-record .tool-expansion + .tool-expansion { margin-left: 0; }
 .agent-record .poll-group { border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 50%, transparent); }
-.agent-record .poll-group > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 31px; padding: 6px 16px; font: var(--ar-text-s)/1.5 var(--ar-font-mono); color: var(--ar-fg-muted); cursor: pointer; list-style: none; }
+.agent-record .poll-group > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 22px; padding: 3px 8px; font: var(--ar-text-s)/1.5 var(--ar-font-mono); color: var(--ar-fg-muted); cursor: pointer; list-style: none; }
 .agent-record .poll-group > summary::-webkit-details-marker { display: none; }
 .agent-record .poll-group > summary::before { display: none; }
 .agent-record .poll-group > summary::after { content: '+'; font-size: var(--ar-text-s); color: var(--ar-fg-faint); }
