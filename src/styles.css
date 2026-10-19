@@ -3667,7 +3667,7 @@
 .ar-ws .climb-brush-tick.tone-fail { background: var(--ar-c-fail); opacity: .55; }
 .ar-ws .climb-brush-window { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--ar-c-info) 22%, transparent); border-left: 2px solid var(--ar-c-info); border-right: 2px solid var(--ar-c-info); pointer-events: none; }
 .ar-ws .bar-gap-candidate { color: var(--ar-fg-muted); font-weight: 500; font-size: 12px; }
-.ar-ws .releases-row { white-space: normal; }
+.ar-ws .goal-rows dd.releases-row { white-space: normal; overflow: visible; }
 
 /* ---------- One agent's attempts as beads on a string (run page, under the replay) ---------- */
 .ar-ws .bead-string { display: grid; gap: 4px; padding: 6px 14px 8px; border-bottom: 1px solid var(--ar-border); }

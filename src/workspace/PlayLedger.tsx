@@ -62,7 +62,17 @@ function WallBar({ row, max }: { row: PlayLedgerRow; max: number }) {
 function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: RunChecks | undefined }) {
   const best = row.best ?? null
   if (!best) {
-    if (!checks?.rows) return <span className="faint">no check ran</span>
+    if (!checks?.rows) {
+      // Checks that found no release are checks: 19b's 17 rows said "no pushed release tag".
+      const untagged = (row as { untaggedChecks?: { rows?: number; line?: string | null; at?: string | null } | null }).untaggedChecks ?? null
+      if (untagged?.rows)
+        return (
+          <span className="ledger-best is-unscored" title={[untagged.line, untagged.at ? `newest ${utc(untagged.at)}` : null].filter(Boolean).join('\n') || undefined}>
+            {untagged.rows} {untagged.rows === 1 ? 'check' : 'checks'}, no release <span className="faint">· {untagged.line ?? 'no line recorded'}</span>
+          </span>
+        )
+      return <span className="faint">no check ran</span>
+    }
     const verdicts = [...new Set(checks.lines.flatMap((line) => line.verdicts))]
     const top = checks.lines[0]
     return (

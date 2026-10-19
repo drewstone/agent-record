@@ -65,6 +65,8 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
 }
 
 const clock = (at: string | null | undefined) => at ? `${new Date(at).toISOString().slice(11, 16)} UTC` : null
+/** A Lab sentence with its ISO timestamps as `10-19 02:42Z`, the way the rest of the page writes times. */
+const humane = (text: string) => text.replace(/\b\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)(?::\d\d(?:\.\d+)?)?Z\b/g, '$1-$2 $3Z')
 const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 
 /**
@@ -86,16 +88,20 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
   const ending = doc.run.ending || doc.run.state === 'stalled' ? endingLabel(doc.run) : execution.settleKind ?? 'settle kind unknown'
-  const reason = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
+  const raw = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
+  const reason = raw ? humane(raw) : null
   const gate = doc.progress?.outcome?.gate
   const blockedGate = gate?.line && gate.verdict && gate.verdict !== 'pass' ? gate : null
   // The gate's newest verdicts that could not decide (the host's check summary): the prover ran past its limit N times.
-  const undecided = doc.run.check?.gateUnknown?.count ? doc.run.check.gateUnknown : null
-  const quota = doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
+  // The Lab's blocker leads; a list line that repeats one of its classes is left out.
+  const live = execution.alive ? (doc.progress?.blocker ?? null) : (doc.progress?.endBlocker ?? null)
+  const classes = new Set([live?.class, ...(live?.also ?? []).map((item) => item.class)].filter(Boolean))
+  const undecided = doc.run.check?.gateUnknown?.count && !classes.has('gate-undecided') ? doc.run.check.gateUnknown : null
+  const quota = classes.has('quota-wall') ? null : (doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null)
   const resume = execution.resume.status === 'preserved' || execution.resume.reason || execution.resume.command
   // What blocked the run, as the play page shows it (discovery-lab blockerOf): the live blocker, or for an ended run what
   // blocked it just before it ended. 19b's page said only "driver-failed" while the Lab had its stuck turn and refused push.
-  const block = execution.alive ? (doc.progress?.blocker ?? null) : (doc.progress?.endBlocker ?? null)
+  const block = live
   const ended = execution.alive ? null : (doc.run.ending?.at ?? execution.lastActivityAt ?? null)
   const wallHours = doc.receipt?.work?.wallHours ?? null
   return <section className="run-execution" aria-label="Run status">

@@ -285,7 +285,8 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
   const best = metric.best ?? null
   const nearest = best ? null : (metric.nearest ?? null)
   const mark = nearest ? (nearest.comparable === null || nearest.comparable === undefined ? '?' : nearest.verdict && /fail|not-solved/.test(nearest.verdict) ? '✕' : '*') : ''
-  const target = targetWords(metric)
+  // The bar with its unit (`bar 11–13 ms`); a long unit the value already shows (`cycles/s`) is left off so the row fits.
+  const target = metric.unit && metric.unit.length > 4 ? targetWords(metric)?.replace(` ${metric.unit}`, '') : targetWords(metric)
   // Only a comparable, passing value states its distance to the bar; a candidate that does not count says why instead.
   const gap = best ? gapWords(metric, best.value) : null
   const why = nearest ? candidateWords(nearest, mark) : null
