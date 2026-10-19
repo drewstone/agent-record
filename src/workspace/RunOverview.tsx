@@ -5,10 +5,12 @@ import remarkGfm from 'remark-gfm'
 import { FigureView, HBars, Meter } from '@tangle-network/charts/react'
 import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
-import type { RunCheck, RunDocument, RunProgress } from '../workspace.js'
+import type { RunCheck, RunDocument, RunProgress, Spend } from '../workspace.js'
+import { tokens as tokensText } from './data.js'
+import { checkerLabel } from './play-standing.js'
 import type { NodeStats } from './RunTable.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
-import { hoursText, tokensText, utcClock } from './run-receipt.js'
+import { hoursText, utcClock } from './run-receipt.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
 const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
@@ -21,7 +23,7 @@ export function RunOverview({ api, doc, open, print = false }: { api: string; do
   // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
   const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
   return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null}
-    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} />
+    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} tokens={doc.spend?.tokens ?? null} />
 }
 
 /**
@@ -42,35 +44,33 @@ const clock = (at: string) => `${at.slice(11, 16)} UTC`
 const shortAgent = (id: string | null, runId: string) => id === null ? 'agent' : id === runId ? 'root' : id.startsWith(`${runId}:`) ? id.slice(runId.length + 1) : id
 const checkerOf = (point: ScorePoint) => typeof point.checker === 'string' ? point.checker : point.checker?.sha256 ?? null
 
+/** A checker as the play page names it (v1..vN, the play's `checkers` the host copies to `check.checkerNames`). */
+const checkerWords = (check: RunCheck | null, digest: string | null) => (digest ? checkerLabel(check?.checkerNames, digest) : 'an unrecorded checker')
+
 /**
  * Where the run's passes stand when the current check does not pass (R1, R3): the version that passed, under which
- * checker and how often, from the Lab's per-checker score rows; else the time the check first passed. Null while the
- * current check passes or nothing ever passed.
+ * checker and how often, from the host's pass groups, else the Lab's score rows; else the time the check first passed.
+ * Null while the current check passes or nothing ever passed. Every pass counts: a score row recorded n times holds
+ * `count` n (18b's receipt said "under checker a3cf95c7 1×" for rc14's three passes under v3).
  */
-/** A checker as the play page names it (`v3 (referee ruling 10-18 19:48Z)`), else `checker <digest>`. */
-export function checkerName(check: RunCheck | null | undefined, digest: string | null | undefined) {
-  if (!digest) return 'an unrecorded checker'
-  const found = check?.checkerNames?.find((item) => digest.startsWith(item.sha256))
-  return found?.label ? `${found.label} (${found.ruling ?? 'as pressed'})` : `checker ${digest.slice(0, 8)}`
-}
-
 function earlierPasses(r: RunReceipt, outcome: Outcome | null, check: RunCheck | null) {
   if (outcome?.solved !== false) return null
-  // The host's passes count every solved row per tag and checker (rc14 under v3: 3×, 20:14–20:46), as the play page does.
+  const current = check?.checkerNames?.find((item) => item.current)
+  const lead = `Nothing passes the current check${current?.label ? ` (${current.label}, ${current.ruling ?? 'as pressed'})` : ''}`
+  const said = (tag: string | null, checker: string | null, count: number, firstAt: string, lastAt: string) =>
+    `${lead}; ${tag ?? 'a version'} passed under ${checkerWords(check, checker)} ${count}×, ${clock(firstAt)}${count > 1 && lastAt !== firstAt ? `–${clock(lastAt)}` : ''}`
   const group = check?.passes?.at(-1)
-  if (group) {
-    const current = check?.checkerNames?.find((item) => item.current)
-    return `Nothing passes the current check${current?.label ? ` (${current.label}, ${current.ruling ?? 'as pressed'})` : ''}; ${shortTag(group.tag) ?? 'a version'} passed ${checkerName(check, group.checker)} ${group.count}×, ${clock(group.firstAt)}${group.count > 1 ? `–${clock(group.lastAt)}` : ''}`
-  }
+  if (group) return said(shortTag(group.tag), group.checker, group.count, group.firstAt, group.lastAt)
   const passes = (r.system?.play?.scores ?? []).filter((point) => point.solved)
   const last = passes.at(-1)
   if (last) {
     const same = passes.filter((point) => point.tag === last.tag && checkerOf(point) === checkerOf(last))
-    const checker = checkerOf(last)
-    return `Nothing passes the current check; ${shortTag(last.tag) ?? last.commit?.slice(0, 8) ?? 'a version'} passed${checker ? ` under checker ${checker.slice(0, 8)}` : ''} ${same.length}×, ${clock(same[0]!.at)}${same.length > 1 ? `–${clock(last.at)}` : ''}`
+    const count = same.reduce((sum, point) => sum + (point.count ?? 1), 0)
+    const firstAt = same[0]!.firstAt ?? same[0]!.at
+    return said(shortTag(last.tag) ?? last.commit?.slice(0, 8) ?? null, checkerOf(last), count, firstAt, last.at)
   }
   const first = r.system?.play?.firstPassAt
-  return first ? `Nothing passes the current check; the check first passed at ${clock(first)}` : null
+  return first ? `${lead}; the check first passed at ${clock(first)}` : null
 }
 
 const RESOLVED: Record<string, string> = { passed: 'the check passed', released: 'its public stages passed and the tag was published', moved: 'a later stage failed instead' }
@@ -104,7 +104,7 @@ const GOAL_AUDIT = { consistent: 'goal audit consistent', contradiction: 'goal a
  * work regressing: each checker is named by the ruling that made it (the Lab's `play.rulings`), the y axis by the
  * check's own stage names, and the figure is drawn at its panel's width.
  */
-function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDelivery[], width: number) {
+function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDelivery[], width: number, check: RunCheck | null) {
   const digestOf = (point: ScorePoint) => (typeof point.checker === 'string' ? point.checker : (point.checker?.sha256 ?? null))
   const rulings = (((r.system?.play as { rulings?: unknown } | null | undefined)?.rulings ?? []) as Array<{ at?: string; by?: string; verdict?: string; newDigest?: string | null }>).filter((item) => item.verdict === 'upheld' && item.newDigest)
   const order: string[] = []
@@ -113,6 +113,9 @@ function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDeli
     if (!order.includes(digest)) order.push(digest)
   }
   const nameOf = (digest: string, index: number) => {
+    // The play page's name for the checker (v1..vN) when the host copies the play's checkers; else the ruling that made it.
+    const named = check?.checkerNames?.find((item) => item.sha256.length >= 8 && digest.startsWith(item.sha256))?.label
+    if (named) return named
     const ruling = rulings.find((item) => item.newDigest && digest.startsWith(item.newDigest.slice(0, 8)))
     return ruling ? `after the ${ruling.by ?? ''} ruling ${ruling.at ? clock(ruling.at) : ''}`.replace(/\s+/g, ' ').trim() : index === 0 ? 'check as pressed' : `checker ${index + 1}`
   }
@@ -129,7 +132,7 @@ function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDeli
     points: scores
       .filter((point) => (digestOf(point) ?? 'unrecorded') === digest)
       // A row recorded n times sits at its first time: the first time that checker scored that release.
-      .map((point) => ({ x: Date.parse(typeof point.firstAt === 'string' ? point.firstAt : point.at), y: point.solved ? 1 : point.progress!, ...(point.tag ? { label: shortTag(point.tag) ?? undefined } : {}) }))
+      .map((point) => ({ x: Date.parse(point.firstAt ?? point.at), y: point.solved ? 1 : point.progress!, ...(point.tag ? { label: shortTag(point.tag) ?? undefined } : {}) }))
       .sort((a, b) => a.x - b.x)
       .filter((point, i, list) => i === 0 || point.x > list[i - 1]!.x),
   })).filter((row) => row.points.length)
@@ -152,7 +155,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; 
   const contract = r.contract ?? []
   const disputes = outcome?.disputes ?? []
   if (!outcome && scores.length === 0 && contract.length === 0) return null
-  const figure = scores.length === 0 ? null : (width: number) => stageFigure(r, scores, contract, width)
+  const figure = scores.length === 0 ? null : (width: number) => stageFigure(r, scores, contract, width, check)
   // With no verdict, what the checks did say: 19b's 17 checks found no pushed release tag, which is not "pending".
   const checks = check?.counts?.checks ?? null
   const untagged = outcome?.solved === null || outcome?.solved === undefined ? (checks && check?.latest && !check.latest.tag ? check.latest : null) : null
@@ -181,7 +184,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; 
     {disputes.length > 0 && <><h3>Check disputes</h3><ol className="rr-contract" data-field="progress.outcome.disputes">{disputes.map((d, i) =>
       <li key={d.id ?? i} data-field={`progress.outcome.disputes.${i}`}>
         <code className="rr-contract-line">{d.line ?? '?'}</code>
-        <span>Disputed {d.at ? clock(d.at) : 'at an unrecorded time'}{d.id && <> as <code>{d.id}</code></>}</span>
+        <span>Disputed {d.at ? clock(d.at) : 'at an unrecorded time'}</span>
         <span data-field={`progress.outcome.disputes.${i}.state`}>{disputeState(d)}</span>
       </li>)}</ol></>}
     {figure && <div className="rr-chart" data-field="system.play.scores"><FigureView figure={figure} /></div>}
@@ -259,7 +262,8 @@ function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['
   </section>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean }) {
+/** `tokens` is the run's total from its record (every agent; the run document's `spend.tokens`), cache read apart. */
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, tokens = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; tokens?: Spend['tokens'] }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -330,12 +334,13 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
           {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}
           {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
         </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
-        {[r.work.recordedHours, r.work.agentHours, r.work.idleHours, r.work.untracedHours, r.work.tokens.fresh, r.work.tokens.cached, r.work.tokens.total, ...Object.values(r.waste.afterPass), ...Object.values(r.waste.verdictDelay)].some(recorded) && <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2>
+        {(tokens || [r.work.recordedHours, r.work.agentHours, r.work.idleHours, r.work.untracedHours, r.work.tokens.fresh, r.work.tokens.cached, r.work.tokens.total, ...Object.values(r.waste.afterPass), ...Object.values(r.waste.verdictDelay)].some(recorded)) && <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2>
           {recorded(r.work.recordedHours) && <div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: stuck ? 'Stuck (a turn open)' : 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>}
           <dl className="rr-facts rr-measures">
             <Fact label="Work" when={recorded(r.work.agentHours)}><Field path="work.agentHours" value={r.work.agentHours} format={hoursText} /></Fact>
             <Fact label={stuck ? 'Stuck (a turn open)' : 'Idle'} when={recorded(r.work.idleHours)}><Field path="work.idleHours" value={r.work.idleHours} format={hoursText} /></Fact>
             <Fact label="Untraced" when={recorded(r.work.untracedHours)}><Field path="work.untracedHours" value={r.work.untracedHours} format={hoursText} /></Fact>
+            <Fact label="Run tokens" when={!!tokens}><span data-run-tokens>{tokens && `${tokensText(tokens.input)} in · ${tokensText(tokens.output)} out · ${tokensText(tokens.cacheRead)} cache read`}</span></Fact>
             <Fact label="Fresh tokens" when={recorded(r.work.tokens.fresh)}><Field path="work.tokens.fresh" value={r.work.tokens.fresh} format={tokensText} /></Fact>
             <Fact label="Cached tokens" when={recorded(r.work.tokens.cached)}><Field path="work.tokens.cached" value={r.work.tokens.cached} format={tokensText} /></Fact>
             <Fact label="Total tokens" when={recorded(r.work.tokens.total)}><Field path="work.tokens.total" value={r.work.tokens.total} format={tokensText} /></Fact>

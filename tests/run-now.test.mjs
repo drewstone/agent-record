@@ -34,9 +34,10 @@ test('each check dispute shows under the outcome with its line and its ruling', 
     { id: '1f2e3d4c5b6a', at: '2026-10-18T02:30:00.000Z', line: 'NOT SOLVED: gamma.txt', state: 'open', ruledAt: null, by: null, attempts: 1 },
   ]
   const words = text(page({ ...passed, disputes }))
-  assert.match(words, /Check disputesNOT SOLVED: alpha\.txt must be at most 3 bytesDisputed 01:52 UTC as 0a1b2c3d4e5fUpheld by the referee at 02:10 UTC: the check is amended for this run/)
-  assert.match(words, /beta\.txt must be emptyDisputed 02:20 UTC as 6a7b8c9d0e1fAwaiting an operator ruling: the referee could not decide/)
+  assert.match(words, /Check disputesNOT SOLVED: alpha\.txt must be at most 3 bytesDisputed 01:52 UTCUpheld by the referee at 02:10 UTC: the check is amended for this run/)
+  assert.match(words, /beta\.txt must be emptyDisputed 02:20 UTCAwaiting an operator ruling: the referee could not decide/)
   assert.match(words, /Open: the referee outside the run is ruling \(1 attempt so far\)/)
+  for (const { id } of disputes) assert.ok(!words.includes(id), `no dispute digest ${id}`)
   assert.doesNotMatch(text(page(passed)), /Check disputes/)
 })
 

@@ -101,7 +101,7 @@ export const money = (value: number | null | undefined) =>
     ? 'unknown'
     : `$${value >= 100 ? value.toFixed(0) : value >= 1 ? value.toFixed(2) : value === 0 ? '0.00' : value.toFixed(value < 0.01 ? 4 : 2)}`
 export const tokens = (value: number | null | undefined) =>
-  value === null || value === undefined ? 'unknown' : new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+  value === null || value === undefined ? 'unknown' : new Intl.NumberFormat('en-US', { notation: 'compact', maximumSignificantDigits: 3 }).format(value)
 export const duration = (value: number | null | undefined) => {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—'
   if (value < 1000) return `${Math.round(value)} ms`

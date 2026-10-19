@@ -225,7 +225,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                   )}
                   {has.tries && <td className="num">{tries ? tries : <span className="faint">—</span>}</td>}
                   {has.best && (
-                    <td>
+                    <td className="ledger-best-cell">
                       <Best play={play} row={row} checks={checks.get(row.runId)} />
                     </td>
                   )}

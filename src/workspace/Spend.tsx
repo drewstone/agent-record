@@ -58,17 +58,16 @@ export function apiEquivalent(spend: SpendLike | null | undefined): { usd: numbe
 
 /**
  * What the spend was, kind by kind, and only the kinds that were read: API-equivalent dollars, subscription use at API
- * prices (not billed), model API and sandbox compute (billed). The unread kinds are named on one line, not drawn as
- * chips of "unknown" or a false "$0.00". `coverage` is a play's: how many of its runs the API-equivalent total prices.
+ * prices (not billed), model API and sandbox compute (billed). Unread kinds are not drawn: the Spend tab names them once
+ * for all agents (`SpendBars`), never as chips of "unknown" or a false "$0.00". `coverage` is a play's: how many of its
+ * runs the API-equivalent total prices. `agents` is a run's: how many of its agents the token total covers.
  */
-export function SpendSummary({ spend, compact = false, coverage }: { spend: Spend | null | undefined; compact?: boolean; coverage?: { usd: number | null; priced: number; runs: number } }) {
+export function SpendSummary({ spend, compact = false, coverage, agents }: { spend: Spend | null | undefined; compact?: boolean; coverage?: { usd: number | null; priced: number; runs: number }; agents?: { measured: number; total: number } }) {
   if (!spend) return <span className="spend-chip unknown">spend unknown</span>
   const subscription = knownSubscription(spend)
   const own = apiEquivalent(spend)
   const equivalent = coverage ? { usd: coverage.usd, partial: coverage.priced < coverage.runs } : own
   const showEquivalent = equivalent.usd !== null && (subscription === null || Math.abs(equivalent.usd - subscription) > 0.005)
-  const unread = [equivalent.usd === null && subscription === null && 'usage at API prices', spend.apiUsd === null && 'model API', spend.sandboxUsd === null && 'sandbox compute'].filter(Boolean)
-  const partialTokens = usageUnknown(spend)
   return (
     <span className={`spend-summary ${compact ? 'compact' : ''}`} data-spend>
       {showEquivalent && (
@@ -93,12 +92,11 @@ export function SpendSummary({ spend, compact = false, coverage }: { spend: Spen
           <b>{money(spend.sandboxUsd)}</b> sandbox compute · billed
         </span>
       )}
-      {unread.length > 0 && <span className="spend-split spend-unread">not recorded: {unread.join(', ')}</span>}
       {!compact && spend.costBasisUsd !== null && <span className="spend-split">sandbox cost basis {money(spend.costBasisUsd)}</span>}
       {!compact && spend.tokens && (
-        <span className="spend-split">
-          tokens in {tokens(spend.tokens.input)} · out {tokens(spend.tokens.output)} · cache read {tokens(spend.tokens.cacheRead)}
-          {partialTokens && <em className="not-known"> partial: some agents&rsquo; usage is unknown</em>}
+        <span className="spend-split" data-run-tokens>
+          tokens in <b>{tokens(spend.tokens.input)}</b> · out <b>{tokens(spend.tokens.output)}</b> · cache read <b>{tokens(spend.tokens.cacheRead)}</b>
+          {agents && (agents.measured < agents.total ? <em className="not-known"> {agents.measured} of {agents.total} agents measured</em> : ` across ${agents.total} agents`)}
         </span>
       )}
     </span>
@@ -107,22 +105,32 @@ export function SpendSummary({ spend, compact = false, coverage }: { spend: Spen
 
 type Row = { label: string; subscription: number | null; api: number | null; sandbox: number | null; subscriptionKnown?: boolean; note?: string; href?: string }
 
-/** A dollar figure with its certainty: unknown stays a word, a partial figure says so. */
-function Amount({ value, known, what }: { value: number | null; known: boolean | undefined; what: string }) {
-  if (value === null) return <span className="unknown">unknown <small>{what}</small></span>
-  return (
-    <span>
-      {money(value)} <small>{what}</small>
-      {known === false && <small className="spend-note"> not fully known</small>}
-    </span>
-  )
+const KINDS = [['subscription', 'subscription use'], ['api', 'model API'], ['sandbox', 'sandbox compute']] as const
+
+/**
+ * The kinds no row measured, said once: `Not measured: subscription use, model API and sandbox compute for 15 of 15
+ * agents`. 18b's Spend tab printed "unknown" three times on each of its 16 rows instead. A kind counts for a row only
+ * when that row has no reading of it at all; a partial reading is a value and says so on its row.
+ */
+function unmeasuredLine(rows: readonly Row[], noun: string): string | null {
+  const groups = new Map<number, string[]>()
+  for (const [key, label] of KINDS) {
+    const count = rows.filter((row) => row[key] === null).length
+    if (count) groups.set(count, [...(groups.get(count) ?? []), label])
+  }
+  if (!groups.size) return null
+  const list = (words: string[]) => (words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words.at(-1)}` : words[0])
+  return `Not measured: ${[...groups.entries()].sort((a, b) => b[0] - a[0]).map(([count, words]) => `${list(words)} for ${count} of ${rows.length} ${noun}`).join('; ')}.`
 }
 
-/** Three cost kinds; missing measurements stay visible. */
-export function SpendBars({ rows, onOpen }: { rows: Row[]; onOpen?: (row: Row) => void }) {
+/** Three cost kinds, each row only what it measured; `unmeasured` names the row noun for the one line that says what was not. */
+export function SpendBars({ rows, onOpen, unmeasured }: { rows: Row[]; onOpen?: (row: Row) => void; unmeasured?: string }) {
   const max = Math.max(1e-9, ...rows.map((row) => (row.subscription ?? 0) + (row.api ?? 0) + (row.sandbox ?? 0)))
   if (!rows.length) return <p className="chat-empty">No spend is recorded.</p>
+  const missing = unmeasured ? unmeasuredLine(rows, unmeasured) : null
   return (
+    <>
+    {missing && <p className="faint spend-unmeasured" data-spend-unmeasured>{missing}</p>}
     <div className="spend-bars" role="table">
       {rows.map((row) => {
         const unknown = row.subscription === null && row.api === null && row.sandbox === null
@@ -143,23 +151,28 @@ export function SpendBars({ rows, onOpen }: { rows: Row[]; onOpen?: (row: Row) =
             <span className="spend-label" role="cell" title={row.label}>{row.label}</span>
             <span className="spend-track" role="cell">
               {unknown ? (
-                <i className="bar unknown" style={{ width: '100%' }} title="unknown" />
+                <i className="bar unknown" style={{ width: '100%' }} title="not measured" />
               ) : (
                 <>
-                  <i className={`bar subscription ${row.subscription === null ? 'unknown' : ''}`} style={{ width: `${row.subscription === null ? 8 : (row.subscription / max) * 100}%` }} title={`subscription use ${money(row.subscription)} at API prices, not billed`} />
-                  <i className={`bar api ${row.api === null ? 'unknown' : ''}`} style={{ width: `${row.api === null ? 8 : (row.api / max) * 100}%` }} title={`model API ${money(row.api)}, billed`} />
-                  <i className={`bar sandbox ${row.sandbox === null ? 'unknown' : ''}`} style={{ width: `${row.sandbox === null ? 8 : (row.sandbox / max) * 100}%` }} title={`sandbox compute ${money(row.sandbox)}, billed`} />
+                  {row.subscription !== null && <i className="bar subscription" style={{ width: `${(row.subscription / max) * 100}%` }} title={`subscription use ${money(row.subscription)} at API prices, not billed`} />}
+                  {row.api !== null && <i className="bar api" style={{ width: `${(row.api / max) * 100}%` }} title={`model API ${money(row.api)}, billed`} />}
+                  {row.sandbox !== null && <i className="bar sandbox" style={{ width: `${(row.sandbox / max) * 100}%` }} title={`sandbox compute ${money(row.sandbox)}, billed`} />}
                 </>
               )}
             </span>
             <span className="spend-value" role="cell">
-              <Amount value={row.subscription} known={row.subscriptionKnown} what="subscription" /> · <Amount value={row.api} known={undefined} what="API" /> · <Amount value={row.sandbox} known={undefined} what="sandbox" />
-              {row.note && <small className="spend-note"> {row.note}</small>}
+              {[
+                row.subscription !== null && <span key="subscription">{money(row.subscription)} <small>subscription</small>{row.subscriptionKnown === false && <small className="spend-note"> not fully known</small>}</span>,
+                row.api !== null && <span key="api">{money(row.api)} <small>API</small></span>,
+                row.sandbox !== null && <span key="sandbox">{money(row.sandbox)} <small>sandbox</small></span>,
+              ].filter(Boolean).flatMap((item, i) => (i ? [' · ', item] : [item]))}
+              {row.note ? <small className="spend-note"> {row.note}</small> : unknown && <span className="faint">—</span>}
             </span>
           </div>
         )
       })}
     </div>
+    </>
   )
 }
 
@@ -219,7 +232,7 @@ export function NodeSpendPanel({ spend, listFromRecord }: { spend: NodeSpend | u
     <div className="node-spend" data-node-spend>
       <SpendSummary spend={spend} />
       <dl className="kv">
-        <div><dt>Account</dt><dd>{spend.account.kind}</dd></div>
+        {spend.account.kind !== 'unknown' && <div><dt>Account</dt><dd>{spend.account.kind}</dd></div>}
         {limit && (
           <div>
             <dt>Rate limit</dt>

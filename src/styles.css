@@ -3481,8 +3481,12 @@
 .ar-ws .outcome-legend li { display: inline-flex; align-items: center; gap: 5px; }
 .ar-ws .outcome-legend i { width: 10px; height: 10px; border-radius: 2px; }
 .ar-ws .outcome-open { background: var(--ws-hatch) !important; box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
-.ar-ws .ledger-table td, .ar-ws .ledger-table th { padding-top: 4px; padding-bottom: 4px; white-space: nowrap; vertical-align: middle; }
-.ar-ws .ledger-table .ledger-bar { width: 22%; min-width: 150px; }
+/* Every column fits at 1440 (the full ledger was 1879 px in a 1342 px box): headers and the best check's words wrap,
+   the bars give way first; below 700 px the table scrolls in its own box. */
+.ar-ws .ledger-table td, .ar-ws .ledger-table th { padding: 4px 8px; white-space: nowrap; vertical-align: middle; }
+.ar-ws .ledger-table th, .ar-ws .ledger-table td.ledger-best-cell { white-space: normal; }
+.ar-ws .ledger-table td.ledger-best-cell { min-width: 12em; }
+.ar-ws .ledger-table .ledger-bar { width: 22%; min-width: 100px; }
 .ar-ws .outcome-bar, .ar-ws .wall-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .ar-ws .outcome-track, .ar-ws .wall-track { display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--ws-raised); }
 .ar-ws .outcome-track i, .ar-ws .wall-track i { display: block; height: 100%; min-width: 1px; }

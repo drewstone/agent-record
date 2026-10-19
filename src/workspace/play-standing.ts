@@ -488,9 +488,10 @@ export const ENDING_GLYPH: Record<string, string> = { solved: '✓', died: '✕'
 export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'withheld by the gate', superseded: 'superseded', unknown: 'state unknown' }
 
 /** A checker's display label, found by digest or by label; null digests read "checker unrecorded". */
-export function checkerLabel(checkers: readonly PlayChecker[] | undefined, id: string | null | undefined): string {
+export function checkerLabel(checkers: readonly { sha256: string; label?: string | null }[] | undefined, id: string | null | undefined): string {
   if (!id) return 'checker unrecorded'
-  const found = checkers?.find((item) => item.sha256 === id || item.label === id || item.sha256.startsWith(id))
+  // A run's `check.checkerNames` holds 12-hex prefixes of the play's digests; a score row names the full digest.
+  const found = checkers?.find((item) => item.sha256 === id || item.label === id || item.sha256.startsWith(id) || (item.sha256.length >= 8 && id.startsWith(item.sha256)))
   return found?.label ?? `checker ${id.slice(0, 8)}`
 }
 

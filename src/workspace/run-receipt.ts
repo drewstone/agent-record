@@ -25,7 +25,9 @@ const scorePointSchema = z.object({
   at: z.string(), tag: nullableText, commit: nullableText, solved: z.boolean(), progress: nullableNumber.optional(), gate: z.string().optional(), settle: z.boolean().optional(),
   /** The checker that scored it (discovery-lab runner/scorecard.mjs keys a score by tag and checker): its SHA-256, or {sha256}. */
   checker: z.union([z.string(), z.object({ sha256: nullableText }).catchall(z.unknown())]).nullable().optional(),
-  score: z.object({ stage: nullableText.optional(), reached: z.number(), of: z.number(), hidden: z.boolean().optional(), workloads: z.object({ passed: z.number(), total: z.number() }).optional() }).catchall(z.unknown()).optional(),
+  score: z.object({ stage: nullableText.optional(), reached: z.number(), of: z.number(), hidden: z.boolean().optional(), workloads: z.object({ passed: z.number(), total: z.number() }).optional() }).catchall(z.unknown()).nullable().optional(),
+  /** How many times the Lab recorded this row (same tag, checker and verdict), from `firstAt` to `at`. */
+  count: z.number().int().positive().optional(), firstAt: z.string().optional(),
 }).catchall(z.unknown())
 const contractDeliverySchema = z.object({
   at: z.string(), line: z.string(), tag: nullableText, commit: nullableText, targets: z.array(z.string()), resolvedAt: nullableText, resolution: nullableText,
@@ -71,5 +73,4 @@ export const runReceiptSchema = z.object({
 }).catchall(z.unknown())
 export type RunReceipt = z.infer<typeof runReceiptSchema>
 export const hoursText = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)} h`
-export const tokensText = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value)
 export const utcClock = (value: string) => `${value.replace('T', ' ').replace(/\.\d+Z$/, ' UTC')}`

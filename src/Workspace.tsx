@@ -1543,12 +1543,17 @@ function RunPanels({
   if (section === 'assessments')
     return <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => update({ dim: dimension }, true)} onCite={cite} />
   if (section === 'coverage') return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
+  const agents = index.actors.filter((item) => item.kind !== 'finding')
+  // The run's total is the record's tree rollup (`spend.tokens`); 18b's tab showed only the root's 50.2M of 62.5M in.
+  const measured = agents.filter((item) => doc.spend.nodes[item.id]?.tokens || stats[item.id]?.tokens).length
   return (
     <div className="spend-tab">
+      <h3>This run</h3>
+      <SpendSummary spend={doc.spend} agents={{ measured, total: agents.length }} />
       <h3>Agents in this run</h3>
       <SpendBars
-        rows={index.actors
-          .filter((item) => item.kind !== 'finding')
+        unmeasured="agents"
+        rows={agents
           .map((item) => {
             const spend = doc.spend.nodes[item.id]
             const equivalent = apiEquivalent(spend)
@@ -1659,5 +1664,6 @@ function ReceiptPage({ api, id }: { api: string; id: string }) {
   // verdict the receipt's own check recorded.
   const run = useDocument<RunDocument>(`${api}/runs/${encodeURIComponent(runId!)}`)
   if (!doc.data) return <p role="status">{doc.error ?? 'Loading receipt…'}</p>
-  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} /></div>
+  // The run document's check names the checkers as the play page does and counts every pass (v3 3×, not a3cf95c7 1×).
+  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} check={run.data?.run.check ?? null} tokens={run.data?.spend.tokens ?? null} /></div>
 }
