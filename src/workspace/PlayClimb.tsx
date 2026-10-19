@@ -379,6 +379,19 @@ function ClimbBrush({ play, climb, extent, window, onWindow }: { play: Play; cli
     event.preventDefault()
   }
   const ticks = useMemo(() => timedRows(climb).map((row) => ({ x: ms(row.firstAt)!, verdict: row.verdict })), [climb])
+  // A run that starts within 4% of the strip after the last labelled one keeps its band and hover but no label:
+  // 16a, 16b and 16d started minutes apart and their names printed over each other.
+  const labelled = useMemo(() => {
+    let last = -Infinity
+    return climb.groups
+      .filter((group) => ms(group.from) !== undefined)
+      .map((group) => {
+        const x = (ms(group.from)! - lo) / (hi - lo)
+        const show = x - last >= 0.04
+        if (show) last = x
+        return { group, label: show ? shortRun(play.id, group.runId) || group.label : null }
+      })
+  }, [climb, lo, hi, play.id])
   return (
     <div className="climb-brush-wrap">
       <div className="climb-brush-runs" role="group" aria-label="Zoom to a run">
@@ -427,9 +440,9 @@ function ClimbBrush({ play, climb, extent, window, onWindow }: { play: Play; cli
           }
         }}
       >
-        {climb.groups.filter((group) => ms(group.from) !== undefined).map((group) => (
-          <span key={group.runId} className="climb-brush-run" style={{ left: at(ms(group.from)!), width: `calc(${at(ms(group.to) ?? hi)} - ${at(ms(group.from)!)})` }}>
-            <b>{shortRun(play.id, group.runId) || group.label}</b>
+        {labelled.map(({ group, label }) => (
+          <span key={group.runId} className="climb-brush-run" style={{ left: at(ms(group.from)!), width: `calc(${at(ms(group.to) ?? hi)} - ${at(ms(group.from)!)})` }} title={`${shortRun(play.id, group.runId) || group.label} · ${runSpan(group.from, group.to)}`}>
+            {label && <b>{label}</b>}
           </span>
         ))}
         {ticks.map((tick, i) => (
