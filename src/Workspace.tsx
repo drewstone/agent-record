@@ -6,6 +6,7 @@ import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
+import { BeadString } from './workspace/BeadString.js'
 import { ExplorePage } from './workspace/Explore.js'
 import { PlayHeader } from './workspace/PlayHead.js'
 import { PlayAgainstBar, PlayClimb } from './workspace/PlayClimb.js'
@@ -1215,6 +1216,12 @@ function RunBody({
   const live = !!doc.live.polling && (!node?.status || /^(running|pending|active|live|started|spawned|paused|waiting)$/i.test(node.status))
   const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
   const flags = useMemo(() => flagsFrom(assessments?.rows ?? [], catalogue), [assessments, catalogue])
+  // This agent's lane in the run receipt's timeline (its attempts and spans), named by the node id after the run id.
+  const lane = useMemo(() => {
+    const lanes = doc.receipt?.timeline?.lanes ?? []
+    const local = actor.startsWith(`${runId}:`) ? actor.slice(runId.length + 1) : actor === runId ? 'root' : actor
+    return lanes.find((item) => item.id === local) ?? null
+  }, [doc.receipt, actor, runId])
   const latest = useRef({ cutoff, index, update })
   latest.current = { cutoff, index, update }
 
@@ -1356,6 +1363,18 @@ function RunBody({
             Full time
           </button>
         </div>
+        {lane && (
+          <BeadString
+            lane={lane}
+            start={index.start}
+            end={index.end}
+            cutoff={cutoff}
+            onSeek={(iso) => {
+              setPlaying(false)
+              select({ t: iso, tab: undefined }, true)
+            }}
+          />
+        )}
         <Tabs label="Agent record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={AGENT_TABS} />
         <div className="ws-panel-body" role="tabpanel">
           {tab === 'messages' && empty && <EmptyAgent index={index} actor={actor} onSelect={selectNode} />}
