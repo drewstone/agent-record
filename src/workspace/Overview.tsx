@@ -2,7 +2,8 @@ import { useState, type ReactNode } from 'react'
 import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
 import { useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
-import { bytes, ChartCard, compact, DayBars, Histogram, HBars, Legend, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
+import { ENDING_COLORS, ENDING_ORDER } from '@tangle-network/charts'
+import { byEnding, bytes, ChartCard, compact, DayBars, ENDING_OF_STATE, Histogram, HBars, Legend, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
 
 // Five ranked causes plus "other". The six fixed slots passed the categorical validator on #16181f.
 const LOSS_COLOR = [...SERIES, '#b97637']
@@ -170,6 +171,8 @@ export function OverviewPage({ api }: { api: string }) {
         <figure className="ov-card ov-now-runs" aria-label="Running now">
           <figcaption>
             <span className="ov-card-title">Running now</span>
+            {/* A copy served while the overview recomposes says when it was composed; its running runs are read now. */}
+            {doc.stale && <span className="ov-stale" data-stale>as of {d.composedAt.slice(11, 16)}Z · refreshing</span>}
             <span className="ov-card-sub">
               {running.length} running · {state.queued} queued
               {/* An unread census is left out rather than printed as "— (unknown)"; a census read earlier says how old it is. */}
@@ -214,7 +217,7 @@ export function OverviewPage({ api }: { api: string }) {
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
           <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims{week.some((play) => play.findingsPending) ? ' · findings incomplete' : ''}</span>
         </div>
-        <Legend items={Object.keys(STATE_COLOR).filter((s) => s !== 'running' || running.length).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, hollow: HOLLOW.has(s) }))} />
+        <Legend items={[...ENDING_ORDER.filter((ending) => Object.values(ENDING_OF_STATE).includes(ending) && (ending !== 'live' || running.length)).map((ending) => ({ name: ending, color: ENDING_COLORS[ending] })), { name: 'unknown', color: STATE_COLOR.unknown!, hollow: true }]} />
         <div className="ov-card ov-week">
           {week.length ? (
             <ol>
@@ -259,8 +262,8 @@ export function OverviewPage({ api }: { api: string }) {
           <span className="ov-loss-total-scope">{d.runs.scope ?? 'All indexed and current live runs started in the last 30 UTC days'}</span>
         </div>
         <div className="ov-run-trends">
-          <ChartCard title="Runs started per day, by how they ended" values={Object.values(runsByDay).flat()} legend={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]! }))}>
-            <DayBars days={days} series={Object.keys(STATE_COLOR).filter((s) => sumOf(runsByDay[s])).map((s) => ({ name: label(s), color: STATE_COLOR[s]!, values: runsByDay[s] ?? [] }))} />
+          <ChartCard title="Runs started per day, by how they ended" values={Object.values(runsByDay).flat()} legend={byEnding(runsByDay).map(({ name, color }) => ({ name, color }))}>
+            <DayBars days={days} series={byEnding(runsByDay)} />
           </ChartCard>
           <ChartCard title="Agent-hours lost per day, by cause" values={lostByDay.flatMap((cause) => cause.values)} legend={lostByDay.map(({ name, color }) => ({ name, color }))} note={`Top five causes over ${range} days, plus other. Grouped by the day each run started.`}>
             <DayBars days={days} series={lostByDay} format={hours} />

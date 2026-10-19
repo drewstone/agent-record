@@ -1,25 +1,42 @@
 import type { ReactNode } from 'react'
+import { ENDING_COLORS, ENDING_ORDER, type RunEnding } from '@tangle-network/charts'
 import { LIVE_SERIES, formatCompact } from '@tangle-network/charts/react'
 export { DayBars, HBars, Histogram, Lines, Meter, Spark, Gantt } from '@tangle-network/charts/react'
 
-// The shared chart palette supplies categorical slots; run states keep their semantic colors here.
+// The shared chart palette supplies categorical slots; run states take the one ending palette every view shares.
 export const SERIES = LIVE_SERIES
-// Run states are labelled status categories. This order passed the categorical validator on the Discovery dark
-// surface (#16181f): adjacent CVD separation >= 13.5, normal-vision separation >= 20.9, contrast >= 3:1.
-// Keeping failed blue and driver-failed red also separates the two outcomes when they dominate a day.
+/**
+ * A catalog state as the ending word every page shows (@tangle-network/charts ENDING_ORDER): green, red and amber mean
+ * solved, died and stalled on the overview, the play page and the explorer alike. A state with no ending (no record,
+ * unknown) draws hollow in the neutral grey.
+ */
+export const ENDING_OF_STATE: Record<string, RunEnding> = {
+  winner: 'solved',
+  'no-winner': 'not solved',
+  'driver-failed': 'died',
+  failed: 'died',
+  stalled: 'stalled',
+  running: 'live',
+  // Ended unsettled with its coordinator gone (often stopped to be forked): cancelled, not a failure.
+  abandoned: 'cancelled',
+  cancelled: 'cancelled',
+}
 export const STATE_COLOR: Record<string, string> = {
-  'driver-failed': '#e26868',
-  running: '#8b7cf6',
-  winner: '#0ea5a0',
-  'no-winner': '#c98500',
-  // No agent live and nothing streamed: the run stopped moving (then cancelled). Beside no-winner it passed adjacent CVD
-  // 14.8 and normal 15.8 on #16181f; it is a known ending, so it draws filled.
-  stalled: '#e0c25a',
-  'no-record': '#e2508f',
-  failed: '#4a90e2',
-  // Ended unsettled with its coordinator gone (often stopped to be forked): a neutral, not a failure colour.
-  abandoned: '#8e8e8e',
-  unknown: '#b97637',
+  ...Object.fromEntries(Object.entries(ENDING_OF_STATE).map(([state, ending]) => [state, ENDING_COLORS[ending]])),
+  'no-record': 'var(--chart-outcome-other)',
+  unknown: 'var(--chart-outcome-other)',
+}
+/** Per-day counts by state folded into the ending words, in ENDING_ORDER; states without an ending are `unknown`. */
+export function byEnding(byState: Record<string, (number | null)[]>): Array<{ name: string; color: string; values: (number | null)[] }> {
+  const sums = new Map<string, (number | null)[]>()
+  for (const [state, values] of Object.entries(byState)) {
+    const ending = ENDING_OF_STATE[state] ?? 'unknown'
+    const prior = sums.get(ending)
+    sums.set(ending, prior ? prior.map((value, i) => (value ?? 0) + (values[i] ?? 0)) : [...values])
+  }
+  return [...ENDING_ORDER, 'unknown' as const]
+    .filter((ending) => (sums.get(ending) ?? []).some((value) => (value ?? 0) > 0))
+    .map((ending) => ({ name: ending, color: ending === 'unknown' ? 'var(--chart-outcome-other)' : ENDING_COLORS[ending], values: sums.get(ending)! }))
 }
 
 export const compact = formatCompact

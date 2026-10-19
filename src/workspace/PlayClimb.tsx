@@ -37,53 +37,72 @@ const runSpan = (from: string | null | undefined, to: string | null | undefined)
   return a && b ? (a.slice(0, 5) === b.slice(0, 5) ? `${a.slice(0, 11)}–${b.slice(6)}` : `${a}–${b}`) : (a ?? '')
 }
 
+/** A column's axis label: its tag, or the span of releases the gate only superseded (`rc8–12`). */
+const columnLabel = (column: Climb['columns'][number]) =>
+  column.tags && column.tags.length > 1 ? `${shortTag(column.tags[0]) ?? ''}–${(shortTag(column.tags.at(-1)) ?? '').replace(/^rc/, '')}` : (shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'))
+
 /**
- * The release axis the climb and the bar panels share: one column per checked release, in time order, grouped by run.
- * A run group with no column yet (a live run with no tag) keeps a narrow empty column, so the group is still drawn.
+ * The release axis the climb and the bar panels share: one column per checked release, in tag order, grouped by run.
+ * A run group with no column (a live run with no tag, or a run whose checks found none) keeps a narrow empty column, so
+ * every run with a check row is on the axis.
  */
 export function releaseAxis(play: Play, climb: Climb) {
   const columns = [...climb.columns].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.at ?? '').localeCompare(String(b.at ?? '')))
   const index = new Map<string, number>()
   const categories: XCategory[] = []
   const runOf: string[] = []
+  const bands: ChartBand[] = []
   const groups = climb.groups
+  const glyphOf = (group: Climb['groups'][number]) => group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
+  const runName = (group: Climb['groups'][number]) => shortRun(play.id, group.runId) || group.label
+  // Runs with check rows but no checked release (16a-17b, 19a-19b on magnetar-rust) fold into one narrow column each
+  // stretch, so the axis names every run without a bracket per run too narrow to read; the hover lists each one.
+  let empty: Climb['groups'] = []
+  const flush = () => {
+    if (!empty.length) return
+    const at = categories.length
+    categories.push({ at, label: '', weight: empty.length === 1 ? 1.2 : 1.6 })
+    // One run per category: the folded column stands under its first run's id.
+    runOf.push(empty[0]!.runId)
+    const each = empty.map((group) => [`${glyphOf(group)} ${runName(group)}`.trim(), (group.untagged ?? group.noTag) ? `${group.untagged ?? group.noTag} untagged` : null, group.note].filter(Boolean).join(' '))
+    const label = empty.length === 1 ? each[0]! : `${runName(empty[0]!)}–${runName(empty.at(-1)!)} · ${empty.length} runs, no checked release: ${each.join('; ')}`
+    bands.push({ from: at, to: at, label, kind: 'group' })
+    empty = []
+  }
   // Columns are drawn group by group, oldest group first, so a run's releases stay together.
   for (const group of groups) {
     const own = columns.filter((column) => column.runId === group.runId)
     if (!own.length) {
-      categories.push({ at: categories.length, label: '', weight: 0.3 })
-      runOf.push(group.runId)
+      empty.push(group)
       continue
     }
+    flush()
+    const from = categories.length
     for (const column of own) {
       index.set(column.id, categories.length)
-      categories.push({ at: categories.length, label: shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'), weight: column.weight ?? 1 })
+      categories.push({ at: categories.length, label: columnLabel(column), weight: column.weight ?? 1 })
       runOf.push(group.runId)
     }
-  }
-  for (const column of columns) {
-    if (index.has(column.id)) continue
-    index.set(column.id, categories.length)
-    categories.push({ at: categories.length, label: shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'), weight: column.weight ?? 1 })
-    runOf.push(column.runId)
-  }
-  const domain: [number, number] = [0, Math.max(1, categories.length - 1)]
-  const bands: ChartBand[] = groups.flatMap((group) => {
-    const at = runOf.flatMap((run, i) => (run === group.runId ? [i] : []))
-    if (!at.length) return []
-    const glyph = group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
     // A run that only scored its untagged workspace has no tag counts to state.
     const tagged = Boolean(group.checked || group.published)
     const counts = [
       tagged && group.checked !== null && group.checked !== undefined ? `${group.checked} checked` : null,
       tagged && group.published !== null && group.published !== undefined ? `${group.published} published` : null,
       group.withheld ? `${group.withheld} withheld` : null,
-      group.noTag ? `${group.noTag} untagged` : null,
+      (group.untagged ?? group.noTag) ? `${group.untagged ?? group.noTag} untagged` : null,
     ].filter(Boolean)
     const lineage = group.lineage?.kind === 'fork' && group.lineage.parentRun ? `forked from ${shortRun(play.id, group.lineage.parentRun)}${group.lineage.parentTag ? `@${shortTag(group.lineage.parentTag)}` : ''}` : group.lineage?.kind === 'wrong-base' ? `wrong base ${group.lineage.why ?? ''}` : null
-    const label = [`${glyph ? `${glyph} ` : ''}${shortRun(play.id, group.runId) || group.label}`, ...counts, lineage, group.unscored ? 'no score line' : null, runSpan(group.from, group.to)].filter(Boolean).join(' · ')
-    return [{ from: at[0]!, to: at.at(-1)!, label, kind: 'group' as const }]
-  })
+    const label = [`${glyphOf(group) ? `${glyphOf(group)} ` : ''}${runName(group)}`, ...counts, lineage, group.unscored ? 'no score line' : null, runSpan(group.from, group.to)].filter(Boolean).join(' · ')
+    bands.push({ from, to: categories.length - 1, label, kind: 'group' })
+  }
+  flush()
+  for (const column of columns) {
+    if (index.has(column.id)) continue
+    index.set(column.id, categories.length)
+    categories.push({ at: categories.length, label: columnLabel(column), weight: column.weight ?? 1 })
+    runOf.push(column.runId)
+  }
+  const domain: [number, number] = [0, Math.max(1, categories.length - 1)]
   return { index, categories, domain, bands, runOf }
 }
 
@@ -160,6 +179,7 @@ function climbFigure(play: Play, climb: Climb, width: number) {
     if (x === undefined || x >= axis.categories.length - 1) continue
     marks.push({ at: x + 0.5, label: `${gap.hours >= 10 ? Math.round(gap.hours) : gap.hours.toFixed(1)} h`, kind: 'event', source: 'gap' })
   }
+  const rulingMarks: ChartMark[] = []
   for (const ruling of climb.rulings ?? []) {
     // A ruling sits at the first column its new checker scored; a rejected ruling at the column checked just before it.
     const to = ruling.checkerTo
@@ -174,7 +194,14 @@ function climbFigure(play: Play, climb: Climb, width: number) {
     const clock = utc(ruling.at)?.slice(6) ?? ''
     // The mark's source names who ruled; the label says what changed and when.
     const label = ruling.verdict === 'rejected' ? `check stands ${clock}` : `${to ? checkerLabel(play.checkers, to) : 'new check'} ${clock}`
-    marks.push({ at: x, label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
+    rulingMarks.push({ at: x, label, kind: 'ruling', ...(ruling.by ? { source: ruling.by } : {}) })
+  }
+  // Rulings that land on one release each keep their own rule, spread across the column in time order: v3's referee
+  // ruling (19:48Z) and v4's operator amendment (20:52Z) both first scored rc14.
+  for (const mark of rulingMarks) {
+    const same = rulingMarks.filter((other) => other.at === mark.at)
+    const k = same.indexOf(mark)
+    marks.push(same.length > 1 ? { ...mark, at: mark.at + (k - (same.length - 1) / 2) * (0.6 / same.length) } : mark)
   }
   const lines = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: item.label.toUpperCase() } : item))
   // A check without stages scores pass or fail: name the floor too, or the plot reads as one line of SOLVED.

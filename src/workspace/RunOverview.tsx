@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm'
 import { FigureView, HBars, Meter } from '@tangle-network/charts/react'
 import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
-import type { RunDocument, RunProgress } from '../workspace.js'
+import type { RunCheck, RunDocument, RunProgress } from '../workspace.js'
 import type { NodeStats } from './RunTable.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
@@ -18,7 +18,10 @@ export function RunOverview({ api, doc, open, print = false }: { api: string; do
   const r = doc.receipt
   if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p></section>
   const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} />
+  // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
+  const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
+  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null}
+    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} />
 }
 
 /**
@@ -44,8 +47,21 @@ const checkerOf = (point: ScorePoint) => typeof point.checker === 'string' ? poi
  * checker and how often, from the Lab's per-checker score rows; else the time the check first passed. Null while the
  * current check passes or nothing ever passed.
  */
-function earlierPasses(r: RunReceipt, outcome: Outcome | null) {
+/** A checker as the play page names it (`v3 (referee ruling 10-18 19:48Z)`), else `checker <digest>`. */
+export function checkerName(check: RunCheck | null | undefined, digest: string | null | undefined) {
+  if (!digest) return 'an unrecorded checker'
+  const found = check?.checkerNames?.find((item) => digest.startsWith(item.sha256))
+  return found?.label ? `${found.label} (${found.ruling ?? 'as pressed'})` : `checker ${digest.slice(0, 8)}`
+}
+
+function earlierPasses(r: RunReceipt, outcome: Outcome | null, check: RunCheck | null) {
   if (outcome?.solved !== false) return null
+  // The host's passes count every solved row per tag and checker (rc14 under v3: 3×, 20:14–20:46), as the play page does.
+  const group = check?.passes?.at(-1)
+  if (group) {
+    const current = check?.checkerNames?.find((item) => item.current)
+    return `Nothing passes the current check${current?.label ? ` (${current.label}, ${current.ruling ?? 'as pressed'})` : ''}; ${shortTag(group.tag) ?? 'a version'} passed ${checkerName(check, group.checker)} ${group.count}×, ${clock(group.firstAt)}${group.count > 1 ? `–${clock(group.lastAt)}` : ''}`
+  }
   const passes = (r.system?.play?.scores ?? []).filter((point) => point.solved)
   const last = passes.at(-1)
   if (last) {
@@ -131,21 +147,25 @@ function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDeli
   })
 }
 
-function RunNow({ receipt: r, outcome, settled }: { receipt: RunReceipt; outcome: Outcome | null; settled: boolean }) {
+function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; outcome: Outcome | null; settled: boolean; check: RunCheck | null }) {
   const scores = (r.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
   const contract = r.contract ?? []
   const disputes = outcome?.disputes ?? []
   if (!outcome && scores.length === 0 && contract.length === 0) return null
   const figure = scores.length === 0 ? null : (width: number) => stageFigure(r, scores, contract, width)
-  const verdict = outcome?.solvedLabel ?? (outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : 'No check verdict yet')
+  // With no verdict, what the checks did say: 19b's 17 checks found no pushed release tag, which is not "pending".
+  const checks = check?.counts?.checks ?? null
+  const untagged = outcome?.solved === null || outcome?.solved === undefined ? (checks && check?.latest && !check.latest.tag ? check.latest : null) : null
+  const verdict = outcome?.solvedLabel ?? (outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet')
   const audit = outcome?.goalAudit ?? null
   const tone = audit?.verdict === 'unaudited' ? 'unaudited' : outcome?.solved === true ? 'passed' : outcome?.solved === false ? 'failing' : 'unknown'
-  const passes = earlierPasses(r, outcome)
+  const passes = earlierPasses(r, outcome, check)
   return <section className="rr-now" aria-labelledby="rr-now-title" data-section="now">
     <h2 id="rr-now-title">Now</h2>
     {outcome && <p className={`rr-now-verdict rr-now-${tone}`} data-field="progress.outcome.solved">
       <strong data-field="progress.outcome.solvedLabel">{verdict}</strong>
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
+      {untagged?.line && <span data-field="run.check.latest"> · newest {untagged.at ? clock(untagged.at) : ''}: {untagged.line}</span>}
       {audit?.verdict && <span data-field="progress.outcome.goalAudit"> · {GOAL_AUDIT[audit.verdict]}{audit.at && ` ${audit.verdict === 'unaudited' ? 'last tried' : 'at'} ${clock(audit.at)}`}</span>}
       {/* A settled run's last stream is a time, not an age that froze when its progress was last written (B6). */}
       {settled ? outcome.lastStreamAt && <span data-field="progress.outcome.lastStreamAt"> · last agent stream {clock(outcome.lastStreamAt)}</span>
@@ -239,7 +259,7 @@ function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['
   </section>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing'] }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -292,7 +312,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{quota && <span data-field="system.attempts.causes">{quota.tries} quota hits</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
       {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
     </header>
-    <RunNow receipt={r} outcome={outcome} settled={settled} />
+    <RunNow receipt={r} outcome={outcome} settled={settled} check={check} />
     <div className="rr-columns">
       <div className="rr-evidence">
         {r.files.length > 0 ? <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>)}</ul></section> : !hasRelease && <p className="rr-muted">No release recorded yet.</p>}
@@ -311,10 +331,10 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
           {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
         </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
         {[r.work.recordedHours, r.work.agentHours, r.work.idleHours, r.work.untracedHours, r.work.tokens.fresh, r.work.tokens.cached, r.work.tokens.total, ...Object.values(r.waste.afterPass), ...Object.values(r.waste.verdictDelay)].some(recorded) && <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2>
-          {recorded(r.work.recordedHours) && <div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>}
+          {recorded(r.work.recordedHours) && <div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: stuck ? 'Stuck (a turn open)' : 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>}
           <dl className="rr-facts rr-measures">
             <Fact label="Work" when={recorded(r.work.agentHours)}><Field path="work.agentHours" value={r.work.agentHours} format={hoursText} /></Fact>
-            <Fact label="Idle" when={recorded(r.work.idleHours)}><Field path="work.idleHours" value={r.work.idleHours} format={hoursText} /></Fact>
+            <Fact label={stuck ? 'Stuck (a turn open)' : 'Idle'} when={recorded(r.work.idleHours)}><Field path="work.idleHours" value={r.work.idleHours} format={hoursText} /></Fact>
             <Fact label="Untraced" when={recorded(r.work.untracedHours)}><Field path="work.untracedHours" value={r.work.untracedHours} format={hoursText} /></Fact>
             <Fact label="Fresh tokens" when={recorded(r.work.tokens.fresh)}><Field path="work.tokens.fresh" value={r.work.tokens.fresh} format={tokensText} /></Fact>
             <Fact label="Cached tokens" when={recorded(r.work.tokens.cached)}><Field path="work.tokens.cached" value={r.work.tokens.cached} format={tokensText} /></Fact>

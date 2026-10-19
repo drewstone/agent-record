@@ -1,4 +1,4 @@
-import { type DotGroup, type RateRow, rankedRates, unitDotLayout } from '@tangle-network/charts'
+import { type DotGroup, ENDING_COLORS, ENDING_ORDER, type RateRow, rankedRates, unitDotLayout } from '@tangle-network/charts'
 import { DOT_MAP_CATEGORIES, DotMap, type DotMapLabel, type DotMapRect, FigureView } from '@tangle-network/charts/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDocument } from './data.js'
@@ -48,11 +48,10 @@ export interface ExploreDocument {
 }
 
 type Layout = 'runs' | 'agents'
-type Lens = 'ending' | 'outcome' | 'harness' | 'credential' | 'program' | 'effort' | 'cluster' | `column:${string}`
+type Lens = 'ending' | 'harness' | 'credential' | 'program' | 'effort' | 'cluster' | `column:${string}`
 
 const LENS_WORD: Record<string, string> = {
   ending: 'How it ended',
-  outcome: 'Research outcome or infrastructure',
   harness: 'Harness',
   credential: 'Credential',
   program: 'Program',
@@ -61,45 +60,16 @@ const LENS_WORD: Record<string, string> = {
 }
 
 /**
- * The catalog's own state as a research outcome or an infrastructure failure (J1): a run the driver lost never reached a
- * research verdict, so it is never counted as a research failure. States with no verdict recorded read as such.
+ * One taxonomy on every view: how a run ended, in @tangle-network/charts' words and colours (solved green, died red,
+ * stalled amber). The host's older word `ended` is `not solved`. The fleet line and the map count the same column.
  */
-const OUTCOME_OF: Record<string, string> = {
-  winner: 'solved',
-  'no-winner': 'not solved',
-  failed: 'failed',
-  'driver-failed': 'infrastructure failure',
-  running: 'live or stalled',
-  stalled: 'live or stalled',
-}
-const outcomeOf = (state: Cell) => OUTCOME_OF[String(state)] ?? 'no outcome recorded'
-
-/**
- * Lenses whose categories are fixed words get fixed colours, the same on every view: solved is the ok hue, an
- * infrastructure failure or a death the failure hue. Other lenses name their three largest categories in colour.
- */
+const endingWord = (value: Cell) => (String(value) === 'ended' ? 'not solved' : String(value ?? 'unknown'))
 const FIXED: Record<string, Record<string, string>> = {
-  ending: {
-    solved: 'var(--ar-c-ok)',
-    died: 'var(--ar-c-fail)',
-    ended: 'var(--ar-c-info)',
-    stalled: 'var(--ar-c-run)',
-    cancelled: 'var(--chart-category-other)',
-    live: 'var(--chart-outcome-refused)',
-    'never started': 'color-mix(in srgb, var(--chart-category-other) 45%, transparent)',
-  },
-  outcome: {
-    solved: 'var(--ar-c-ok)',
-    'not solved': 'var(--ar-c-info)',
-    failed: 'var(--ar-c-run)',
-    'infrastructure failure': 'var(--ar-c-fail)',
-    'live or stalled': 'var(--chart-outcome-refused)',
-    'no outcome recorded': 'color-mix(in srgb, var(--chart-category-other) 45%, transparent)',
-  },
+  ending: { ...ENDING_COLORS },
 }
 /** The play groups a fleet layout draws on their own; the rest fold into one rectangle. */
 const GROUPS_SHOWN = 40
-const ORDER_FIRST: Record<string, string[]> = { ending: ['solved', 'died', 'ended', 'cancelled', 'stalled', 'live', 'never started'] }
+const ORDER_FIRST: Record<string, string[]> = { ending: [...ENDING_ORDER] }
 
 const col = (table: Table, name: string) => table.columns.indexOf(name)
 const fmtInt = (n: number) => n.toLocaleString('en-US')
@@ -218,9 +188,9 @@ export function ExplorePage({ api }: { api: string }) {
         return labels && firstClassifier ? (labels[firstClassifier] ?? 'not labelled') : 'not labelled'
       })
     }
-    if (lens === 'outcome') {
-      const k = col(runs, 'state')
-      return runOfPoint.map((r) => outcomeOf(runs.rows[r]?.[k] ?? null))
+    if (lens === 'ending') {
+      const k = col(runs, 'ending')
+      return runOfPoint.map((r) => endingWord(runs.rows[r]?.[k] ?? null))
     }
     return field(lens)
   }, [runs, agents, lens, runOfPoint, clusterLabel, columnLabels, firstClassifier])
@@ -312,9 +282,9 @@ export function ExplorePage({ api }: { api: string }) {
     const row = runs.rows[runOfPoint[i]!]
     if (!row) return ''
     const agent = layout === 'agents' && agents ? String(agents.rows[i]![col(agents, 'agent')]) : null
-    return [agent ? `${row[0]} · ${agent}` : String(row[0]), `${row[col(runs, 'play')]} · ${row[col(runs, 'ending')]}`, `${LENS_WORD[lens] ?? lens.slice(7)}: ${values[i]}`].join('\n')
+    return [agent ? `${row[0]} · ${agent}` : String(row[0]), `${row[col(runs, 'play')]} · ${endingWord(row[col(runs, 'ending')] ?? null)}`, `${LENS_WORD[lens] ?? lens.slice(7)}: ${values[i]}`].join('\n')
   }
-  const lensOptions: Lens[] = layout === 'agents' ? ['cluster', 'ending', 'outcome', 'harness', 'credential', ...((data.columns?.agreement ?? []).map((item) => `column:${item.id}` as Lens))] : ['ending', 'outcome', 'harness', 'credential', 'program', 'effort']
+  const lensOptions: Lens[] = layout === 'agents' ? ['cluster', 'ending', 'harness', 'credential', ...((data.columns?.agreement ?? []).map((item) => `column:${item.id}` as Lens))] : ['ending', 'harness', 'credential', 'program', 'effort']
   const columnTitle = (id: string) => {
     const item = data.columns?.agreement.find((a) => a.id === id)
     return item ? `${id} ${item.column.replaceAll('_', ' ')}` : id
@@ -339,7 +309,7 @@ export function ExplorePage({ api }: { api: string }) {
       <header className="ws-head explore-head">
         <div className="ws-title-row">
           <h1>Explore</h1>
-          <FleetLine runs={runs} onPick={(value) => { setLayout('runs'); setLens('outcome'); setNamed(null); setOnly(value); setSelected(null) }} />
+          <FleetLine runs={runs} onPick={(value) => { setLayout('runs'); setLens('ending'); setNamed(null); setOnly(value); setSelected(null) }} />
           <p className="faint explore-counts">
             {data.semantic ? `${fmtInt(data.semantic.agents.rows.length)} agents mapped by what they said (${data.semantic.clusters.length} clusters, built ${utc(Date.parse(data.semantic.builtAt ?? '') / 1000)})` : 'No semantic map of agents yet'}
           </p>
@@ -415,7 +385,7 @@ export function ExplorePage({ api }: { api: string }) {
                 <dt>play</dt>
                 <dd><a href={`/play/${encodeURIComponent(String(selRow[col(runs, 'play')]))}`}>{String(selRow[col(runs, 'play')])}</a></dd>
                 <dt>ended</dt>
-                <dd>{String(selRow[col(runs, 'ending')])}</dd>
+                <dd>{endingWord(selRow[col(runs, 'ending')] ?? null)}</dd>
                 <dt>started</dt>
                 <dd>{utc(selRow[col(runs, 'started')])}</dd>
                 {selRow[col(runs, 'wallHours')] !== null && (<><dt>wall</dt><dd>{String(selRow[col(runs, 'wallHours')])} h</dd></>)}
@@ -458,49 +428,65 @@ export function ExplorePage({ api }: { api: string }) {
 }
 
 /**
- * The fleet in one line (J1): every catalogued run by research outcome, with infrastructure failures counted apart from
- * research verdicts. Each count isolates its runs on the map.
+ * The fleet in one line (J1): every catalogued run by how it ended, research outcomes (solved, not solved) apart from
+ * infrastructure failures (died, never started), with the same counts and colours as the map's legend. Each count
+ * isolates its runs on the map.
  */
 function FleetLine({ runs, onPick }: { runs: Table; onPick: (value: string) => void }) {
-  const k = col(runs, 'state')
+  const k = col(runs, 'ending')
   const counts = new Map<string, number>()
   for (const row of runs.rows) {
-    const value = outcomeOf(row[k] ?? null)
+    const value = endingWord(row[k] ?? null)
     counts.set(value, (counts.get(value) ?? 0) + 1)
   }
-  const order = ['solved', 'not solved', 'failed', 'infrastructure failure', 'live or stalled', 'no outcome recorded']
   const total = runs.rows.length
+  const groups: Array<[string, readonly string[]]> = [
+    ['research', ['solved', 'not solved']],
+    ['infrastructure', ['died', 'never started']],
+    ['other', ['stalled', 'cancelled', 'live', ...[...counts.keys()].filter((value) => !(ENDING_ORDER as readonly string[]).includes(value))]],
+  ]
   return (
     <p className="explore-fleet-line" data-fleet-line>
       <b>{fmtInt(total)} runs</b>
-      {order
-        .filter((value) => counts.get(value))
-        .map((value) => (
-          <span key={value}>
+      {groups.map(([name, values]) => {
+        const shown = values.filter((value) => counts.get(value))
+        if (!shown.length) return null
+        const sum = shown.reduce((acc, value) => acc + counts.get(value)!, 0)
+        return (
+          <span key={name} className="explore-fleet-group" data-fleet-group={name}>
             {' · '}
-            <button type="button" className="link-button" onClick={() => onPick(value)} title={`Show only the ${fmtInt(counts.get(value)!)} runs whose catalog state reads ${value}, of ${fmtInt(total)}`}>
-              <i className="explore-swatch" style={{ background: FIXED.outcome![value] }} aria-hidden="true" />
-              {fmtInt(counts.get(value)!)} {value}
-            </button>
-            {value === 'infrastructure failure' ? <span className="faint"> ({Math.round((counts.get(value)! / total) * 100)}%)</span> : null}
+            <span className="faint" title={`${fmtInt(sum)} of ${fmtInt(total)} runs (${Math.round((sum / total) * 100)}%)`}>{name}</span>{' '}
+            {shown.map((value, i) => (
+              <span key={value}>
+                {i > 0 && ', '}
+                <button type="button" className="link-button" onClick={() => onPick(value)} title={`Show only the ${fmtInt(counts.get(value)!)} runs that ${value === 'never started' ? 'never started' : `ended ${value}`}, of ${fmtInt(total)}`}>
+                  <i className="explore-swatch" style={{ background: FIXED.ending![value] ?? 'var(--chart-outcome-other)' }} aria-hidden="true" />
+                  {fmtInt(counts.get(value)!)} {value}
+                </button>
+              </span>
+            ))}
+            {name === 'infrastructure' ? <span className="faint"> ({Math.round((sum / total) * 100)}%)</span> : null}
           </span>
-        ))}
+        )
+      })}
     </p>
   )
 }
 
-const RESEARCH = new Set(['winner', 'no-winner', 'failed'])
+/** Endings that are a research verdict, and the infrastructure failure, in the fleet line's words. */
+const RESEARCH = new Set(['solved', 'not solved'])
 
 /**
  * Compare cohorts (J4, J6): the solve rate of each category of the current lens, over runs that reached a research
- * verdict, and its infrastructure failure rate over runs that started, each with a 95% Wilson interval. A category under
- * five runs prints its count without a bar. Under an outcome lens the cohorts are harnesses.
+ * verdict (solved or not solved), and its infrastructure failure rate (died) over runs that started, each with a 95%
+ * Wilson interval, counted from the same ending column as the fleet line. A category under five runs prints its count
+ * without a bar. Under the ending lens the cohorts are harnesses.
  */
 function Compare({ runs, runOfPoint, values, lens, lensTitle, unit }: { runs: Table; runOfPoint: number[]; values: string[]; lens: Lens; lensTitle: string; unit: 'run' | 'agent' }) {
-  const by = lens === 'ending' || lens === 'outcome' ? 'harness' : lens
+  const by = lens === 'ending' ? 'harness' : lens
   const byTitle = by === lens ? lensTitle : LENS_WORD.harness!
   const rows = useMemo(() => {
-    const k = col(runs, 'state')
+    const k = col(runs, 'ending')
     const wi = col(runs, 'wallHours')
     const hi = col(runs, by)
     const groups = new Map<string, { research: number; solved: number; started: number; infra: number; hours: number[] }>()
@@ -509,14 +495,14 @@ function Compare({ runs, runOfPoint, values, lens, lensTitle, unit }: { runs: Ta
       if (!row) return
       const key = by === lens ? values[i]! : String(row[hi] ?? 'not recorded')
       const g = groups.get(key) ?? { research: 0, solved: 0, started: 0, infra: 0, hours: [] }
-      const state = String(row[k] ?? '')
-      if (RESEARCH.has(state)) {
+      const ending = endingWord(row[k] ?? null)
+      if (RESEARCH.has(ending)) {
         g.research++
-        if (state === 'winner') g.solved++
+        if (ending === 'solved') g.solved++
       }
-      if (RESEARCH.has(state) || state === 'driver-failed') {
+      if (RESEARCH.has(ending) || ending === 'died') {
         g.started++
-        if (state === 'driver-failed') g.infra++
+        if (ending === 'died') g.infra++
       }
       if (typeof row[wi] === 'number') g.hours.push(row[wi] as number)
       groups.set(key, g)

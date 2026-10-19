@@ -14,7 +14,7 @@ import { PlayLedger } from './workspace/PlayLedger.js'
 import { PlayTeams } from './workspace/PlayTeams.js'
 import { PlayFindings } from './workspace/PlayFindings.js'
 import { PlayReleases } from './workspace/PlayReleases.js'
-import { inlinedPlayHead, type PlayHead, targetWords } from './workspace/play-standing.js'
+import { inlinedPlayHead, type PlayHead, shortTag, targetWords, verdictWord } from './workspace/play-standing.js'
 import { OverviewPage } from './workspace/Overview.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
@@ -157,7 +157,6 @@ type PlaySort = 'latest' | 'spend' | 'runs' | 'name'
 function PlaysPage({ api }: { api: string }) {
   const [params, update] = useSearch()
   const plays = useDocument<PlaysDocument>(`${api}/plays`)
-  const dimensions = useDocument<DimensionsDocument>(`${api}/dimensions`)
   const query = params.get('q') ?? ''
   const program = params.get('program') ?? ''
   const sort = (['latest', 'spend', 'runs', 'name'] as const).find((value) => value === params.get('sort')) ?? 'latest'
@@ -165,7 +164,6 @@ function PlaysPage({ api }: { api: string }) {
   const [draft, setDraft] = useState(query)
   useEffect(() => setDraft(query), [query])
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
-  const keys = useMemo(() => new Map((dimensions.data?.dimensions ?? []).map((dimension) => [dimension.id, dimension.key])), [dimensions.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
     const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.apiUsd ?? 0) + (spend.sandboxUsd ?? 0)
@@ -195,15 +193,14 @@ function PlaysPage({ api }: { api: string }) {
       {programs.map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
   </div>
-  const frontiers = <section className="research-frontiers" aria-label="Best known frontiers">
-    <h2 className="kicker tone-finding">Best known</h2>
+  const frontiers = !plays.data?.frontiers?.length ? null : <details className="research-frontiers" aria-label="Frontier statements">
+    <summary className="faint">Frontier statements ({plays.data.frontiers.length}, as of {plays.data.frontiers.map((item) => item.asOf).filter(Boolean).sort().at(-1) ?? 'an unrecorded date'})</summary>
     <div className="research-frontier-list">{(plays.data?.frontiers ?? []).map((item) =>
       <a key={item.id} href={`/plays?view=plays&q=${encodeURIComponent(item.id)}`} className="research-frontier">
         <strong>{item.id.replaceAll('-', ' ')}</strong><span>{item.statement || 'No statement recorded'}</span>
         <small>{item.asOf || 'date unknown'} · {item.banked} banked · {item.next} next</small>
       </a>)}</div>
-    {!plays.data?.frontiers?.length && <p className="faint">No frontier statement recorded.</p>}
-  </section>
+  </details>
   const homeTabs = (
     <nav className="run-tabs" aria-label="Research views">
       {([['plays', 'Plays'], ['findings', 'Findings'], ['runs', 'Runs']] as const).map(([value, label]) => (
@@ -217,8 +214,9 @@ function PlaysPage({ api }: { api: string }) {
   if (home === 'findings')
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
-        {frontiers}{homeTabs}{sharedFilters}
+        {homeTabs}{sharedFilters}
         <FindingsFeed api={api} query={query} program={program} />
+        {frontiers}
       </div>
     )
   if (home === 'runs') {
@@ -227,7 +225,7 @@ function PlaysPage({ api }: { api: string }) {
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
     return <div className="ws-page ws-plays" data-plays-home="runs">
-      {frontiers}{homeTabs}{sharedFilters}
+      {homeTabs}{sharedFilters}
       <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.</p>
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
@@ -245,7 +243,7 @@ function PlaysPage({ api }: { api: string }) {
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
-        {frontiers}{homeTabs}{sharedFilters}
+        {homeTabs}{sharedFilters}
         <header className="ws-head">
           <div className="ws-title-row">
             <h1>Plays</h1>
@@ -267,63 +265,78 @@ function PlaysPage({ api }: { api: string }) {
               <thead>
                 <tr>
                   <th>Play</th>
-                  <th>Program</th>
-                  <th>State</th>
-                  <th>Latest run</th>
+                  <th>Where it stands</th>
+                  <th>Best under the current check</th>
+                  <th>Last run</th>
                   <th className="num">Runs</th>
-                  <th className="num" title="Subscription model use at API prices; not billed">Subscription use</th>
-                  <th className="num" title="Model API charges billed through Router">Model API</th>
-                  <th className="num" title="Billed sandbox compute">Sandbox compute</th>
-                  <th>Flags</th>
+                  <th className="num" title="Every token at list price, whoever paid; how many started runs were priced">API-equivalent</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((play) => {
                   const open = () => go(`/play/${encodeURIComponent(play.id)}`)
-                  const flags = Object.entries(play.headline).filter(([, value]) => value.polarity === 'bad')
                   const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
+                  const standing = play.standing ?? null
+                  const best = (standing?.best ?? null) as { tag?: string | null; run?: string | null; checker?: string | null; reached?: number | null; of?: number | null; workloads?: { passed?: number | null; total?: number | null } | null; verdict?: string | null } | null
+                  const last = standing?.lastEnding ?? null
+                  const cost = standing?.cost ?? null
+                  const lastId = last?.runId ?? play.latestRun?.id ?? null
                   return (
                     <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
                       <td>
                         <a href={`/play/${encodeURIComponent(play.id)}`} onClick={(event) => event.preventDefault()}>{play.title}</a>
                         {play.title !== play.id && <small className="faint mono"> {play.id}</small>}
+                        {play.program && <small className="faint"> · {play.program}</small>}
                       </td>
-                      <td className="mono">
-                        {play.program ?? <span className="faint">{play.noProgram ? 'no program' : play.playBasis}</span>}
+                      <td className="plays-standing">
+                        {standing?.sentence ? (
+                          <span className="clamp-2" title={standing.sentence}>{standing.sentence}</span>
+                        ) : (
+                          <span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span>
+                        )}
                       </td>
-                      <td><span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span></td>
                       <td>
-                        {play.latestRun ? (
+                        {best?.tag || best?.run ? (
+                          <span className="mono" title={[best.checker ? `under ${best.checker}` : null, best.verdict ? verdictWord(best.verdict) : null].filter(Boolean).join(' · ') || undefined}>
+                            {shortTag(best.tag) ?? 'workspace'}
+                            {best.run ? <span className="faint"> ({best.run})</span> : null}
+                            {best.reached && best.of ? ` · stage ${best.reached}/${best.of}` : ''}
+                            {best.workloads?.total ? ` · ${best.workloads.passed ?? '?'}/${best.workloads.total}` : ''}
+                            {best.checker ? <span className="faint"> {best.checker}</span> : null}
+                          </span>
+                        ) : (
+                          <span className="faint">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {lastId ? (
                           <a
                             className="mono"
-                            href={`/run/${encodeURIComponent(play.latestRun.id)}`}
+                            href={`/run/${encodeURIComponent(lastId)}`}
                             onClick={(event) => {
                               event.preventDefault()
                               event.stopPropagation()
-                              go(`/run/${encodeURIComponent(play.latestRun!.id)}`)
+                              go(`/run/${encodeURIComponent(lastId)}`)
                             }}
                           >
-                            {shortRun(play.id, play.latestRun.id)}
+                            {last?.run ?? shortRun(play.id, lastId)}
                           </a>
                         ) : '—'}
-                        <small className="faint"> {when(play.latestRun?.startedAt)}</small>
+                        {last?.word ? <span> {last.glyph ?? ''} {last.word}</span> : null}
+                        <small className="faint"> {when(last?.at ?? play.latestRun?.startedAt)}</small>
                       </td>
                       <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
                         {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
                       </td>
-                      <td className={`num ${play.spend.subscriptionUsd === null ? 'unknown' : ''}`}>
-                        {money(play.spend.subscriptionUsd)}{!play.spend.subscriptionKnown && play.spend.subscriptionUsd !== null ? '+' : ''}
-                      </td>
-                      <td className={`num ${play.spend.apiUsd === null ? 'unknown' : ''}`}>{money(play.spend.apiUsd)}</td>
-                      <td className={`num ${play.spend.sandboxUsd === null ? 'unknown' : ''}`}>
-                        {money(play.spend.sandboxUsd)}
-                      </td>
-                      <td className="headline-cell">
-                        {flags.map(([dimension, value]) => (
-                          <span key={dimension} className="label-chip polarity-bad" title={`${dimension} ${keys.get(dimension)?.replaceAll('_', ' ') ?? ''}: ${value.label}`}>
-                            {dimension} {value.label.replaceAll('_', ' ')}
-                          </span>
-                        ))}
+                      <td className="num" title={cost?.priced !== null && cost?.priced !== undefined ? `${cost.priced} of ${cost.started ?? '?'} started runs priced${cost.provenance ? ` (${cost.provenance})` : ''}` : undefined}>
+                        {cost?.apiEquivalentUsd !== null && cost?.apiEquivalentUsd !== undefined && cost.priced ? (
+                          <>
+                            {money(cost.apiEquivalentUsd)}
+                            {cost.priced !== cost.started ? <small className="faint"> {cost.priced}/{cost.started}</small> : null}
+                          </>
+                        ) : (
+                          <span className="faint">unpriced</span>
+                        )}
                       </td>
                     </tr>
                   )
@@ -884,7 +897,11 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const index = nodes.index
   const streamNode = requested ?? id
   const archivedCapture = recordReady && !run.data?.execution?.alive && ['archive', 'none'].includes(run.data?.run.location?.kind ?? '') && openedLiveStream.current !== streamNode
-  const streamConversation = !!run.data?.execution && !archivedCapture && !capturedStreams.has(streamNode) && !['timeline', 'usage'].includes(params.get('tab') ?? '')
+  // A settled run with a record opens its agents from the record: the agent rail with each agent's bead string, not the
+  // root's last 200 stream events (18b's Conversations showed 18:34-18:55Z while its root streamed until 02:42Z). Only a
+  // live run, or an agent the record does not hold, reads the stream.
+  const settledRecord = !run.data?.execution?.alive && recordReady && (!index || index.nodes.has(index.canonical(streamNode)))
+  const streamConversation = !!run.data?.execution && !settledRecord && !archivedCapture && !capturedStreams.has(streamNode) && !['timeline', 'usage'].includes(params.get('tab') ?? '')
   useEffect(() => {
     if (section === 'agents' && streamConversation && run.data?.execution?.alive) openedLiveStream.current = streamNode
     else if (section !== 'agents' || !streamConversation) openedLiveStream.current = null

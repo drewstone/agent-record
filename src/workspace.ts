@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
-import { playFindingFields, playPageFields } from './workspace/play-standing.js'
+import { playBlockerSchema, playFindingFields, playPageFields } from './workspace/play-standing.js'
 
 /**
  * Documents served by a run workspace API (`/api/discovery/*` on the Tangle wall).
@@ -166,6 +166,9 @@ const runCheckSchema = z
     /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
     gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
     headline: z.string().nullable().optional(),
+    counts: z.object({ checks: z.number(), known: z.number(), solved: z.number() }).partial().catchall(z.unknown()).nullable().optional(),
+    /** The play's checkers as its page labels them (v1..vN with the ruling that made each), by digest prefix. */
+    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional() }).catchall(z.unknown())).optional(),
   })
   .catchall(z.unknown())
 export type RunCheck = z.infer<typeof runCheckSchema>
@@ -292,6 +295,22 @@ export const playsDocumentSchema = z
           latestRun: z.object({ id: z.string(), startedAt: time.nullable(), state: runState }).nullable(),
           /** Its best result: the newest run that won (its root submitted, or its play check passed); null before one did. */
           best: z.string().nullable().optional(),
+          /**
+           * Where the play stands, as its own page states it (tangle-tools play_standing_brief): the standing sentence,
+           * the best under the current check, the last run's ending and the API-equivalent. Null before its page is composed.
+           */
+          standing: z
+            .object({
+              status: z.string().nullable().optional(),
+              sentence: z.string().nullable().optional(),
+              best: z.record(z.string(), z.unknown()).nullable().optional(),
+              bestEver: z.record(z.string(), z.unknown()).nullable().optional(),
+              lastEnding: z.object({ runId: z.string().nullable().optional(), run: z.string().nullable().optional(), word: z.string().nullable().optional(), glyph: z.string().nullable().optional(), at: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+              cost: z.object({ apiEquivalentUsd: z.number().nullable().optional(), provenance: z.string().nullable().optional(), priced: z.number().nullable().optional(), started: z.number().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+            })
+            .catchall(z.unknown())
+            .nullable()
+            .optional(),
           runCount: z.number().int().nonnegative(),
           /** Runs by why they are hidden by default; `shown` counts the rest. */
           counts: z
@@ -639,6 +658,9 @@ export const runProgressSchema = z
     ),
     /** When each record the document reads last changed. */
     sources: z.record(z.string(), time.nullable()).optional(),
+    /** What holds a live run, and what blocked an ended run just before it ended (discovery-lab `blockerOf`). */
+    blocker: playBlockerSchema.nullable().optional(),
+    endBlocker: playBlockerSchema.nullable().optional(),
     /**
      * The run's outcome first (discovery-lab `runner/run-progress.mjs` outcomeOf): whether the play's check is solved,
      * the first line its latest failing check printed and when, and the minutes since any agent's stream last moved.

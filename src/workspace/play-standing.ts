@@ -13,6 +13,13 @@ const s = z.string().nullable()
 /** A check stage reached: `reached` of `of`, the stage's name, and workloads passed of total when the check prints them. */
 const workloads = z.object({ passed: n, total: n }).catchall(z.unknown()).nullable()
 
+/** Why a block began, when the Lab found it: the provider error opencode logged as a stuck turn opened (a 429). */
+const blockerCause = z
+  .object({ kind: s.optional(), provider: s.optional(), model: s.optional(), at: s.optional(), error: s.optional(), source: s.optional() })
+  .catchall(z.unknown())
+  .nullable()
+  .optional()
+
 export const playBlockerSchema = z
   .object({
     class: z.string(),
@@ -21,7 +28,8 @@ export const playBlockerSchema = z
     evidence: s.optional(),
     source: s.optional(),
     owner: s.optional(),
-    also: z.array(z.object({ class: z.string(), since: s.optional(), evidence: s.optional(), source: s.optional() }).catchall(z.unknown())).optional(),
+    cause: blockerCause,
+    also: z.array(z.object({ class: z.string(), since: s.optional(), evidence: s.optional(), source: s.optional(), cause: blockerCause }).catchall(z.unknown())).optional(),
   })
   .catchall(z.unknown())
 
@@ -61,7 +69,19 @@ export const playCheckerSchema = z
   .catchall(z.unknown())
 
 const barValue = z
-  .object({ value: z.number(), columnId: s.optional(), tag: s.optional(), runId: s.optional(), checker: s.optional(), verdict: s.optional(), comparable: z.boolean().nullable().optional(), why: s.optional() })
+  .object({
+    value: z.number(),
+    columnId: s.optional(),
+    tag: s.optional(),
+    runId: s.optional(),
+    checker: s.optional(),
+    verdict: s.optional(),
+    comparable: z.boolean().nullable().optional(),
+    why: s.optional(),
+    /** The words the bar row prints for a value that does not count: `failing candidate (4/15)`, `not comparable: 1-bit declared`. */
+    short: s.optional(),
+    workloads: workloads.optional(),
+  })
   .catchall(z.unknown())
 
 export const playBarMetricSchema = z
@@ -112,7 +132,28 @@ export const playStandingSchema = z
     current: playBestSchema.nullable().optional(),
     bestCurrent: playBestSchema.nullable().optional(),
     bestEver: playBestSchema.nullable().optional(),
-    releases: z.object({ published: n, checked: n, withheld: n, superseded: n, passingCurrent: n, neverChecked: n }).partial().catchall(z.unknown()).nullable().optional(),
+    /**
+     * Published releases and, under the current checker, how many it checked, how many pass and how many it never
+     * checked (`checkedCurrent`, `passingCurrent`, `neverCheckedCurrent`), with the source of the counts.
+     */
+    releases: z
+      .object({
+        published: n,
+        checked: n,
+        withheld: n,
+        superseded: n,
+        passingCurrent: n,
+        neverChecked: n,
+        checker: s,
+        checkedCurrent: n,
+        checkedCurrentTags: z.array(z.string()),
+        neverCheckedCurrent: n,
+        source: s,
+      })
+      .partial()
+      .catchall(z.unknown())
+      .nullable()
+      .optional(),
     lastEnding: z
       .object({
         runId: z.string(),
@@ -183,12 +224,27 @@ export const playClimbSchema = z
           unscored: z.boolean().optional(),
           lineage: lineage.optional(),
           summary: s.optional(),
+          /** Check rows of this run on no release tag, and the newest one's reason when the run has no checked tag. */
+          untagged: n.optional(),
+          note: s.optional(),
         })
         .catchall(z.unknown()),
     ),
     columns: z.array(
       z
-        .object({ id: z.string(), runId: z.string(), tag: s.optional(), commit: s.optional(), order: z.number().optional(), at: s.optional(), state: s.optional(), weight: n.optional() })
+        .object({
+          id: z.string(),
+          runId: z.string(),
+          tag: s.optional(),
+          commit: s.optional(),
+          order: z.number().optional(),
+          at: s.optional(),
+          state: s.optional(),
+          weight: n.optional(),
+          /** Releases the gate only superseded, folded into this one column (`rc8–rc12 superseded`). */
+          tags: z.array(z.string()).optional(),
+          label: s.optional(),
+        })
         .catchall(z.unknown()),
     ),
     gaps: z.array(z.object({ afterColumnId: z.string(), hours: z.number() }).catchall(z.unknown())).optional(),
@@ -322,7 +378,7 @@ export const playReleaseSchema = z
  */
 export const playFindingFields = {
   id: s.optional(),
-  group: z.enum(['verified', 'contradicted', 'undecided', 'unchecked']).or(z.string()).optional(),
+  group: z.enum(['verified', 'contradicted', 'mixed', 'undecided', 'unchecked']).or(z.string()).optional(),
   writer: s.optional(),
   writtenAt: s.optional(),
   commits: z
@@ -540,22 +596,6 @@ export function gapWords(metric: PlayBarMetric, value: number | null | undefined
   const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
   const better = (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low)
   return better ? `${times}× past the bar` : `${times}× ${value < low ? 'below' : 'above'} the bar`
-}
-
-/**
- * How far a candidate that does not count toward the bar (failing, or measured under other conditions) sits from it,
- * as a plain ratio with no verdict: `36× below`, `25× above`. Never "past the bar": the arrow beside the metric says
- * which way is better, and the mark beside the value says why it does not count.
- */
-export function ratioWords(metric: PlayBarMetric, value: number | null | undefined): string | null {
-  const t = metric.target
-  if (!t || value === null || value === undefined || !(value > 0)) return null
-  const low = t.min ?? t.approx ?? t.max ?? null
-  const high = t.max ?? t.approx ?? t.min ?? null
-  if (low === null || high === null) return null
-  if (value >= low && value <= high) return 'inside the bar’s range'
-  const ratio = value < low ? low / value : value / high
-  return `${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}× ${value < low ? 'below' : 'above'}`
 }
 
 /** A check line without its verdict word, digests or the tail after ` | `: the words that say why, for grouping. */

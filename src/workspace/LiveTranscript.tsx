@@ -6,6 +6,7 @@ import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
 import { endingLabel } from './data.js'
+import { BlockerChip } from './PlayHead.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
@@ -64,6 +65,8 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
 }
 
 const clock = (at: string | null | undefined) => at ? `${new Date(at).toISOString().slice(11, 16)} UTC` : null
+/** A Lab sentence with its ISO timestamps as `10-19 02:42Z`, the way the rest of the page writes times. */
+const humane = (text: string) => text.replace(/\b\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)(?::\d\d(?:\.\d+)?)?Z\b/g, '$1-$2 $3Z')
 const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 
 /**
@@ -85,13 +88,22 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
   const ending = doc.run.ending || doc.run.state === 'stalled' ? endingLabel(doc.run) : execution.settleKind ?? 'settle kind unknown'
-  const reason = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
+  const raw = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
+  const reason = raw ? humane(raw) : null
   const gate = doc.progress?.outcome?.gate
   const blockedGate = gate?.line && gate.verdict && gate.verdict !== 'pass' ? gate : null
   // The gate's newest verdicts that could not decide (the host's check summary): the prover ran past its limit N times.
-  const undecided = doc.run.check?.gateUnknown?.count ? doc.run.check.gateUnknown : null
-  const quota = doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
+  // The Lab's blocker leads; a list line that repeats one of its classes is left out.
+  const live = execution.alive ? (doc.progress?.blocker ?? null) : (doc.progress?.endBlocker ?? null)
+  const classes = new Set([live?.class, ...(live?.also ?? []).map((item) => item.class)].filter(Boolean))
+  const undecided = doc.run.check?.gateUnknown?.count && !classes.has('gate-undecided') ? doc.run.check.gateUnknown : null
+  const quota = classes.has('quota-wall') ? null : (doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null)
   const resume = execution.resume.status === 'preserved' || execution.resume.reason || execution.resume.command
+  // What blocked the run, as the play page shows it (discovery-lab blockerOf): the live blocker, or for an ended run what
+  // blocked it just before it ended. 19b's page said only "driver-failed" while the Lab had its stuck turn and refused push.
+  const block = live
+  const ended = execution.alive ? null : (doc.run.ending?.at ?? execution.lastActivityAt ?? null)
+  const wallHours = doc.receipt?.work?.wallHours ?? null
   return <section className="run-execution" aria-label="Run status">
     <p role="status" data-run-status>
       <strong>{execution.alive ? 'Running' : `Stopped · ${ending}`}</strong>
@@ -103,6 +115,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
         {diagnosis && <span> · {diagnosis.id}: {fixLine}</span>}
       </>}
     </p>
+    {block && <div className="run-end-blocker" data-run-blocker={block.class}><BlockerChip blocker={block} until={ended} wallHours={wallHours} /></div>}
     {(blockedGate || undecided || quota) && <ul className="run-blockers" aria-label="What blocks the run">
       {undecided && <li data-field="run.check.gateUnknown"><strong>Tag gate undecided {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
       {blockedGate && <li data-field="progress.outcome.gate"><strong>Tag gate {blockedGate.verdict}</strong>{shortTag(blockedGate.tag) && <> on <code>{shortTag(blockedGate.tag)}</code></>}{clock(blockedGate.at) && <> at {clock(blockedGate.at)}</>}: <span className="run-blocker-line">{blockedGate.line}</span></li>}
