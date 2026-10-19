@@ -143,7 +143,8 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
         )}
       </span>
       {metrics.map((metric) => {
-        const value = release.metrics?.[metric.id]
+        // The composer keys release metrics in camelCase (rateCps); the bar names them in snake case (rate_cps).
+        const value = release.metrics?.[metric.id] ?? release.metrics?.[metric.id.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())]
         return (
           <span key={metric.id} className="num">
             {typeof value === 'number' ? metricValue(value, metric.unit) : <span className="faint">—</span>}

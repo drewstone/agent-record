@@ -54,14 +54,14 @@ export function releaseAxis(play: Play, climb: Climb) {
     }
     for (const column of own) {
       index.set(column.id, categories.length)
-      categories.push({ at: categories.length, label: shortTag(column.tag) ?? '·', weight: column.weight ?? 1 })
+      categories.push({ at: categories.length, label: shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'), weight: column.weight ?? 1 })
       runOf.push(group.runId)
     }
   }
   for (const column of columns) {
     if (index.has(column.id)) continue
     index.set(column.id, categories.length)
-    categories.push({ at: categories.length, label: shortTag(column.tag) ?? '·', weight: column.weight ?? 1 })
+    categories.push({ at: categories.length, label: shortTag(column.tag) ?? (column.state === 'workspace' ? 'workspace' : '·'), weight: column.weight ?? 1 })
     runOf.push(column.runId)
   }
   const domain: [number, number] = [0, Math.max(1, categories.length - 1)]

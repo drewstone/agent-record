@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@tangle-network/charts':
-        specifier: 0.9.0
-        version: 0.9.0(react@19.3.0)
+        specifier: 0.9.1
+        version: 0.9.1(react@19.3.0)
       '@tangle-network/harness-sessions':
         specifier: 0.1.0
         version: 0.1.0
@@ -159,8 +159,8 @@ packages:
   '@tangle-network/agent-trace-contract@2.0.0':
     resolution: {integrity: sha512-lq2hp3gg8FsNVA3yZAyuj3NvL57pJTsI6sUF8cYwVsUXA8QZlrO78SqRPRslWxf/sMFHxXhusOuDQ3YxVv12bw==}
 
-  '@tangle-network/charts@0.9.0':
-    resolution: {integrity: sha512-LGIaQLVTfrrMidMaHLd+3dHHf1TZXqjYFVesH9S5lZLUKbAjsXDAeF3v+4tDqet/t+8/q8EaNlsCSzI690ix8A==}
+  '@tangle-network/charts@0.9.1':
+    resolution: {integrity: sha512-OVvnILezFGcK+2Fwu7NzbaeAks4sfE8Hg6yLOT4ObHQXAlPd342nEA84OeSZodsu/4kQWM3VntWxS5gF3OiCig==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -952,7 +952,7 @@ snapshots:
 
   '@tangle-network/agent-trace-contract@2.0.0': {}
 
-  '@tangle-network/charts@0.9.0(react@19.3.0)':
+  '@tangle-network/charts@0.9.1(react@19.3.0)':
     optionalDependencies:
       react: 19.3.0
 

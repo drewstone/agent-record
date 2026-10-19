@@ -22,9 +22,21 @@ interface Team {
 const time = (value: unknown) => (typeof value === 'number' ? value : typeof value === 'string' ? Date.parse(value) : NaN)
 const PAGE = 4
 
+/** The receipt names a child lane `<parent>:<child>`; a lane without a recorded parent hangs from that, else from the root. */
+const parentOf = (id: string, ids: Set<string>) => {
+  const cut = id.lastIndexOf(':')
+  if (cut > 0 && ids.has(id.slice(0, cut))) return id.slice(0, cut)
+  return id !== 'root' && ids.has('root') ? 'root' : undefined
+}
+
+/** Marks a team panel draws: releases, rulings, steers, deaths, deadlines and passes; wakes and events stay in the run page. */
+const TEAM_MARKS = new Set(['release', 'ruling', 'steer', 'died', 'deadline', 'pass'])
+
 function lanesOf(team: Team): TimelineLane[] {
+  const ids = new Set((team.lanes ?? []).map((lane) => String(lane.id)))
   return (team.lanes ?? []).map((lane) => ({
     ...(lane as unknown as TimelineLane),
+    ...(lane.parent === undefined && parentOf(String(lane.id), ids) ? { parent: parentOf(String(lane.id), ids) } : {}),
     spans: ((lane.spans as Array<Record<string, unknown>>) ?? []).map((span) => ({
       start: time(span.start),
       end: span.end === null || span.end === undefined ? null : time(span.end),
@@ -36,11 +48,13 @@ function lanesOf(team: Team): TimelineLane[] {
 }
 
 function TeamPanel({ play, team, hoursAxis }: { play: Play; team: Team; hoursAxis: number }) {
-  const lanes = useMemo(() => lanesOf(team).slice(0, 30), [team])
+  const lanes = useMemo(() => lanesOf(team), [team])
   const start = time(team.start ?? lanes[0]?.spans[0]?.start)
   const end = Number.isFinite(time(team.end)) ? time(team.end) : Date.now()
   const options = useMemo(() => {
-    const marks: ChartMark[] = (team.marks ?? []).map((mark) => ({ ...(mark as unknown as ChartMark), at: time(mark.at ?? mark.t) })).filter((mark) => Number.isFinite(mark.at) && mark.at >= start)
+    const marks: ChartMark[] = (team.marks ?? [])
+      .map((mark) => ({ ...(mark as unknown as ChartMark), at: time(mark.at ?? mark.t) }))
+      .filter((mark) => Number.isFinite(mark.at) && mark.at >= start && TEAM_MARKS.has(mark.kind))
     const bands: ChartBand[] = (team.bands ?? []).map((band) => ({ ...(band as unknown as ChartBand), from: time(band.from), to: time(band.to) })).filter((band) => Number.isFinite(band.from) && Number.isFinite(band.to) && band.to > band.from)
     const axisEnd = Math.max(end, start + hoursAxis * 3_600_000)
     return {
@@ -72,8 +86,9 @@ function TeamPanel({ play, team, hoursAxis }: { play: Play; team: Team; hoursAxi
  */
 export function PlayTeams({ api, play }: { api: string; play: Play }) {
   const rows = play.ledger?.rows ?? []
-  const multi = rows.filter((row) => (row.agents ?? 0) >= 2)
-  const single = rows.filter((row) => (row.agents ?? 0) === 1)
+  // An unknown agent count (null) is not one agent: its receipt timeline says how the run staffed itself.
+  const multi = rows.filter((row) => row.agents === null || row.agents === undefined || row.agents >= 2)
+  const single = rows.filter((row) => row.agents === 1)
   const [shown, setShown] = useState(PAGE)
   const [visible, setVisible] = useState(false)
   const box = useRef<HTMLElement>(null)
