@@ -52,6 +52,13 @@ export function AgentTable({
   selected: string | null
   onSelect: (id: string) => void
 }) {
+  // An agent by the profile it was spawned as, as the play page's team lanes name it: `pcs-lead (s0)`, not `s0`.
+  const profiles = useMemo(() => new Map((doc.receipt?.timeline?.lanes ?? []).map((lane) => [lane.id, lane.profile ?? null])), [doc.receipt])
+  const nameOf = (node: RecordNode) => {
+    const short = node.id.startsWith(`${doc.run.id}:`) ? node.id.slice(doc.run.id.length + 1) : node.label
+    const profile = profiles.get(short) ?? null
+    return node.parent && profile && profile !== node.label ? `${profile} (${node.label})` : node.label
+  }
   const rows = useMemo(() => {
     const nodes = index.actors.filter((node) => node.kind !== 'finding')
     const ids = new Set(nodes.map((node) => node.id))
@@ -108,7 +115,7 @@ export function AgentTable({
         </span>
         <span role="columnheader" className="num">Time</span>
         <span role="columnheader" className="num">Tokens</span>
-        <span role="columnheader" className="num" title="Model usage at API prices when priced, else tokens; this column is not a bill">Usage</span>
+        <span role="columnheader" className="num" title="API-equivalent: every token at list price, whoever paid; not a bill. Tokens are in their own column.">API-equiv.</span>
         <span role="columnheader">Conversation</span>
         <span role="columnheader">Flags</span>
       </div>
@@ -138,7 +145,7 @@ export function AgentTable({
             onClick={() => onSelect(node.id)}
           >
             <span className="agent-name" role="cell" style={{ paddingLeft: `${depth * 22}px` }} title={`${node.label}\n${roleOf(node)}\n${node.id}`}>
-              <span className="clip">{node.label}</span>
+              <span className="clip">{nameOf(node)}</span>
             </span>
             <span role="cell">
               <span className={`state-pill ${stateClass(status === 'running' ? 'running' : status)}`} title={state}>
@@ -151,7 +158,8 @@ export function AgentTable({
             <span role="cell" className="num">{start !== null && end !== null ? duration(end - start) : '—'}</span>
             <span role="cell" className="num">{total !== null ? tokens(total) : '—'}</span>
             <span role="cell" className="num" title={list === null ? (total !== null ? 'Tokens are counted; this model has no API list price yet' : 'No usage metered yet') : 'API-equivalent: every token at list price, whoever paid'}>
-              {list !== null && list > 0 ? money(list) : total !== null ? `${tokens(total)} tok` : '—'}
+              {/* One unit per column: dollars here, tokens in the Tokens column (it mixed $82.47 with 296.6M tok). */}
+              {list !== null && list > 0 ? money(list) : <span className="faint">{total !== null ? 'unpriced' : '—'}</span>}
             </span>
             <span role="cell" className={`capture-text capture-${capture ?? 'unknown'}`}>
               {capture === 'complete' ? 'complete' : capture === 'lossy' ? 'partial' : capture === 'absent' ? 'not captured' : 'unknown'}
