@@ -26,6 +26,21 @@ import {
   utcTime,
 } from './viewer/model.js'
 
+export interface BehaviorVerdict {
+  behavior: string
+  verdict: 'yes' | 'no' | 'unclear'
+  confidence: number
+  evidence?: Array<{ eventId: string; quote?: string }>
+  note?: string
+}
+
+/** A full battery report for one record, keyed by runId. */
+export interface BehaviorReport {
+  runId: string
+  verdicts: readonly BehaviorVerdict[]
+  summary?: string
+}
+
 export interface AgentRecordProps {
   records: readonly RunRecord[]
   selection?: RecordSelection
@@ -33,6 +48,8 @@ export interface AgentRecordProps {
   onSelectionChange?: (selection: RecordSelection) => void
   theme?: 'light' | 'dark' | 'auto'
   className?: string
+  /** Behavior-battery reports; the active record's yes-verdicts render as a lane under the timeline. */
+  behaviors?: readonly BehaviorReport[]
 }
 
 function Select({
@@ -73,6 +90,7 @@ export function AgentRecord({
   onSelectionChange,
   theme = 'auto',
   className = '',
+  behaviors,
 }: AgentRecordProps) {
   const [internal, setInternal] = useState<RecordSelection | undefined>(
     defaultSelection,
@@ -121,6 +139,28 @@ function RecordView({
 }) {
   const uid = useId()
   const index = useMemo(() => indexRecord(record), [record])
+  // Behavior-battery yes-verdicts for the active record, positioned at their cited events.
+  const behaviorMarks = useMemo(() => {
+    const report = behaviors?.find((item) => item.runId === record?.runId)
+    if (!report) return undefined
+    const AXIS: Record<string, string> = {
+      alignment: 'alignment', efficiency: 'efficiency', affect: 'affect',
+    }
+    return report.verdicts
+      .filter((v) => v.verdict === 'yes' && v.evidence?.length)
+      .flatMap((v) =>
+        (v.evidence ?? [])
+          .filter((e) => index.byEvent.has(e.eventId))
+          .map((e) => ({
+            behavior: v.behavior,
+            axis: AXIS[v.behavior] ?? (v.behavior.includes('hack') || v.behavior.includes('unsafe') || v.behavior.includes('decept') || v.behavior.includes('escape') || v.behavior.includes('intent') || v.behavior.includes('scope') ? 'alignment' : v.behavior.includes('frustrat') || v.behavior.includes('confidence') || v.behavior.includes('breakthrough') || v.behavior.includes('giving') ? 'affect' : 'efficiency'),
+            confidence: v.confidence,
+            at: ms(index.byEvent.get(e.eventId)!.at),
+            eventId: e.eventId,
+            quote: e.quote,
+          })),
+      )
+  }, [behaviors, record, index])
   const explicitEvent = selection.eventId
     ? index.byEvent.get(selection.eventId)
     : undefined
@@ -476,6 +516,7 @@ function RecordView({
         navigate={navigate}
         showTooltip={showTooltip}
         hideTooltip={hideTooltip}
+        behaviors={behaviorMarks}
       />
       <div className="legend">
         {categoryOptions.map((item) => (
