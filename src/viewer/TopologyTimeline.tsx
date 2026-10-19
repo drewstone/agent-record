@@ -49,10 +49,19 @@ function buildLanes(record: RunRecord): TimelineLane[] {
     // with a zero-duration span at their recorded start, or skip only when they
     // are both eventless and childless.
     if (!times.length) {
-      const hasChildren = record.nodes.some((other) => other.parent === node.id)
-      const startFallback = node.start ? ms(node.start) : undefined
-      if (!hasChildren || startFallback === undefined || !Number.isFinite(startFallback)) continue
-      times.push(startFallback)
+      const children = record.nodes.filter((other) => other.parent === node.id)
+      if (!children.length) continue
+      // Derive the span from children: the workflow ran when its children ran.
+      const childTimes = children.flatMap((child) => {
+        const childEvents = eventsByNode.get(child.id) ?? []
+        return childEvents.map((event) => ms(event.at)).filter(Number.isFinite)
+      })
+      const ownStart = node.start ? ms(node.start) : undefined
+      const fallback = ownStart !== undefined && Number.isFinite(ownStart)
+        ? ownStart
+        : childTimes.length ? Math.min(...childTimes) : undefined
+      if (fallback === undefined) continue
+      times.push(fallback)
     }
     const start = Math.min(...times)
     const end = Math.max(...times)
