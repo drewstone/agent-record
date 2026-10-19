@@ -1,29 +1,32 @@
 // The shipped workspace bundle (dist/workspace-viewer.js) on magnetar-rust-20261018b's served documents, in a real
 // browser at 1440 and 390: the run page and its Spend tab show the run's token total, Spend says once what it did not
-// measure, the receipt names v3 3×, and the play's Runs tab fits every column at 1440. Run after a build with
-// PLAYWRIGHT_MODULE pointing to an installed Playwright; RECEIPT_EVIDENCE_DIR keeps the screenshots outside the repo.
+// measure, the receipt names v3 3×, and the play's Runs tab fits every column at 1440. `pnpm test` builds the bundle and
+// installs Playwright's headless Chromium first; RECEIPT_EVIDENCE_DIR keeps the screenshots outside the public repo.
 import assert from 'node:assert/strict'
 import { mkdir, readFile } from 'node:fs/promises'
 import { test } from 'node:test'
+import { chromium } from 'playwright'
 
-const playwright = process.env.PLAYWRIGHT_MODULE
 const evidence = process.env.RECEIPT_EVIDENCE_DIR
 const RUN = 'magnetar-rust-20261018b'
 const read = (path) => readFile(new URL(path, import.meta.url))
+const fixture = async (name) => JSON.parse(await read(`./fixtures/${RUN}/${name}`))
+const [run, nodes, play] = await Promise.all([fixture('run.json'), fixture('nodes.json'), fixture('play.json')])
+// The host serves the receipt the run document embeds, and the root's record part is the nodes part without its stats.
+const { nodeStats: _stats, ...rootPart } = nodes
 const documents = {
-  [`/api/discovery/runs/${RUN}`]: 'run.json',
-  [`/api/discovery/runs/${RUN}/receipt/receipt.json`]: 'receipt.json',
-  '/api/discovery/plays/magnetar-rust': 'play.json',
+  [`/api/discovery/runs/${RUN}`]: run,
+  [`/api/discovery/runs/${RUN}/receipt/receipt.json`]: run.receipt,
+  '/api/discovery/plays/magnetar-rust': play,
 }
-const fixtureFor = (url) => {
-  if (url.pathname === `/api/discovery/runs/${RUN}/record`) return url.searchParams.get('part') === 'nodes' ? 'nodes.json' : url.searchParams.get('node') === RUN ? 'root-part.json' : null
+const documentFor = (url) => {
+  if (url.pathname === `/api/discovery/runs/${RUN}/record`) return url.searchParams.get('part') === 'nodes' ? nodes : url.searchParams.get('node') === RUN ? rootPart : null
   return documents[url.pathname] ?? null
 }
 
-test('magnetar-rust-20261018b: run total, one not-measured line, v3 3× and a Runs table that fits at 1440', { skip: !playwright }, async () => {
-  const { chromium } = await import(playwright)
+test('magnetar-rust-20261018b: run total, one not-measured line, v3 3× and a Runs table that fits at 1440', async () => {
   const [viewer, css] = await Promise.all([read('../dist/workspace-viewer.js'), read('../dist/styles.css')])
-  const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) })
+  const browser = await chromium.launch({ headless: true })
   if (evidence) await mkdir(evidence, { recursive: true })
   try {
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
@@ -37,9 +40,9 @@ test('magnetar-rust-20261018b: run total, one not-measured line, v3 3× and a Ru
           const shell = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style>`
           return route.fulfill({ contentType: 'text/html', body: `${shell}<div id="agent-workspace" data-api="/api/discovery" data-mode="${url.searchParams.get('mode')}" data-id="${url.searchParams.get('id')}" data-theme="light"></div><script src="/viewer.js"></script>` })
         }
-        const file = fixtureFor(url)
-        return file
-          ? route.fulfill({ contentType: 'application/json', body: await read(`./fixtures/magnetar-rust-20261018b/${file}`) })
+        const document = documentFor(url)
+        return document
+          ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(document) })
           : route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"not in the fixture"}' })
       })
       const open = async (query, ready, name) => {

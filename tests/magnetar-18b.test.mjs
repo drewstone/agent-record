@@ -1,6 +1,7 @@
 // magnetar-rust-20261018b as the wall served it on 2026-10-19 (agent-record 0.49.3): the run page showed no token total,
 // and its receipt said "rc14 passed under checker a3cf95c7 1×" for three passes under v3. The fixtures are the served
-// run document, receipt and magnetar-rust play document, trimmed to what these pages read and with host paths scrubbed.
+// run document (its receipt is the one the receipt page serves) and magnetar-rust play document, trimmed to what these
+// pages read and with host paths scrubbed.
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
@@ -10,7 +11,7 @@ import { RunOverview, RunReceiptView, runDocumentSchema, runReceiptSchema } from
 
 const fixture = async (name) => JSON.parse(await readFile(new URL(`./fixtures/magnetar-rust-20261018b/${name}`, import.meta.url), 'utf8'))
 const run = runDocumentSchema.parse(await fixture('run.json'))
-const receipt = runReceiptSchema.parse(await fixture('receipt.json'))
+const receipt = runReceiptSchema.parse(run.receipt)
 const play = await fixture('play.json')
 const text = (html) => html.replace(/<[^>]+>/g, '').replaceAll('&gt;', '>').replaceAll('&#x27;', "'").replaceAll('&quot;', '"')
 

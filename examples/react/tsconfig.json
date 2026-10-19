@@ -1,5 +1,14 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["vite/client"] },
+  "compilerOptions": {
+    "rootDir": "../..",
+    "noEmit": true,
+    "types": ["vite/client"],
+    // The example typechecks against the package source, so `pnpm typecheck` needs no `dist/` (a clean checkout has none).
+    "paths": {
+      "@drewstone/agent-record": ["../../src/index.ts"],
+      "@drewstone/agent-record/adapters/research-publication": ["../../src/adapters/research-publication.ts"]
+    }
+  },
   "include": ["src.tsx", "vite.config.ts"]
 }
