@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { Fork, PlayDocument, Release } from '../workspace.js'
-import { go, money, readRecord, stateClass, stateLabel, useDocument, when } from './data.js'
-import { RecordWorkGraph } from './WorkGraph.js'
+import { go, money, stateClass, stateLabel, when } from './data.js'
 import { CanvasControls } from './ProfileCanvas.js'
 import { deliverableTimeline, L_NODE_H, L_NODE_W, lineageLit, lineageModel, lineageNeighbour } from './run-lineage.js'
 import type { LineageEdge, LineageModel, LineageNode } from './run-lineage.js'
@@ -18,10 +17,18 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
  * findings, the three cost kinds and the agent-hours lost; one edge per fork, supersedes or continuation), the selected
  * run's fork (why, what moved, what it carried, what changed) and releases beside it, and the deliverable timeline below.
  */
-export function RunLineage({ api, play, selected, onSelect: setSelected }: { api: string; play: PlayDocument; selected: string | null; onSelect: (id: string | null) => void }) {
+export function RunLineage({ play, selected, onSelect: setSelected }: { play: PlayDocument; selected: string | null; onSelect: (id: string | null) => void }) {
   const model = useMemo(() => lineageModel(play), [play])
   const node = selected ? (model.byId.get(selected) ?? null) : null
   if (model.nodes.length < 2) return <p className="ws-status">This play has one run, so it has no lineage yet.</p>
+  // With no recorded link between runs the canvas is a column of unconnected cards (X4): the deliverable timeline is the story.
+  if (model.edges.length === 0)
+    return (
+      <div className="lineage-story" data-lineage={model.nodes.length} data-lineage-edges="0">
+        <p className="faint">{plural(model.counts.runs, 'run')}, none forked from, continuing or superseding another: each started from the play&rsquo;s repository. The deliverable across them:</p>
+        <DeliverableTimeline play={play} selectedRun={null} onChoose={(id) => go(`/run/${encodeURIComponent(id)}`)} />
+      </div>
+    )
   return (
     <div className="lineage-story" data-lineage={model.nodes.length}>
       <div className="pc-layout ln-layout">
@@ -31,7 +38,6 @@ export function RunLineage({ api, play, selected, onSelect: setSelected }: { api
         </aside>
       </div>
       <DeliverableTimeline play={play} selectedRun={node?.id ?? null} onChoose={setSelected} />
-      <PlayRecord api={api} play={play} />
     </div>
   )
 }
@@ -125,7 +131,7 @@ function LineagePane({ play, model, selectedId, onChoose }: { play: PlayDocument
           ))}
         </div>
       </div>
-      <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys follow the line, Enter opens · 0 fits</p>
+      <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys follow the line, Enter opens · press 0 to fit</p>
     </section>
   )
 }
@@ -405,38 +411,6 @@ function DeliverableTimeline({ play, selectedRun, onChoose }: { play: PlayDocume
           )}
         </div>
       )}
-    </section>
-  )
-}
-
-/**
- * The play's record (agent-record.v1): one node per run, one fork edge per fork receipt, each run's own record joined by
- * its digest. Read only when opened; a run's full record stays on its run page.
- */
-function PlayRecord({ api, play }: { api: string; play: PlayDocument }) {
-  const [open, setOpen] = useState(false)
-  const url = `${api}/plays/${encodeURIComponent(play.id)}/record`
-  const doc = useDocument<unknown>(open ? url : null)
-  const parsed = useMemo((): { record: ReturnType<typeof readRecord> | null; error: string | null } => {
-    if (!doc.data) return { record: null, error: null }
-    try {
-      return { record: readRecord(doc.data), error: null }
-    } catch (error) {
-      return { record: null, error: error instanceof Error ? error.message : 'not a record' }
-    }
-  }, [doc.data])
-  const record = parsed.record
-  const error = doc.error ?? parsed.error
-  return (
-    <section className="ws-section ln-record" aria-label="The play's record">
-      <details onToggle={(event) => setOpen((event.target as HTMLDetailsElement).open)}>
-        <summary>The play&rsquo;s record: its runs joined through their fork receipts</summary>
-        <p className="faint">
-          One record for the whole play (agent-record.v1): a node per run, an edge per fork from its fork.json, and each run&rsquo;s own record joined by its digest.{' '}
-          <a href={url} download={`${play.id}.record.json`}>Download it</a>
-        </p>
-        {open && (error ? <p className="ws-status" role="alert">The play&rsquo;s record is unavailable: {error}</p> : record ? <RecordWorkGraph record={record} /> : <p className="ws-status" role="status">Loading the play&rsquo;s record…</p>)}
-      </details>
     </section>
   )
 }

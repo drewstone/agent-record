@@ -141,7 +141,7 @@ function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; run
             ))}
           </div>
         </div>
-        <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move between cards, Enter selects · 0 fits</p>
+        <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys move between cards, Enter selects · press 0 to fit</p>
         {Object.keys(graph.hidden).length > 0 && (
           <p className="faint card-note">
             Each lane shows its first {PER_LANE} results, claims and checks; {Object.values(graph.hidden).reduce((a, b) => a + b, 0)} more are listed under Findings.

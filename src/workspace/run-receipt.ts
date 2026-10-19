@@ -23,6 +23,8 @@ const behaviorExpectationsSchema = z.object({
 }).catchall(z.unknown())
 const scorePointSchema = z.object({
   at: z.string(), tag: nullableText, commit: nullableText, solved: z.boolean(), progress: nullableNumber.optional(), gate: z.string().optional(), settle: z.boolean().optional(),
+  /** The checker that scored it (discovery-lab runner/scorecard.mjs keys a score by tag and checker): its SHA-256, or {sha256}. */
+  checker: z.union([z.string(), z.object({ sha256: nullableText }).catchall(z.unknown())]).nullable().optional(),
   score: z.object({ stage: nullableText.optional(), reached: z.number(), of: z.number(), hidden: z.boolean().optional(), workloads: z.object({ passed: z.number(), total: z.number() }).optional() }).catchall(z.unknown()).optional(),
 }).catchall(z.unknown())
 const contractDeliverySchema = z.object({
@@ -35,7 +37,8 @@ export type ContractDelivery = z.infer<typeof contractDeliverySchema>
 export const runReceiptSchema = z.object({
   schema: z.literal('discovery-lab.run-receipt'), runId: z.string(), tag: z.string(), title: z.string(), brief: nullableText,
   outcome: z.object({ status: z.enum(['running', 'passed', 'not-passed', 'unmeasured', 'cancelled']), sentence: z.string(), at: nullableText, reason: nullableText, class: nullableText }),
-  chosen: z.object({ tag: z.string(), commit: nullableText, why: z.string() }),
+  /** `checked`: whether a play check ran on the chosen commit, when the Lab states it (R1); absent, the viewer looks for one. */
+  chosen: z.object({ tag: z.string(), commit: nullableText, why: z.string(), checked: z.boolean().nullable().optional() }).catchall(z.unknown()),
   behaviorExpectations: behaviorExpectationsSchema.nullable().optional(),
   check: z.object({ passed: z.boolean().nullable(), known: z.boolean(), output: nullableText, commit: nullableText, tag: nullableText, at: nullableText, checker: z.object({ path: nullableText, sha256: nullableText }), inputs: z.object({ source: nullableText, sha256: nullableText, count: nullableNumber }), rerun: nullableText }).catchall(z.unknown()).nullable(),
   files: z.array(z.object({ file: z.string(), label: z.string(), size: z.number().optional() }).catchall(z.unknown())),
@@ -46,11 +49,23 @@ export const runReceiptSchema = z.object({
   versions: z.object({ rows: z.array(z.object({ tag: z.string(), commit: nullableText, at: nullableText, exactPassed: nullableNumber, exactTotal: nullableNumber, checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) })), line: z.object({ x: z.tuple([z.number(), z.number()]).nullable(), y: z.tuple([z.number(), z.number()]), marks: z.array(z.object({ t: z.string(), label: z.string(), kind: z.enum(['pass', 'deadline', 'died', 'event']) })) }) }).optional(),
   lineage: z.object({ chain: z.array(z.string()), ancestors: z.array(z.unknown()) }).catchall(z.unknown()).nullable().optional(),
   sources: z.record(z.string(), nullableText),
-  cost: z.object({ billedUsd: z.object({ total: z.object({ usd: nullableNumber }).catchall(z.unknown()) }).catchall(z.unknown()) }).catchall(z.unknown()),
+  /** API-equivalent dollars (every token at API list price, whoever paid) and what was billed; `plan` names a flat plan
+   * that billed nothing per token (for example "Z.ai plan") when the Lab knows it. */
+  cost: z.object({
+    apiEquivalentUsd: z.object({ usd: nullableNumber, provenance: nullableText.optional() }).catchall(z.unknown()).nullable().optional(),
+    billedUsd: z.object({ total: z.object({ usd: nullableNumber, provenance: nullableText.optional() }).catchall(z.unknown()) }).catchall(z.unknown()),
+    plan: nullableText.optional(),
+  }).catchall(z.unknown()),
   scores: z.object({ checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) }).catchall(z.unknown()).nullable(),
   system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional(),
     /** The play check's dense score per version (discovery-lab runner/scorecard.mjs): 0 at the first stage to 1 for a pass. */
-    play: z.object({ scores: z.array(scorePointSchema).optional() }).catchall(z.unknown()).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
+    play: z.object({ scores: z.array(scorePointSchema).optional(), firstPassAt: nullableText.optional() }).catchall(z.unknown()).nullable().optional(),
+    /** Every driver try and why each ended (discovery-lab runner/scorecard.mjs attempts): the run's failure causes in hours. */
+    attempts: z.object({ tries: z.number(), failed: z.number(), hours: nullableNumber.optional(), failedHours: nullableNumber.optional(),
+      causes: z.array(z.object({ cause: z.string(), label: z.string().optional(), tries: z.number(), hours: nullableNumber }).catchall(z.unknown())) }).catchall(z.unknown()).nullable().optional(),
+    /** The run's workers and how many never finished a turn. */
+    workers: z.object({ count: z.number(), neverFinished: z.number(), neverFinishedHours: nullableNumber.optional(), hours: nullableNumber.optional() }).catchall(z.unknown()).nullable().optional(),
+  }).catchall(z.unknown()).nullable().optional(),
   /** Each contract line sent to the fleet (discovery-lab runner/play-check.mjs contractDeliveries), its acknowledgements and the fix. */
   contract: z.array(contractDeliverySchema).optional(),
 }).catchall(z.unknown())

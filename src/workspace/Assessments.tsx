@@ -60,13 +60,23 @@ export function AssessmentMatrix({
   }
   const runs = play.runs.filter((run) => run.kind !== 'search')
   if (!headline.length) return <p className="chat-empty">The dimension catalogue is unavailable.</p>
+  // A dimension no run's assessment resolved (every row unresolved, stale or absent) is a column of "unresolvable": it
+  // is counted, not drawn (X15).
+  const resolved = new Set(play.assessments.filter((row) => row.status === 'decided').map((row) => row.dimension))
+  const shown = headline.filter((dimension) => resolved.has(dimension.id))
+  const hidden = headline.filter((dimension) => !resolved.has(dimension.id))
   return (
     <div className="matrix-scroll" data-assessment-matrix>
+      {hidden.length > 0 && (
+        <p className="faint" data-unresolved-dimensions={hidden.length}>
+          {hidden.length} of {headline.length} dimensions are not shown: no run&rsquo;s assessment resolved them ({hidden.map((dimension) => dimension.id).join(', ')}).
+        </p>
+      )}
       <table className="matrix">
         <thead>
           <tr>
             <th className="matrix-run">Run</th>
-            {headline.map((dimension) => (
+            {shown.map((dimension) => (
               <th key={dimension.id} title={dimension.question}>
                 <span className="dim-id">{dimension.id}</span>
                 <span className="dim-key">{dimension.key.replaceAll('_', ' ')}</span>
@@ -82,7 +92,7 @@ export function AssessmentMatrix({
                   {run.id.startsWith(play.id + '-') ? run.id.slice(play.id.length + 1) : run.id}
                 </a>
               </th>
-              {headline.map((dimension) => {
+              {shown.map((dimension) => {
                 const cell = cells.get(`${run.id}\0${dimension.id}`)
                 const polarity = cell ? cell.shown : 'none'
                 return (

@@ -146,7 +146,7 @@ function ProvenancePane({ model, selectedId, onChoose }: { model: ProvenanceMode
           ))}
         </div>
       </div>
-      <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys follow the edges, Enter opens · 0 fits</p>
+      <p className="pc-help faint">Drag to pan · scroll or pinch to zoom · arrow keys follow the edges, Enter opens · press 0 to fit</p>
     </section>
   )
 }

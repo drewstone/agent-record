@@ -20,9 +20,9 @@ test('the run page opens with the outcome, the score curve and each contract lin
   assert.ok(now > 0 && now < html.indexOf('rr-columns'), 'the Now section comes before the evidence columns')
   const words = text(html)
   assert.match(words, /Check passed · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
-  // The curve is the Lab's points: rc1 at 0, rc2 at 0.5, rc3 at 0.667 when its public stages passed, then 1.
+  // The curve is the Lab's points: rc1 at 0, rc2 at 0.5, rc3 at 0.667 when its public stages passed, then 1. The paragraph
+  // that repeated them in words is gone (X9); the chart's data table carries the values.
   assert.match(html, /data-field="system\.play\.scores"[^>]*>.*<svg/s)
-  assert.match(words, /rc1 0 \(stage 1 of 3 \(manifest\), public workloads 0\/2\) → rc2 0\.5 .* → rc3 0\.667 .* → rc3 1 \(every stage passed\)/)
   assert.match(words, /manifest\.json build must be a cargo argv list \(argv\[0\] == cargo\)Sent 01:51 UTC on rc1 to 2 agentsAcknowledged: root delivered, s0 deliveredFixed in 47711253 \(rc2\): a later stage failed instead at 01:53 UTC/)
   assert.match(words, /workloads\/beta\.txt must hold the single word betaSent 01:53 UTC on rc2 to the rootAcknowledged: root deliveredFixed in a6f78d9e \(rc3\): its public stages passed and the tag was published at 01:55 UTC/)
 })

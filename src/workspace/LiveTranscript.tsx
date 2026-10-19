@@ -5,6 +5,7 @@ import { Conversation } from '../viewer/Conversation.js'
 import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
+import { endingLabel } from './data.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
@@ -62,6 +63,14 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
   return { schema: 'agent-record.v1', runId, title: runId, nodes: nodes.map((item) => ({ ...item, kind: 'agent' })), events, sources: [], assignment: { objective: '', suppliedKnowledge: '', deliverables: '', constraints: '', source: null }, terminal: null, coverage: { completeOriginalCapture: false, publicContent: 'Live stream window', categoryMethod: 'Runtime event kind', cost: 'Unknown' } }
 }
 
+const clock = (at: string | null | undefined) => at ? `${new Date(at).toISOString().slice(11, 16)} UTC` : null
+const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
+
+/**
+ * The run's status first, with what blocks it as the headline (M4): how it ended in one name and why (the receipt's
+ * outcome reason), the newest tag gate that did not pass, and the turns a quota (HTTP 429) ended. The driver's own last
+ * error and the runner log stay under Ending evidence.
+ */
 export function RunExecution({ doc, onConversations }: { doc: RunDocument; onConversations: () => void }) {
   const execution = doc.execution
   const [now, setNow] = useState(Date.now)
@@ -75,20 +84,36 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const fix = diagnosis ? compact(diagnosis.fix) : ''
   const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
+  const ending = doc.run.ending || doc.run.state === 'stalled' ? endingLabel(doc.run) : execution.settleKind ?? 'settle kind unknown'
+  const reason = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
+  const gate = doc.progress?.outcome?.gate
+  const blockedGate = gate?.line && gate.verdict && gate.verdict !== 'pass' ? gate : null
+  // The gate's newest verdicts that could not decide (the host's check summary): the prover ran past its limit N times.
+  const undecided = doc.run.check?.gateUnknown?.count ? doc.run.check.gateUnknown : null
+  const quota = doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
+  const resume = execution.resume.status === 'preserved' || execution.resume.reason || execution.resume.command
   return <section className="run-execution" aria-label="Run status">
     <p role="status" data-run-status>
-      <strong>{execution.alive ? 'Running' : `Stopped · ${execution.settleKind ?? 'settle kind unknown'}`}</strong>
+      <strong>{execution.alive ? 'Running' : `Stopped · ${ending}`}</strong>
       {execution.alive ? <> · last activity {age !== null && Number.isFinite(age) ? `${age} s ago` : 'unknown'} · attempts failed {execution.failedAttempts}</> : <>
-        {execution.endingError && <> · {execution.endingError.name}</>}
-        {execution.lastAttempt && <> · last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</>}
+        {reason ? <span data-field="receipt.outcome.reason"> · {reason}</span> : <>
+          {execution.endingError && <> · {execution.endingError.name}</>}
+          {execution.lastAttempt && <> · last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</>}
+        </>}
         {diagnosis && <span> · {diagnosis.id}: {fixLine}</span>}
       </>}
     </p>
+    {(blockedGate || undecided || quota) && <ul className="run-blockers" aria-label="What blocks the run">
+      {undecided && <li data-field="run.check.gateUnknown"><strong>Tag gate undecided {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
+      {blockedGate && <li data-field="progress.outcome.gate"><strong>Tag gate {blockedGate.verdict}</strong>{shortTag(blockedGate.tag) && <> on <code>{shortTag(blockedGate.tag)}</code></>}{clock(blockedGate.at) && <> at {clock(blockedGate.at)}</>}: <span className="run-blocker-line">{blockedGate.line}</span></li>}
+      {quota && <li data-field="receipt.system.attempts.causes"><strong>{quota.tries} quota hits</strong>: {quota.label ?? 'a 429 ended the turn'}{quota.hours ? ` (${quota.hours} h of turns)` : ''}</li>}
+    </ul>}
     <div className="run-execution-next">
-      <span>{execution.resume.status === 'preserved' ? 'Source sandbox preserved. Resume with ' : `${execution.resume.reason} `}{execution.resume.command && <code>{execution.resume.command}</code>}</span>
+      {resume ? <span>{execution.resume.status === 'preserved' ? 'Source sandbox preserved. Resume with ' : execution.resume.reason ? `${execution.resume.reason} ` : ''}{execution.resume.command && <code>{execution.resume.command}</code>}</span> : <span />}
       <button type="button" className="ui-button" onClick={onConversations}>Conversations</button>
     </div>
-    {!execution.alive && (execution.endingError?.message || execution.runnerTail || execution.diagnosisError || execution.diagnoses.length > 0) && <details><summary>Ending evidence</summary>
+    {!execution.alive && (execution.endingError?.message || execution.runnerTail || execution.diagnosisError || execution.diagnoses.length > 0 || (reason && execution.lastAttempt)) && <details><summary>Ending evidence</summary>
+      {reason && execution.lastAttempt && <p>Last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</p>}
       {execution.diagnoses.length > 0 && <dl>{execution.diagnoses.map((item) => <div key={item.id}><dt><strong>{item.id}</strong></dt><dd>{item.fix}</dd></div>)}</dl>}
       {execution.endingError?.message && <pre>{execution.endingError.message}</pre>}
       {execution.diagnosisError && <p>Known failure lookup unavailable: {execution.diagnosisError}</p>}
