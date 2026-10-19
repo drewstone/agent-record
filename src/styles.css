@@ -3682,3 +3682,7 @@
 .ar-ws .bead:hover, .ar-ws .bead:focus-visible { transform: scale(1.35); outline: none; box-shadow: 0 0 0 2px var(--ws-panel), 0 0 0 3px var(--ar-fg); }
 .ar-ws .bead-summary { margin: 0; font-size: 12px; }
 .ar-ws .bead-key { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; vertical-align: 0; }
+
+.agent-record .assignment-source { margin-top: 0.5rem; }
+.agent-record .assignment-source summary { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg-faint); cursor: pointer; }
+.agent-record .assignment-source pre { margin: 0.35rem 0 0; font-size: var(--ar-text-s); }

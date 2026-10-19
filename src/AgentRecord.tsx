@@ -598,9 +598,11 @@ function RecordView({
             >
               {index.actors.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label === roleOf(item)
-                    ? item.label
-                    : `${item.label} · ${roleOf(item)}`}
+                  {item.label === item.id || item.label.startsWith('wf_') || item.label.length < 8
+                    ? `${roleOf(item)} (${item.label.slice(0, 12)})`
+                    : item.label === roleOf(item)
+                      ? item.label
+                      : `${item.label} · ${roleOf(item)}`}
                 </option>
               ))}
             </Select>
@@ -608,7 +610,7 @@ function RecordView({
           {(captureLabel || captureNote || node?.assignment) && <div className="agent-capture-summary" role="status">
             {captureLabel}
             {captureNote ? <details><summary>Capture details</summary><p>{captureNote}</p></details> : null}
-            {node?.assignment && <details><summary>Assignment</summary><p>{node.assignment}</p></details>}
+            {node?.assignment && <details><summary>What this agent did</summary><p>{node.assignment}</p></details>}
           </div>}
           <div className="ui-tabs" role="tablist" aria-label="Agent evidence">
             {(['chat', 'source', 'usage'] as const).map((tab, i, all) => (
@@ -816,7 +818,10 @@ function RecordView({
             ))}
         </dl>
         {record.assignment.source && (
-          <pre>{JSON.stringify(record.assignment.source, null, 2)}</pre>
+          <details className="assignment-source">
+            <summary>Provenance</summary>
+            <pre>{JSON.stringify(record.assignment.source, null, 2)}</pre>
+          </details>
         )}
       </details>
       <details className="coverage">
@@ -824,7 +829,7 @@ function RecordView({
         <div data-coverage>
           {record.coverage.publicContent && <p>{record.coverage.publicContent}</p>}
           {record.coverage.categoryMethod && <p>{record.coverage.categoryMethod}</p>}
-          <p>Cost: {record.coverage.cost}</p>
+          {record.coverage.cost && record.coverage.cost !== 'Not recorded' && <p>Cost: {record.coverage.cost}</p>}
           {record.terminal && (
             <p>
               Recorded terminal: {record.terminal.kind ?? 'unknown'}
