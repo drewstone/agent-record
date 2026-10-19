@@ -75,8 +75,15 @@ export function Timeline({
     behaviorLane = behaviors?.length ? 26 : 0,
     height = Math.max(85, 48 + index.actors.length * step) + behaviorLane
   const span = Math.max(index.end - index.start, 1)
-  const x = (at: number) =>
-    left + ((at - index.start) / span) * (width - left - 20)
+  // Log-scale time: when one agent runs 100x longer than the rest, linear time
+  // squishes every other agent into a sliver. A log axis gives short runs visible
+  // space and compresses the long tail, with tick labels in real elapsed time.
+  const plotSpan = Math.max(1, Math.log10(span) + 1)
+  const x = (at: number) => {
+    const elapsed = Math.max(0, at - index.start)
+    if (elapsed <= 0) return left
+    return left + (Math.log10(elapsed + 1) / plotSpan) * (width - left - 20)
+  }
   const lanes = useMemo(
     () => new Map(index.actors.map((node, i) => [node.id, i])),
     [index],
@@ -90,7 +97,7 @@ export function Timeline({
       const lane = lanes.get(index.canonical(event.node))
       if (lane === undefined) continue
       const bin = Math.floor(
-        (((ms(event.at) - index.start) / span) * (width - left - 20)) / 6,
+        (x(ms(event.at)) - left) / 6,
       )
       const key = `${lane}:${bin}`
       const bucket = result.get(key) ?? { lane, bin, events: [] }
@@ -121,7 +128,9 @@ export function Timeline({
         }}
       >
         {Array.from({ length: ticks + 1 }, (_, i) => {
-          const xx = left + (i / ticks) * (width - left - 20)
+          const fraction = i / ticks
+          const elapsedAtTick = Math.max(0, Math.pow(10, fraction * plotSpan) - 1)
+          const xx = left + fraction * (width - left - 20)
           return (
             <g key={i}>
               <line
@@ -132,7 +141,7 @@ export function Timeline({
                 className="grid-line"
               />
               <text x={xx} y={18} textAnchor="middle" className="axis-label">
-                {interval(((index.end - index.start) * i) / ticks)}
+                {interval(Math.min(elapsedAtTick, span))}
               </text>
             </g>
           )
