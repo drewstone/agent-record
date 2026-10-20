@@ -9,8 +9,8 @@ import { parseResearchReport, playReportToResearchReport, ResearchReport } from 
 
 const served = () => JSON.parse(readFileSync(new URL('./fixtures/play-report-magnetar-rust.json', import.meta.url), 'utf8'))
 const render = (doc) => renderToStaticMarkup(createElement(ResearchReport, { report: playReportToResearchReport(doc) }))
-// The page's words for the host's: a gate-held release reads "not published" (v2 status words).
-const worded = (text) => text.replaceAll('withheld by the gate', 'not published')
+// The page's words for the host's: a gate-held release reads "not published" and a miss "no pass yet" (v2 status words).
+const worded = (text) => text.replaceAll('withheld by the gate', 'not published').replace(/\bnot solved\b/gi, 'no pass yet')
 const html = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
 // The rendered markup between an element's opening tag (found by an attribute) and the next element of that kind.
 const block = (page, attribute, tag = 'li') => {
