@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FindingItem, Findings, RunDocument } from '../workspace.js'
+import type { FindingItem, Findings, RunDocument } from '../workspace-model.js'
 import { MessageText } from '../viewer/StructuredContent.js'
 import { ReviewBadges, ReviewDetails } from './ScientificReviews.js'
 

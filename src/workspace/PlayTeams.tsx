@@ -1,7 +1,7 @@
 import type { ChartBand, ChartMark, TimelineLane } from '@tangle-network/charts'
 import { TimelineView } from '@tangle-network/charts/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { endingStatus, useDocument } from './data.js'
 import { type PlayHead, shortRun } from './play-standing.js'
 

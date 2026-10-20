@@ -1,4 +1,4 @@
-import type { FindingItem, Findings, Publication, ScientificReview } from '../workspace.js'
+import type { FindingItem, Findings, Publication, ScientificReview } from '../workspace-model.js'
 
 /**
  * A run's provenance as one topology, in three bands left to right:

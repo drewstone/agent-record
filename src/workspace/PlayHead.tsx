@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { dataStatus, money, standingSentence, type Status, StatusPill, statusOf } from './data.js'
 import {
   barSide,

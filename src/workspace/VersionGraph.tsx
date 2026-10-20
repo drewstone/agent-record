@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { versionGraphDocumentSchema } from '../workspace.js'
-import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace.js'
+import { versionGraphDocumentSchema } from '../workspace-model.js'
+import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 import { money, useDocument, when } from './data.js'
 import { flagLabel, layoutVersionGraph, PICKED, runGraphModel, scoreLine } from './version-graph.js'

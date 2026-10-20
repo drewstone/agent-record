@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { ProfileGraphDocument } from '../workspace.js'
+import type { ProfileGraphDocument } from '../workspace-model.js'
 import { duration, money, when } from './data.js'
 import { ProfileDiffView } from './ProfileVersions.js'
 import { blameOf, replayAt, searchesOf, signed, type SearchModel, type SearchVersion } from './search.js'

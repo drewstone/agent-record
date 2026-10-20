@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { runDocumentSchema } from '../dist/workspace.js'
-import { briefLines, compareOutputs, groupOutputs, outputKind, parseDelimited, pathInGroup } from '../src/workspace/outputs.ts'
+import { briefLines, compareOutputs, groupOutputs, outputKind, parseDelimited, pathInGroup } from '../src/workspace/outputs-model.ts'
 
 const ROOT = 'knowledge/pages/study'
 const sha = (n) => String(n).padStart(64, '0')

@@ -2,7 +2,7 @@ import { type ChartBand, type ChartMark, type MultiplePanel, smallMultiples, typ
 import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { dataStatus, statusOf } from './data.js'
 import {
   checkerIndex,
@@ -12,6 +12,7 @@ import {
   compactNumber,
   displayUnitFor,
   ENDING_GLYPH,
+  hostWords,
   lineReason,
   markVerdict,
   metricValue,
@@ -23,6 +24,7 @@ import {
   tagsWords,
   targetWords,
   utc,
+  VERDICT_WORDS,
   verdictWord,
 } from './play-standing.js'
 
@@ -555,6 +557,12 @@ function ChecksSaid({ play, climb }: { play: Play; climb: Climb }) {
   )
 }
 
+/**
+ * @tangle-network/charts 0.12 names an unknown verdict "undecided" in its key, data table and hover (plan item D6); the
+ * pages say "unverified" (design-system section 1). A figure is plain strings, so the word is replaced outside class names.
+ */
+const inGrammar = <T,>(figure: T): T => JSON.parse(JSON.stringify(figure).replace(/(?<![-\w])undecided\b/g, VERDICT_WORDS.undecided!)) as T
+
 const initialMode = (): 'release' | 'time' => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('climb') === 'time' ? 'time' : 'release')
 
 export function PlayClimb({ play }: { play: Play }) {
@@ -566,7 +574,7 @@ export function PlayClimb({ play }: { play: Play }) {
   const extent = useMemo(() => (climb ? timeExtent(climb) : null), [climb])
   const timed = mode === 'time' && !!extent
   // Drawn at the section's measured width, so the climb's labels and marks keep their set size on a wide page.
-  const figure = useCallback((width: number) => (timed ? climbTimeFigure(play, climb!, width, range ?? extent!) : climbFigure(play, climb!, width)), [play, climb, timed, range, extent])
+  const figure = useCallback((width: number) => inGrammar(timed ? climbTimeFigure(play, climb!, width, range ?? extent!) : climbFigure(play, climb!, width)), [play, climb, timed, range, extent])
   const choose = (next: 'release' | 'time') => {
     setMode(next)
     const url = new URL(window.location.href)
@@ -585,7 +593,7 @@ export function PlayClimb({ play }: { play: Play }) {
           {graded
             ? timed
               ? 'Check progress at the time each check ran, each run a band over the hours it ran; a release checked many times is a line from its first check to its last. Filled marks pass, rings fail; ◆ is a tag gate.'
-              : 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are undecided; ◆ is a tag gate.'
+              : 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are unverified; ◆ is a tag gate.'
             : 'This check passes or fails without partial progress: each run’s checked releases with their verdicts.'}
         </p>
         {graded && extent && (
@@ -649,7 +657,7 @@ export function PlayAgainstBar({ play }: { play: Play }) {
   const bar = play.bar ?? null
   const figure = useMemo(() => {
     if (!climb || !bar || !play.barSeries?.length) return null
-    return (width: number) => barFigure(play, climb, bar, width)
+    return (width: number) => inGrammar(barFigure(play, climb, bar, width))
   }, [play, climb, bar])
   if (!figure || !barPanels(play).length) return null
   return (
@@ -688,7 +696,7 @@ function barFigure(play: Play, climb: Climb, bar: NonNullable<Play['bar']>, widt
           verdict: markVerdict(point.verdict),
           comparable: point.comparable === undefined ? null : point.comparable,
           ...(failing && point.comparable !== false ? { glyph: 'cross' as const } : {}),
-          annotation: [metricValue(point.value, metric.unit), verdictWord(point.verdict), point.note, point.basis ? `from ${point.basis}` : null].filter(Boolean).join(' · '),
+          annotation: [metricValue(point.value, metric.unit), verdictWord(point.verdict), point.note ? hostWords(point.note) : null, point.basis ? `from ${point.basis}` : null].filter(Boolean).join(' · '),
         }
       })
     const domain = domainOf(metric, points.map((point) => point.y!).filter((value) => value !== null))

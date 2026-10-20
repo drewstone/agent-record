@@ -1,6 +1,6 @@
 import { createElement, Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
 import type { RunRecord } from '../record.js'
-import type { Spend } from '../workspace.js'
+import type { Spend } from '../workspace-model.js'
 import { ENDING_GLYPH, hostWords } from './play-standing.js'
 
 /** How soon a document the server marked stale (X-Workspace-Stale) is fetched again, backing off by half each time:
@@ -248,10 +248,13 @@ function causeAxis({ cause, label, live, actNow = null }: Extract<StatusInput, {
     case 'rate-limited':
       return status('cause', 'Quota hit', live ? 'attention' : 'neutral', live ? ENDING_GLYPH.attention : ENDING_GLYPH.stalled)
     case 'platform-lost':
-      // The fail family's hollow mark (□, against act-now ■): red only while a live run's blocker is red.
-      return live && actNow
-        ? status('cause', `Platform lost the turn · act now: ${actNow}`, 'fail', ENDING_GLYPH.crashed)
-        : status('cause', 'Platform lost the turn', 'neutral', ENDING_GLYPH.crashed)
+      // A hollow △, against act-now's filled ■: attention while a live run is losing turns (it is blocked), red only when
+      // that run's blocker is red, and a past fact once the run has ended (v2: amber only for running or blocked).
+      return !live
+        ? status('cause', 'Platform lost the turn', 'neutral', ENDING_GLYPH.lost)
+        : actNow
+          ? status('cause', `Platform lost the turn · act now: ${actNow}`, 'fail', ENDING_GLYPH.lost)
+          : status('cause', 'Platform lost the turn', 'attention', ENDING_GLYPH.lost)
     default:
       return status('cause', label ?? cause.replaceAll('-', ' '), 'neutral', ENDING_GLYPH.ended)
   }

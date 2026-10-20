@@ -3,7 +3,7 @@ import type { AssessmentRow, AssessmentsDocument, Dimension, DimensionsDocument 
 import type { EventFlag } from '../viewer/Conversation.js'
 import type { RecordIndex } from '../viewer/model.js'
 import { utcTime } from '../viewer/model.js'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { duration, money, when } from './data.js'
 
 /** A System One distribution without calibration never colours a cell. */

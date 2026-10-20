@@ -499,6 +499,7 @@ export const ENDING_GLYPH: Record<string, string> = {
   'never started': '·',
   ended: '○',
   attention: '▲',
+  lost: '△',
   unknown: '◌',
   fail: '■',
 }

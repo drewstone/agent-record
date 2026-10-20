@@ -1,5 +1,5 @@
 import type { RunRecord } from '../record.js'
-import type { FindingItem, Findings } from '../workspace.js'
+import type { FindingItem, Findings } from '../workspace-model.js'
 
 const SHOWN_KINDS = new Set(['result', 'claim', 'check'])
 const PER_LANE = 14

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
+import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
 import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'

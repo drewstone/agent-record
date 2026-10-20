@@ -24,7 +24,10 @@ export const ENDING_OF_STATE: Record<string, RunEnding> = {
   abandoned: 'cancelled',
   cancelled: 'cancelled',
 }
-/** Per-day counts by state folded into the ending words, in ENDING_ORDER; states without an ending are `unknown`. */
+/**
+ * Per-day counts by state folded into the ending words, in ENDING_ORDER; states without an ending are `unknown`. A count
+ * of running runs is data, drawn in ink: the running run's own row chip is its one amber mark on the page (v2 delta 3).
+ */
 export function byEnding(byState: Record<string, (number | null)[]>): Array<{ name: string; color: string; values: (number | null)[] }> {
   const sums = new Map<string, (number | null)[]>()
   for (const [state, values] of Object.entries(byState)) {
@@ -34,7 +37,7 @@ export function byEnding(byState: Record<string, (number | null)[]>): Array<{ na
   }
   return [...ENDING_ORDER, 'unknown' as const]
     .filter((ending) => (sums.get(ending) ?? []).some((value) => (value ?? 0) > 0))
-    .map((ending) => ({ name: endingStatus(ending).word.replace(/ \(.*\)$/, ''), color: ending === 'unknown' ? 'var(--chart-outcome-other)' : ENDING_COLORS[ending], values: sums.get(ending)! }))
+    .map((ending) => ({ name: endingStatus(ending).word.replace(/ \(.*\)$/, ''), color: ending === 'unknown' ? 'var(--chart-outcome-other)' : ending === 'live' ? 'var(--ar-fg)' : ENDING_COLORS[ending], values: sums.get(ending)! }))
 }
 
 export const compact = formatCompact

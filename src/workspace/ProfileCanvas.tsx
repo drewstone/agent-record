@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace.js'
+import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 import { dataStatus, money, statusOf } from './data.js'
 import { canvasModel, COL_W, lineageOf, neighbour, NODE_H, NODE_W, originChain, originText, originVerb, profileRunCost, runPlays } from './profile-canvas.js'

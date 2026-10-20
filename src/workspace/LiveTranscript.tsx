@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RecordEvent, RunRecord } from '../record.js'
-import type { RunDocument } from '../workspace.js'
+import type { RunDocument } from '../workspace-model.js'
 import { Conversation } from '../viewer/Conversation.js'
 import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
@@ -119,7 +119,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
     </p>
     {block && <div className="run-end-blocker" data-run-blocker={block.class}><BlockerChip blocker={block} until={ended} wallHours={wallHours} /></div>}
     {(blockedGate || undecided || quota) && <ul className="run-blockers" aria-label="What blocks the run">
-      {undecided && <li data-field="run.check.gateUnknown" data-status={dataStatus(blocking)}><strong>Tag gate undecided {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
+      {undecided && <li data-field="run.check.gateUnknown" data-status={dataStatus(blocking)}><strong>Tag gate unverified {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
       {blockedGate && <li data-field="progress.outcome.gate" data-status={dataStatus(blocking)}><strong>Tag gate {blockedGate.verdict}</strong>{shortTag(blockedGate.tag) && <> on <code>{shortTag(blockedGate.tag)}</code></>}{clock(blockedGate.at) && <> at {clock(blockedGate.at)}</>}: <span className="run-blocker-line">{blockedGate.line}</span></li>}
       {quota && <li data-field="receipt.system.attempts.causes" data-status={dataStatus(blocking)}><strong>{quota.tries} quota hits</strong>: {quota.label ?? 'a 429 ended the turn'}{quota.hours ? ` (${quota.hours} h of turns)` : ''}</li>}
     </ul>}

@@ -1,5 +1,5 @@
 import { useDocument, when } from './data.js'
-import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument } from './reliability.js'
+import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument } from './reliability-model.js'
 
 /**
  * The fleet's run reliability over the last seven days, on the plays page: the share of settled runs no infrastructure,

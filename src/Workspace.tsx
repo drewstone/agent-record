@@ -20,7 +20,7 @@ import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import { ResearchReport } from './ResearchReport.js'
 import { playReportToResearchReport, type PlayReportDocument } from './play-report.js'
-import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace.js'
+import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
 import { withPrompts } from './viewer/prompts.js'

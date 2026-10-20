@@ -1,4 +1,4 @@
-import type { VersionGraphDocument, VersionTag } from '../workspace.js'
+import type { VersionGraphDocument, VersionTag } from '../workspace-model.js'
 import type { StatusTone } from './data.js'
 
 /** The registered rule's pick is bookkeeping, not a pass: no check ran on it for this mark. */

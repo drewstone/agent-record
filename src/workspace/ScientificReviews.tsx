@@ -1,4 +1,4 @@
-import type { ScientificReview } from '../workspace.js'
+import type { ScientificReview } from '../workspace-model.js'
 
 // A reviewer's label is a finding word ("WRONG" reads as contradicted), not a status: neutral, with "NEW" as information.
 function tone(label: string) {

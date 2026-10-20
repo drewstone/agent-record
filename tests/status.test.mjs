@@ -101,7 +101,7 @@ test("18b's readout is pending for an hour after it settled, then says no readou
   assert.match(late, /No readout was written: the run was stopped by Lab \(stall\) 03:27Z\./)
 })
 
-test("the receipt's turn endings: platform loss is the hollow crash square, neutral once settled and red only for a live red blocker", () => {
+test("the receipt's turn endings: platform loss is a hollow triangle: neutral once settled, amber while live, red only for a live red blocker", () => {
   // 18b's served receipt.system.attempts (api/runs/magnetar-rust-20261018b, 2026-10-19), on the contract-loop receipt.
   const attempts = { tries: 324, failed: 240, hours: 60.38, failedHours: 44.45, causes: [
     { cause: 'completed', label: 'completed', tries: 84, hours: 15.93 },
@@ -121,15 +121,15 @@ test("the receipt's turn endings: platform loss is the hollow crash square, neut
   assert.match(visible(settled.section), /Where turns ended/)
   assert.doesNotMatch(settled.html, /Why turns failed/)
   assert.deepEqual(settled.rows, ['cause:Platform lost the turn:neutral', 'cause:Quota hit:neutral', 'cause:Stopped by Lab (budget):neutral', 'cause:Stopped by Lab or operator:neutral'])
-  assert.match(visible(settled.section), /□\s+Platform lost the turn/)
+  assert.match(visible(settled.section), /△\s+Platform lost the turn/)
   assert.deepEqual(statuses(settled.html).filter((status) => status.endsWith(':fail')), [])
 
   const amber = causes({ phase: 'running', final: false, blocker: { class: 'stuck-turn', severity: 'amber' } })
   assert.ok(amber.rows.includes('cause:Quota hit:attention'), 'a live run hitting quota is blocked: amber')
-  assert.ok(amber.rows.includes('cause:Platform lost the turn:neutral'))
+  assert.ok(amber.rows.includes('cause:Platform lost the turn:attention'), 'a live run losing turns to the platform is blocked: amber')
 
   const red = causes({ phase: 'running', final: false, blocker: { class: 'stuck-turn', severity: 'red', owner: 'discovery-lab' } })
   // Red only while a live run is blocked red, and the mark names who must act.
   assert.deepEqual(red.rows.filter((status) => status.endsWith(':fail')), ['cause:Platform lost the turn · act now: discovery-lab:fail'])
-  assert.match(visible(red.section), /□\s+Platform lost the turn · act now: discovery-lab/)
+  assert.match(visible(red.section), /△\s+Platform lost the turn · act now: discovery-lab/)
 })

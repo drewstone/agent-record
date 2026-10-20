@@ -3,10 +3,10 @@ import type { AssessmentRow, Dimension } from '../assessment.js'
 import type { RecordNode } from '../record.js'
 import type { RecordIndex } from '../viewer/model.js'
 import { agentState, ms, roleOf } from '../viewer/model.js'
-import type { RunDocument } from '../workspace.js'
+import type { RunDocument } from '../workspace-model.js'
 import { polarityOf, shownPolarity } from './Assessments.js'
 import { dataStatus, duration, money, StatusPill, statusOf, tokens } from './data.js'
-import { briefLines } from './outputs.js'
+import { briefLines } from './outputs-model.js'
 
 /** Per agent, from the record's `nodes` part: event count, first and last event, recorded usage and list price, tool
  * calls, its latest words and the profile it was spawned with (the last four absent from hosts before them). */

@@ -1,6 +1,6 @@
 import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { useMemo, useState } from 'react'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { money, StatusPill, statusOf, tokens } from './data.js'
 import { checkerLabel, checksByRun, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 

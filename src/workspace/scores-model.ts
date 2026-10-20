@@ -1,4 +1,4 @@
-import type { HumanGrade, PanelReview, Readout, ReadoutChart } from '../workspace.js'
+import type { HumanGrade, PanelReview, Readout, ReadoutChart } from '../workspace-model.js'
 
 /**
  * A run's scores side by side, all on the readout's absolute 0–100 vs world-class scale: the readout's AI judges, the
