@@ -238,3 +238,44 @@ export function modelIdentity(
       ? `${node.model} (declared; served model unknown)`
       : null
 }
+
+export interface TooltipSection {
+  kind: 'header' | 'body' | 'usage' | 'status' | 'note'
+  label?: string
+  value: string
+  tone?: 'default' | 'error' | 'ok' | 'warn' | 'muted' | 'accent'
+}
+
+export function tooltipSections(event: RecordEvent, index: RecordIndex, cutoff: number): { title: string; category: string; tone: string; sections: TooltipSection[] } {
+  const node = index.nodes.get(index.canonical(event.node))
+  const isError = event.detail.isError === true || event.detail.responseStatus === 'error'
+  const category = event.detail.role ?? event.kind
+  const title = event.label || category
+  const sections: TooltipSection[] = [
+    { kind: 'header', value: `${node?.label ?? event.node} · ${utcTime(event.at)}`, tone: 'muted' },
+  ]
+  if (ms(event.at) > cutoff) {
+    sections.push({ kind: 'note', value: 'After the selected time. Select this event to advance.' })
+    return { title, category, tone: isError ? 'error' : 'default', sections }
+  }
+  if (event.detail.isError) sections.push({ kind: 'status', value: 'Tool error', tone: 'error' })
+  if (event.detail.responseStatus === 'error') sections.push({ kind: 'status', value: 'Request failed', tone: 'error' })
+  const text = textOf(event)
+  if (text) sections.push({ kind: 'body', value: text.slice(0, 200) + (text.length > 200 ? '…' : '') })
+  const calls = callsOf(event)
+  for (const call of calls.slice(0, 2)) {
+    sections.push({ kind: 'body', label: call.name, value: preview(call).slice(0, 160) })
+  }
+  const usage = event.detail.usage
+  if (usage && !event.detail.usageScope) {
+    const parts: string[] = []
+    if (usage.input !== undefined) parts.push(`↑ ${fmt(usage.input)}`)
+    if (usage.output !== undefined) parts.push(`↓ ${fmt(usage.output)}`)
+    if (usage.cacheRead !== undefined) parts.push(`⟳ ${fmt(usage.cacheRead)}`)
+    if (usage.cacheWrite !== undefined) parts.push(`→ ${fmt(usage.cacheWrite)}`)
+    if (parts.length) sections.push({ kind: 'usage', value: parts.join('  '), tone: 'accent' })
+  }
+  const duration = event.detail.durationMs
+  if (typeof duration === 'number') sections.push({ kind: 'status', value: `⏱ ${duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`}`, tone: 'muted' })
+  return { title, category, tone: isError ? 'error' : 'default', sections }
+}

@@ -862,10 +862,23 @@ function RecordView({
                 : undefined,
           }}
         >
-          <strong>{tooltip.title}</strong>
-          {tooltip.lines.map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
+          <strong className="tooltip-title">{tooltip.title}</strong>
+          {tooltip.lines.map((line, i) => {
+            if (line.kind === 'header')
+              return <p key={i} className="tooltip-header">{line.value}</p>
+            if (line.kind === 'status')
+              return <p key={i} className={`tooltip-status tooltip-${line.tone ?? 'default'}`}>{line.value}</p>
+            if (line.kind === 'usage')
+              return <p key={i} className="tooltip-usage">{line.value}</p>
+            if (line.kind === 'note')
+              return <p key={i} className="tooltip-note">{line.value}</p>
+            return (
+              <p key={i} className="tooltip-body">
+                {line.label && <span className="tooltip-label">{line.label}</span>}
+                {line.value}
+              </p>
+            )
+          })}
         </div>
       )}
     </div>

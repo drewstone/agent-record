@@ -1,19 +1,19 @@
 import { useMemo, useState } from 'react'
 import type { FocusEvent, KeyboardEvent, MouseEvent } from 'react'
 import type { RecordEvent } from '../record.js'
-import { fmt, hoverLines, interval, ms, toolKey, utcTime } from './model.js'
+import { fmt, hoverLines, interval, ms, toolKey, tooltipSections, utcTime } from './model.js'
 import type { RecordIndex } from './model.js'
 
 export interface PlotTooltip {
   title: string
-  lines: string[]
+  lines: Array<string | { kind: string; value: string; tone?: string; label?: string }>
   x: number
   y: number
 }
 export type ShowTooltip = (
   event: MouseEvent<SVGElement> | FocusEvent<SVGElement>,
   title: string,
-  lines: string[],
+  lines: Array<string | { kind: string; value: string; tone?: string; label?: string }>,
 ) => void
 
 export const activate = (
@@ -168,7 +168,8 @@ export function Timeline({
             (event) => event.id === selected,
           )
           const event = group[selectedIndex < 0 ? 0 : selectedIndex]!
-          const lines = hoverLines(event, index, cutoff)
+          const tooltipData = tooltipSections(event, index, cutoff)
+          const lines = tooltipData.sections
           if (group.length > 1)
             lines.unshift(
               `${group.length} events in this interval. Select again to cycle; zoom separates nearby times.`,
@@ -508,7 +509,8 @@ export function UsageChart({
               ? point.elapsed!
               : Math.max(0, ...visible.map((channel) => point.values[channel] ?? 0))
           if (metric !== 'tool-time' && value === 0 && !visible.some((channel) => point.values[channel] !== undefined)) return null
-          const lines = hoverLines(point.event, index, cutoff)
+          const tooltipData = tooltipSections(point.event, index, cutoff)
+          const lines = tooltipData.sections
           if (metric === 'tool-time')
             lines.push(
               `${point.elapsed!.toFixed(3)} seconds between the recorded call and this result. Includes queue and tool time.`,

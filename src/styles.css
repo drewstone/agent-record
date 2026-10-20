@@ -206,15 +206,15 @@
   position: fixed;
   z-index: 30;
   width: min(345px, calc(100vw - 16px));
-  padding: 0.65rem 0.8rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid var(--ar-border-strong);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--ar-bg);
   color: var(--ar-fg);
-  box-shadow: 0 5px 20px #0002;
+  box-shadow: 0 8px 32px #0003, 0 2px 8px #0002;
   pointer-events: none;
-  font-size: var(--ar-text-s);
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.45;
 }
 .agent-record .ui-plot-tooltip strong {
   display: block;
@@ -226,6 +226,60 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+.agent-record .ui-plot-tooltip .tooltip-title {
+  display: block;
+  font: 600 12px/1.3 var(--ar-font-body);
+  margin: 0 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--ar-border);
+}
+.agent-record .ui-plot-tooltip .tooltip-header {
+  font: 11px/1.3 var(--ar-font-body);
+  color: var(--ar-muted);
+  margin: 0 0 4px;
+}
+.agent-record .ui-plot-tooltip .tooltip-body {
+  font: 11px/1.5 var(--ar-font-mono);
+  color: var(--ar-fg);
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+.agent-record .ui-plot-tooltip .tooltip-label {
+  display: inline-block;
+  font: 600 10px/1.3 var(--ar-font-body);
+  color: var(--ar-accent);
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.agent-record .ui-plot-tooltip .tooltip-status {
+  font: 500 11px/1.3 var(--ar-font-body);
+  margin: 2px 0;
+}
+.agent-record .ui-plot-tooltip .tooltip-status.tooltip-error {
+  color: var(--ar-fail, #e5484d);
+}
+.agent-record .ui-plot-tooltip .tooltip-status.tooltip-ok {
+  color: var(--ar-ok, #30a46c);
+}
+.agent-record .ui-plot-tooltip .tooltip-status.tooltip-warn {
+  color: var(--ar-warn, #f5a524);
+}
+.agent-record .ui-plot-tooltip .tooltip-usage {
+  font: 11px/1.3 var(--ar-font-mono);
+  color: var(--ar-accent);
+  margin: 4px 0 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--ar-border);
+  letter-spacing: 0.03em;
+}
+.agent-record .ui-plot-tooltip .tooltip-note {
+  font: italic 11px/1.4 var(--ar-font-body);
+  color: var(--ar-subtle);
+  margin: 4px 0 0;
+}
+
 .agent-record {
   --ar-panel: var(--ar-surface, color-mix(in srgb, var(--ar-bg-alt) 35%, var(--ar-bg)));
   border: 1px solid var(--ar-border);
