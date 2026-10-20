@@ -1,4 +1,4 @@
-import type { PlayDocument, ProfileDiffField, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace.js'
+import type { PlayDocument, ProfileDiffField, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace-model.js'
 
 /**
  * The play page's version graph, read for drawing: each run of the play is a version (its registered profile), compared

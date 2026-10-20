@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
+import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
 import { useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { ENDING_COLORS, ENDING_ORDER } from '@tangle-network/charts'

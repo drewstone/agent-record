@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RecordEvent, RunRecord } from '../record.js'
-import type { RunDocument } from '../workspace.js'
+import type { RunDocument } from '../workspace-model.js'
 import { Conversation } from '../viewer/Conversation.js'
 import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { RunRecord } from '../record.js'
-import type { RunDocument } from '../workspace.js'
+import type { RunDocument } from '../workspace-model.js'
 import { PageReader } from './Findings.js'
 import { CanvasControls } from './ProfileCanvas.js'
 import { useCanvasView } from './useCanvasView.js'

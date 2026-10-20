@@ -1,4 +1,4 @@
-import type { ScientificReview } from '../workspace.js'
+import type { ScientificReview } from '../workspace-model.js'
 
 function tone(label: string) {
   if (label === 'WRONG') return 'fail'

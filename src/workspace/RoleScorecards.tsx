@@ -1,4 +1,4 @@
-import type { ProfileGraphDocument, ProfileNode, RoleCard, RoleEdit, RunRoleCard } from '../workspace.js'
+import type { ProfileGraphDocument, ProfileNode, RoleCard, RoleEdit, RunRoleCard } from '../workspace-model.js'
 import { when } from './data.js'
 import { classCounts, costText, expectationsText, minutes, replayText, severityText, weakText } from './role-scorecards.js'
 

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useDocument, when } from './data.js'
-import { apiCost, billedCost, day, dotLabel, headlineBars, panelModel, playNames } from './theatre.js'
-import type { Column, Dot, Panel, RoundKind, TheatreAct, TheatreBarView, TheatreViewsDocument } from './theatre.js'
+import { apiCost, billedCost, day, dotLabel, headlineBars, panelModel, playNames } from './theatre-model.js'
+import type { Column, Dot, Panel, RoundKind, TheatreAct, TheatreBarView, TheatreViewsDocument } from './theatre-model.js'
 
 const CHIP: Record<TheatreAct['result']['status'], string> = {
   'new-best': 'Step up',

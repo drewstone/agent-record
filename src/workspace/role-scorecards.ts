@@ -1,4 +1,4 @@
-import type { RoleCard, RoleEdit, RoleScorecardSummary } from '../workspace.js'
+import type { RoleCard, RoleEdit, RoleScorecardSummary } from '../workspace-model.js'
 
 type Cost = RoleScorecardSummary['cost'] | RoleCard['cost']
 type Expectations = RoleScorecardSummary['expectations'] | RoleCard['expectations']

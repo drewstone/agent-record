@@ -1,4 +1,4 @@
-import type { FeedItem, PlayDocument } from '../workspace.js'
+import type { FeedItem, PlayDocument } from '../workspace-model.js'
 import { plain } from './FindingsFeed.js'
 import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { PlayInput } from '../workspace.js'
+import type { PlayInput } from '../workspace-model.js'
 import { MessageText, StructuredContent } from '../viewer/StructuredContent.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 

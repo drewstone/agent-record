@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { Findings, RunDocument, ScientificReview } from '../workspace.js'
+import type { Findings, RunDocument, ScientificReview } from '../workspace-model.js'
 import { useDocument } from './data.js'
 import { CanvasControls } from './ProfileCanvas.js'
 import { P_NODE_H, P_NODE_W, provenanceLit, provenanceModel, provenanceNeighbour, reviewerOf, verdictTone, VERDICTS } from './provenance.js'

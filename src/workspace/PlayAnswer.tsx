@@ -1,4 +1,4 @@
-import type { PlayDocument, RunCheck, RunSummary } from '../workspace.js'
+import type { PlayDocument, RunCheck, RunSummary } from '../workspace-model.js'
 import { stateClass, stateLabel, when } from './data.js'
 import { plain } from './FindingsFeed.js'
 

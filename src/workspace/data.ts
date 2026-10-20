@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RunRecord } from '../record.js'
-import type { Spend } from '../workspace.js'
+import type { Spend } from '../workspace-model.js'
 
 /** How soon a document the server marked stale (X-Workspace-Stale) is fetched again, backing off by half each time:
  * about a minute in all, the longest a plays index takes to recompose on a loaded host. */
