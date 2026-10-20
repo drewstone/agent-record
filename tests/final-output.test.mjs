@@ -5,7 +5,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { FinalOutputPanel, finalOutputSchema } from '../dist/index.js'
-import { externalHref, judgeBasis, questionLabel, reviewPhaseLabel, reviewScoreTone, scoreLabel, verdictView } from '../src/workspace/final-output.ts'
+import { externalHref, judgeBasis, questionLabel, reviewPhaseLabel, scoreLabel, verdictView } from '../src/workspace/final-output.ts'
 
 const readout = {
   status: 'complete',
@@ -51,9 +51,8 @@ test('readout links are absolute http(s) only', () => {
 })
 
 test('verdicts, scores and judge basis never invent a value', () => {
-  assert.deepEqual(verdictView('not-measured'), { label: 'not measured', tone: 'state-unknown' })
-  assert.deepEqual(verdictView('not-met'), { label: 'not met', tone: 'state-fail' })
-  assert.deepEqual(verdictView('retracted-later'), { label: 'retracted later', tone: 'state-unknown' })
+  assert.equal(verdictView('not-measured').label, 'not measured')
+  assert.equal(verdictView('retracted-later').label, 'retracted later')
   assert.equal(scoreLabel(3, 4), '3/4')
   assert.equal(scoreLabel(null, 4), 'unknown/4')
   assert.equal(scoreLabel(2.5, null), '2.5/unknown')
@@ -111,10 +110,6 @@ test('the run page shows the latest trace review in plain words, and nothing whe
 test('trace review questions, scores and phase read as plain words', () => {
   assert.equal(questionLabel('coordination-waste'), 'Agents coordinate without waste')
   assert.equal(questionLabel('some_new-question'), 'Some new question')
-  assert.equal(reviewScoreTone(70), 'state-ok')
-  assert.equal(reviewScoreTone(55), 'state-warn')
-  assert.equal(reviewScoreTone(39), 'state-fail')
-  assert.equal(reviewScoreTone(null), 'state-unknown')
   assert.equal(reviewPhaseLabel({ final: false, phase: 'running' }, 'now'), 'Live review, now')
   assert.equal(reviewPhaseLabel({ final: true, phase: 'settled' }, 'now'), 'Final review, after the run settled')
 })

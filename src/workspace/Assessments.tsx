@@ -176,8 +176,10 @@ export function RunAssessments({
       .sort((a, b) => (RANK[b.polarity] ?? 0) - (RANK[a.polarity] ?? 0))
     const worst = ranked[0]!
     const labels = new Set(list.map((row) => row.label))
-    return { label: worst.row.label, polarity: worst.polarity, subjects: list.length, mixed: labels.size > 1, stale: list.some((row) => row.status === 'stale') }
+    return { label: worst.row.label, polarity: worst.polarity, subjects: list.length, mixed: labels.size > 1, stale: list.some((row) => row.status === 'stale'), resolved: list.some((row) => row.status === 'decided') }
   }
+  // Resolved items lead; a dimension no judge resolved is counted per group, and a stale judge's reason prints once.
+  const staleReason = visible.find((row) => row.status === 'stale' && row.reason)?.reason ?? null
   const firstAdverse = (dimensions.dimensions ?? []).find((dimension) => summary(dimension)?.polarity === 'bad')?.id
   const selected = (focus && catalogue.has(focus) ? focus : null) ?? firstAdverse ?? (dimensions.dimensions ?? []).find((dimension) => byDimension.has(dimension.id))?.id
   const dimension = selected ? catalogue.get(selected) : undefined
@@ -191,13 +193,17 @@ export function RunAssessments({
         </div>
         {doc?.recordDigest && <span className="mono faint">record {doc.recordDigest.slice(0, 12)}</span>}
       </div>
+      {staleReason && <p className="faint assessment-stale" data-stale-reason>Stale judge: {staleReason}</p>}
       <div className="scorecard" data-scorecard>
-        {dimensions.groups.map((group) => (
+        {dimensions.groups.map((group) => {
+          const items = dimensions.dimensions.filter((item) => item.group === group.id)
+          const judged = items.filter((item) => summary(item)?.resolved)
+          const unjudged = items.length - judged.length
+          return (
           <div key={group.id} className="scorecard-group">
             <span className="scorecard-name"><span className="dim-id">{group.id}</span>{group.name}</span>
             <span className="scorecard-cells">
-              {dimensions.dimensions
-                .filter((item) => item.group === group.id)
+              {judged
                 .map((item) => {
                   const cell = summary(item)
                   return (
@@ -215,9 +221,11 @@ export function RunAssessments({
                     </button>
                   )
                 })}
+              {unjudged > 0 && <span className="score-unjudged faint" data-unjudged={unjudged}>{group.id}: {unjudged} not judged</span>}
             </span>
           </div>
-        ))}
+          )
+        })}
       </div>
       {dimension && (
         <section className="assessment-dimension focused" data-dimension={dimension.id} id={`dim-${dimension.id}`}>

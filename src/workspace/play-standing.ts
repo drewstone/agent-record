@@ -481,11 +481,27 @@ export const verdictWord = (verdict: string | null | undefined) => (verdict ? (V
 export const markVerdict = (verdict: string | null | undefined): 'pass' | 'fail' | 'unknown' =>
   verdict === 'solved' || verdict === 'contract-held' ? 'pass' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown'
 
-/** Run ending glyphs: ✓ solved, ✕ died, ⊘ cancelled, ⏸ stalled, ▶ live, · never started. */
-export const ENDING_GLYPH: Record<string, string> = { solved: '✓', died: '✕', cancelled: '⊘', stalled: '⏸', live: '▶', 'never started': '·' }
+/**
+ * Status shapes, one per meaning (design-system section 1): ✓ solved, ⊘ stopped by the operator, ⏸ stopped by the Lab,
+ * ▶ running, · never started, ○ ended or no pass yet, □ a past crash, ▲ attention, ◌ (a dashed ring) unknown or
+ * unverified, ■ act now. A past crash ("died") is □, never a red ✕.
+ */
+export const ENDING_GLYPH: Record<string, string> = {
+  solved: '✓',
+  died: '□',
+  crashed: '□',
+  cancelled: '⊘',
+  stalled: '⏸',
+  live: '▶',
+  'never started': '·',
+  ended: '○',
+  attention: '▲',
+  unknown: '◌',
+  fail: '■',
+}
 
 /** Release states, in the four words the pages use. */
-export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'withheld by the gate', superseded: 'superseded', unknown: 'state unknown' }
+export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'not published', superseded: 'superseded', unknown: 'state unknown' }
 
 /** A checker's display label, found by digest or by label; null digests read "checker unrecorded". */
 export function checkerLabel(checkers: readonly PlayChecker[] | undefined, id: string | null | undefined): string {
@@ -582,6 +598,17 @@ export function targetWords(metric: PlayBarMetric): string | null {
   if (t.min !== null && t.min !== undefined) return `≥ ${metricValue(t.min, metric.unit)}`
   if (t.max !== null && t.max !== undefined) return `≤ ${metricValue(t.max, metric.unit)}`
   return null
+}
+
+/** Where a value sits against a metric's target: within it, past it in the metric's better direction, or short of it. */
+export function barSide(metric: PlayBarMetric, value: number | null | undefined): 'within' | 'past' | 'short' | null {
+  const t = metric.target
+  if (!t || value === null || value === undefined || !(value > 0)) return null
+  const low = t.min ?? t.approx ?? t.max ?? null
+  const high = t.max ?? t.approx ?? t.min ?? null
+  if (low === null || high === null) return null
+  if (value >= low && value <= high) return 'within'
+  return (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low) ? 'past' : 'short'
 }
 
 /** How far a value is from a metric's target, as text: "36× below the bar", "within the bar", "0.6× of the bar". */

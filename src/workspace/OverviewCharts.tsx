@@ -3,12 +3,14 @@ import { ENDING_COLORS, ENDING_ORDER, type RunEnding } from '@tangle-network/cha
 import { LIVE_SERIES, formatCompact } from '@tangle-network/charts/react'
 export { DayBars, HBars, Histogram, Lines, Meter, Spark, Gantt } from '@tangle-network/charts/react'
 
-// The shared chart palette supplies categorical slots; run states take the one ending palette every view shares.
-export const SERIES = LIVE_SERIES
+// The shared chart palette supplies categorical slots, except its third (#c98500), which is the stalled amber: status hues
+// mark status only (design-system section 5), so that slot is a violet at ΔE ≥ 24 from every series and status tone.
+// The palette itself is the charts library's to change (plan item D6).
+export const SERIES = [LIVE_SERIES[0]!, LIVE_SERIES[1]!, '#9b59b6', ...LIVE_SERIES.slice(3)]
 /**
- * A catalog state as the ending word every page shows (@tangle-network/charts ENDING_ORDER): green, red and amber mean
- * solved, died and stalled on the overview, the play page and the explorer alike. A state with no ending (no record,
- * unknown) draws hollow in the neutral grey.
+ * A catalog state as the ending word every page shows (@tangle-network/charts ENDING_ORDER). The ending colours are the
+ * status tones agent-record sets on `--chart-ending-*` (styles.css): green for solved, amber for live, and neutral for
+ * every other ending, told apart by shape. A state with no ending (no record, unknown) draws hollow.
  */
 export const ENDING_OF_STATE: Record<string, RunEnding> = {
   winner: 'solved',
@@ -20,11 +22,6 @@ export const ENDING_OF_STATE: Record<string, RunEnding> = {
   // Ended unsettled with its coordinator gone (often stopped to be forked): cancelled, not a failure.
   abandoned: 'cancelled',
   cancelled: 'cancelled',
-}
-export const STATE_COLOR: Record<string, string> = {
-  ...Object.fromEntries(Object.entries(ENDING_OF_STATE).map(([state, ending]) => [state, ENDING_COLORS[ending]])),
-  'no-record': 'var(--chart-outcome-other)',
-  unknown: 'var(--chart-outcome-other)',
 }
 /** Per-day counts by state folded into the ending words, in ENDING_ORDER; states without an ending are `unknown`. */
 export function byEnding(byState: Record<string, (number | null)[]>): Array<{ name: string; color: string; values: (number | null)[] }> {

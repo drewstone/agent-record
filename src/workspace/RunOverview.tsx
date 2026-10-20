@@ -7,6 +7,7 @@ import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-n
 import type { RecordNode } from '../record.js'
 import type { RunCheck, RunDocument, RunProgress } from '../workspace.js'
 import type { NodeStats } from './RunTable.js'
+import { dataStatus, statusOf } from './data.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
 
@@ -37,6 +38,8 @@ export function outcomeOfCheck(r: RunReceipt): Outcome | null {
 }
 
 type Outcome = NonNullable<RunProgress['outcome']>
+// A quota or rate limit blocks a live run's turn (attention); on a settled run it is history, neutral, like every stop.
+const QUOTA = /quota|rate-limit/
 const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 const clock = (at: string) => `${at.slice(11, 16)} UTC`
 const shortAgent = (id: string | null, runId: string) => id === null ? 'agent' : id === runId ? 'root' : id.startsWith(`${runId}:`) ? id.slice(runId.length + 1) : id
@@ -156,14 +159,21 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; 
   // With no verdict, what the checks did say: 19b's 17 checks found no pushed release tag, which is not "pending".
   const checks = check?.counts?.checks ?? null
   const untagged = outcome?.solved === null || outcome?.solved === undefined ? (checks && check?.latest && !check.latest.tag ? check.latest : null) : null
-  const verdict = outcome?.solvedLabel ?? (outcome?.solved === true ? 'Check passed' : outcome?.solved === false ? 'Check not passing' : untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet')
+  // The verdict is read against the check version it ran under: a miss under a retired check says so, neutral.
+  const digest = check?.latest?.checker ?? null
+  const named = digest ? (check?.checkerNames?.find((item) => digest.startsWith(item.sha256) || item.sha256.startsWith(digest)) ?? null) : null
+  const result = outcome && outcome.solved !== null && outcome.solved !== undefined
+    ? statusOf({ axis: 'result', verdict: outcome.solved ? 'solved' : 'not-solved', current: named?.current ?? true, checker: named?.current === false ? (named.label ?? null) : null })
+    : null
+  // The host's label leads (it composes the sentence); a verdict under a retired check reads as statusOf words it.
+  const verdict = result && named?.current === false ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet'))
   const audit = outcome?.goalAudit ?? null
   const tone = audit?.verdict === 'unaudited' ? 'unaudited' : outcome?.solved === true ? 'passed' : outcome?.solved === false ? 'failing' : 'unknown'
   const passes = earlierPasses(r, outcome, check)
   return <section className="rr-now" aria-labelledby="rr-now-title" data-section="now">
     <h2 id="rr-now-title">Now</h2>
     {outcome && <p className={`rr-now-verdict rr-now-${tone}`} data-field="progress.outcome.solved">
-      <strong data-field="progress.outcome.solvedLabel">{verdict}</strong>
+      <strong data-field="progress.outcome.solvedLabel" className={result ? `tone-${result.tone}` : undefined} data-status={result ? dataStatus(result) : undefined}>{verdict}</strong>
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
       {untagged?.line && <span data-field="run.check.latest"> · newest {untagged.at ? clock(untagged.at) : ''}: {untagged.line}</span>}
       {audit?.verdict && <span data-field="progress.outcome.goalAudit"> · {GOAL_AUDIT[audit.verdict]}{audit.at && ` ${audit.verdict === 'unaudited' ? 'last tried' : 'at'} ${clock(audit.at)}`}</span>}
@@ -352,7 +362,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
     {(lanes.length > 0 || marks.length > 0) && <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div></Drawer>}
     {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><Field path={`versions.rows.${i}.tag`} value={row.tag} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
     {(recorded(r.work.toolCalls) || recorded(r.work.tries) || lanes.length > 0 || (r.lineage?.chain.length ?? 0) > 1 || recorded(r.outcome.reason) || Boolean(r.system?.errors?.top.length) || failures.length > 0 || Boolean(workers?.count) || Boolean(open)) && <Drawer title="How it ran" print={print}>
-      {failures.length > 0 && <div className="rr-chart" data-field="system.attempts.causes"><p className="rr-muted">Why turns failed: {r.system!.attempts!.failed} of {r.system!.attempts!.tries} tries, hours each cause took</p><HBars rows={failures.map((cause) => ({ label: cause.label ?? cause.cause, value: cause.hours ?? 0, note: `${cause.tries} ${cause.tries === 1 ? 'try' : 'tries'}` }))} format={hoursText} color="var(--ar-c-fail)" /></div>}
+      {failures.length > 0 && <div className="rr-chart" data-field="system.attempts.causes"><p className="rr-muted">Where turns ended: {r.system!.attempts!.failed} of {r.system!.attempts!.tries} tries, hours each cause took</p><HBars rows={failures.map((cause) => ({ label: cause.label ?? cause.cause, value: cause.hours ?? 0, note: `${cause.tries} ${cause.tries === 1 ? 'try' : 'tries'}`, color: QUOTA.test(cause.cause) && !settled ? 'var(--ar-c-run)' : 'var(--ar-c-neutral)' }))} format={hoursText} /></div>}
       <dl className="rr-facts">
       <Fact label="Tool calls" when={recorded(r.work.toolCalls)}><Field path="work.toolCalls" value={r.work.toolCalls} /></Fact>
       <Fact label="Tries" when={recorded(r.work.tries)}><Field path="work.tries" value={r.work.tries} /></Fact>

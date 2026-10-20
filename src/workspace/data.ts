@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { createElement, type ReactNode, useEffect, useRef, useState } from 'react'
 import type { RunRecord } from '../record.js'
 import type { Spend } from '../workspace.js'
+import { ENDING_GLYPH } from './play-standing.js'
 
 /** How soon a document the server marked stale (X-Workspace-Stale) is fetched again, backing off by half each time:
  * about a minute in all, the longest a plays index takes to recompose on a loaded host. */
@@ -116,48 +117,162 @@ export const when = (value: string | null | undefined, withDate = true) => {
   const iso = date.toISOString()
   return withDate ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : `${iso.slice(11, 19)} UTC`
 }
-export const stateClass = (state: string | null | undefined) => {
+/**
+ * One status grammar (design-system section 1, v2 tone rule). Five tones, each with one meaning: neutral; the accent for
+ * data series and links (never a status); pass only for passed under the current check; attention only for running or
+ * blocked; fail only for "a person must act now", which is an `attention[]` item the host marks crit or a live run's
+ * blocker with severity red. Red has no default: a past crash, an operator or Lab stop, a research miss, a verdict under
+ * a retired check and an unknown are all neutral, and keep their meaning through their word and shape.
+ */
+export type StatusTone = 'pass' | 'attention' | 'fail' | 'neutral'
+export type StatusAxis = 'run' | 'result' | 'alert' | 'agent' | 'release'
+export interface Status {
+  axis: StatusAxis
+  word: string
+  tone: StatusTone
+  shape: string
+}
+export type StatusInput =
+  /** A run, from the catalog's `state`, Runtime's `reason` and the Lab's `stopCause`; `elapsedMs` adds a running run's age. */
+  | { axis: 'run'; state: string | null | undefined; reason?: string | null; stopCause?: string | null; elapsedMs?: number | null }
+  /**
+   * A verdict against a check. `current: false` is a verdict under a retired check version, named by `checker`;
+   * `waiting` is a live run waiting on an undecided check; `passed`/`total` are workloads.
+   */
+  | { axis: 'result'; verdict: string | null | undefined; current?: boolean; checker?: string | null; waiting?: boolean; passed?: number | null; total?: number | null }
+  /** Something that may need a person: an overview `attention[]` tone, or a blocker's severity on a run that is or is not live. */
+  | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean }
+  /** An agent row: its recorded status while its run is or is not live. */
+  | { axis: 'agent'; status: string | null | undefined; live: boolean }
+  /** A release tag's state. */
+  | { axis: 'release'; state: string | null | undefined }
+
+const status = (axis: StatusAxis, word: string, tone: StatusTone, shape: string): Status => ({ axis, word, tone, shape })
+const OPERATOR = /operator|cancel/
+const FAILED = new Set(['failed', 'driver-failed', 'died'])
+
+function runAxis(input: Extract<StatusInput, { axis: 'run' }>): Status {
+  const { state, reason, stopCause, elapsedMs } = input
+  const why = `${stopCause ?? ''} ${reason ?? ''}`
   switch (state) {
-    case 'winner':
-    case 'done':
-    case 'complete':
-    case 'ready':
-      return 'state-ok'
     case 'running':
     case 'building':
-      return 'state-run'
-    case 'failed':
-    case 'driver-failed':
-    case 'down':
+    case 'live': {
+      const age = elapsedMs !== null && elapsedMs !== undefined && elapsedMs > 0 ? ` ${duration(elapsedMs)}` : ''
+      return status('run', `Running${age}`, 'attention', ENDING_GLYPH.live)
+    }
+    case 'winner':
+    case 'solved':
+      return status('result', 'Passed', 'pass', ENDING_GLYPH.solved)
+    case 'stalled':
+      return status('run', 'Stopped by Lab (stall)', 'neutral', ENDING_GLYPH.stalled)
+    case 'cancelled':
+    case 'operator-cancel':
+      return status('run', 'Stopped by operator', 'neutral', ENDING_GLYPH.cancelled)
+    case 'budget-exhausted':
+      return status('run', 'Stopped by Lab (budget)', 'neutral', ENDING_GLYPH.stalled)
+    case 'no-winner':
+      if (/budget-exhausted/.test(why)) return status('run', 'Stopped by Lab (budget)', 'neutral', ENDING_GLYPH.stalled)
+      if (/stall/.test(why)) return status('run', 'Stopped by Lab (stall)', 'neutral', ENDING_GLYPH.stalled)
+      if (OPERATOR.test(why)) return status('run', 'Stopped by operator', 'neutral', ENDING_GLYPH.cancelled)
+      return status('run', 'Finished', 'neutral', ENDING_GLYPH.ended)
+    case 'no-result-selected':
+    case 'done':
+    case 'complete':
+      return status('run', 'Finished', 'neutral', ENDING_GLYPH.ended)
+    case 'abandoned':
+      return status('run', 'Ended', 'neutral', ENDING_GLYPH.ended)
+    case 'never started':
+    case 'not-started':
+      return status('run', 'Not started', 'neutral', ENDING_GLYPH['never started'])
     case 'no-record':
     case 'missing':
-      return 'state-fail'
-    // Amber is stalled only; a run that ended without a pass is the slate "not solved", a cancelled one neutral grey,
-    // as @tangle-network/charts ENDING_COLORS draws them on the overview and the explorer.
-    case 'stalled':
-      return 'state-warn'
-    case 'no-winner':
-      return 'state-notsolved'
-    case 'cancelled':
-    case 'abandoned':
-      return 'state-unknown'
+    case 'unknown':
+    case null:
+    case undefined:
+      return status('run', 'No record', 'neutral', ENDING_GLYPH.unknown)
     default:
-      return 'state-unknown'
+      // A crash is a past fact: it needs a person only when the host raises it as an act-now item.
+      if (FAILED.has(state)) return status('run', state === 'driver-failed' ? 'Crashed (driver)' : 'Crashed', 'neutral', ENDING_GLYPH.crashed)
+      return status('run', state.replaceAll('-', ' '), 'neutral', ENDING_GLYPH.ended)
   }
 }
-export const stateLabel = (state: string | null | undefined) =>
-  state ? state.replaceAll('-', ' ') : 'state unknown'
+
+function resultAxis(input: Extract<StatusInput, { axis: 'result' }>): Status {
+  const { verdict, current = true, checker, waiting = false, passed, total } = input
+  const under = checker ? ` ${current ? '' : 'under '}${checker}${current ? '' : ' (retired)'}` : ''
+  const count = passed !== null && passed !== undefined && total ? ` · ${passed}/${total}` : ''
+  if (verdict === 'solved' || verdict === 'contract-held' || verdict === 'pass' || verdict === 'met')
+    return current
+      ? status('result', `Passed${checker ? ` ${checker}` : ''}`, 'pass', ENDING_GLYPH.solved)
+      : status('result', `Passed${checker ? ` ${checker}` : ''} (superseded)`, 'neutral', ENDING_GLYPH.ended)
+  if (verdict === 'undecided' || verdict === 'inconclusive' || verdict === 'error' || verdict === null || verdict === undefined || verdict === 'unknown')
+    return waiting ? status('result', 'Unverified', 'attention', ENDING_GLYPH.attention) : status('result', `Unverified${current ? '' : under}`, 'neutral', ENDING_GLYPH.unknown)
+  if (verdict === 'superseded') return status('result', 'Superseded', 'neutral', ENDING_GLYPH.ended)
+  if (verdict === 'no-tag') return status('result', 'Not checked', 'neutral', ENDING_GLYPH.unknown)
+  return status('result', `No pass yet${current ? '' : under}${count}`, 'neutral', ENDING_GLYPH.ended)
+}
+
+/** The one place a status chooses its word, tone and shape. */
+export function statusOf(input: StatusInput): Status {
+  switch (input.axis) {
+    case 'run':
+      return runAxis(input)
+    case 'result':
+      return resultAxis(input)
+    case 'alert':
+      if (input.tone === 'crit' || (input.live && input.severity === 'red')) return status('alert', 'act now', 'fail', ENDING_GLYPH.fail)
+      if (input.live && input.severity) return status('alert', 'Blocked', 'attention', ENDING_GLYPH.attention)
+      if (!input.live && input.severity) return status('alert', 'past', 'neutral', ENDING_GLYPH.ended)
+      return status('alert', input.tone === 'info' ? 'cleared' : 'not urgent', 'neutral', ENDING_GLYPH.ended)
+    case 'agent':
+      if (!input.live || input.status === 'done' || input.status === 'ended') return status('agent', 'Ended', 'neutral', ENDING_GLYPH.ended)
+      if (input.status === 'down') return status('agent', 'Down', 'attention', ENDING_GLYPH.attention)
+      if (input.status === 'running' || input.status === 'working' || !input.status) return status('agent', 'Working', 'neutral', ENDING_GLYPH.live)
+      return status('agent', 'Waiting', 'neutral', ENDING_GLYPH.stalled)
+    case 'release':
+      return input.state === 'published' || !input.state
+        ? status('release', 'Published', 'neutral', ENDING_GLYPH.ended)
+        : input.state === 'withheld'
+          ? status('release', 'not published', 'neutral', ENDING_GLYPH.ended)
+          : status('release', input.state === 'superseded' ? 'superseded' : 'state unknown', 'neutral', ENDING_GLYPH.unknown)
+  }
+}
+
+const LEAD_VERDICT: Record<string, string> = { 'NOT SOLVED': 'not-solved', SOLVED: 'solved', UNDECIDED: 'undecided' }
 
 /**
- * One name for how a run ended (M4), the same words on the play, its runs table and the run page: the host's
- * (tangle-tools `run_ending`, for example "cancelled after stall"), a stalled run's with its time. Without it, a run the catalog marks
- * `stalled` that settled was cancelled after its stall (discovery-lab runner/stall.mjs); any other state is its own label.
+ * The host's standing sentence in this grammar: its leading verdict clause as a result status (`NOT SOLVED` reads "No
+ * pass yet") and a gate-held release as "not published". The host still composes the old words until tangle-tools
+ * changes them; the rest of the sentence is printed as composed.
  */
-export const endingLabel = (run: { state: string | null | undefined; settledAt?: string | null; ending?: { name: string; at?: string | null } | null }) => {
-  const at = run.ending?.at ?? run.settledAt
-  const name = run.state !== 'running' && run.ending?.name ? run.ending.name : run.state === 'stalled' && at ? 'cancelled after stall' : stateLabel(run.state)
-  return run.state === 'stalled' && at ? `${name} ${at.slice(11, 16)}Z` : name
+export function standingSentence(text: string): { lead: Status | null; rest: string } {
+  const rest = text.replaceAll('withheld by the gate', statusOf({ axis: 'release', state: 'withheld' }).word)
+  const head = /^(NOT SOLVED|SOLVED|UNDECIDED)\b/.exec(rest)?.[0]
+  return head ? { lead: statusOf({ axis: 'result', verdict: LEAD_VERDICT[head] }), rest: rest.slice(head.length) } : { lead: null, rest }
 }
+
+/** The `data-status` every status mark carries, so checks query meaning instead of pixels. */
+export const dataStatus = (s: Status) => `${s.axis}:${s.word}:${s.tone}`
+
+/** A status as a pill: its shape, then its word, toned and carrying `data-status`. */
+export function StatusPill({ status, title, children, className = 'state-pill' }: { status: Status; title?: string; children?: ReactNode; className?: string }) {
+  return createElement(
+    'span',
+    { className: `${className} tone-${status.tone}`, 'data-status': dataStatus(status), title },
+    createElement('i', { className: 'status-shape', 'aria-hidden': true }, status.shape),
+    ' ',
+    children ?? status.word,
+  )
+}
+
+/** A run's status word with its ending time when it stopped: `Stopped by Lab (stall) 03:27Z`. */
+export function runStatus(run: { state: string | null | undefined; reason?: string | null; stopCause?: string | null; settledAt?: string | null; ending?: { at?: string | null } | null }): Status {
+  const base = statusOf({ axis: 'run', state: run.state, reason: run.reason, stopCause: run.stopCause })
+  const at = run.ending?.at ?? run.settledAt
+  return base.tone === 'neutral' && at && base.word.startsWith('Stopped') ? { ...base, word: `${base.word} ${at.slice(11, 16)}Z` } : base
+}
+
 
 /** Paid and list price, with unknown kept apart. */
 export function spendParts(spend: Spend | null | undefined) {
