@@ -1,10 +1,8 @@
 import type { ScientificReview } from '../workspace.js'
 
+// A reviewer's label is a finding word ("WRONG" reads as contradicted), not a status: neutral, with "NEW" as information.
 function tone(label: string) {
-  if (label === 'WRONG') return 'fail'
-  if (label === 'UNVERIFIABLE' || label === 'unresolved' || label === 'stale') return 'warn'
-  if (label === 'NEW') return 'info'
-  return 'neutral'
+  return label === 'NEW' ? 'info' : 'neutral'
 }
 
 function reviewLabel(review: ScientificReview) {

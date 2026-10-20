@@ -466,26 +466,71 @@ export const seatWords = (seat: string | null | undefined) => (seat ? (seat.spli
 /** A tag without its run prefix: `rc14`. */
 export const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
 
-/** Verdict words, as every page writes them. SOLVED never appears without its checker. */
+/**
+ * Verdict words, as every page writes them, in the result grammar `statusOf` uses (design-system section 1): a miss is
+ * "no pass yet", an undecided check "unverified", a missing tag "not checked". SOLVED never appears without its checker.
+ */
 export const VERDICT_WORDS: Record<string, string> = {
-  solved: 'solved',
-  'not-solved': 'not solved',
+  solved: 'passed',
+  'not-solved': 'no pass yet',
   'contract-held': 'contract held',
-  'contract-failed': 'contract failed',
-  undecided: 'undecided',
+  'contract-failed': 'fails the contract',
+  undecided: 'unverified',
   superseded: 'superseded',
-  'no-tag': 'no tag yet',
+  'no-tag': 'not checked',
 }
 export const verdictWord = (verdict: string | null | undefined) => (verdict ? (VERDICT_WORDS[verdict] ?? verdict.replaceAll('-', ' ')) : 'no verdict')
 /** pass: solved or contract held (filled); fail: not solved or contract failed (a ring); unknown: undecided (hatched). */
 export const markVerdict = (verdict: string | null | undefined): 'pass' | 'fail' | 'unknown' =>
   verdict === 'solved' || verdict === 'contract-held' ? 'pass' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown'
 
-/** Run ending glyphs: ✓ solved, ✕ died, ⊘ cancelled, ⏸ stalled, ▶ live, · never started. */
-export const ENDING_GLYPH: Record<string, string> = { solved: '✓', died: '✕', cancelled: '⊘', stalled: '⏸', live: '▶', 'never started': '·' }
+/**
+ * Status shapes, one per meaning (design-system section 1): ✓ solved, ⊘ stopped by the operator, ⏸ stopped by the Lab,
+ * ▶ running, · never started, ○ ended or no pass yet, □ a past crash, ▲ attention, ◌ (a dashed ring) unknown or
+ * unverified, ■ act now. A past crash ("died") is □, never a red ✕.
+ */
+export const ENDING_GLYPH: Record<string, string> = {
+  solved: '✓',
+  died: '□',
+  crashed: '□',
+  cancelled: '⊘',
+  stalled: '⏸',
+  live: '▶',
+  'never started': '·',
+  ended: '○',
+  attention: '▲',
+  unknown: '◌',
+  fail: '■',
+}
 
 /** Release states, in the four words the pages use. */
-export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'withheld by the gate', superseded: 'superseded', unknown: 'state unknown' }
+export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'not published', superseded: 'superseded', unknown: 'state unknown' }
+
+/**
+ * Host prose and quoted checker lines in the status grammar (design-system section 1): the words tangle-tools composes
+ * (`withheld by the gate`, `cancelled after stall`, `died`) read as the pages' own (`not published`, `stopped by Lab
+ * (stall)`, `crashed`), so a page uses one word per meaning whoever wrote the sentence. The host keeps its words until
+ * tangle-tools changes them; this mapping is where they meet the grammar, longest phrase first.
+ */
+const HOST_WORDS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bwithheld by the gate\b/gi, RELEASE_STATE.withheld!],
+  [/\bwithheld\b/gi, RELEASE_STATE.withheld!],
+  [/\bnot solved\b/gi, VERDICT_WORDS['not-solved']!],
+  [/\bcancelled after (?:a )?stall\b/gi, 'stopped by Lab (stall)'],
+  [/\bcancelled\b/gi, 'stopped by operator'],
+  [/\bstalled\b/gi, 'stopped by Lab (stall)'],
+  [/\bdriver[- ]failed\b/gi, 'crashed (driver)'],
+  [/\bdied\b/gi, 'crashed'],
+  [/\bnever[- ]started\b/gi, 'not started'],
+  [/\bstuck\b/gi, 'hung'],
+  [/\bfailed\b/gi, 'did not pass'],
+  [/\bundecided\b/gi, VERDICT_WORDS.undecided!],
+  [/\babsent\b/gi, 'missing'],
+  // The host's "no record states a bound" is prose; "No record" is the run status for a run with nothing to read.
+  [/\bno record\b/gi, 'nothing on record'],
+]
+const keepCase = (match: string, word: string) => (match[0] === match[0]!.toUpperCase() && match[0] !== match[0]!.toLowerCase() ? word[0]!.toUpperCase() + word.slice(1) : word)
+export const hostWords = (text: string) => HOST_WORDS.reduce((out, [pattern, word]) => out.replace(pattern, (match) => keepCase(match, word)), text)
 
 /** A checker's display label, found by digest or by label; null digests read "checker unrecorded". */
 export function checkerLabel(checkers: readonly PlayChecker[] | undefined, id: string | null | undefined): string {
@@ -584,6 +629,17 @@ export function targetWords(metric: PlayBarMetric): string | null {
   return null
 }
 
+/** Where a value sits against a metric's target: within it, past it in the metric's better direction, or short of it. */
+export function barSide(metric: PlayBarMetric, value: number | null | undefined): 'within' | 'past' | 'short' | null {
+  const t = metric.target
+  if (!t || value === null || value === undefined || !(value > 0)) return null
+  const low = t.min ?? t.approx ?? t.max ?? null
+  const high = t.max ?? t.approx ?? t.min ?? null
+  if (low === null || high === null) return null
+  if (value >= low && value <= high) return 'within'
+  return (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low) ? 'past' : 'short'
+}
+
 /** How far a value is from a metric's target, as text: "36× below the bar", "within the bar", "0.6× of the bar". */
 export function gapWords(metric: PlayBarMetric, value: number | null | undefined): string | null {
   const t = metric.target
@@ -600,11 +656,13 @@ export function gapWords(metric: PlayBarMetric, value: number | null | undefined
 
 /** A check line without its verdict word, digests or the tail after ` | `: the words that say why, for grouping. */
 export const lineReason = (line: string | null | undefined) =>
-  (line ?? '')
-    .replace(/^(NOT SOLVED|SOLVED|UNKNOWN|UNDECIDED)\s*:\s*/i, '')
-    .replace(/\b[0-9a-f]{7,64}\b/g, '…')
-    .split(/\s\|\s/)[0]!
-    .trim()
+  hostWords(
+    (line ?? '')
+      .replace(/^(NOT SOLVED|SOLVED|UNKNOWN|UNDECIDED)\s*:\s*/i, '')
+      .replace(/\b[0-9a-f]{7,64}\b/g, '…')
+      .split(/\s\|\s/)[0]!
+      .trim(),
+  )
 
 export interface RunCheckLine {
   reason: string

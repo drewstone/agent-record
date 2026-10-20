@@ -28,12 +28,12 @@ function citationHref(kind: string, id: string) {
   return null
 }
 
-/** The tone a check's verdict word carries. */
-function verdictTone(verdict: string | null) {
-  if (!verdict) return 'neutral'
-  if (/^(CORRECT|NO ERRORS? FOUND|NO ERROR|NO GAPS)$/.test(verdict)) return 'ok'
-  if (/^(INCORRECT|REFUTED|ERROR)$/.test(verdict)) return 'fail'
-  return 'warn'
+/** An agent's own check verdict is bookkeeping: a ✓ or ✕ glyph beside its word, in neutral ink. */
+function verdictGlyph(verdict: string | null) {
+  if (!verdict) return '◌'
+  if (/^(CORRECT|NO ERRORS? FOUND|NO ERROR|NO GAPS)$/.test(verdict)) return '✓'
+  if (/^(INCORRECT|REFUTED|ERROR)$/.test(verdict)) return '✕'
+  return '○'
 }
 
 /** One page's full text, fetched when its reader opens it. */
@@ -99,7 +99,7 @@ function FindingRow({ item, pageHref, open, onToggle }: { item: FindingItem; pag
           <div className="finding-facts">
             <span className="mono">{item.path}</span>
             {item.versions > 1 && <span>{item.versions} versions</span>}
-            {item.uncaptured && <span className="tone-warn" title="The run directory holds this page; the conversation record stopped before the agent wrote it.">written after capture stopped</span>}
+            {item.uncaptured && <span className="faint" title="The run directory holds this page; the conversation record stopped before the agent wrote it.">written after capture stopped</span>}
           </div>
           {LEAD_KINDS.has(item.kind) && <ReviewDetails reviews={item.reviews} />}
           <div className="finding-actions">
@@ -120,7 +120,7 @@ function StopCard({ findings, doc }: { findings: Findings; doc: RunDocument }) {
   if (!stop.limits.length && !(failed && (stop.lastCause || stop.firstFailure))) return null
   return (
     <section className="finding-card" aria-label="Why the run stopped" data-findings-stop>
-      <h3 className="kicker tone-fail">Why it stopped</h3>
+      <h3 className="kicker tone-neutral">Why it stopped</h3>
       <ol className="stop-steps">
         {stop.limits.map((limit, i) => (
           <li key={`${limit.agent}:${limit.limit}:${i}`}>
@@ -207,13 +207,13 @@ function ChecksCard({ checks, pageHref }: { checks: FindingItem[]; pageHref: (it
   if (!checks.length) return null
   return (
     <section className="finding-card" aria-label="Checks" data-findings-checks>
-      <h3 className="kicker tone-ok">How far to trust it</h3>
+      <h3 className="kicker tone-neutral">How far to trust it</h3>
       <ul className="check-list">
         {checks.map((item) => (
           <li key={item.sha256}>
             <button type="button" className="check-row" aria-expanded={open === item.sha256} onClick={() => setOpen(open === item.sha256 ? null : item.sha256)}>
               <span className="clamp-1" title={item.title}>{item.title}</span>
-              <span className={`ftag tone-${verdictTone(item.verdict)}`}>{item.verdict ? item.verdict.toLowerCase() : 'no verdict word'}</span>
+              <span className="ftag tone-neutral">{verdictGlyph(item.verdict)} {item.verdict ? item.verdict.toLowerCase() : 'no verdict word'}</span>
             </button>
             {open === item.sha256 && <PageReader href={pageHref(item)} artifacts={item.artifacts} />}
           </li>

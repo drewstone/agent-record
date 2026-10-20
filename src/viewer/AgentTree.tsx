@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { RecordNode } from '../record.js'
+import { dataStatus, statusOf } from '../workspace/data.js'
 import { ms, roleOf } from './model.js'
 import type { RecordIndex } from './model.js'
 
@@ -78,8 +79,10 @@ export function AgentTree({
               title={`${node.label}${node.assignment ? ` · ${node.assignment}` : ''} · ${state}`}
               onClick={() => select(node.id)}
             >
+              {/* An agent that has ended is history, neutral: filled when it finished, a ring when it went down. */}
               <span
                 className={`graph-state ${ended && node.status === 'done' ? 'state-done' : ended && node.status === 'down' ? 'state-down' : 'state-unknown'}`}
+                data-status={dataStatus(statusOf({ axis: 'agent', status: node.status, live: !ended }))}
                 aria-hidden="true"
               />
               <span className="graph-copy">

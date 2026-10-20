@@ -5,7 +5,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { FinalOutputPanel, finalOutputSchema } from '../dist/index.js'
-import { externalHref, judgeBasis, questionLabel, reviewPhaseLabel, reviewScoreTone, scoreLabel, verdictView } from '../src/workspace/final-output.ts'
+import { externalHref, judgeBasis, questionLabel, scoreLabel, verdictView } from '../src/workspace/final-output.ts'
 
 const readout = {
   status: 'complete',
@@ -51,9 +51,8 @@ test('readout links are absolute http(s) only', () => {
 })
 
 test('verdicts, scores and judge basis never invent a value', () => {
-  assert.deepEqual(verdictView('not-measured'), { label: 'not measured', tone: 'state-unknown' })
-  assert.deepEqual(verdictView('not-met'), { label: 'not met', tone: 'state-fail' })
-  assert.deepEqual(verdictView('retracted-later'), { label: 'retracted later', tone: 'state-unknown' })
+  assert.equal(verdictView('not-measured').label, 'not measured')
+  assert.equal(verdictView('retracted-later').label, 'retracted later')
   assert.equal(scoreLabel(3, 4), '3/4')
   assert.equal(scoreLabel(null, 4), 'unknown/4')
   assert.equal(scoreLabel(2.5, null), '2.5/unknown')
@@ -98,7 +97,7 @@ test('the run page shows the latest trace review in plain words, and nothing whe
   assert.match(html, /0 of 4 citations found in the sessions/, 'citations show even without quotes or suggestions')
   assert.doesNotMatch(html, /goal-alignment</)
   const settled = renderToStaticMarkup(createElement(FinalOutputPanel, { output: finalOutputSchema.parse({ ...finalOutput(null), traceReview: { ...traceReview, phase: 'settled', final: true } }) }))
-  assert.match(settled, /Final review, after the run settled/)
+  assert.match(settled, /Reviewed: 12 sessions read/)
   // A run without a review, and a document built before the field existed, render without the section.
   for (const output of [{ ...finalOutput(null), traceReview: null }, finalOutput(null)]) {
     const plain = renderToStaticMarkup(createElement(FinalOutputPanel, { output: finalOutputSchema.parse(output) }))
@@ -108,13 +107,7 @@ test('the run page shows the latest trace review in plain words, and nothing whe
   assert.throws(() => finalOutputSchema.parse({ ...finalOutput(null), traceReview: { ...traceReview, phase: 'stopped' } }))
 })
 
-test('trace review questions, scores and phase read as plain words', () => {
+test('trace review questions and scores read as plain words', () => {
   assert.equal(questionLabel('coordination-waste'), 'Agents coordinate without waste')
   assert.equal(questionLabel('some_new-question'), 'Some new question')
-  assert.equal(reviewScoreTone(70), 'state-ok')
-  assert.equal(reviewScoreTone(55), 'state-warn')
-  assert.equal(reviewScoreTone(39), 'state-fail')
-  assert.equal(reviewScoreTone(null), 'state-unknown')
-  assert.equal(reviewPhaseLabel({ final: false, phase: 'running' }, 'now'), 'Live review, now')
-  assert.equal(reviewPhaseLabel({ final: true, phase: 'settled' }, 'now'), 'Final review, after the run settled')
 })

@@ -67,7 +67,7 @@ function ScoreRowView({ row, people }: { row: ScoreRow; people: string[] }) {
         {row.ai === 'retired' ? <span className="faint">retired scale</span> : row.ai ? (
           <>
             {scoreCell(row.ai.score)}
-            {row.ai.calibrated ? <span className="state-ok" title="calibrated"> ✓</span> : null}
+            {row.ai.calibrated ? <span title="calibrated"> ✓</span> : null}
           </>
         ) : '—'}
       </td>
