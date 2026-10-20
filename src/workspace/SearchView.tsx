@@ -4,7 +4,8 @@ import { duration, money, when } from './data.js'
 import { ProfileDiffView } from './ProfileVersions.js'
 import { blameOf, replayAt, searchesOf, signed, type SearchModel, type SearchVersion } from './search.js'
 
-const STATUS_TONE: Record<string, string> = { selected: 'state-ok', finalist: 'state-run', rejected: 'state-unknown', invalid: 'state-fail', pending: 'state-unknown' }
+// A search version's status is bookkeeping, not a run or check status: neutral words, the selected one marked ★.
+const STATUS_MARK: Record<string, string> = { selected: '★ ', invalid: '✕ ' }
 const ms = (value: string | null | undefined) => (value ? Date.parse(value) : NaN)
 
 /**
@@ -138,7 +139,7 @@ function VersionRow({ version, span, on, hidden, onSelect }: { version: SearchVe
         <span className="clip">{version.root ? 'the registered profile' : version.label}</span>
       </span>
       <span role="cell">
-        <span className={`state-pill ${STATUS_TONE[version.status] ?? 'state-unknown'}`}>{version.status}</span>
+        <span className="state-pill tone-neutral">{STATUS_MARK[version.status] ?? ''}{version.status}</span>
       </span>
       <span role="cell" className="num">{version.scores.selection ? version.scores.selection.mean.toFixed(3) : '—'}</span>
       <span role="cell" className="search-effect">
@@ -168,7 +169,7 @@ function VersionDetail({ graph, model, version, onSelect }: { graph: ProfileGrap
     <div className="inspector" data-search-detail={version.short}>
       <header className="inspector-head">
         <h2>{version.root ? 'The registered profile' : version.label}</h2>
-        <span className={`state-pill ${STATUS_TONE[version.status] ?? 'state-unknown'}`}>{version.status}</span>
+        <span className="state-pill tone-neutral">{STATUS_MARK[version.status] ?? ''}{version.status}</span>
         <code className="faint">{version.short}</code>
       </header>
       <p className="faint">

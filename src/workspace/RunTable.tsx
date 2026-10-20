@@ -5,7 +5,7 @@ import type { RecordIndex } from '../viewer/model.js'
 import { agentState, ms, roleOf } from '../viewer/model.js'
 import type { RunDocument } from '../workspace.js'
 import { polarityOf, shownPolarity } from './Assessments.js'
-import { duration, money, stateClass, tokens } from './data.js'
+import { dataStatus, duration, money, StatusPill, statusOf, tokens } from './data.js'
 import { briefLines } from './outputs.js'
 
 /** Per agent, from the record's `nodes` part: event count, first and last event, recorded usage and list price, tool
@@ -127,6 +127,8 @@ export function AgentTable({
         // A live agent has no terminal state yet: it is working, as Runtime's progress document says.
         const status = node.status ?? (doc.live.polling ? (live.get(node.id) ?? 'running') : null)
         const state = node.status ? agentState(node, measured || !!meter) : status ? `${status} · ${stat?.calls ?? 0} tool calls so far` : 'the run settled without this agent recording an end'
+        // An agent row on an ended run is "Ended", neutral: "down" means something only while the run is live.
+        const agent = statusOf({ axis: 'agent', status, live: doc.live.polling })
         const metered = meter ? Object.values(meter.tokens).reduce((sum, value) => sum + value, 0) : 0
         // Turns metered without counts measured nothing: no tokens, not zero.
         const total = stat?.tokens ? stat.tokens.input + stat.tokens.output + stat.tokens.cacheRead + stat.tokens.cacheWrite : metered > 0 ? metered : null
@@ -148,12 +150,10 @@ export function AgentTable({
               <span className="clip">{nameOf(node)}</span>
             </span>
             <span role="cell">
-              <span className={`state-pill ${stateClass(status === 'running' ? 'running' : status)}`} title={state}>
-                {status ? (status === 'running' ? 'working' : status.replaceAll('-', ' ')) : 'ended'}
-              </span>
+              <StatusPill status={agent} title={state} />
             </span>
             <span role="cell" className="lane" title={start !== null ? `${duration((end ?? start) - start)} from ${new Date(start).toISOString().slice(11, 16)} UTC` : 'no recorded time'}>
-              {left !== null && width !== null && <i className={`seg ${stateClass(node.status)}`} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
+              {left !== null && width !== null && <i className="seg" data-status={dataStatus(agent)} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
             </span>
             <span role="cell" className="num">{start !== null && end !== null ? duration(end - start) : '—'}</span>
             <span role="cell" className="num">{total !== null ? tokens(total) : '—'}</span>

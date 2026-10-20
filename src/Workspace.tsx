@@ -32,7 +32,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { duration, endingLabel, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, endingStatus, go, money, readRecord, runStatus, StandingText, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -52,7 +52,7 @@ import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
+import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -138,9 +138,9 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
       <span>
         <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}:{' '}
         {HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason, i) => (
-          <span key={reason} className={reason === 'failed' ? 'hidden-failed' : undefined}>
+          <span key={reason}>
             {i > 0 && ' · '}
-            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'whose runs all failed' : HIDDEN_LABEL[reason]}
+            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}
           </span>
         ))}
       </span>
@@ -227,17 +227,20 @@ function PlaysPage({ api }: { api: string }) {
     const all = plays.data?.runs ?? []
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
+    // An unknown is one line (design-system section 2): a missing reading prints a dash, and the line counts them.
+    const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd))
+    const unrecorded = shown.filter((run) => [run.subscriptionUsd, run.apiUsd, run.sandboxUsd].every((usd) => usd === null || usd === undefined)).length
     return <div className="ws-page ws-plays" data-plays-home="runs">
       {homeTabs}{sharedFilters}
-      <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.</p>
+      <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.{unrecorded ? ` No spend reading for ${unrecorded} of them (subscription, API and sandbox; no per-run meter).` : ''}</p>
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
           <th className="num">Subscription at API prices</th><th className="num">Billed API</th><th className="num">Billed sandbox</th></tr></thead>
         <tbody>{shown.map((run) => <tr key={run.id}>
           <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono"> {run.id}</small></td>
-          <td><span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span></td>
+          <td><StatusPill status={runStatus(run)} /></td>
           <td>{when(run.startedAt)}</td><td>{when(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
-          <td className="num">{money(run.subscriptionUsd)}</td><td className="num">{money(run.apiUsd)}</td><td className="num">{money(run.sandboxUsd)}</td>
+          <td className="num">{cash(run.subscriptionUsd)}</td><td className="num">{cash(run.apiUsd)}</td><td className="num">{cash(run.sandboxUsd)}</td>
         </tr>)}</tbody>
       </table></div>
       {!shown.length && <p className="chat-empty">No runs match.</p>}
@@ -293,9 +296,9 @@ function PlaysPage({ api }: { api: string }) {
                       </td>
                       <td className="plays-standing">
                         {standing?.sentence ? (
-                          <span className="clamp-2" title={standing.sentence}>{standing.sentence}</span>
+                          <span className="clamp-2" title={standing.sentence}><StandingText text={standing.sentence} /></span>
                         ) : (
-                          <span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span>
+                          <StatusPill status={statusOf({ axis: 'run', state: play.state })} />
                         )}
                       </td>
                       <td>
@@ -325,7 +328,7 @@ function PlaysPage({ api }: { api: string }) {
                             {last?.run ?? shortRun(play.id, lastId)}
                           </a>
                         ) : '—'}
-                        {last?.word ? <span> {last.glyph ?? ''} {last.word}</span> : null}
+                        {last?.word ? <> <StatusPill status={endingStatus(last.word)} className="ending-word" /></> : null}
                         <small className="faint"> {when(last?.at ?? play.latestRun?.startedAt)}</small>
                       </td>
                       <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
@@ -338,7 +341,7 @@ function PlaysPage({ api }: { api: string }) {
                             {cost.priced !== cost.started ? <small className="faint"> {cost.priced}/{cost.started}</small> : null}
                           </>
                         ) : (
-                          <span className="faint">unpriced</span>
+                          <span className="faint" title="API-equivalent not priced">—</span>
                         )}
                       </td>
                     </tr>
@@ -449,7 +452,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             onChange={(next) => update({ tab: next === 'standing' ? undefined : next, judged: undefined })}
             tabs={[
               ['standing', 'Standing'],
-              ['releases', releaseCount ? `Releases ${releaseCount}${withheld ? ` · ${withheld} withheld` : ''}` : 'Releases'],
+              ['releases', releaseCount ? `Releases ${releaseCount}${withheld ? ` · ${withheld} not published` : ''}` : 'Releases'],
               ['runs', `Runs ${runCount}`],
               ['findings', findingCount ? `Findings ${findingCount}` : 'Findings'],
               ['setup', 'Setup'],
@@ -647,7 +650,7 @@ function PlayStanding({ play }: { play: PlayDocument }) {
         <span className="answer-label">Best result</span>
         {best ? (
           <>
-            <span className="answer-value state-ok">winner</span>
+            <StatusPill status={statusOf({ axis: 'run', state: 'winner' })} className="answer-value" />
             <span className="mono">{shortRun(play.id, best.id)}</span>
             <span className="faint">{when(best.settledAt ?? best.startedAt)}</span>
           </>
@@ -659,7 +662,7 @@ function PlayStanding({ play }: { play: PlayDocument }) {
       {latest && (
         <a className="play-fact" href={`/run/${encodeURIComponent(latest.id)}`} data-latest={latest.id}>
           <span className="answer-label">Latest run</span>
-          <span className={`state-pill ${stateClass(latest.state)}`}>{endingLabel(latest)}</span>
+          <StatusPill status={runStatus(latest)} />
           <span className="mono">{shortRun(play.id, latest.id)}</span>
           <span className="faint">{when(latest.startedAt)}</span>
         </a>
@@ -743,7 +746,7 @@ function RunsTable({
                 </td>
               )}
               <td className="run-state">
-                <span className={`state-pill ${stateClass(run.state)}`}>{endingLabel(run)}</span>
+                <StatusPill status={runStatus(run)} />
                 {run.reason && run.reason !== run.state && <small className="faint clamp-1" title={run.reason}>{run.reason}</small>}
               </td>
               <td>{when(run.startedAt)}</td>
@@ -763,7 +766,7 @@ function RunsTable({
                 {run.record.capture ? (
                   <CaptureBar capture={run.record.capture} />
                 ) : (
-                  <span className={`faint ${stateClass(run.record.status)}`}>{run.record.status}</span>
+                  <span className="faint">{run.record.status}</span>
                 )}
               </td>
               <td className="headline-cell">
@@ -1022,7 +1025,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       )}
       {section === 'readout' && (
         <section className="run-panel" aria-label="Readout" data-drawer="readout">
-          <FinalOutputPanel output={doc.finalOutput} grading={grading} />
+          <FinalOutputPanel output={doc.finalOutput} grading={grading} run={doc.run} />
         </section>
       )}
       {section === 'outputs' && (
@@ -1145,7 +1148,7 @@ function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument;
         </button>
       )}
       <span className="detail-run mono" title={run.id}>
-        {shortRun(run.play, run.id)} <span className={`state-pill ${stateClass(run.state)}`}>{endingLabel(run)}</span>
+        {shortRun(run.play, run.id)} <StatusPill status={runStatus(run)} />
       </span>
       <span className="detail-views">
         {views.map(([value, label]) => (
@@ -1353,12 +1356,13 @@ function RunBody({
   const model = node?.servedModel ? `${node.servedModel}` : node?.model ? `${node.model} (declared)` : null
   const measured = useMemo(() => measuredUsage(index, actor), [index, actor])
   const empty = !(index.byActor.get(actor) ?? []).length
+  const agentStatus = statusOf({ axis: 'agent', status: node?.status, live: doc.live.polling })
   return (
     <div className="agent-drawer" onScrollCapture={hideTooltip}>
       <section className="ws-panel" aria-label="Agent record">
         <div className="agent-head">
           <div className="agent-identity">
-            <span className={`agent-avatar ${node?.status === 'done' && measured ? 'state-ok' : node?.status === 'down' ? 'state-fail' : ''}`} aria-hidden="true">
+            <span className="agent-avatar" data-status={dataStatus(agentStatus)} aria-hidden="true">
               {role.slice(0, 1).toUpperCase()}
             </span>
             <div>
@@ -1518,7 +1522,7 @@ function RunBody({
       {tooltip && (
         <div className="ui-plot-tooltip" role="tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: tooltip.y > window.innerHeight / 2 ? 'translateY(-100%)' : undefined }}>
           <strong>{tooltip.title}</strong>
-          {tooltip.lines.map((line, i) => <p key={i}>{line}</p>)}
+          {tooltip.lines.map((line, i) => <p key={i}>{typeof line === 'string' ? line : line.value}</p>)}
         </div>
       )}
     </div>
@@ -1572,22 +1576,15 @@ function RunPanels({
     <div className="spend-tab">
       <h3>Agents in this run</h3>
       <SpendBars
-        rows={index.actors
-          .filter((item) => item.kind !== 'finding')
-          .map((item) => {
-            const spend = doc.spend.nodes[item.id]
-            const equivalent = apiEquivalent(spend)
-            return { label: item.label, subscription: knownSubscription(spend), api: spend?.apiUsd ?? null,
-              sandbox: spend?.sandboxUsd ?? null, subscriptionKnown: spend?.subscriptionKnown, href: item.id,
-              note: equivalent.usd !== null ? `${money(equivalent.usd)}${equivalent.partial ? '+' : ''} API-equivalent` : undefined }
-          })}
+        rows={agentSpendRows(doc.spend.nodes, index.actors.filter((item) => item.kind !== 'finding'))}
         onOpen={(row) => row.href && onSelectAgent(row.href)}
+        why="no per-agent meter"
       />
       {byModel(doc.spend).length > 0 && (
         <>
           <h3>By model</h3>
           <p className="faint">The Router bill cannot be split by model.</p>
-          <SpendBars rows={byModel(doc.spend)} />
+          <SpendBars rows={byModel(doc.spend)} noun="models" />
         </>
       )}
       <SeatWeeksPanel spend={doc.spend} />
@@ -1630,6 +1627,8 @@ function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: str
   )
 }
 
+const CAPTURE_WORD: Record<string, string> = { complete: 'Captured', lossy: 'Partly captured', absent: 'Not captured' }
+
 /**
  * Each agent's capture and state. `index` holds only the selected agent's part, so whether an agent's usage was measured
  * comes from the nodes part's per-agent stats, as in the agents table; on magnetar-rust-20261018b the event scan alone
@@ -1651,7 +1650,7 @@ function Coverage({ index, doc, gaps: recordGaps, stats, onSelect }: { index: Re
               <tr key={node.id} className="clickable" onClick={() => onSelect(node.id)}>
                 <td className="mono">{node.label}</td>
                 <td className="mono">{capture?.channel ?? '—'}</td>
-                <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{capture?.status ?? 'unknown'}</span></td>
+                <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{CAPTURE_WORD[capture?.status ?? ''] ?? 'Capture unknown'}</span></td>
                 <td className="mono faint">{capture?.reason ?? ''}</td>
                 <td>{agentState(node, measured(node.id), doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === node.id)?.status ?? 'running') : null)}</td>
               </tr>

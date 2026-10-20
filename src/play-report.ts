@@ -1,6 +1,7 @@
 import { parseResearchReport } from './report.js'
 import type { EvidenceReference, ResearchReportData } from './report.js'
 import { utcTime } from './viewer/model.js'
+import { RELEASE_STATE, releaseWords } from './workspace/play-standing.js'
 
 /**
  * The play report the Lab host serves at `/api/discovery/plays/<id>/report` (tangle-tools `compose_play_report`).
@@ -167,7 +168,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
     summaries['how-good'] = `${words(counts.published) ?? 'unknown'} releases published, ${words(counts.checked) ?? 'unknown'} checked, ${words(counts.passingCurrent) ?? 'unknown'} passing under ${checker}.`
     fact('how-good', 'published', 'Releases published', { value: counts.published ?? null, unit: 'releases', ...at })
     fact('how-good', 'checked', 'Releases checked', { value: counts.checked ?? null, unit: 'releases', ...at })
-    fact('how-good', 'withheld', 'Withheld by the gate', { value: counts.withheld ?? null, unit: 'releases', ...at })
+    fact('how-good', 'withheld', 'Not published (held by the gate)', { value: counts.withheld ?? null, unit: 'releases', ...at })
     fact('how-good', 'passing', `Passing under ${checker}`, { value: counts.passingCurrent ?? null, unit: 'releases', ...at })
     fact('how-good', 'never-checked', `Never checked under ${checker}`, { value: counts.neverCheckedCurrent ?? null, unit: 'releases', ...at })
   }
@@ -196,7 +197,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
         return [
           { text: release.tag },
           { text: release.run ?? shortRun(doc.id, release.runId), href: runHref(release.runId) },
-          { text: release.state ?? null },
+          { text: release.state ? (RELEASE_STATE[release.state] ?? release.state) : null },
           { text: verdict },
           ...ids.map((id) => {
             const value = release.metrics?.[id]
@@ -285,22 +286,23 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
   const unitOf = (rule: string) => doc.rules?.find((item) => item.id === rule)?.unit ?? null
 
   const verdict = doc.verdict ?? null
+  const sentence = verdict ? releaseWords(verdict.sentence) : null
   const report = {
     schema: 'agent-research-report.v1',
     id: `${doc.id}-report`,
     title: doc.title,
     generatedAt: doc.asOf,
-    summary: verdict?.sentence ?? doc.goal?.text ?? '',
+    summary: sentence ?? doc.goal?.text ?? '',
     plays: [
       {
         id: doc.id,
         title: doc.title,
-        summary: verdict?.sentence ?? 'No verdict recorded.',
+        summary: sentence ?? 'No verdict recorded.',
         updatedAt: verdict?.asOf ?? doc.asOf,
         status: verdict?.status ?? null,
         claims: [],
         ...(doc.links?.play ? { href: doc.links.play } : {}),
-        ...(verdict ? { verdict: { sentence: verdict.sentence, status: verdict.status ?? null, evidence: evidence(verdict.source, verdict.asOf) } } : {}),
+        ...(verdict ? { verdict: { sentence: releaseWords(verdict.sentence), status: verdict.status ?? null, evidence: evidence(verdict.source, verdict.asOf) } } : {}),
         questionCoverage: (doc.questions ?? []).map((question) => {
           const sources = evidence(question.source, question.asOf)
           // An answer with no source is not observed: it reads unknown and says so.
@@ -310,7 +312,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
             id: question.id,
             question: question.question,
             status: observed ? 'observed' : question.status === 'not_applicable' ? 'not_applicable' : 'unavailable',
-            ...(observed && question.answer ? { answer: question.answer } : {}),
+            ...(observed && question.answer ? { answer: releaseWords(question.answer) } : {}),
             evidence: sources,
             ...(question.asOf ? { asOf: question.asOf } : {}),
             ...(observed ? (gaps ? { why: gaps } : {}) : { why: question.why ?? (question.status === 'observed' ? 'the answer names no source' : 'not recorded') }),

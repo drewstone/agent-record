@@ -1,4 +1,5 @@
 import type { FeedItem, PlayDocument } from '../workspace.js'
+import { dataStatus, statusOf } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
 
@@ -7,15 +8,19 @@ type Play = PlayDocument & PlayHead
 /** The host's groups (tangle-tools joined_findings), each with words that are true of every row in it. */
 const GROUPS = [
   ['verified', 'Verified by the current check', 'A commit it cites is solved, or its contract held, under the current checker.'],
-  ['contradicted', 'Contradicted', 'No check or gate held what it cites, and at least one failed it.'],
-  ['mixed', 'Checked, not settled', 'A check or the gate held what it cites under one checker; another failed it.'],
+  ['contradicted', 'Contradicted', 'No check or gate held what it cites, and at least one contradicted it.'],
+  ['mixed', 'Checked, not settled', 'A check or the gate held what it cites under one checker; another contradicted it.'],
   ['undecided', 'Undecided', 'Every row on the commits it cites is undecided.'],
   ['unchecked', 'Unchecked agent claims', 'No check row matches anything it cites.'],
 ] as const
 
 // A group this renderer does not know is shown as checked-not-settled, never as unchecked: it has evidence.
 const groupOf = (item: FeedItem) => (GROUPS.some(([id]) => id === item.group) ? (item.group as string) : item.commits?.length ? 'mixed' : 'unchecked')
-const tone = (verdict: string | null | undefined) => (verdict === 'solved' || verdict === 'contract-held' ? 'ok' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown')
+/** A cited commit's verdict, read against its check version: a pass under a retired check is neutral, like every miss. */
+const commitStatus = (play: Play, commit: { verdict?: string | null; checker?: string | null }) => {
+  const named = commit.checker ? play.checkers?.find((item) => item.sha256 === commit.checker || item.label === commit.checker || item.sha256.startsWith(commit.checker!)) : null
+  return statusOf({ axis: 'result', verdict: commit.verdict, current: named?.current ?? true, checker: named?.label ?? null })
+}
 
 function Row({ play, item }: { play: Play; item: FeedItem }) {
   const title = plain(item.title) || plain(item.text).slice(0, 140) || 'Untitled page'
@@ -39,7 +44,8 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
           {item.commits.map((commit) => (
             <span
               key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`}
-              className={`commit-chip tone-${tone(commit.verdict)}`}
+              className="commit-chip"
+              data-status={dataStatus(commitStatus(play, commit))}
               title={[`commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null].filter(Boolean).join('\n')}
             >
               {commit.tag ? <b>{shortTag(commit.tag)}</b> : <>commit {commit.sha.slice(0, 7)}</>}

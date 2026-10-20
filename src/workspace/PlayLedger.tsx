@@ -1,8 +1,8 @@
 import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
-import { money, tokens } from './data.js'
-import { checkerLabel, checksByRun, ENDING_GLYPH, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
+import { money, StatusPill, statusOf, tokens } from './data.js'
+import { checkerLabel, checksByRun, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 
 type Play = PlayDocument & PlayHead
 type SortKey = 'newest' | 'wall' | 'agent' | 'cost' | 'score'
@@ -79,7 +79,7 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
     return (
       <span className="ledger-best is-unscored" title={[`${checks.rows} rows under ${checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')}; the check prints no score`, top ? `most: ${top.count}× ${top.reason}` : null].filter(Boolean).join('\n')}>
         {checks.solved ? `solved ×${checks.solved}` : verdicts.length === 1 ? verdictWord(verdicts[0]) : 'not solved'} <span className="num">×{checks.rows}</span>
-        <span className="faint"> {checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')} · no score</span>
+        <span className="faint"> {checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')} · score not recorded</span>
       </span>
     )
   }
@@ -103,7 +103,7 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
 function Cost({ row }: { row: PlayLedgerRow }) {
   const cost = row.cost ?? null
   if (!cost || cost.provenance === 'unmetered') return <span className="faint" title="No settled attempt: nothing to price">unmetered</span>
-  if (cost.apiUsd === null || cost.apiUsd === undefined) return <span className="unpriced">unpriced</span>
+  if (cost.apiUsd === null || cost.apiUsd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
     <span title={`API-equivalent${cost.provenance ? ` (${cost.provenance})` : ''}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
       {money(cost.apiUsd)}
@@ -196,7 +196,6 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
           </thead>
           <tbody>
             {rows.map((row) => {
-              const glyph = row.ending?.glyph ?? ENDING_GLYPH[row.ending?.word ?? ''] ?? ''
               const tries = Object.values(row.triesByOutcome ?? {}).reduce((sum, value) => sum + value, 0)
               const fork = lineageGlyph(play, row)
               return (
@@ -209,7 +208,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                     {full && row.inputDiffers && <span className="chip" title={`Input differs: ${row.inputDiffers}`}>{row.inputDiffers}</span>}
                   </td>
                   <td className="ledger-ending" title={row.ending?.reason ?? undefined}>
-                    <span className={`ending-glyph ending-${(row.ending?.word ?? 'unknown').replace(/\s+/g, '-')}`}>{glyph}</span> {row.ending?.word ?? '—'}
+                    {row.ending ? <StatusPill status={statusOf({ axis: 'run', state: row.ending.word, reason: row.ending.reason })} className="ending-glyph" /> : '—'}
                   </td>
                   <td className="ledger-bar">
                     <WallBar row={row} max={maxWall} />

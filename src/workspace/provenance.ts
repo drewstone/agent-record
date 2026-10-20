@@ -103,8 +103,9 @@ const COLUMNS: readonly { kind: ProvenanceKind; band: ProvenanceBand }[] = [
 const DECLARED = new Set(['result', 'claim'])
 
 export const VERDICTS = ['NEW', 'REPRODUCTION', 'KNOWN', 'UNVERIFIABLE', 'WRONG'] as const
-export const verdictTone = (label: string | null | undefined) =>
-  label === 'NEW' ? 'ok' : label === 'WRONG' ? 'fail' : label === 'UNVERIFIABLE' ? 'warn' : label ? 'neutral' : 'none'
+/** A reviewer's verdict on a claim is a word with a neutral border, never a status hue: "WRONG" is a contradiction to
+ * read, not an alarm (design-system section 1, Finding words). `none` marks an edge with no verdict. */
+export const verdictTone = (label: string | null | undefined) => (label ? 'neutral' : 'none')
 
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null)
 
