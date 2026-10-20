@@ -102,6 +102,8 @@ function TeamPanel({ play, team, hoursAxis }: { play: Play; team: Team; hoursAxi
  * Team shape per run (chart d): each multi-agent run's agent timeline, on one hours-since-start axis, folded below
  * depth 1, with attempt ticks by outcome and quota walls as blocked bands. Loads when scrolled into view.
  */
+const LOADING_MAX_MS = 10_000
+
 export function PlayTeams({ api, play }: { api: string; play: Play }) {
   // An index group's runs are unrelated plays: a team view across them says nothing.
   const rows = play.standing?.status === 'group' ? [] : (play.ledger?.rows ?? [])
@@ -119,7 +121,15 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
     return () => observer.disconnect()
   }, [visible])
   const ids = multi.slice(0, shown).map((row) => row.runId)
-  const teams = useDocument<Team[]>(visible && ids.length ? `${api}/plays/${encodeURIComponent(play.id)}/teams?runs=${ids.map(encodeURIComponent).join(',')}` : null)
+  const url = visible && ids.length ? `${api}/plays/${encodeURIComponent(play.id)}/teams?runs=${ids.map(encodeURIComponent).join(',')}` : null
+  const teams = useDocument<Team[]>(url)
+  // A loading line lasts only while its request is in flight, and at most 10 s (design system §2).
+  const [overdue, setOverdue] = useState<string | null>(null)
+  useEffect(() => {
+    if (!url || !teams.loading) return
+    const timer = window.setTimeout(() => setOverdue(url), LOADING_MAX_MS)
+    return () => window.clearTimeout(timer)
+  }, [url, teams.loading])
   // An index group has no play file and no teams to compare (3.10).
   if (play.standing?.status === 'group' || (!multi.length && !single.length)) return null
   const hoursAxis = Math.max(1, ...multi.slice(0, shown).map((row) => row.wallHours ?? 0))
@@ -131,10 +141,12 @@ export function PlayTeams({ api, play }: { api: string; play: Play }) {
       </header>
       {multi.length > 0 && (
         <div className="team-grid">
-          {!visible || teams.loading ? (
+          {!visible ? null : teams.loading && overdue === url ? (
+            <p className="ws-status faint" role="status">Teams unavailable: no answer in {LOADING_MAX_MS / 1000} s.</p>
+          ) : teams.loading ? (
             <p className="ws-status" role="status">Loading teams…</p>
           ) : teams.error ? (
-            <p className="ws-status" role="alert">Teams are unavailable: {teams.error}</p>
+            <p className="ws-status faint" role="status">Teams unavailable: {teams.error}</p>
           ) : (
             (teams.data ?? []).filter((team) => team.missing || team.lanes?.length).map((team) => <TeamPanel key={team.runId} play={play} team={team} hoursAxis={hoursAxis} />)
           )}

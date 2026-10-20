@@ -275,7 +275,7 @@ function Releases({ doc, selected, onSelect }: { doc: VersionGraphDocument; sele
             >
               <td>
                 <b className="mono">{tag.name}</b>
-                {tag.best && <span className="vg-chip tone-ok">★ deliverable</span>}
+                {tag.best && <span className="vg-chip tone-muted">★ picked by rule{tag.score ? '' : ' · not checked'}</span>}
                 {tag.score && !tag.score.complete && <span className="vg-chip tone-muted">incomplete</span>}
               </td>
               <td className="mono">{tag.score ? `${tag.score.vector.exact[0]}/${tag.score.vector.exact[1]}` : '—'}</td>
@@ -284,7 +284,7 @@ function Releases({ doc, selected, onSelect }: { doc: VersionGraphDocument; sele
               <td className="mono">{tag.score ? (tag.score.vector.judge === null ? 'none' : Math.round(tag.score.vector.judge * 10) / 10) : '—'}</td>
               <td>
                 {tag.flags.length === 0 ? <span className="faint">none</span> : tag.flags.map((flag, i) => (
-                  <span key={i} className={`vg-chip tone-${flag.kind === 'regression' ? 'warn' : 'fail'}`}>{flagLabel(flag)}</span>
+                  <span key={i} className="vg-chip tone-muted">{flagLabel(flag)}</span>
                 ))}
               </td>
             </tr>
@@ -420,18 +420,19 @@ function TagDetail({ tag }: { tag: VersionTag }) {
     <section className="vg-tag-detail" data-tag-detail={tag.name}>
       <h3>
         Release candidate {tag.name}
-        {tag.best && <span className="vg-chip tone-ok">★ deliverable</span>}
+        {tag.best && <span className="vg-chip tone-muted">★ picked by rule{tag.score ? '' : ' · not checked'}</span>}
       </h3>
       {tag.best && <p className="faint">The registered rule picks this tag as the run's deliverable.</p>}
       <p>{scoreLine(tag)}</p>
       {tag.flags.map((flag, i) => (
-        <p key={i} className={`vg-flag tone-${flag.kind === 'regression' ? 'warn' : 'fail'}`}>{flagLabel(flag)}</p>
+        <p key={i} className="vg-flag tone-neutral">{flagLabel(flag)}</p>
       ))}
       {tag.score && (
         <ul className="vg-checks">
           {tag.score.results.map((result) => (
             <li key={result.id} data-check={result.id}>
-              <span className={`vg-verdict ${result.error ? 'state-warn' : result.pass ? 'state-ok' : 'state-fail'}`}>{result.error ? 'error' : result.pass ? 'pass' : 'fail'}</span>{' '}
+              {/* A bookkeeping check's pass or fail is a glyph in neutral ink, never a status hue. */}
+              <span className="vg-verdict tone-neutral">{result.error ? '◌ error' : result.pass ? '✓ pass' : '✕ fail'}</span>{' '}
               <code>{result.id}</code> <span className="faint">{result.tier}</span>
               <span className="vg-evidence">{result.error ?? result.evidence ?? ''}</span>
             </li>

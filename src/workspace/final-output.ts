@@ -41,15 +41,16 @@ export function externalHref(href: string | null | undefined): string | null {
   }
 }
 
+// A readout verdict is a research judgement, not a fault someone must act on: only "met" carries a hue.
 const VERDICTS: Record<string, { label: string; tone: string }> = {
-  met: { label: 'met', tone: 'state-ok' },
-  'not-met': { label: 'not met', tone: 'state-fail' },
-  inconclusive: { label: 'inconclusive', tone: 'state-warn' },
-  'not-measured': { label: 'not measured', tone: 'state-unknown' },
+  met: { label: 'met', tone: 'tone-pass' },
+  'not-met': { label: 'not met', tone: 'tone-neutral' },
+  inconclusive: { label: 'inconclusive', tone: 'tone-neutral' },
+  'not-measured': { label: 'not measured', tone: 'tone-neutral' },
 }
 
 /** A hypothesis verdict's label and tone; a value this viewer does not know is shown as written, in a neutral tone. */
-export const verdictView = (verdict: string) => VERDICTS[verdict] ?? { label: verdict.replaceAll('-', ' '), tone: 'state-unknown' }
+export const verdictView = (verdict: string) => VERDICTS[verdict] ?? { label: verdict.replaceAll('-', ' '), tone: 'tone-neutral' }
 
 /** `3/4`; a judge that gave no score reads `unknown/4`, never 0. */
 export function scoreLabel(score: number | null | undefined, max: number | null | undefined): string {
@@ -82,10 +83,9 @@ export function questionLabel(id: string): string {
   return words ? words[0].toUpperCase() + words.slice(1) : id
 }
 
-/** A 0–100 review score's tone: 70 and up good, under 40 poor, between mixed; no score is neutral. */
+/** A 0–100 review score's tone: 70 and up good; a low score is a research judgement, neutral like no score. */
 export function reviewScoreTone(score: number | null | undefined): string {
-  if (score === null || score === undefined || !Number.isFinite(score)) return 'state-unknown'
-  return score >= 70 ? 'state-ok' : score < 40 ? 'state-fail' : 'state-warn'
+  return score !== null && score !== undefined && Number.isFinite(score) && score >= 70 ? 'tone-pass' : 'tone-neutral'
 }
 
 /** Whether the review is the settled run's final one, or a live one with the time it was written. */

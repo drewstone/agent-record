@@ -21,7 +21,8 @@ export function ReliabilityPanel({ api }: { api: string }) {
     <section className="reliability" aria-label="Run reliability, last 7 days" data-reliability={data.rate ?? 'unknown'}>
       <div className="reliability-figure">
         <span className="answer-label">Run reliability · last {data.window.days} days</span>
-        <span className={`reliability-rate ${data.rate !== null && data.rate < 0.8 ? 'state-fail' : 'state-ok'}`}>{percent(data.rate)}</span>
+        {/* A share of settled runs is a trend, not a fault someone must act on now: neutral ink, never red. */}
+        <span className="reliability-rate">{percent(data.rate)}</span>
         <span className="faint">
           of {runs.settled} settled runs ran clean · {runs.clean} clean, {runs.hit} hit by a failure, {runs.failed} failed
         </span>
@@ -32,7 +33,7 @@ export function ReliabilityPanel({ api }: { api: string }) {
         {data.daily.map((day) => (
           <div key={day.day} className="reliability-day" title={`${day.day}: ${day.clean} clean, ${day.hit} hit, ${day.failed} failed of ${day.runs}`}>
             <span className="reliability-bar">
-              {day.rate !== null && day.runs > 0 && <i style={{ height: `${Math.max(3, day.rate * 100)}%` }} className={day.rate < 0.8 ? 'low' : ''} />}
+              {day.rate !== null && day.runs > 0 && <i style={{ height: `${Math.max(3, day.rate * 100)}%` }} />}
             </span>
             <span>{day.runs ? percent(day.rate) : '—'}</span>
             <span className="faint">{day.runs}</span>

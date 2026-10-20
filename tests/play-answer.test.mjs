@@ -69,7 +69,7 @@ test('the answer leads: what the winner found, the run and its check, the eviden
   ]
   assert.deepEqual(order, [...order].sort((a, b) => a - b))
   assert.ok(html.includes('href="/run/albert-full-ldpc-symmetry-20261011b?section=outputs&amp;file=release%2Frc2%2Fpages%2Falbert-full-ldpc%2Fhandoff.md"'))
-  assert.ok(html.includes('class="state-pill state-ok">winner<'))
+  assert.match(html, /class="state-pill tone-pass" data-status="run:Finished:pass"><span class="status-shape" aria-hidden="true">✓<\/span> Finished</)
 })
 
 test('a whole SOLVED line is the answer itself', () => {

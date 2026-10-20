@@ -73,3 +73,13 @@ export type RunReceipt = z.infer<typeof runReceiptSchema>
 export const hoursText = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)} h`
 export const tokensText = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value)
 export const utcClock = (value: string) => `${value.replace('T', ' ').replace(/\.\d+Z$/, ' UTC')}`
+
+/**
+ * How a turn-ending cause reads (design system §1): an operator or Lab stop and an exhausted budget are neutral, a quota
+ * wall is attention, the platform losing the turn is a fault (fail family); anything else is neutral.
+ */
+export function turnEndTone(cause: string): 'neutral' | 'attention' | 'fail' {
+  if (cause === 'rate-limited' || cause === 'quota') return 'attention'
+  if (cause === 'platform-lost') return 'fail'
+  return 'neutral'
+}

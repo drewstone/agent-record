@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
-import { money, stateClass, stateLabel } from './data.js'
+import { money, statusData, statusOf } from './data.js'
 import { canvasModel, COL_W, lineageOf, neighbour, NODE_H, NODE_W, originChain, originText, originVerb, profileRunCost, runPlays } from './profile-canvas.js'
 import type { CanvasEdge, CanvasModel, CanvasNode, CanvasScope } from './profile-canvas.js'
 import { findProfile, profileGraph, profileState } from './profile-graph.js'
@@ -337,7 +337,10 @@ function NodeCard({
     >
       {node.foreign && node.play && <span className="pc-play mono">{node.play}</span>}
       <span className="pc-title">
-        <span className={`dot ${stateClass(state)}`} title={stateLabel(state)} />
+        {(() => {
+          const status = statusOf({ axis: 'run', state, now: Date.now() })
+          return <span className={`dot tone-${status.tone}`} title={status.word} data-status={statusData(status)} />
+        })()}
         <b>{name}</b>
         <span className="pc-kind">{KIND_LABEL[profile.kind] ?? profile.kind}</span>
       </span>

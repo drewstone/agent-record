@@ -3,6 +3,7 @@ import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
+import { statusData, statusOf } from './data.js'
 import {
   checkerIndex,
   checkerLabel,
@@ -446,7 +447,8 @@ function ClimbBrush({ play, climb, extent, window, onWindow }: { play: Play; cli
           </span>
         ))}
         {ticks.map((tick, i) => (
-          <i key={i} className={`climb-brush-tick tone-${markVerdict(tick.verdict) === 'pass' ? 'ok' : markVerdict(tick.verdict) === 'fail' ? 'fail' : 'unknown'}`} style={{ left: at(tick.x) }} />
+          // Ticks are neutral history; only a pass is filled.
+          <i key={i} className={`climb-brush-tick${markVerdict(tick.verdict) === 'pass' ? ' tone-pass' : ''}`} style={{ left: at(tick.x) }} />
         ))}
         {shown && <span className="climb-brush-window" style={{ left: at(shown[0]), width: `calc(${at(shown[1])} - ${at(shown[0])})` }} />}
       </div>
@@ -461,6 +463,7 @@ function ClimbBrush({ play, climb, extent, window, onWindow }: { play: Play; cli
  */
 function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
   const rows = [...climb.marks, ...(climb.strip ?? [])]
+  const currentChecker = play.checkers?.find((item) => item.current)?.label ?? null
   return (
     <ol className="verdict-strip" data-verdict-strip>
       {climb.groups.map((group) => {
@@ -479,7 +482,8 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
                   .map((row, i) => (
                     <span
                       key={`${column.id}:${i}`}
-                      className={`verdict-chip tone-${markVerdict(row.verdict) === 'pass' ? 'ok' : markVerdict(row.verdict) === 'fail' ? 'fail' : 'unknown'}`}
+                      className={`verdict-chip tone-${statusOf({ axis: 'result', verdict: row.verdict, checker: checkerLabel(play.checkers, row.checker), current: currentChecker }).tone}`}
+                      data-status={statusData(statusOf({ axis: 'result', verdict: row.verdict, checker: checkerLabel(play.checkers, row.checker), current: currentChecker }))}
                       style={{ ['--checker' as string]: checkerColor(checkerIndex(play.checkers, row.checker) ?? 9) }}
                       title={[`${row.kind === 'gate' ? 'tag gate' : 'check'} under ${checkerLabel(play.checkers, row.checker)}: ${verdictWord(row.verdict)}`, row.line, utc(row.lastAt ?? row.firstAt)].filter(Boolean).join('\n')}
                     >

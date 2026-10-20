@@ -44,7 +44,7 @@ test('a failing run shows its first failing line with its stage, and a page with
   const failing = { ...passed, solved: false, checkedAt: '2026-10-18T01:51:33.804Z', tag: 'test-contract-loop-20261018c/rc1', stage: 'contract',
     firstFailingLine: 'NOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)' }
   const words = text(page(failing))
-  assert.match(words, /Check not passing · checked 01:51 UTC on rc1/)
+  assert.match(words, /No pass yet · checked 01:51 UTC on rc1/)
   assert.match(words, /First failing line \(contract stage\)NOT SOLVED: manifest\.json build must be a cargo argv list/)
   const bare = text(page(undefined))
   assert.doesNotMatch(bare, /Check passed|Check not passing/)
@@ -58,7 +58,7 @@ test('a live run whose newest version waits for its check says which version and
     firstFailingLine: 'NOT SOLVED: (g) workload sha256: reference RV64I execution failed: not an RV64I instruction: 0x6b855593 at 0x10080' }
   const checkWait = { tag: 'magnetar-rust-20261018b/rc7', publishedAt: '2026-10-18T07:32:09.588Z', since: '2026-10-18T07:37:45.098Z', reason: 'the host is stood down: GTR memory 102/121 GB used' }
   const words = text(page({ ...failing, checkWait }))
-  assert.match(words, /Check not passing · checked 07:23 UTC on rc6/)
+  assert.match(words, /No pass yet · checked 07:23 UTC on rc6/)
   assert.match(words, /rc7 is not checked yet · published 07:32 UTC · the host is stood down: GTR memory 102\/121 GB used \(since 07:37 UTC\)/)
   assert.doesNotMatch(text(page({ ...failing, checkWait: null })), /not checked yet/)
 })

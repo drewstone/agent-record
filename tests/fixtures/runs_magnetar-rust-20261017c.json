@@ -1,0 +1,946 @@
+{
+ "schema": "agent-workspace.run.v1",
+ "run": {
+  "id": "magnetar-rust-20261017c",
+  "group": "magnetar-rust-20261017c",
+  "kind": "run",
+  "play": "magnetar-rust",
+  "state": "no-winner",
+  "reason": "cancelled",
+  "startedAt": "2026-10-17T06:59:09.952Z",
+  "settledAt": "2026-10-17T21:58:52.140Z",
+  "durationMs": 53982188,
+  "nodes": 27,
+  "ending": {
+   "name": "cancelled",
+   "state": "no-winner",
+   "at": "2026-10-17T21:58:52.140Z",
+   "reason": "stopping to continue in a fresh press with the closed check loop (contract feedback to managers, pre-tag gate, dense score, seat cap 8); 17c was over the Coding Plan cap (12 vs 8) and blocked at the build step since 20:23Z; its code is preserved at tangle-discovery/magnetar-rust main = rc101 0394d1eeb",
+   "sentence": "The operator stopped this run.",
+   "by": "operator"
+  },
+  "location": {
+   "kind": "dir",
+   "path": "/mnt/traces/discovery-runs/magnetar-rust-20261017c"
+  },
+  "format": "runtime",
+  "depth": 2,
+  "harnesses": [
+   "opencode"
+  ],
+  "models": [
+   "glm-5.3",
+   "zai-coding-plan/glm-5.3"
+  ],
+  "keys": [],
+  "record": {
+   "status": "ready",
+   "digest": "b29cbf1f25e8ceacf3918af93de5ce3b3a2c1a4e9e22e3ae4ffe7da1e98c6e8b",
+   "builtAt": "2026-10-19T10:34:58.784Z",
+   "reason": null,
+   "capture": {
+    "complete": 25,
+    "lossy": 0,
+    "absent": 2
+   }
+  },
+  "check": {
+   "latest": {
+    "at": "2026-10-18T03:14:36.703Z",
+    "tag": "rc102",
+    "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4",
+    "checker": "639c17a4485f",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/runner/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+    "score": null,
+    "source": "play-check.json",
+    "verdict": "not-solved"
+   },
+   "best": {
+    "at": "2026-10-17T07:54:25.884Z",
+    "tag": "rc5",
+    "commit": "f41ba873e7cc58aa0a67340a04c5ea3071500f94",
+    "checker": "639c17a4485f",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: magnetar.json is missing: no deliverable to build",
+    "score": null,
+    "source": "play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   "passes": [],
+   "checkers": [
+    {
+     "checker": "639c17a4485f",
+     "from": "2026-10-17T07:54:25.884Z",
+     "to": "2026-10-18T03:14:36.703Z",
+     "checks": 54,
+     "solved": 0
+    }
+   ],
+   "gate": null,
+   "gateUnknown": null,
+   "counts": {
+    "checks": 57,
+    "known": 54,
+    "solved": 0,
+    "gates": 0,
+    "gateUnknown": 0
+   },
+   "headline": "rc102 NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/runner/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this (10-18 03:14 UTC)",
+   "checkerNames": [
+    {
+     "sha256": "639c17a4485f",
+     "label": "v1",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "3d2b3f1e7a1c",
+     "label": "v2",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "a3cf95c7cd4a",
+     "label": "v3",
+     "ruling": "referee ruling 10-18 19:48Z",
+     "current": false
+    },
+    {
+     "sha256": "041435d77c69",
+     "label": "v4",
+     "ruling": "operator amendment 10-18 20:52Z",
+     "current": true
+    }
+   ]
+  }
+ },
+ "spend": {
+  "paidUsd": null,
+  "subscriptionUsd": null,
+  "apiUsd": null,
+  "sandboxUsd": null,
+  "routerUsd": null,
+  "costBasisUsd": null,
+  "listUsd": 501.678811,
+  "tokens": {
+   "input": 61833396,
+   "output": 2500291,
+   "cacheRead": 1402040640,
+   "cacheWrite": 0
+  },
+  "subscriptionKnown": false,
+  "paidKnown": false,
+  "listKnown": true,
+  "sources": [
+   "runtime:run-totals"
+  ],
+  "gaps": [
+   {
+    "runId": "magnetar-rust-20261017c",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   }
+  ],
+  "nodes": {
+   "magnetar-rust-20261017c": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s1": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 244.5253302,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s2": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 78.7900762,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s3": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 129.84337539999999,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s1:s0": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 52.00044200000001,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s1:s1": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 62.8380498,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s1:s2": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 48.969738199999995,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s1:s3": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s1": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 4.4353516,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s0": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 2.3835962,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s2": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s3": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 0.3577282,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s3:s0": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 26.8110074,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s3:s1": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 17.7507728,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s3:s2": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 5.5755913999999995,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s1:s4": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 26.8663046,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s4": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 46.347592999999996,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s5": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 223.5408286,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s3:s3": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s6": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s4": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s7": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s8": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s9": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s10": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261017c:s0:s11": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   }
+  }
+ },
+ "progress": {
+  "outcome": {
+   "solved": false,
+   "checkedAt": "2026-10-17T21:58:58.296Z",
+   "firstFailingLine": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 0 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/runner/.cache/disco/play-checks/magnetar-24b6890684e5d434/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+   "stage": "hidden",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "lastStreamAt": "2026-10-17T21:55:03.246Z",
+   "minutesSinceLastStream": 810.8,
+   "latestCheck": {
+    "at": "2026-10-18T03:14:36.703Z",
+    "tag": "magnetar-rust-20261017c/rc102",
+    "line": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/runner/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+    "stage": "hidden",
+    "known": true,
+    "solved": false,
+    "score": null
+   },
+   "gate": null,
+   "score": null,
+   "disputes": []
+  },
+  "blocker": null,
+  "endBlocker": null,
+  "phase": "settled",
+  "agents": [
+   {
+    "node": "magnetar-rust-20261017c",
+    "status": "no-winner"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s2",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s0",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s1",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s2",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s3",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s1",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s0",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s2",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s3",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s0",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s1",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s2",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s4",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s4",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s5",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s3",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s6",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s4",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s7",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s8",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s9",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s10",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s11",
+    "status": "down"
+   }
+  ]
+ },
+ "finalOutput": {
+  "readout": {
+   "status": "pending",
+   "generatedAt": null,
+   "settle": null,
+   "summary": null,
+   "deliverables": [],
+   "verdicts": [],
+   "judges": [],
+   "links": {
+    "report": null,
+    "dossier": null,
+    "gist": null
+   },
+   "cost": {
+    "readoutUsd": null,
+    "runUsd": null,
+    "apiEquivalentUsd": null,
+    "billedUsd": null,
+    "clause": null
+   },
+   "error": null,
+   "charts": []
+  }
+ },
+ "receipt": {
+  "timeline": {
+   "lanes": [
+    {
+     "id": "root",
+     "label": "magnetar-rust-20261017c-root · glm-5.3 · cancelled",
+     "profile": "magnetar-rust-20261017c-root"
+    },
+    {
+     "id": "s0",
+     "label": "lead-core · glm-5.3 · unsettled when the run ended",
+     "profile": "lead-core"
+    },
+    {
+     "id": "s1",
+     "label": "lead-vm · glm-5.3 · done",
+     "profile": "lead-vm"
+    },
+    {
+     "id": "s2",
+     "label": "lead-memory · glm-5.3 · done",
+     "profile": "lead-memory"
+    },
+    {
+     "id": "s3",
+     "label": "lead-pcs · glm-5.3 · done",
+     "profile": "lead-pcs"
+    },
+    {
+     "id": "s1:s0",
+     "label": "vm-core · glm-5.3 · done",
+     "profile": "vm-core"
+    },
+    {
+     "id": "s1:s1",
+     "label": "vm-rom · glm-5.3 · done",
+     "profile": "vm-rom"
+    },
+    {
+     "id": "s1:s2",
+     "label": "vm-guests · glm-5.3 · done",
+     "profile": "vm-guests"
+    },
+    {
+     "id": "s1:s3",
+     "label": "vm-marith · glm-5.3 · down, no completed turn",
+     "profile": "vm-marith"
+    },
+    {
+     "id": "s0:s1",
+     "label": "sumcheck-eng · glm-5.3 · done",
+     "profile": "sumcheck-eng"
+    },
+    {
+     "id": "s0:s0",
+     "label": "fields-fast · glm-5.3 · done",
+     "profile": "fields-fast"
+    },
+    {
+     "id": "s0:s2",
+     "label": "hash-eng · glm-5.3 · down, no completed turn",
+     "profile": "hash-eng"
+    },
+    {
+     "id": "s0:s3",
+     "label": "spartan-eng · glm-5.3 · down",
+     "profile": "spartan-eng"
+    },
+    {
+     "id": "s3:s0",
+     "label": "ligerito-porter · glm-5.3 · done",
+     "profile": "ligerito-porter"
+    },
+    {
+     "id": "s3:s1",
+     "label": "mosaic-builder · glm-5.3 · done",
+     "profile": "mosaic-builder"
+    },
+    {
+     "id": "s3:s2",
+     "label": "pcs-soundness · glm-5.3 · done",
+     "profile": "pcs-soundness"
+    },
+    {
+     "id": "s1:s4",
+     "label": "vm-rom2 · glm-5.3 · done",
+     "profile": "vm-rom2"
+    },
+    {
+     "id": "s0:s4",
+     "label": "consolidator · glm-5.3 · down",
+     "profile": "consolidator"
+    },
+    {
+     "id": "s0:s5",
+     "label": "c3-engineer · glm-5.3 · done",
+     "profile": "c3-engineer"
+    },
+    {
+     "id": "s3:s3",
+     "label": "pcs-perf · glm-5.3 · down, no completed turn",
+     "profile": "pcs-perf"
+    },
+    {
+     "id": "s0:s6",
+     "label": "stages-eng · model unrecorded · down, no completed turn",
+     "profile": "stages-eng"
+    },
+    {
+     "id": "s4",
+     "label": "referee · glm-5.3 · unsettled when the run ended, no completed turn",
+     "profile": "referee"
+    },
+    {
+     "id": "s0:s7",
+     "label": "stages-eng2 · glm-5.3 · unsettled when the run ended, no completed turn",
+     "profile": "stages-eng2"
+    },
+    {
+     "id": "s0:s8",
+     "label": "f256-eng · glm-5.3 · down, no completed turn",
+     "profile": "f256-eng"
+    },
+    {
+     "id": "s0:s9",
+     "label": "f256-sweep · glm-5.3 · unsettled when the run ended, no completed turn",
+     "profile": "f256-sweep"
+    },
+    {
+     "id": "s0:s10",
+     "label": "spartan-f256 · glm-5.3 · unsettled when the run ended",
+     "profile": "spartan-f256"
+    },
+    {
+     "id": "s0:s11",
+     "label": "c3-debug · model unrecorded · down, no completed turn",
+     "profile": "c3-debug"
+    }
+   ]
+  },
+  "system": {
+   "attempts": {
+    "tries": 2069,
+    "failed": 1923,
+    "hours": 76.27,
+    "failedHours": 59.78,
+    "causes": [
+     {
+      "cause": "completed",
+      "label": "completed",
+      "tries": 146,
+      "hours": 16.49
+     },
+     {
+      "cause": "platform-lost",
+      "label": "platform lost or killed the turn",
+      "tries": 1278,
+      "hours": 8.58
+     },
+     {
+      "cause": "rate-limited",
+      "label": "a 429 killed the turn",
+      "tries": 637,
+      "hours": 48.43
+     },
+     {
+      "cause": "stopped",
+      "label": "stopped by the Lab or an operator",
+      "tries": 4,
+      "hours": 2.37
+     },
+     {
+      "cause": "other",
+      "label": "other",
+      "tries": 4,
+      "hours": 0.41
+     }
+    ],
+    "outcomes": [
+     {
+      "outcome": "ok",
+      "tries": 146,
+      "hours": 16.49
+     },
+     {
+      "outcome": "quota",
+      "tries": 570,
+      "hours": 34.18
+     },
+     {
+      "outcome": "lost",
+      "tries": 1271,
+      "hours": 6.04
+     },
+     {
+      "outcome": "rate-limit",
+      "tries": 67,
+      "hours": 14.25
+     },
+     {
+      "outcome": "oom",
+      "tries": 7,
+      "hours": 2.54
+     },
+     {
+      "outcome": "aborted",
+      "tries": 4,
+      "hours": 2.37
+     },
+     {
+      "outcome": "other",
+      "tries": 4,
+      "hours": 0.41
+     }
+    ],
+    "open": {
+     "nodes": 15,
+     "tokens": 689148234,
+     "agent": null,
+     "since": null,
+     "hours": null
+    }
+   }
+  }
+ },
+ "live": {
+  "mirrorAt": null,
+  "polling": false
+ }
+}

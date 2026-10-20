@@ -2,7 +2,7 @@ import { Fragment, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, ProfileParent, ProfileRun } from '../workspace.js'
 import { CollapsibleValue } from './CollapsibleValue.js'
-import { stateClass, stateLabel, when } from './data.js'
+import { StatusPill, statusOf, when } from './data.js'
 import type { Comparison } from './profile-compare.js'
 import { primaryDiff, primaryParent, profileLabel, proposedVersions } from './profile-graph.js'
 import { EditEvidence, ProfileScorecards } from './RoleScorecards.js'
@@ -198,9 +198,9 @@ function ProfileRuns({ runs, cost }: { runs: ProfileRun[]; cost?: (runId: string
                 <a href={runHref(run.runId)}>{run.runId}</a>
                 {run.nodeIds.length > 1 && <span className="chip">{run.nodeIds.length} agents</span>}
               </td>
-              <td><span className={`state-pill ${stateClass(run.outcome)}`}>{run.outcome ? stateLabel(run.outcome) : 'unknown'}</span></td>
+              <td><StatusPill status={statusOf({ axis: 'run', state: run.outcome, now: Date.now() })} /></td>
               <td>
-                <span className={`state-pill ${stateClass(run.run.state)}`}>{stateLabel(run.run.state)}</span>
+                <StatusPill status={statusOf({ axis: 'run', state: run.run.state, reason: run.run.reason, now: Date.now() })} />
                 {run.run.reason && <small className="faint"> {run.run.reason}</small>}
               </td>
               <td className="profile-score"><Score score={run.score} /></td>

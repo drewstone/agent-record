@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
-import { money } from './data.js'
+import { money, type Status, statusData, StatusPill, statusOf, type StatusTone } from './data.js'
 import {
+  barSide,
   checkerIndex,
   checkerTitle,
-  ENDING_GLYPH,
   gapWords,
   metricValue,
   type PlayBarMetric,
@@ -35,14 +35,18 @@ function goalOf(play: Play): { text: string; full: string | null } | null {
   return { text: play.goal.text, full: play.goal.full && play.goal.full !== play.goal.text ? play.goal.full : null }
 }
 
-/** The standing sentence with its verdict clause in bold, as the composer wrote it. */
+/**
+ * The standing sentence with its verdict clause in bold, as the composer wrote it. Only a pass under the current check
+ * has a hue; not solved, undecided and never pressed are neutral ink (a research miss is never red or amber).
+ */
 function Sentence({ text, status }: { text: string; status: string }) {
   const lead = /^(NOT SOLVED|SOLVED|UNDECIDED|NEVER PRESSED|NO CHECK DECLARED)\b/.exec(text)?.[0]
+  const verdict = statusOf({ axis: 'result', verdict: lead === 'SOLVED' ? 'solved' : lead === 'NOT SOLVED' ? 'not-solved' : lead === 'UNDECIDED' ? 'undecided' : null })
   return (
     <p className="play-sentence" data-standing={status}>
       {lead ? (
         <>
-          <b className={`play-verdict verdict-${status}`}>{lead}</b>
+          <b className={`play-verdict tone-${verdict.tone}`} data-status={statusData(verdict)}>{lead}</b>
           {text.slice(lead.length)}
         </>
       ) : (
@@ -52,20 +56,24 @@ function Sentence({ text, status }: { text: string; status: string }) {
   )
 }
 
-const verdictGlyph = (verdict: string | null | undefined) =>
-  verdict === 'solved' || verdict === 'contract-held' ? '✓' : verdict === 'not-solved' || verdict === 'contract-failed' ? '✕' : verdict === 'undecided' ? '?' : ''
 
 /** Where a best row came from: `rc16 (18b) ✕ withheld by the gate`, with its line on hover. */
 function Provenance({ play, best }: { play: Play; best: PlayBest | null | undefined }) {
   if (!best) return null
-  const glyph = verdictGlyph(best.verdict)
+  const current = play.checkers?.find((item) => item.current)?.label ?? best.checker
+  const verdict = best.verdict ? statusOf({ axis: 'result', verdict: best.verdict, checker: best.checker, current }) : null
   // A workspace row has no release: it reads as its verdict.
   const release = best.state ?? (typeof best.release === 'string' && best.release !== 'workspace' ? best.release : null)
   return (
     <span className="goal-prov" title={[best.line, best.lastAt ?? best.at ? `last ${utc(best.lastAt ?? best.at)}` : null].filter(Boolean).join('\n') || undefined}>
       <b className="mono">{shortTag(best.tag) ?? 'workspace'}</b>
       {best.runId && <span className="faint"> ({shortRun(play.id, best.runId)})</span>}
-      {glyph && <span className={`goal-glyph glyph-${glyph === '✓' ? 'ok' : glyph === '✕' ? 'fail' : 'unknown'}`}> {glyph}</span>}
+      {verdict && (
+        <span className={`goal-glyph tone-${verdict.tone}`} data-status={statusData(verdict)} title={verdict.word}>
+          {' '}
+          {verdict.shape}
+        </span>
+      )}
       {release && release !== 'published' && <span className="faint"> {RELEASE_STATE[release] ?? release}</span>}
       {(!release || release === 'published') && best.verdict && <span className="faint"> {verdictWord(best.verdict)}</span>}
     </span>
@@ -236,7 +244,7 @@ function ReleasesRow({ releases, label }: { releases: Releases; label: string | 
  * dashed band, and the value as a mark — filled when comparable, a ring with ✕ for a failing candidate, * not comparable,
  * ? comparability unknown. The track spans the value and both bands with room either side, so the distance is visible.
  */
-function BarTrack({ metric, value, mark }: { metric: PlayBarMetric; value: number | null; mark: '' | '✕' | '*' | '?' }) {
+function BarTrack({ metric, value, mark, tone }: { metric: PlayBarMetric; value: number | null; mark: '' | '✕' | '*' | '?'; tone: StatusTone }) {
   const t = metric.target ?? null
   const st = metric.stretch ?? null
   const bounds = [value, t?.min, t?.max, t?.approx, st?.min, st?.max].filter((item): item is number => typeof item === 'number' && Number.isFinite(item) && (metric.scale !== 'log' || item > 0))
@@ -264,7 +272,7 @@ function BarTrack({ metric, value, mark }: { metric: PlayBarMetric; value: numbe
       {edge !== null && value !== null && <i className="bar-gapline" style={{ left: at(Math.min(value, edge)), width: `calc(${at(Math.max(value, edge))} - ${at(Math.min(value, edge))})` }} />}
       {band(st?.min, st?.max, 'bar-stretch', `stretch${st?.label ? ` (${st.label})` : ''}`)}
       {band(t?.min ?? t?.approx, t?.max ?? t?.approx, 'bar-target', `bar ${targetWords(metric) ?? ''}`)}
-      {value !== null && <b className={`bar-dot${mark ? ` mark-${mark === '✕' ? 'fail' : 'na'}` : ''}`} style={{ left: at(value) }} />}
+      {value !== null && <b className={`bar-dot tone-${tone}${mark ? ` mark-${mark === '✕' ? 'candidate' : 'na'}` : ''}`} style={{ left: at(value) }} />}
     </span>
   )
 }
@@ -276,8 +284,8 @@ function BarTrack({ metric, value, mark }: { metric: PlayBarMetric; value: numbe
  */
 function candidateWords(nearest: NonNullable<PlayBarMetric['nearest']>, mark: '' | '✕' | '*' | '?') {
   if (nearest.short) return nearest.short
-  const workloads = nearest.workloads?.total ? ` (${nearest.workloads.passed ?? '?'}/${nearest.workloads.total})` : ''
-  return mark === '✕' ? `failing candidate${workloads}` : mark === '?' ? 'comparability unknown' : (nearest.why ?? 'not comparable')
+  const workloads = nearest.workloads?.total && nearest.workloads.passed !== null && nearest.workloads.passed !== undefined ? `, ${nearest.workloads.passed}/${nearest.workloads.total}` : ''
+  return mark === '✕' ? `on a failing candidate${workloads}` : mark === '?' ? 'comparability unknown' : (nearest.why ?? 'not comparable')
 }
 
 /** One bar metric: the best comparable value, else the nearest candidate marked failing (✕), not comparable (*) or of unknown comparability (?). */
@@ -291,6 +299,12 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
   const gap = best ? gapWords(metric, best.value) : null
   const why = nearest ? candidateWords(nearest, mark) : null
   const shown = best ?? nearest
+  // The number is toned by its own comparison to the bar (377 KiB beats ≈ 599 KiB: pass); whether its release passed the
+  // check is the separate neutral word after it.
+  // A failing candidate's value still compares to the bar; one that is not comparable (*, 1-bit security against a
+  // 120-bit bar) or of unknown comparability (?) is compared to nothing.
+  const side = shown && (mark === '' || mark === '✕') ? barSide(metric, shown.value)?.side : null
+  const value: Status = side === 'within' || side === 'past' ? { axis: 'result', word: 'Meets the bar', tone: 'pass', shape: '✓' } : { axis: 'result', word: side === 'short' ? 'Short of the bar' : 'Not compared', tone: 'neutral', shape: '○' }
   const hover = nearest ? [`No release passes; nearest candidate ${shortTag(nearest.tag)} (${shortRun(play.id, nearest.runId)})`, nearest.why].filter(Boolean).join('\n') : (metric.missing?.why ?? undefined)
   return (
     <div className="bar-row" data-bar-metric={metric.id} data-comparable={best ? 'yes' : nearest ? String(nearest.comparable) : 'none'} title={hover}>
@@ -299,8 +313,8 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
       </dt>
       <dd className="bar-value">
         {shown ? (
-          <span className={best ? '' : `bar-nearest mark-${mark === '✕' ? 'fail' : 'na'}`}>
-            <b>{metricValue(shown.value, metric.unit)}</b> <span className="mono">{shortTag(shown.tag)}{mark ? ` ${mark}` : ''}</span>
+          <span className={best ? '' : 'bar-nearest'}>
+            <b className={`tone-${value.tone}`} data-status={statusData(value)}>{metricValue(shown.value, metric.unit)}</b> <span className="mono">{shortTag(shown.tag)}{mark && mark !== '✕' ? ` ${mark}` : ''}</span>
           </span>
         ) : (
           <span className="faint">not measured</span>
@@ -310,7 +324,7 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
       </dd>
       <dd className="bar-target">{target ? <>bar {target}</> : <span className="faint">no target</span>}</dd>
       <dd className="bar-track-cell">
-        <BarTrack metric={metric} value={shown?.value ?? null} mark={mark} />
+        <BarTrack metric={metric} value={shown?.value ?? null} mark={mark} tone={value.tone} />
       </dd>
     </div>
   )
@@ -336,7 +350,7 @@ function GoalBlock({ play }: { play: Play }) {
           <p className="faint bar-caption" title={[play.bar?.condition && `The bar: ${play.bar.condition}`, play.bar?.checkCondition && `The check measures: ${play.bar.checkCondition}`].filter(Boolean).join('\n') || undefined}>
             {marks.length === metrics.length && marks.length > 0 && <>No release passes: each value is the nearest candidate. </>}
             {marks.some((item) => item!.comparable === false && !/fail|not-solved/.test(item!.verdict ?? '')) && <>* not comparable{precondition ? ` (${precondition.label.toLowerCase()} under ${targetWords(precondition) ?? 'its bar'})` : ''} · </>}
-            {marks.some((item) => item!.verdict && /fail|not-solved/.test(item!.verdict)) && <>✕ failing candidate · </>}
+            {marks.some((item) => item!.verdict && /fail|not-solved/.test(item!.verdict)) && <>○ on a failing candidate · </>}
             {marks.some((item) => item!.comparable === null || item!.comparable === undefined) && <>? comparability unknown · </>}
             {play.bar?.checkCondition && <>ours: {play.bar.checkCondition}</>}
           </p>
@@ -352,21 +366,35 @@ const BLOCKER_WORD: Record<string, string> = {
   'quota-wall': 'Quota wall',
   'gate-undecided': 'Gate undecided',
 }
+/** The host's ending words as run states, for a last ending whose run is not in the document. */
+const ENDING_STATE: Record<string, string> = { died: 'died', cancelled: 'cancelled', stalled: 'stalled', solved: 'winner', 'never started': 'not-started' }
 const ago = (since: string | null | undefined, until?: string | null) => (since ? span((until ? new Date(until).valueOf() : Date.now()) - new Date(since).valueOf()) : null)
+
+/** A blocker's status: its severity while it is current (red is fail, amber attention), neutral history once its run ended. */
+export function blockerStatus(blocker: PlayBlocker, current: boolean): Status {
+  const word = BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')
+  if (!current) return { axis: 'run', word, tone: 'neutral', shape: '○' }
+  return blocker.severity === 'red' ? { axis: 'run', word, tone: 'fail', shape: '■' } : blocker.severity === 'amber' ? { axis: 'run', word, tone: 'attention', shape: '▲' } : { axis: 'run', word, tone: 'neutral', shape: '○' }
+}
 
 /**
  * A run's blocker in one line: severity, class and age, its evidence and its source; every other class beneath. For a
- * run that has ended, `until` is its end, so the age is how long the block lasted rather than time since.
+ * run that has ended, `until` is its end, so the age is how long the block lasted rather than time since, and the
+ * blocker is history (neutral) unless the caller says it is still `current`. A current red blocker names its owner in
+ * visible text, never only on hover.
  */
-export function BlockerChip({ blocker, until, wallHours }: { blocker: PlayBlocker; until?: string | null; wallHours?: number | null }) {
+export function BlockerChip({ blocker, until, wallHours, current = !until }: { blocker: PlayBlocker; until?: string | null; wallHours?: number | null; current?: boolean }) {
+  const status = blockerStatus(blocker, current)
   const lasted = blocker.since ? (until ? new Date(until).valueOf() : Date.now()) - new Date(blocker.since).valueOf() : null
   // On a run that has ended, a block that lasted (nearly) the whole run says so instead of repeating the run's hours.
   const whole = until && wallHours && lasted !== null && lasted >= wallHours * 3_600_000 * 0.9
   const age = whole ? 'the whole run' : ago(blocker.since, until)
   return (
-    <div className={`blocker-chip severity-${blocker.severity}`} data-blocker={blocker.class}>
+    <div className={`blocker-chip tone-${status.tone}`} data-blocker={blocker.class} data-status={statusData(status)}>
       <p>
-        <b className="blocker-class">{BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')}</b>
+        <b className="blocker-class">
+          <span className="status-shape" aria-hidden="true">{status.shape}</span> {status.word}
+        </b>
         {age && <b className="blocker-age"> {age}</b>}
         {blocker.evidence && (
           <span className="blocker-evidence" title={[blocker.evidence, blocker.source && `source: ${blocker.source}`, blocker.owner && `owner: ${blocker.owner}`].filter(Boolean).join('\n')}>
@@ -374,6 +402,7 @@ export function BlockerChip({ blocker, until, wallHours }: { blocker: PlayBlocke
             · {blocker.evidence}
           </span>
         )}
+        {status.tone === 'fail' && blocker.owner && <span className="blocker-owner"> · owner: {blocker.owner}</span>}
       </p>
       {blocker.also?.map((item) => (
         <p key={item.class} className="blocker-also" data-blocker-also={item.class} title={[item.evidence, item.source && `source: ${item.source}`].filter(Boolean).join('\n') || undefined}>
@@ -425,17 +454,23 @@ function LiveBox({ play }: { play: Play }) {
     if (!ending) return null
     const wall = ending.wallHours ?? play.ledger?.rows.find((row) => row.runId === ending.runId)?.wallHours ?? null
     const blocker = ending.blocker ?? null
+    // The last ending is the newest run and none is live, so its fault is current for a day after it ended.
+    const now = Date.now()
+    const current = !!ending.at && now - Date.parse(ending.at) < 86_400_000
+    const run = play.runs.find((item) => item.id === ending.runId)
+    const status = statusOf({ axis: 'run', state: run?.state ?? ENDING_STATE[ending.word] ?? ending.word, reason: run?.reason ?? ending.reason, settledAt: run?.settledAt ?? ending.at, newerRun: false, now })
+    const tone = blocker ? blockerStatus(blocker, current).tone : status.tone
     return (
-      <section className={`live-box is-settled ${blocker ? `severity-${blocker.severity}` : ''}`} aria-label="Last run" data-last-run={ending.runId}>
+      <section className={`live-box is-settled tone-${tone}`} aria-label="Last run" data-last-run={ending.runId}>
         <h4>
           Last run · <a className="mono" href={`/run/${encodeURIComponent(ending.runId)}`}>{ending.run ?? shortRun(play.id, ending.runId)}</a>{' '}
-          <span className="ending-glyph">{ending.glyph ?? ENDING_GLYPH[ending.word] ?? ''}</span> {ending.word}
+          <StatusPill status={status} />
           <span className="faint nowrap">
             {ending.at ? ` ${utc(ending.at)}` : ''}
             {wall !== null ? ` after ${wall >= 10 ? Math.round(wall) : wall.toFixed(1)} h` : ''}
           </span>
         </h4>
-        {blocker && <BlockerChip blocker={blocker} until={ending.at} wallHours={wall} />}
+        {blocker && <BlockerChip blocker={blocker} until={ending.at} wallHours={wall} current={current} />}
         {ending.reason && !blocker && (
           <p className="faint ending-reason clamp-2" title={ending.reason}>
             ended: {ending.reason.replaceAll('-', ' ')}
@@ -446,7 +481,7 @@ function LiveBox({ play }: { play: Play }) {
     )
   }
   return (
-    <section className={`live-box ${live.blocker ? `severity-${live.blocker.severity}` : ''}`} aria-label="Live run" data-live={live.runId}>
+    <section className={`live-box tone-${live.blocker ? blockerStatus(live.blocker, true).tone : 'live'}`} aria-label="Live run" data-live={live.runId}>
       <h4>
         Live · <a className="mono" href={`/run/${encodeURIComponent(live.runId)}`}>{live.run ?? shortRun(play.id, live.runId)}</a>
         <span className="faint">

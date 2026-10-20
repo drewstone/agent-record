@@ -1,4 +1,5 @@
 import type { FeedItem, PlayDocument } from '../workspace.js'
+import { statusData, statusOf } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
 
@@ -15,7 +16,9 @@ const GROUPS = [
 
 // A group this renderer does not know is shown as checked-not-settled, never as unchecked: it has evidence.
 const groupOf = (item: FeedItem) => (GROUPS.some(([id]) => id === item.group) ? (item.group as string) : item.commits?.length ? 'mixed' : 'unchecked')
-const tone = (verdict: string | null | undefined) => (verdict === 'solved' || verdict === 'contract-held' ? 'ok' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown')
+/** A cited commit's verdict: a pass under the current check is pass; a miss, or anything under a retired check, is neutral. */
+const commitStatus = (play: Play, commit: { verdict?: string | null; checker?: string | null }) =>
+  statusOf({ axis: 'result', verdict: commit.verdict, checker: commit.checker ? checkerLabel(play.checkers, commit.checker) : null, current: play.checkers?.find((item) => item.current)?.label ?? null })
 
 function Row({ play, item }: { play: Play; item: FeedItem }) {
   const title = plain(item.title) || plain(item.text).slice(0, 140) || 'Untitled page'
@@ -39,7 +42,8 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
           {item.commits.map((commit) => (
             <span
               key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`}
-              className={`commit-chip tone-${tone(commit.verdict)}`}
+              className={`commit-chip tone-${commitStatus(play, commit).tone}`}
+              data-status={statusData(commitStatus(play, commit))}
               title={[`commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null].filter(Boolean).join('\n')}
             >
               {commit.tag ? <b>{shortTag(commit.tag)}</b> : <>commit {commit.sha.slice(0, 7)}</>}

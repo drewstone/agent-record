@@ -5,7 +5,7 @@ import { Conversation } from '../viewer/Conversation.js'
 import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
-import { endingLabel } from './data.js'
+import { statusData, statusOf } from './data.js'
 import { BlockerChip } from './PlayHead.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
@@ -87,7 +87,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const fix = diagnosis ? compact(diagnosis.fix) : ''
   const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
-  const ending = doc.run.ending || doc.run.state === 'stalled' ? endingLabel(doc.run) : execution.settleKind ?? 'settle kind unknown'
+  const status = statusOf({ axis: 'run', state: execution.alive ? 'running' : doc.run.state, reason: doc.run.reason, settledAt: doc.run.settledAt, live: execution.alive, now })
   const raw = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
   const reason = raw ? humane(raw) : null
   const gate = doc.progress?.outcome?.gate
@@ -106,7 +106,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const wallHours = doc.receipt?.work?.wallHours ?? null
   return <section className="run-execution" aria-label="Run status">
     <p role="status" data-run-status>
-      <strong>{execution.alive ? 'Running' : `Stopped · ${ending}`}</strong>
+      <strong className={`tone-${status.tone}`} data-status={statusData(status)}>{status.word}{!execution.alive && doc.run.settledAt ? ` ${clock(doc.run.settledAt)}` : ''}</strong>
       {execution.alive ? <> · last activity {age !== null && Number.isFinite(age) ? `${age} s ago` : 'unknown'} · attempts failed {execution.failedAttempts}</> : <>
         {reason ? <span data-field="receipt.outcome.reason"> · {reason}</span> : <>
           {execution.endingError && <> · {execution.endingError.name}</>}
@@ -116,7 +116,8 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
       </>}
     </p>
     {block && <div className="run-end-blocker" data-run-blocker={block.class}><BlockerChip blocker={block} until={ended} wallHours={wallHours} /></div>}
-    {(blockedGate || undecided || quota) && <ul className="run-blockers" aria-label="What blocks the run">
+    {(blockedGate || undecided || quota) && <ul className={`run-blockers tone-${execution.alive ? 'attention' : 'neutral'}`} aria-label={execution.alive ? 'What blocks the run' : 'What blocked the run'}
+      data-status={`run:${execution.alive ? 'Blocked' : 'Ended'}:${execution.alive ? 'attention' : 'neutral'}`}>
       {undecided && <li data-field="run.check.gateUnknown"><strong>Tag gate undecided {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
       {blockedGate && <li data-field="progress.outcome.gate"><strong>Tag gate {blockedGate.verdict}</strong>{shortTag(blockedGate.tag) && <> on <code>{shortTag(blockedGate.tag)}</code></>}{clock(blockedGate.at) && <> at {clock(blockedGate.at)}</>}: <span className="run-blocker-line">{blockedGate.line}</span></li>}
       {quota && <li data-field="receipt.system.attempts.causes"><strong>{quota.tries} quota hits</strong>: {quota.label ?? 'a 429 ended the turn'}{quota.hours ? ` (${quota.hours} h of turns)` : ''}</li>}

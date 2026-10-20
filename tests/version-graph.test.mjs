@@ -67,10 +67,10 @@ test('a tag shows its score, the rule\'s pick and its flags on its commit', () =
     ['merge', 'muted'],
     ['rc2', 'accent'],
     ['exact 4/4 · held-out 1/3 · blockers unknown · judge 81.3 (incomplete)', 'info'],
-    ['regression vs rc1: sampled', 'warn'],
-    ['suspected judge-gaming vs rc1', 'fail'],
+    ['regression vs rc1: sampled', 'muted'],
+    ['suspected judge-gaming vs rc1', 'muted'],
   ])
-  assert.equal(model.nodes.find((node) => node.id === sha('c')).chips[1].label, 'rc1 ★ deliverable')
+  assert.equal(model.nodes.find((node) => node.id === sha('c')).chips[1].label, 'rc1 ★ picked by rule')
   assert.equal(scoreLine({ ...doc.tags[0], score: null }), 'not scored yet')
   assert.equal(flagLabel({ kind: 'other', tag: 'rc2', from: 'rc1', checks: [] }), 'other vs rc1')
   assert.equal(model.nodes.find((node) => node.id === sha('d')).chips.length, 0, 'a plain write carries no chip')

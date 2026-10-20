@@ -182,6 +182,9 @@ export function RunAssessments({
   const selected = (focus && catalogue.has(focus) ? focus : null) ?? firstAdverse ?? (dimensions.dimensions ?? []).find((dimension) => byDimension.has(dimension.id))?.id
   const dimension = selected ? catalogue.get(selected) : undefined
   const list = selected ? (byDimension.get(selected) ?? []) : []
+  // Resolved dimensions lead; the rest fold into one count per group, and a stale judge's reason is said once.
+  const judged = (id: string) => (byDimension.get(id) ?? []).some((row) => row.status === 'decided')
+  const staleReasons = [...new Set(visible.filter((row) => row.status === 'stale' && row.reason).map((row) => row.reason!))]
   return (
     <div className="run-assessments" data-run-assessments>
       <div className="assessment-toolbar">
@@ -191,13 +194,17 @@ export function RunAssessments({
         </div>
         {doc?.recordDigest && <span className="mono faint">record {doc.recordDigest.slice(0, 12)}</span>}
       </div>
+      {staleReasons.length > 0 && <p className="faint" data-stale-reason>Some judgements are stale: {staleReasons[0]}{staleReasons.length > 1 ? ` (and ${staleReasons.length - 1} other reasons)` : ''}.</p>}
       <div className="scorecard" data-scorecard>
-        {dimensions.groups.map((group) => (
+        {dimensions.groups.map((group) => {
+          const items = dimensions.dimensions.filter((item) => item.group === group.id)
+          const unjudged = items.filter((item) => !judged(item.id) && item.id !== selected)
+          return (
           <div key={group.id} className="scorecard-group">
             <span className="scorecard-name"><span className="dim-id">{group.id}</span>{group.name}</span>
             <span className="scorecard-cells">
-              {dimensions.dimensions
-                .filter((item) => item.group === group.id)
+              {items
+                .filter((item) => judged(item.id) || item.id === selected)
                 .map((item) => {
                   const cell = summary(item)
                   return (
@@ -215,9 +222,15 @@ export function RunAssessments({
                     </button>
                   )
                 })}
+              {unjudged.length > 0 && (
+                <span className="score-unjudged faint" data-unjudged={unjudged.length} title={unjudged.map((item) => `${item.id} ${item.key.replaceAll('_', ' ')}`).join('\n')}>
+                  {group.id}: {unjudged.length} not judged
+                </span>
+              )}
             </span>
           </div>
-        ))}
+          )
+        })}
       </div>
       {dimension && (
         <section className="assessment-dimension focused" data-dimension={dimension.id} id={`dim-${dimension.id}`}>

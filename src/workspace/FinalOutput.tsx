@@ -13,7 +13,11 @@ import {
   scoreLabel,
   verdictView,
 } from './final-output.js'
-import { money, when } from './data.js'
+import { money, statusOf, when } from './data.js'
+
+/** The run a readout belongs to: when it settled and how it ended, to say a readout never came after its deadline. */
+type ReadoutRun = { state: string | null | undefined; reason?: string | null; settledAt?: string | null }
+const READOUT_DEADLINE_MS = 3_600_000
 import { ChartGallery, GradeControl, ScoresTable } from './Scores.js'
 
 function FileRow({ file, label }: { file: OutputFile; label?: string }) {
@@ -79,8 +83,18 @@ const READOUT_LINKS = [
 ] as const
 
 /** The readout the Lab writes after the run settles: summary, deliverables, verdicts, judges, cost and its links. */
-function ReadoutSection({ readout, output, grading }: { readout: Readout; output: FinalOutput; grading?: Grading }) {
+function ReadoutSection({ readout, output, grading, run }: { readout: Readout; output: FinalOutput; grading?: Grading; run?: ReadoutRun }) {
   if (readout.status === 'pending') {
+    // "Pending" holds only before its deadline: an hour after the run settled, say what did not happen.
+    const settled = run?.settledAt ? Date.parse(run.settledAt) : NaN
+    if (run && Number.isFinite(settled) && Date.now() - settled > READOUT_DEADLINE_MS) {
+      const ending = statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, now: Date.now() })
+      return (
+        <div className="final-readout" data-readout="not-written">
+          <p className="faint">No readout was written: the run was {ending.word.charAt(0).toLowerCase() + ending.word.slice(1)}.</p>
+        </div>
+      )
+    }
     return (
       <div className="final-readout" data-readout="pending">
         <h3>Readout pending</h3>
@@ -88,7 +102,8 @@ function ReadoutSection({ readout, output, grading }: { readout: Readout; output
       </div>
     )
   }
-  const tone = readout.status === 'complete' ? 'state-ok' : readout.status === 'failed' ? 'state-fail' : 'state-warn'
+  // Bookkeeping: whether the Lab wrote its readout is a word, never a verdict colour.
+  const tone = 'tone-neutral'
   const gist = externalHref(readout.links.gist)
   const shownGist = gist && !READOUT_LINKS.some(([key]) => externalHref(readout.links[key]) === gist) ? gist : null
   return (
@@ -127,7 +142,7 @@ function ReadoutSection({ readout, output, grading }: { readout: Readout; output
             const href = externalHref(item.url)
             return (
               <li className="final-file final-deliverable" key={item.id} data-deliverable={item.id}>
-                <span className={`state-pill ${item.present === true ? 'state-ok' : item.present === false ? 'state-fail' : 'state-unknown'}`}>
+                <span className="state-pill tone-neutral">
                   {item.present === true ? 'present' : item.present === false ? 'missing' : 'unknown'}
                 </span>
                 {href ? <ExternalLink href={href}>{item.id}</ExternalLink> : <b>{item.id}</b>}
@@ -219,7 +234,7 @@ function QuestionDetail({ item }: { item: TraceReviewQuestion }) {
   return (
     <>
       {citations.total !== null && citations.total > 0 && (
-        <p className={`review-note ${citations.resolved !== null && citations.resolved < citations.total ? 'state-warn' : 'faint'}`}>
+        <p className="review-note faint">
           {citations.resolved ?? 'An unknown number'} of {plural(citations.total, 'citation')} found in the sessions.
         </p>
       )}
@@ -258,7 +273,7 @@ export function TraceReviewSection({ review }: { review: TraceReview }) {
     <div className="final-readout final-review" data-trace-review={review.final ? 'final' : 'live'}>
       <div className="final-readout-head">
         <h3>Trace review</h3>
-        <span className={`state-pill ${review.final ? 'state-ok' : 'state-warn'}`}>{reviewPhaseLabel(review, when(review.generatedAt))}</span>
+        <span className={`state-pill ${review.final ? 'tone-neutral' : 'tone-live'}`}>{reviewPhaseLabel(review, when(review.generatedAt))}</span>
       </div>
       <p className="final-summary">
         <b>The requester's goal:</b> {review.goal ?? <span className="faint">not registered for this run</span>}
@@ -305,7 +320,7 @@ export function TraceReviewSection({ review }: { review: TraceReview }) {
                   </td>
                   <td className="num final-nowrap">
                     {item.status === 'failed' ? (
-                      <span className="state-pill state-fail">failed</span>
+                      <span className="state-pill tone-neutral">not reviewed</span>
                     ) : item.score === null ? (
                       <span className="faint">no score</span>
                     ) : (
@@ -341,10 +356,10 @@ export interface Grading {
   onSaved?: () => void
 }
 
-export function FinalOutputPanel({ output, grading }: { output: FinalOutput | null | undefined; grading?: Grading }) {
+export function FinalOutputPanel({ output, grading, run }: { output: FinalOutput | null | undefined; grading?: Grading; run?: ReadoutRun }) {
   if (!output) return null
   const declared = output.declared
-  const tone = output.status === 'delivered' ? 'state-ok' : output.status === 'not-delivered' ? 'state-fail' : 'state-unknown'
+  const tone = 'tone-neutral'
   return (
     <section className="ws-final" aria-label="Final output" data-final-output={output.status}>
       <header className="ws-final-head">
@@ -352,7 +367,7 @@ export function FinalOutputPanel({ output, grading }: { output: FinalOutput | nu
         {declared && <span className={`state-pill ${tone}`} data-final-status>{deliveryLabel(output.status)}</span>}
         {output.checkedAt && <span className="faint final-checked">checked {when(output.checkedAt)}</span>}
       </header>
-      {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} />}
+      {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} run={run} />}
       {output.traceReview && <TraceReviewSection review={output.traceReview} />}
       {declared ? (
         <>

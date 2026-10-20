@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
-import { useDocument } from './data.js'
+import { statusData, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
-import { ENDING_COLORS, ENDING_ORDER } from '@tangle-network/charts'
-import { byEnding, bytes, ChartCard, compact, DayBars, ENDING_OF_STATE, Histogram, HBars, Legend, Lines, Meter, pct, SERIES, Spark, STATE_COLOR, usd } from './OverviewCharts.js'
+import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
 
-// Five ranked causes plus "other". The six fixed slots passed the categorical validator on #16181f.
-const LOSS_COLOR = [...SERIES, '#b97637']
+// Five ranked causes plus "other". The amber slot (the stalled hex), the magenta slot and the old orange sixth sit beside
+// status hues, so the causes use the violet, teal and blue slots and their lighter mixes; status hues mark status only
+// (design system §5.8). Change 6 redraws this chart.
+const LOSS_COLOR = [SERIES[0], SERIES[1], SERIES[4], `color-mix(in srgb, ${SERIES[0]} 50%, var(--ar-bg))`, `color-mix(in srgb, ${SERIES[1]} 50%, var(--ar-bg))`, 'var(--ar-fg-faint)']
 const hours = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value)} h`
 
 const ago = (value: string | null | undefined) => {
@@ -30,13 +31,19 @@ const weekCost = (play: OverviewPlayWeek) => {
   if (value === null || value === undefined || (unknown >= play.runCount && !value)) return '?'
   return `${money(value)}${unknown > 0 ? '+' : ''}`
 }
-// Runs whose outcome is not known draw hollow, so they never pass for a near hue with a known outcome
-// (unknown beside no winner, no record beside driver failed).
-const HOLLOW = new Set(['unknown', 'no-record'])
-const chipStyle = (state: string) => {
-  const color = STATE_COLOR[state] ?? STATE_COLOR.unknown!
-  return HOLLOW.has(state) || !STATE_COLOR[state] ? { boxShadow: `inset 0 0 0 2px ${color}` } : { background: color }
-}
+/** The shapes the week's run chips use, as their legend: the glyph carries the meaning without colour. */
+const CHIP_LEGEND = [
+  ['▶', 'running', 'live'],
+  ['✓', 'finished with a winner', 'pass'],
+  ['○', 'finished', 'neutral'],
+  ['⊘', 'stopped', 'neutral'],
+  ['⏸', 'stopped by Lab (stall)', 'neutral'],
+  ['■', 'crashed in the last day', 'fail'],
+  ['□', 'crashed earlier', 'neutral'],
+  ['◌', 'no record', 'neutral'],
+] as const
+/** An unknown amount: a muted word at body size, never a display-size "?". */
+const NotMeasured = () => <span className="ov-not-measured">not measured</span>
 const sumOf = (values: (number | null)[] | undefined) => (values ?? []).reduce<number>((a, b) => a + (b ?? 0), 0)
 
 function Section({ id, title, tone, aside, children }: { id?: string; title: string; tone: string; aside?: ReactNode; children: ReactNode }) {
@@ -58,12 +65,13 @@ function Section({ id, title, tone, aside, children }: { id?: string; title: str
 function Lead({ lead }: { lead: OverviewLead }) {
   const title = plain(lead.title)
   const text = plain(lead.text)
-  const failing = lead.kind === 'progress' && lead.verdict !== 'solved'
-  const kind = lead.kind === 'check' ? 'check passed' : lead.kind === 'progress' ? 'check' : lead.kind
+  // A run whose checks never passed is a research miss: "No pass yet" in neutral, with its workloads when the line says them.
+  const workloads = /(\d+) of (\d+) workloads/.exec(lead.text ?? '')
+  const kind = lead.kind === 'check' ? 'check passed' : lead.kind === 'progress' ? (lead.verdict === 'solved' ? 'check passed' : `No pass yet${workloads ? ` · ${workloads[1]}/${workloads[2]}` : ''}`) : lead.kind
   const words = [title, text && text !== title ? text : ''].filter(Boolean)
   return (
     <span className="ov-lead" title={words.join(' · ') || undefined}>
-      <span className={`ov-lead-kind kind-${lead.kind}${failing ? ' is-failing' : ''}`}>{kind}</span>
+      <span className={`ov-lead-kind kind-${lead.kind}`}>{kind}</span>
       <span className="ov-lead-title">{title && <b>{title}</b>}{title && words.length > 1 ? ' · ' : ''}{words.length ? words.filter((word) => word !== title).join(' · ') : 'No answer recorded'}</span>
     </span>
   )
@@ -75,7 +83,7 @@ function RunningRow({ run }: { run: OverviewRun }) {
   return (
     <li>
       <a className="ov-running-row" href={`/run/${encodeURIComponent(run.runId)}`}>
-        <span className={`ov-light ${stale ? 'tone-fail' : 'tone-live'}`} aria-hidden="true" />
+        <span className={`ov-light ${stale ? 'tone-attention' : 'tone-live'}`} aria-hidden="true" />
         <span className="ov-running-title">{run.title}</span>
         <span className="ov-running-meta">
           <span>started {ago(run.startedAt)}</span>
@@ -99,11 +107,18 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
         {play.running > 0 && <span className="ov-badge tone-live">running</span>}
       </a>
       <span className="ov-week-runs">
-        {play.runs.map((run) => (
-          <a key={run.runId} className="ov-chip" href={`/run/${encodeURIComponent(run.runId)}`} style={chipStyle(run.state)}
-            title={`${label(run.state)} · started ${run.startedAt?.slice(0, 16).replace('T', ' ') ?? 'unknown'} UTC${run.lostHours ? ` · ${hours(run.lostHours)} lost` : ''}`}
-            aria-label={`run ${run.runId}, ${label(run.state)}`} />
-        ))}
+        {play.runs.map((run) => {
+          // Newest first; the start bounds the settle from below, so a crash that started under a day ago is the only red one.
+          const status = statusOf({ axis: 'run', state: run.state, settledAt: run.startedAt, live: run.state === 'running',
+            newerRun: play.runs.some((other) => !!other.startedAt && !!run.startedAt && other.startedAt > run.startedAt), now: Date.now() })
+          return (
+            <a key={run.runId} className={`ov-chip tone-${status.tone}`} href={`/run/${encodeURIComponent(run.runId)}`} data-status={statusData(status)}
+              title={`${status.word} · started ${run.startedAt?.slice(0, 16).replace('T', ' ') ?? 'unknown'} UTC${run.lostHours ? ` · ${hours(run.lostHours)} lost` : ''}`}
+              aria-label={`run ${run.runId}, ${status.word}`}>
+              <span aria-hidden="true">{status.shape}</span>
+            </a>
+          )
+        })}
         {play.runCount > play.runs.length && <span className="ov-week-more">+{play.runCount - play.runs.length}</span>}
       </span>
       <span className="ov-week-found">
@@ -197,13 +212,15 @@ export function OverviewPage({ api }: { api: string }) {
               {attention.map((item) => {
                 const body = (
                   <>
-                    <span className={`ov-light tone-${item.tone === 'crit' ? 'fail' : item.tone === 'warn' ? 'warn' : 'info'}`} aria-hidden="true" />
+                    <span className={`ov-light tone-${item.tone === 'crit' ? 'fail' : item.tone === 'warn' ? 'attention' : 'info'}`} aria-hidden="true" />
                     <span className="ov-attention-text">{item.text}{item.detail ? <small>{item.detail}</small> : null}
                       <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
                   </>
                 )
-                // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
-                return <li key={item.text}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
+                // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall. The host
+                // composes the tone; a critical item is the page's earned fail, its owner and next action in visible text.
+                const tone = item.tone === 'crit' ? 'fail' : item.tone === 'warn' ? 'attention' : 'neutral'
+                return <li key={item.text} data-status={`run:Needs you:${tone}`}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
               })}
             </ul>
           ) : (
@@ -217,7 +234,11 @@ export function OverviewPage({ api }: { api: string }) {
           <h2 className="kicker tone-finding">Last {weekDays} days, by play</h2>
           <span className="ov-card-sub">{week.length} plays · {weekRuns} runs · {weekResults} results · {weekClaims} claims{week.some((play) => play.findingsPending) ? ' · findings incomplete' : ''}</span>
         </div>
-        <Legend items={[...ENDING_ORDER.filter((ending) => Object.values(ENDING_OF_STATE).includes(ending) && (ending !== 'live' || running.length)).map((ending) => ({ name: ending, color: ENDING_COLORS[ending] })), { name: 'unknown', color: STATE_COLOR.unknown!, hollow: true }]} />
+        <div className="ov-legend" data-chip-legend>
+          {CHIP_LEGEND.filter(([, , tone]) => tone !== 'live' || running.length).map(([shape, name, tone]) => (
+            <span key={name}><b className={`ov-legend-shape tone-${tone === 'fail' ? 'neutral' : tone}`} aria-hidden="true">{shape}</b> {name}</span>
+          ))}
+        </div>
         <div className="ov-card ov-week">
           {week.length ? (
             <ol>
@@ -228,7 +249,7 @@ export function OverviewPage({ api }: { api: string }) {
               <li className="ov-week-total">
                 <span>{week.length} plays</span><span>{weekRuns} runs</span><span>{weekResults} results · {weekClaims} claims</span>
                 <span className="ov-week-num">{hours(sumOf(week.map((p) => p.lostHours)))}</span>
-                <span className="ov-week-num" title="Known subtotal; + means some runs have no reading">{weekCostTotal ? `${usd(weekCostTotal)}${weekCostUnknown ? '+' : ''}` : '?'}</span>
+                <span className="ov-week-num" title="Known subtotal; + means some runs have no reading">{weekCostTotal ? `${usd(weekCostTotal)}${weekCostUnknown ? '+' : ''}` : <NotMeasured />}</span>
                 <span />
               </li>
             </ol>
@@ -277,8 +298,8 @@ export function OverviewPage({ api }: { api: string }) {
         >
           <DayBars days={days} series={[{ name: 'results', color: SERIES[0], values: findingsByDay.result ?? [] }, { name: 'claims', color: SERIES[2], values: findingsByDay.claim ?? [] }, { name: 'checks', color: SERIES[3], values: findingsByDay.check ?? [] }]} />
         </ChartCard>
-        <ChartCard title="Why runs failed" values={d.runs.causes.map(([, n]) => n)} note="Root cause of each driver-failed or failed run, 30 days.">
-          <HBars rows={d.runs.causes.map(([cause, n]) => ({ label: label(cause), value: n }))} color="var(--ar-c-fail)" />
+        <ChartCard title="Why runs crashed" values={d.runs.causes.map(([, n]) => n)} note="Root cause of each driver-failed or failed run, 30 days: history, so neutral.">
+          <HBars rows={d.runs.causes.map(([cause, n]) => ({ label: label(cause), value: n }))} color="var(--ar-c-neutral)" />
         </ChartCard>
         <ChartCard title="Agents per run" values={d.runs.agentsHistogram.map((bin) => bin.n)} note={`Depth: ${d.runs.depth.map(([k, n]) => `${k} → ${n}`).join(' · ')}`}>
           <Histogram bins={d.runs.agentsHistogram} unit="agents" format={(v) => String(Math.round(v))} />
@@ -310,35 +331,48 @@ export function OverviewPage({ api }: { api: string }) {
       <Section id="money" title="Money" tone="tone-warn">
         <ChartCard title={`Cost by kind, ${range} days`} values={[costRuns?.api ? sumOf(cut(cost?.api)) : null, costRuns?.sandbox ? sumOf(cut(cost?.sandbox)) : null, costRuns?.subscription ? sumOf(cut(cost?.subscription)) : null]} note={costRuns ? `${costRuns.counted} catalog runs in 30 days; ${costRuns.snapshots} spend snapshots. Router recorded for ${costRuns.api}, sandbox compute for ${costRuns.sandbox}; other amounts are unknown, not zero.` : undefined}>
           <dl className="ov-costs">
-            <div><dt>Billed: model API (Router), measured subtotal</dt><dd>{costRuns?.api ? usd(sumOf(cut(cost?.api))) : '?'}</dd></div>
-            <div><dt>Billed: sandbox compute, measured subtotal</dt><dd>{costRuns?.sandbox ? usd(sumOf(cut(cost?.sandbox))) : '?'}</dd></div>
-            <div><dt>Not billed: subscription use at API prices</dt><dd>{costRuns?.subscription ? usd(sumOf(cut(cost?.subscription))) : '?'}</dd></div>
+            <div><dt>Billed: model API (Router), measured subtotal</dt><dd>{costRuns?.api ? usd(sumOf(cut(cost?.api))) : <NotMeasured />}</dd></div>
+            <div><dt>Billed: sandbox compute, measured subtotal</dt><dd>{costRuns?.sandbox ? usd(sumOf(cut(cost?.sandbox))) : <NotMeasured />}</dd></div>
+            <div><dt>Not billed: subscription use at API prices</dt><dd>{costRuns?.subscription ? usd(sumOf(cut(cost?.subscription))) : <NotMeasured />}</dd></div>
             {sumOf(cost?.otherList) > 0 && <div><dt>API-key agents at list price</dt><dd>{usd(sumOf(cut(cost?.otherList)))}</dd></div>}
           </dl>
         </ChartCard>
         <ChartCard title="Infrastructure billed to Discovery" values={infra ? [infra.totals.hostUsd, infra.totals.volumeUsd, infra.totals.snapshotUsd, infra.totals.r2Usd, infra.totals.egressUsd, infra.totals.r2ListUsd] : []} note={infra ? `${infra.window.from?.slice(0, 10) ?? 'unknown start'}–${infra.window.to.slice(0, 10)} · measured ${ago(infra.generatedAt)}. Missing sources remain unknown.` : 'Infrastructure cost readings have not arrived.'}>
-          <dl className="ov-costs">
-            <div><dt>Hosts</dt><dd>{money(infra?.totals.hostUsd)}</dd></div>
-            <div><dt>Hetzner volumes, including traces</dt><dd>{money(infra?.totals.volumeUsd)}</dd></div>
-            <div><dt>Snapshots and backups</dt><dd>{money(infra?.totals.snapshotUsd)}</dd></div>
-            <div><dt>Cloudflare R2</dt><dd>{money(infra?.totals.r2Usd)}</dd></div>
-            <div><dt>Egress charges</dt><dd>{money(infra?.totals.egressUsd)}</dd></div>
-            <div><dt>R2 egress</dt><dd>{infra?.totals.r2EgressUsd === 0 ? '$0 (free)' : money(infra?.totals.r2EgressUsd)}</dd></div>
-          </dl>
+          {(() => {
+            // A card with more than half its sources unknown collapses to one line with the count (design system §2).
+            const sources = [
+              ['hosts', 'Hosts', infra?.totals.hostUsd],
+              ['volumes', 'Hetzner volumes, including traces', infra?.totals.volumeUsd],
+              ['snapshots', 'Snapshots and backups', infra?.totals.snapshotUsd],
+              ['R2', 'Cloudflare R2', infra?.totals.r2Usd],
+              ['egress', 'Egress charges', infra?.totals.egressUsd],
+              ['R2 egress', 'R2 egress', infra?.totals.r2EgressUsd],
+            ] as const
+            const missing = sources.filter(([, , value]) => value === null || value === undefined)
+            if (missing.length * 2 > sources.length)
+              return <p className="ov-note" data-unknown-line>Billed infrastructure: {missing.length} of {sources.length} sources not measured ({missing.map(([word]) => word).join(', ')}).</p>
+            return (
+              <dl className="ov-costs">
+                {sources.map(([word, title, value]) => (
+                  <div key={word}><dt>{title}</dt><dd>{word === 'R2 egress' && value === 0 ? '$0 (free)' : value === null || value === undefined ? <NotMeasured /> : money(value)}</dd></div>
+                ))}
+              </dl>
+            )
+          })()}
           {infra?.totals.r2ListUsd != null ? <p className="ov-note">R2 storage and operations at list rates: {usd(infra.totals.r2ListUsd)}; the billed allocation is unknown.</p> : null}
           {infra?.totals.r2DownloadBytesLowerBound != null ? <p className="ov-note">R2 download lower bound: {bytes(infra.totals.r2DownloadBytesLowerBound)}; R2 egress itself is free.</p> : null}
           {infra?.gaps?.length ? <p className="ov-note">Unmeasured: {infra.gaps.map((gap) => gap.detail).join(' · ')}</p> : null}
         </ChartCard>
         <ChartCard title="Provider bill reconciliation" values={[infra?.reconciliation?.billedUsd, infra?.reconciliation?.priorBillEvidence?.length || null]} note={infra?.reconciliation?.reason ?? 'No same-period provider bill is available.'}>
           <dl className="ov-costs">
-            <div><dt>Discovery billed allocation, {infra?.reconciliation?.period ?? 'current period'}</dt><dd>{money(infra?.reconciliation?.billedUsd)}</dd></div>
+            <div><dt>Discovery billed allocation, {infra?.reconciliation?.period ?? 'current period'}</dt><dd>{infra?.reconciliation?.billedUsd == null ? <NotMeasured /> : money(infra.reconciliation.billedUsd)}</dd></div>
             <div><dt>Prior bill evidence</dt><dd>{infra?.reconciliation?.priorBillEvidence?.length ?? 0} lines</dd></div>
           </dl>
           {infra?.reconciliation?.priorBillEvidence?.map((bill, i) => <p className="ov-note" key={`${bill.vendor}:${bill.item}:${i}`}>{bill.vendor}: {money(bill.monthlyUsd)}/month · {bill.asOf} · {bill.item}</p>)}
         </ChartCard>
         <ChartCard title="Hosts with Discovery sidecars" values={(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => host.monthlyUsd)} note="Provider list price and outbound counters are host-wide; Discovery share and egress charges are unknown.">
           <dl className="ov-costs">
-            {(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => <div key={host.id}><dt>{host.name ?? host.id} · {host.discoverySidecars} sidecars · {bytes(host.outgoingBytes)} outbound</dt><dd>{money(host.monthlyUsd)}/mo</dd></div>)}
+            {(infra?.hosts ?? []).filter((host) => host.discoverySidecars).map((host) => <div key={host.id}><dt>{host.name ?? host.id} · {host.discoverySidecars} sidecars · {bytes(host.outgoingBytes)} outbound</dt><dd>{host.monthlyUsd == null ? <NotMeasured /> : `${money(host.monthlyUsd)}/mo`}</dd></div>)}
           </dl>
         </ChartCard>
         <ChartCard title="Host allocation per day" values={infraValues('hostUsd')} note="Measured Discovery share of host fixed cost. A missing day has no allocation.">

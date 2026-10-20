@@ -60,8 +60,10 @@ const LENS_WORD: Record<string, string> = {
 }
 
 /**
- * One taxonomy on every view: how a run ended, in @tangle-network/charts' words and colours (solved green, died red,
- * stalled amber). The host's older word `ended` is `not solved`. The fleet line and the map count the same column.
+ * One taxonomy on every view: how a run ended, in @tangle-network/charts' words. The colours are the status tones
+ * (styles.css overrides --chart-ending-*): solved green, live blue, every other ending neutral ink at its own strength.
+ * A point carries no play order, so whether a newer run followed a crash is unknown and no death here is red. The
+ * host's older word `ended` is `not solved`. The fleet line and the map count the same column.
  */
 const endingWord = (value: Cell) => (String(value) === 'ended' ? 'not solved' : String(value ?? 'unknown'))
 const FIXED: Record<string, Record<string, string>> = {

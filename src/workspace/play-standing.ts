@@ -481,8 +481,23 @@ export const verdictWord = (verdict: string | null | undefined) => (verdict ? (V
 export const markVerdict = (verdict: string | null | undefined): 'pass' | 'fail' | 'unknown' =>
   verdict === 'solved' || verdict === 'contract-held' ? 'pass' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : 'unknown'
 
-/** Run ending glyphs: ✓ solved, ✕ died, ⊘ cancelled, ⏸ stalled, ▶ live, · never started. */
-export const ENDING_GLYPH: Record<string, string> = { solved: '✓', died: '✕', cancelled: '⊘', stalled: '⏸', live: '▶', 'never started': '·' }
+/**
+ * Status shapes, one per meaning so a status reads without colour: ✓ solved, ✕ died, ⊘ cancelled, ⏸ stalled, ▶ live,
+ * · never started, ○ ended, □ a past crash, ■ broken now, ▲ attention, ◌ (drawn dashed) unknown or unverified.
+ */
+export const ENDING_GLYPH: Record<string, string> = {
+  solved: '✓',
+  died: '✕',
+  cancelled: '⊘',
+  stalled: '⏸',
+  live: '▶',
+  'never started': '·',
+  ended: '○',
+  crashed: '□',
+  fail: '■',
+  attention: '▲',
+  unknown: '◌',
+}
 
 /** Release states, in the four words the pages use. */
 export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'withheld by the gate', superseded: 'superseded', unknown: 'state unknown' }
@@ -584,18 +599,26 @@ export function targetWords(metric: PlayBarMetric): string | null {
   return null
 }
 
-/** How far a value is from a metric's target, as text: "36× below the bar", "within the bar", "0.6× of the bar". */
-export function gapWords(metric: PlayBarMetric, value: number | null | undefined): string | null {
+/** Where a value sits against a metric's target: within it, past it in the better direction, or short of it. */
+export function barSide(metric: PlayBarMetric, value: number | null | undefined): { side: 'within' | 'past' | 'short'; low: number; high: number } | null {
   const t = metric.target
   if (!t || value === null || value === undefined || !(value > 0)) return null
   const low = t.min ?? t.approx ?? t.max ?? null
   const high = t.max ?? t.approx ?? t.min ?? null
   if (low === null || high === null) return null
-  if (value >= low && value <= high) return 'within the bar'
-  const ratio = value < low ? low / value : value / high
-  const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
+  if (value >= low && value <= high) return { side: 'within', low, high }
   const better = (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low)
-  return better ? `${times}× past the bar` : `${times}× ${value < low ? 'below' : 'above'} the bar`
+  return { side: better ? 'past' : 'short', low, high }
+}
+
+/** How far a value is from a metric's target, as text: "36× below the bar", "within the bar", "0.6× of the bar". */
+export function gapWords(metric: PlayBarMetric, value: number | null | undefined): string | null {
+  const at = barSide(metric, value)
+  if (!at || value === null || value === undefined) return null
+  if (at.side === 'within') return 'within the bar'
+  const ratio = value < at.low ? at.low / value : value / at.high
+  const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
+  return at.side === 'past' ? `${times}× past the bar` : `${times}× ${value < at.low ? 'below' : 'above'} the bar`
 }
 
 /** A check line without its verdict word, digests or the tail after ` | `: the words that say why, for grouping. */

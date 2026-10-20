@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunDocument } from '../workspace.js'
 import { ValueControls, ValueScope } from './CollapsibleValue.js'
-import { duration, money, stateClass, stateLabel, useDocument, when } from './data.js'
+import { duration, money, StatusPill, statusOf, type StatusTone, useDocument, when } from './data.js'
 import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Version } from './profile-compare.js'
 import { OutputChanges } from './Outputs.js'
@@ -21,10 +21,10 @@ export type Selection = { kind: 'version'; runId: string } | { kind: 'profile'; 
 const versionNodeId = (runId: string) => `run:${runId}`
 const profileNodeId = (digest: string) => `profile:${digest}`
 
-const stateTone = (state: string | null | undefined): GraphTone => {
-  const css = stateClass(state)
-  return css === 'state-ok' ? 'ok' : css === 'state-fail' ? 'fail' : css === 'state-run' ? 'run' : css === 'state-warn' ? 'warn' : 'muted'
-}
+/** A run's word on the run axis; the graph's chip tone follows its status tone. */
+const runStatus = (run: { state: string | null | undefined; reason?: string | null; settledAt?: string | null }) =>
+  statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, now: Date.now() })
+const GRAPH_TONE: Record<StatusTone, GraphTone> = { pass: 'ok', fail: 'fail', live: 'run', attention: 'warn', neutral: 'muted' }
 
 /**
  * A play's versions as the model: each run's registered profile on the `versions` lane, its parent the version before it;
@@ -56,7 +56,7 @@ function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, 
           lane: `authored-${entry.depth}`,
           at: entry.node.createdAt,
           title: entry.node.name ?? entry.node.label ?? entry.node.short,
-          detail: `${outcome ? stateLabel(outcome) : 'outcome not recorded'} · ${entry.node.model.id ?? 'model unknown'}`,
+          detail: `${outcome ? statusOf({ axis: 'run', state: outcome, now: Date.now() }).word : 'outcome not recorded'} · ${entry.node.model.id ?? 'model unknown'}`,
           kind: 'authored',
           chips: [{ label: entry.node.short, tone: 'muted' }],
         })
@@ -73,7 +73,7 @@ function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, 
       detail: version.run.purpose ?? version.root?.description ?? (version.root ? version.root.name : 'no registered profile on this host'),
       kind: 'version',
       chips: [
-        { label: stateLabel(version.run.state), tone: stateTone(version.run.state) },
+        { label: `${runStatus(version.run).shape} ${runStatus(version.run).word}`, tone: GRAPH_TONE[runStatus(version.run).tone] },
         { label: scores ? judgeShort(scores.judges) : 'no readout', tone: 'muted' },
         ...(contract ? [{ label: `research contract v2 · ${contract.commit.slice(0, 8)}`, tone: 'muted' as const,
           title: contract.components.map((component) => `${component.id} ${component.commit.slice(0, 8)} · ${component.message}`).join('\n') }] : []),
@@ -88,7 +88,7 @@ function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, 
       lane: 'outside',
       at: null,
       title: shortRun(play.id, id),
-      detail: `${ghost.kind === 'supersedes' ? 'superseded by these versions' : ghost.kind === 'continues' ? 'continued by these versions' : ghost.kind}${ghost.state === 'unknown' ? ' · not on this host' : ` · ${stateLabel(ghost.state)}`}`,
+      detail: `${ghost.kind === 'supersedes' ? 'superseded by these versions' : ghost.kind === 'continues' ? 'continued by these versions' : ghost.kind}${ghost.state === 'unknown' ? ' · not on this host' : ` · ${statusOf({ axis: 'run', state: ghost.state, now: Date.now() }).word}`}`,
       kind: 'ghost',
     })
   }
@@ -221,7 +221,7 @@ function VersionInspector({ api, play, version }: { api: string; play: PlayDocum
     <div className="inspector" data-inspector={run.id}>
       <header className="inspector-head">
         <h2 className="mono">{shortRun(play.id, run.id)}</h2>
-        <span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span>
+        <StatusPill status={runStatus(run)} />
         {run.reason && <span className="faint">{run.reason.replaceAll('-', ' ')}</span>}
       </header>
       {run.purpose && <p>{run.purpose}</p>}

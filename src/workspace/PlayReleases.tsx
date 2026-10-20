@@ -118,7 +118,7 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
         checkers.map((checker) => {
           const check = checks[checker.label] ?? checks[checker.sha256]
           return (
-            <span key={checker.sha256} className={`verdict-cell tone-${tone(check?.verdict)}`} title={check ? `${checker.label}: ${verdictWord(check.verdict)}${check.count && check.count > 1 ? ` ×${check.count}` : ''}` : `${checker.label}: not checked`}>
+            <span key={checker.sha256} className={`verdict-cell tone-${tone(check?.verdict) === 'ok' && !checker.current ? 'neutral' : tone(check?.verdict)}`} title={check ? `${checker.label}: ${verdictWord(check.verdict)}${check.count && check.count > 1 ? ` ×${check.count}` : ''}` : `${checker.label}: not checked`}>
               {check ? (
                 <>
                   {glyph(check.verdict)}

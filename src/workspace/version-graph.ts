@@ -141,9 +141,10 @@ export function runGraphModel(doc: VersionGraphDocument, when: (iso: string) => 
       chips: [
         ...(commit.kind === 'write' ? [] : [{ label: KIND_LABEL[commit.kind] ?? commit.kind, tone: 'muted' as const }]),
         ...(tagsOf.get(commit.id) ?? []).flatMap((tag): GraphChip[] => [
-          { label: tag.best ? `${tag.name} ★ deliverable` : tag.name, tone: tag.best ? 'ok' : 'accent', title: scoreLine(tag) },
+          // The rule's pick is bookkeeping, not a pass: it is neutral, and says when no check ran on it.
+          { label: tag.best ? `${tag.name} ★ picked by rule${tag.score ? '' : ' · not checked'}` : tag.name, tone: tag.best ? 'muted' : 'accent', title: scoreLine(tag) },
           { label: scoreLine(tag), tone: 'info' },
-          ...tag.flags.map((flag) => ({ label: flagLabel(flag), tone: flag.kind === 'regression' ? ('warn' as const) : ('fail' as const) })),
+          ...tag.flags.map((flag) => ({ label: flagLabel(flag), tone: 'muted' as const })),
         ]),
       ],
     })),

@@ -120,7 +120,7 @@ function StopCard({ findings, doc }: { findings: Findings; doc: RunDocument }) {
   if (!stop.limits.length && !(failed && (stop.lastCause || stop.firstFailure))) return null
   return (
     <section className="finding-card" aria-label="Why the run stopped" data-findings-stop>
-      <h3 className="kicker tone-fail">Why it stopped</h3>
+      <h3 className="kicker tone-neutral">Why it stopped</h3>
       <ol className="stop-steps">
         {stop.limits.map((limit, i) => (
           <li key={`${limit.agent}:${limit.limit}:${i}`}>

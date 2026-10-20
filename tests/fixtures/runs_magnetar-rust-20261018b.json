@@ -1,0 +1,829 @@
+{
+ "schema": "agent-workspace.run.v1",
+ "run": {
+  "id": "magnetar-rust-20261018b",
+  "group": "magnetar-rust-20261018b",
+  "kind": "run",
+  "play": "magnetar-rust",
+  "state": "stalled",
+  "reason": "stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper woke the root at 2026-10-19T03:10:59.035Z and nothing streamed for 15 min",
+  "startedAt": "2026-10-18T01:19:04.494Z",
+  "settledAt": "2026-10-19T03:27:08.452Z",
+  "durationMs": 94083958,
+  "nodes": 15,
+  "ending": {
+   "name": "cancelled after stall",
+   "state": "stalled",
+   "at": "2026-10-19T03:27:08.452Z",
+   "reason": "stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper woke the root at 2026-10-19T03:10:59.035Z and nothing streamed for 15 min",
+   "sentence": "The operator stopped this run.",
+   "by": "operator"
+  },
+  "location": {
+   "kind": "dir",
+   "path": "/mnt/traces/discovery-runs/magnetar-rust-20261018b"
+  },
+  "format": "runtime",
+  "depth": 2,
+  "harnesses": [
+   "opencode"
+  ],
+  "models": [
+   "zai-coding-plan/glm-5.3"
+  ],
+  "keys": [],
+  "record": {
+   "status": "ready",
+   "digest": "538323ae1758d7e857a139424e38f505205324d0500e4a93a1edcd3e09a2252b",
+   "builtAt": "2026-10-19T10:37:21.490Z",
+   "reason": null,
+   "capture": {
+    "complete": 15,
+    "lossy": 0,
+    "absent": 0
+   }
+  },
+  "check": {
+   "latest": {
+    "at": "2026-10-19T03:28:20.652Z",
+    "tag": "rc14",
+    "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+    "checker": "041435d77c69",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+    "score": {
+     "stage": "manifest",
+     "reached": 1,
+     "of": 6,
+     "partial": 0,
+     "hidden": false,
+     "workloads": {
+      "passed": 0,
+      "total": 15
+     },
+     "proofBytes": null,
+     "verifyMs": null,
+     "value": null
+    },
+    "source": "play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   "best": {
+    "at": "2026-10-18T20:14:04.270Z",
+    "tag": "rc14",
+    "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+    "checker": "a3cf95c7cd4a",
+    "known": true,
+    "solved": true,
+    "line": "SOLVED: 15 RV64I workloads preprocessed to <= 4096 B keys, proved, and verified (verifier given only the key, program absent) declaring 1-bit security; reference execution matched; every byte-flip, wrong-output and cross-program probe rejected; proof and verify time both succinct (2.0x / 8.0x caps held). The run continues toward Table 2/3 (7.2-8.7 Mcps, ~599 KiB, 11-13 ms, 6 GiB at 2^22).",
+    "score": {
+     "stage": "hidden",
+     "reached": 6,
+     "of": 6,
+     "partial": 0,
+     "hidden": true,
+     "workloads": {
+      "passed": 15,
+      "total": 15
+     },
+     "proofBytes": 11290,
+     "verifyMs": 14.97,
+     "value": null
+    },
+    "source": "play-checks.jsonl",
+    "verdict": "solved"
+   },
+   "passes": [
+    {
+     "tag": "rc14",
+     "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+     "checker": "a3cf95c7cd4a",
+     "count": 3,
+     "firstAt": "2026-10-18T20:14:04.270Z",
+     "lastAt": "2026-10-18T20:46:10.316Z"
+    }
+   ],
+   "checkers": [
+    {
+     "checker": "3d2b3f1e7a1c",
+     "from": "2026-10-18T04:57:17.785Z",
+     "to": "2026-10-18T19:41:15.502Z",
+     "checks": 15,
+     "solved": 0
+    },
+    {
+     "checker": "a3cf95c7cd4a",
+     "from": "2026-10-18T19:58:47.238Z",
+     "to": "2026-10-18T20:46:10.316Z",
+     "checks": 4,
+     "solved": 3
+    },
+    {
+     "checker": "041435d77c69",
+     "from": "2026-10-18T21:01:42.927Z",
+     "to": "2026-10-19T03:28:20.652Z",
+     "checks": 12,
+     "solved": 0
+    }
+   ],
+   "gate": {
+    "at": "2026-10-19T03:24:08.889Z",
+    "decidedAt": "2026-10-19T03:30:52.023Z",
+    "tag": "rc18",
+    "commit": "d42042742bf8ce7c6dff0b468457e5711bfe1baa",
+    "verdict": "unknown",
+    "line": "UNKNOWN: prover for pointer-chase at 4096 cycles did not finish in 300 s",
+    "score": {
+     "stage": "workloads",
+     "reached": 5,
+     "of": 6,
+     "partial": 0.2,
+     "hidden": false,
+     "workloads": {
+      "passed": 3,
+      "total": 15
+     },
+     "proofBytes": 356988,
+     "verifyMs": 293.98,
+     "value": null
+    },
+    "build": "/home/runner/.cache/disco/play-checks/magnetar-37d62879d7be15a9"
+   },
+   "gateUnknown": {
+    "count": 21,
+    "from": "2026-10-18T23:55:59.970Z",
+    "to": "2026-10-19T03:24:08.889Z",
+    "line": "UNKNOWN: prover for pointer-chase at 4096 cycles did not finish in 300 s",
+    "tags": [
+     "rc17",
+     "rc18"
+    ]
+   },
+   "counts": {
+    "checks": 43,
+    "known": 31,
+    "solved": 3,
+    "gates": 39,
+    "gateUnknown": 22
+   },
+   "headline": "rc14 NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security) (10-19 03:28 UTC); rc14 passed 3× under v3 (referee ruling 10-18 19:48Z) (10-18 20:14 UTC to 10-18 20:46 UTC); v4 (operator amendment 10-18 20:52Z) current since 10-18 21:01 UTC",
+   "checkerNames": [
+    {
+     "sha256": "639c17a4485f",
+     "label": "v1",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "3d2b3f1e7a1c",
+     "label": "v2",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "a3cf95c7cd4a",
+     "label": "v3",
+     "ruling": "referee ruling 10-18 19:48Z",
+     "current": false
+    },
+    {
+     "sha256": "041435d77c69",
+     "label": "v4",
+     "ruling": "operator amendment 10-18 20:52Z",
+     "current": true
+    }
+   ]
+  }
+ },
+ "spend": {
+  "paidUsd": null,
+  "subscriptionUsd": null,
+  "apiUsd": null,
+  "sandboxUsd": null,
+  "routerUsd": null,
+  "costBasisUsd": null,
+  "listUsd": 891.0586218,
+  "tokens": {
+   "input": 62499149,
+   "output": 1354970,
+   "cacheRead": 963086784,
+   "cacheWrite": 0
+  },
+  "subscriptionKnown": false,
+  "paidKnown": false,
+  "listKnown": true,
+  "sources": [
+   "runtime:run-totals"
+  ],
+  "gaps": [
+   {
+    "runId": "magnetar-rust-20261018b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   }
+  ],
+  "nodes": {
+   "magnetar-rust-20261018b": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s0": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 82.4744312,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s1": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 173.8048534,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s2": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s3": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 122.60841959999999,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s3:s0": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s4": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s5": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 0.465584,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s6": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 51.1462174,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s7": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 9.7312318,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s8": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s9": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s10": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s11": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": null,
+    "listKnown": false,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   },
+   "magnetar-rust-20261018b:s12": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "listUsd": 65.6738474,
+    "listKnown": true,
+    "subscriptionKnown": false,
+    "gaps": [],
+    "account": {
+     "kind": "unknown",
+     "rateLimit": null
+    }
+   }
+  }
+ },
+ "progress": {
+  "outcome": {
+   "solved": false,
+   "checkedAt": "2026-10-19T03:28:20.652Z",
+   "firstFailingLine": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+   "stage": "contract",
+   "tag": "magnetar-rust-20261018b/rc14",
+   "lastStreamAt": "2026-10-19T05:25:19.437Z",
+   "minutesSinceLastStream": 367.3,
+   "latestCheck": {
+    "at": "2026-10-19T03:28:20.652Z",
+    "tag": "magnetar-rust-20261018b/rc14",
+    "line": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+    "stage": "contract",
+    "known": true,
+    "solved": false,
+    "score": {
+     "stage": "manifest",
+     "reached": 1,
+     "of": 6,
+     "partial": 0,
+     "hidden": false,
+     "workloads": {
+      "passed": 0,
+      "total": 15
+     },
+     "proofBytes": null,
+     "verifyMs": null,
+     "value": 0
+    }
+   },
+   "gate": {
+    "at": "2026-10-18T22:43:07.266Z",
+    "tag": "magnetar-rust-20261018b/rc16",
+    "line": "NOT SOLVED: prover for binary-search at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: internal: self-check failed: mosaic batch: mosaic batch: round 0 sum check failed | Command exited with non-zero status 1",
+    "stage": "contract",
+    "verdict": "fail",
+    "score": {
+     "stage": "workloads",
+     "reached": 5,
+     "of": 6,
+     "partial": 0.267,
+     "hidden": false,
+     "workloads": {
+      "passed": 4,
+      "total": 15
+     },
+     "proofBytes": 385792,
+     "verifyMs": 319.08,
+     "value": 0.711
+    }
+   },
+   "score": {
+    "at": "2026-10-19T03:28:20.652Z",
+    "tag": "magnetar-rust-20261018b/rc14",
+    "source": "check",
+    "stage": "manifest",
+    "reached": 1,
+    "of": 6,
+    "partial": 0,
+    "hidden": false,
+    "workloads": {
+     "passed": 0,
+     "total": 15
+    },
+    "proofBytes": null,
+    "verifyMs": null,
+    "value": 0
+   },
+   "disputes": [
+    {
+     "id": "f81edc942b30",
+     "at": "2026-10-18T18:18:30.442Z",
+     "line": "a hidden check line (disputed by the keeper)",
+     "state": "rejected",
+     "ruledAt": "2026-10-18T18:22:25.656Z",
+     "by": "operator",
+     "attempts": 2
+    },
+    {
+     "id": "2669615819ad",
+     "at": "2026-10-18T19:26:16.740Z",
+     "line": "a hidden check line (disputed by the keeper)",
+     "state": "upheld",
+     "ruledAt": "2026-10-18T19:48:40.017Z",
+     "by": "referee",
+     "attempts": 1
+    },
+    {
+     "id": "operator-041435d77c69",
+     "at": "2026-10-18T20:52:08.860Z",
+     "line": "operator amendment",
+     "state": "upheld",
+     "ruledAt": "2026-10-18T20:52:08.860Z",
+     "by": "operator",
+     "attempts": 0
+    }
+   ],
+   "checkWait": null,
+   "solvedLabel": "not solved",
+   "goalAudit": null
+  },
+  "blocker": null,
+  "endBlocker": {
+   "class": "gate-undecided",
+   "since": "2026-10-18T23:55:59.970Z",
+   "evidence": "21 gate decisions in a row reached no verdict, the newest on rc18: UNKNOWN: prover for pointer-chase at 4096 cycles did not finish in 300 s",
+   "source": "tag-gate.jsonl",
+   "cause": null,
+   "severity": "amber",
+   "owner": "discovery-lab (tag gate)",
+   "also": [
+    {
+     "class": "stuck-turn",
+     "since": "2026-10-19T02:42:11.149Z",
+     "evidence": "a turn open since 02:42Z with only keepalives (87 by 03:26Z), no model event since 02:42Z (retained_events)",
+     "source": "/home/runner/.cache/disco/host/magnetar-rust-20261018b/state/bridge/sessions.sqlite",
+     "cause": null
+    }
+   ]
+  },
+  "phase": "settled",
+  "agents": [
+   {
+    "node": "magnetar-rust-20261018b",
+    "status": "stalled"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s0",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s1",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s2",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s3",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s3:s0",
+    "status": "done"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s4",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s5",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s6",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s7",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s8",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s9",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s10",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s11",
+    "status": "down"
+   },
+   {
+    "node": "magnetar-rust-20261018b:s12",
+    "status": "done"
+   }
+  ]
+ },
+ "finalOutput": {
+  "readout": {
+   "status": "pending",
+   "generatedAt": null,
+   "settle": null,
+   "summary": null,
+   "deliverables": [],
+   "verdicts": [],
+   "judges": [],
+   "links": {
+    "report": null,
+    "dossier": null,
+    "gist": null
+   },
+   "cost": {
+    "readoutUsd": null,
+    "runUsd": null,
+    "apiEquivalentUsd": null,
+    "billedUsd": null,
+    "clause": null
+   },
+   "error": null,
+   "charts": []
+  }
+ },
+ "receipt": {
+  "timeline": {
+   "lanes": [
+    {
+     "id": "root",
+     "label": "magnetar-rust-20261018b-root · glm-5.3 · cancelled",
+     "profile": "magnetar-rust-20261018b-root"
+    },
+    {
+     "id": "s0",
+     "label": "pcs-lead · glm-5.3 · done",
+     "profile": "pcs-lead"
+    },
+    {
+     "id": "s1",
+     "label": "vm-lead · glm-5.3 · done",
+     "profile": "vm-lead"
+    },
+    {
+     "id": "s2",
+     "label": "memory-lead · model unrecorded · down, no completed turn",
+     "profile": "memory-lead"
+    },
+    {
+     "id": "s3",
+     "label": "core-lead · glm-5.3 · down",
+     "profile": "core-lead"
+    },
+    {
+     "id": "s3:s0",
+     "label": "guest-coverage-auditor · glm-5.3 · done, no completed turn",
+     "profile": "guest-coverage-auditor"
+    },
+    {
+     "id": "s4",
+     "label": "guest-perf · glm-5.3 · down, no completed turn",
+     "profile": "guest-perf"
+    },
+    {
+     "id": "s5",
+     "label": "keccak-asm · glm-5.3 · down",
+     "profile": "keccak-asm"
+    },
+    {
+     "id": "s6",
+     "label": "core-lead-2 · glm-5.3 · down, no completed turn",
+     "profile": "core-lead-2"
+    },
+    {
+     "id": "s7",
+     "label": "referee · glm-5.3 · down",
+     "profile": "referee"
+    },
+    {
+     "id": "s8",
+     "label": "memory-lead-2 · glm-5.3 · down, no completed turn",
+     "profile": "memory-lead-2"
+    },
+    {
+     "id": "s9",
+     "label": "vm-lead-2 · glm-5.3 · down, no completed turn",
+     "profile": "vm-lead-2"
+    },
+    {
+     "id": "s10",
+     "label": "memory-lead-3 · glm-5.3 · down, no completed turn",
+     "profile": "memory-lead-3"
+    },
+    {
+     "id": "s11",
+     "label": "core-lead-3 · glm-5.3 · down, no completed turn",
+     "profile": "core-lead-3"
+    },
+    {
+     "id": "s12",
+     "label": "core-lead-4 · glm-5.3 · done",
+     "profile": "core-lead-4"
+    }
+   ]
+  },
+  "system": {
+   "attempts": {
+    "tries": 324,
+    "failed": 240,
+    "hours": 60.38,
+    "failedHours": 44.45,
+    "causes": [
+     {
+      "cause": "completed",
+      "label": "completed",
+      "tries": 84,
+      "hours": 15.93
+     },
+     {
+      "cause": "platform-lost",
+      "label": "platform lost or killed the turn",
+      "tries": 14,
+      "hours": 12.35
+     },
+     {
+      "cause": "rate-limited",
+      "label": "a 429 killed the turn",
+      "tries": 219,
+      "hours": 12.13
+     },
+     {
+      "cause": "budget-exhausted",
+      "label": "supervisor budget exhausted",
+      "tries": 2,
+      "hours": 4.34
+     },
+     {
+      "cause": "stopped",
+      "label": "stopped by the Lab or an operator",
+      "tries": 5,
+      "hours": 15.63
+     }
+    ],
+    "outcomes": [
+     {
+      "outcome": "ok",
+      "tries": 84,
+      "hours": 15.93
+     },
+     {
+      "outcome": "quota",
+      "tries": 219,
+      "hours": 12.13
+     },
+     {
+      "outcome": "lost",
+      "tries": 2,
+      "hours": 2.43
+     },
+     {
+      "outcome": "oom",
+      "tries": 12,
+      "hours": 9.92
+     },
+     {
+      "outcome": "aborted",
+      "tries": 5,
+      "hours": 15.63
+     },
+     {
+      "outcome": "other",
+      "tries": 2,
+      "hours": 4.34
+     }
+    ],
+    "open": {
+     "nodes": 7,
+     "tokens": 359095917,
+     "agent": null,
+     "since": null,
+     "hours": null
+    }
+   }
+  }
+ },
+ "live": {
+  "mirrorAt": null,
+  "polling": false
+ }
+}

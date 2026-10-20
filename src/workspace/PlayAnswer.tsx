@@ -1,5 +1,5 @@
 import type { PlayDocument, RunCheck, RunSummary } from '../workspace.js'
-import { stateClass, stateLabel, when } from './data.js'
+import { StatusPill, statusOf, when } from './data.js'
 import { plain } from './FindingsFeed.js'
 
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
@@ -102,7 +102,7 @@ export function PlayAnswer({ play }: { play: PlayDocument }) {
       <h3>Answer</h3>
       {answer && <p className="play-answer-text">{answer}</p>}
       <p className="play-answer-run">
-        <span className={`state-pill ${stateClass(best.state)}`}>{stateLabel(best.state)}</span>
+        <StatusPill status={statusOf({ axis: 'run', state: best.state, reason: best.reason, settledAt: best.settledAt, now: Date.now() })} />
         <a className="mono" href={runHref}>{shortRun(play.id, best.id)}</a>
         {check ? (
           <span>

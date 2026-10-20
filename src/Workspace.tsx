@@ -32,7 +32,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { duration, endingLabel, go, money, readRecord, stateClass, stateLabel, useDocument, when, writeSearch } from './workspace/data.js'
+import { duration, go, money, readRecord, stateClass, statusData, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -52,7 +52,7 @@ import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
+import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -127,8 +127,8 @@ function Status({ loading, error, children }: { loading: boolean; error?: string
 const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? run.slice(play.length + 1) : run)
 
 /**
- * What the default filter holds back, said where it is seen first: failed runs are a health signal, not noise, so the
- * failed count leads in the failure colour. `noun` names what is counted (plays or runs).
+ * What the default filter holds back, said where it is seen first, in neutral ink: plays retired after runs that never
+ * ran clean are history, not a fault someone must act on now. `noun` names what is counted (plays or runs).
  */
 function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: Record<HiddenReason, number>; total: number; noun: string; showHidden: boolean; onChange: (all: boolean) => void }) {
   const hidden = HIDDEN_ORDER.reduce((sum, reason) => sum + counts[reason], 0)
@@ -138,9 +138,9 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
       <span>
         <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}:{' '}
         {HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason, i) => (
-          <span key={reason} className={reason === 'failed' ? 'hidden-failed' : undefined}>
+          <span key={reason}>
             {i > 0 && ' · '}
-            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'whose runs all failed' : HIDDEN_LABEL[reason]}
+            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}
           </span>
         ))}
       </span>
@@ -225,6 +225,10 @@ function PlaysPage({ api }: { api: string }) {
   if (home === 'runs') {
     const cutoff = Date.now() - 30 * 86400_000
     const all = plays.data?.runs ?? []
+    // A crash is red only while it is under a day old and no newer run of its play has started.
+    const newest = new Map<string, string>()
+    for (const run of all) if (run.startedAt && run.startedAt > (newest.get(run.play) ?? '')) newest.set(run.play, run.startedAt)
+    const now = Date.now()
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
     return <div className="ws-page ws-plays" data-plays-home="runs">
@@ -235,7 +239,10 @@ function PlaysPage({ api }: { api: string }) {
           <th className="num">Subscription at API prices</th><th className="num">Billed API</th><th className="num">Billed sandbox</th></tr></thead>
         <tbody>{shown.map((run) => <tr key={run.id}>
           <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono"> {run.id}</small></td>
-          <td><span className={`state-pill ${stateClass(run.state)}`}>{stateLabel(run.state)}</span></td>
+          <td><StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason, stopCause: run.stopCause, live: run.state === 'running',
+            // The catalog row has no settle time, and its last activity moves when a sweep touches an old run; the start
+            // bounds the settle from below, so only a run that started under a day ago can be a crash happening now.
+            settledAt: run.state === 'running' ? null : run.startedAt, newerRun: !!run.startedAt && newest.get(run.play)! > run.startedAt, now })} /></td>
           <td>{when(run.startedAt)}</td><td>{when(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
           <td className="num">{money(run.subscriptionUsd)}</td><td className="num">{money(run.apiUsd)}</td><td className="num">{money(run.sandboxUsd)}</td>
         </tr>)}</tbody>
@@ -295,7 +302,7 @@ function PlaysPage({ api }: { api: string }) {
                         {standing?.sentence ? (
                           <span className="clamp-2" title={standing.sentence}>{standing.sentence}</span>
                         ) : (
-                          <span className={`state-pill ${stateClass(play.state)}`}>{stateLabel(play.state)}</span>
+                          <StatusPill status={statusOf({ axis: 'run', state: play.state, now: Date.now() })} />
                         )}
                       </td>
                       <td>
@@ -659,7 +666,7 @@ function PlayStanding({ play }: { play: PlayDocument }) {
       {latest && (
         <a className="play-fact" href={`/run/${encodeURIComponent(latest.id)}`} data-latest={latest.id}>
           <span className="answer-label">Latest run</span>
-          <span className={`state-pill ${stateClass(latest.state)}`}>{endingLabel(latest)}</span>
+          <StatusPill status={statusOf({ axis: 'run', state: latest.state, reason: latest.reason, settledAt: latest.settledAt, live: latest.state === 'running', newerRun: false, now: Date.now() })} />
           <span className="mono">{shortRun(play.id, latest.id)}</span>
           <span className="faint">{when(latest.startedAt)}</span>
         </a>
@@ -743,7 +750,8 @@ function RunsTable({
                 </td>
               )}
               <td className="run-state">
-                <span className={`state-pill ${stateClass(run.state)}`}>{endingLabel(run)}</span>
+                <StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, live: run.state === 'running',
+                  newerRun: play.runs.some((other) => !!other.startedAt && !!run.startedAt && other.startedAt > run.startedAt), now: Date.now() })} />
                 {run.reason && run.reason !== run.state && <small className="faint clamp-1" title={run.reason}>{run.reason}</small>}
               </td>
               <td>{when(run.startedAt)}</td>
@@ -1022,7 +1030,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       )}
       {section === 'readout' && (
         <section className="run-panel" aria-label="Readout" data-drawer="readout">
-          <FinalOutputPanel output={doc.finalOutput} grading={grading} />
+          <FinalOutputPanel output={doc.finalOutput} grading={grading} run={doc.run} />
         </section>
       )}
       {section === 'outputs' && (
@@ -1145,7 +1153,7 @@ function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument;
         </button>
       )}
       <span className="detail-run mono" title={run.id}>
-        {shortRun(run.play, run.id)} <span className={`state-pill ${stateClass(run.state)}`}>{endingLabel(run)}</span>
+        {shortRun(run.play, run.id)} <StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, live: !!doc.live.polling, now: Date.now() })} />
       </span>
       <span className="detail-views">
         {views.map(([value, label]) => (
@@ -1358,7 +1366,8 @@ function RunBody({
       <section className="ws-panel" aria-label="Agent record">
         <div className="agent-head">
           <div className="agent-identity">
-            <span className={`agent-avatar ${node?.status === 'done' && measured ? 'state-ok' : node?.status === 'down' ? 'state-fail' : ''}`} aria-hidden="true">
+            <span className={`agent-avatar ${node?.status === 'down' && doc.live.polling ? 'tone-fail' : ''}`} aria-hidden="true"
+              data-status={statusData(statusOf({ axis: 'agent', status: node?.status, live: !!doc.live.polling }))}>
               {role.slice(0, 1).toUpperCase()}
             </span>
             <div>
@@ -1572,22 +1581,16 @@ function RunPanels({
     <div className="spend-tab">
       <h3>Agents in this run</h3>
       <SpendBars
-        rows={index.actors
-          .filter((item) => item.kind !== 'finding')
-          .map((item) => {
-            const spend = doc.spend.nodes[item.id]
-            const equivalent = apiEquivalent(spend)
-            return { label: item.label, subscription: knownSubscription(spend), api: spend?.apiUsd ?? null,
-              sandbox: spend?.sandboxUsd ?? null, subscriptionKnown: spend?.subscriptionKnown, href: item.id,
-              note: equivalent.usd !== null ? `${money(equivalent.usd)}${equivalent.partial ? '+' : ''} API-equivalent` : undefined }
-          })}
+        rows={agentSpendRows(doc.spend.nodes, index.actors.filter((item) => item.kind !== 'finding'))}
+        noun="agents"
+        reason="no per-agent meter"
         onOpen={(row) => row.href && onSelectAgent(row.href)}
       />
       {byModel(doc.spend).length > 0 && (
         <>
           <h3>By model</h3>
           <p className="faint">The Router bill cannot be split by model.</p>
-          <SpendBars rows={byModel(doc.spend)} />
+          <SpendBars rows={byModel(doc.spend)} noun="models" />
         </>
       )}
       <SeatWeeksPanel spend={doc.spend} />
