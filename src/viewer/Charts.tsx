@@ -6,14 +6,14 @@ import type { RecordIndex } from './model.js'
 
 export interface PlotTooltip {
   title: string
-  lines: Array<string | { kind: string; value: string; tone?: string; label?: string }>
+  lines: Array<{ kind: string; value: string; tone?: string; label?: string }>
   x: number
   y: number
 }
 export type ShowTooltip = (
   event: MouseEvent<SVGElement> | FocusEvent<SVGElement>,
   title: string,
-  lines: Array<string | { kind: string; value: string; tone?: string; label?: string }>,
+  lines: Array<{ kind: string; value: string; tone?: string; label?: string }>,
 ) => void
 
 export const activate = (
@@ -171,9 +171,10 @@ export function Timeline({
           const tooltipData = tooltipSections(event, index, cutoff)
           const lines = tooltipData.sections
           if (group.length > 1)
-            lines.unshift(
-              `${group.length} events in this interval. Select again to cycle; zoom separates nearby times.`,
-            )
+            lines.unshift({
+              kind: 'note',
+              value: `${group.length} events in this interval. Select again to cycle; zoom separates nearby times.`,
+            })
           const choose = () => {
             hideTooltip()
             inspect(
@@ -255,9 +256,9 @@ export function Timeline({
                     role="button"
                     tabIndex={0}
                     aria-label={`${mark.behavior} (${Math.round(mark.confidence * 100)}%)${mark.quote ? `: ${mark.quote.slice(0, 60)}` : ''}`}
-                    onMouseEnter={(e) => showTooltip(e, mark.behavior, [`${Math.round(mark.confidence * 100)}% confidence · ${mark.axis}`, ...(mark.quote ? [mark.quote.slice(0, 90)] : [])])}
+                    onMouseEnter={(e) => showTooltip(e, mark.behavior, [{ kind: 'status', value: `${Math.round(mark.confidence * 100)}% confidence · ${mark.axis}`, tone: mark.axis === 'alignment' ? 'error' : mark.axis === 'affect' ? 'warn' : 'ok' }, ...(mark.quote ? [{ kind: 'body', value: mark.quote.slice(0, 90) }] : [])])}
                     onMouseLeave={hideTooltip}
-                    onFocus={(e) => showTooltip(e, mark.behavior, [`${Math.round(mark.confidence * 100)}% confidence · ${mark.axis}`])}
+                    onFocus={(e) => showTooltip(e, mark.behavior, [{ kind: 'status', value: `${Math.round(mark.confidence * 100)}% confidence · ${mark.axis}` }])}
                     onBlur={hideTooltip}
                     onClick={() => mark.eventId && inspect(index.byEvent.get(mark.eventId)!, true)}
                     onKeyDown={(e) => activate(e, () => mark.eventId && inspect(index.byEvent.get(mark.eventId)!, true))}
@@ -512,18 +513,14 @@ export function UsageChart({
           const tooltipData = tooltipSections(point.event, index, cutoff)
           const lines = tooltipData.sections
           if (metric === 'tool-time')
-            lines.push(
-              `${point.elapsed!.toFixed(3)} seconds between the recorded call and this result. Includes queue and tool time.`,
-            )
+            lines.push({ kind: 'status', value: `${point.elapsed!.toFixed(3)} seconds between the recorded call and this result. Includes queue and tool time.`, tone: 'muted' })
           else if (metric === 'cumulative')
-            lines.push(
-              channels
+            lines.push({ kind: 'usage', value: channels
                 .map(
                   (channel) =>
-                    `${channelLabels[channel]} total ${point.values[channel] === undefined ? 'unmeasured here' : fmt(point.values[channel]!)}`,
+                    `${channelLabels[channel]} ${point.values[channel] === undefined ? 'unmeasured' : fmt(point.values[channel]!)}`,
                 )
-                .join(' · '),
-            )
+                .join('  ') })
           const choose = () => {
             hideTooltip()
             inspect(point.event, true)
