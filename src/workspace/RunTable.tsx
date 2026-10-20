@@ -5,7 +5,7 @@ import type { RecordIndex } from '../viewer/model.js'
 import { agentState, ms, roleOf } from '../viewer/model.js'
 import type { RunDocument } from '../workspace.js'
 import { polarityOf, shownPolarity } from './Assessments.js'
-import { duration, money, StatusPill, statusOf, tokens } from './data.js'
+import { duration, money, StatusPill, statusAttrs, statusOf, tokens } from './data.js'
 import { briefLines } from './outputs.js'
 
 /** Per agent, from the record's `nodes` part: event count, first and last event, recorded usage and list price, tool
@@ -134,6 +134,7 @@ export function AgentTable({
         const left = span && start !== null ? ((start - span.first) / (span.last - span.first)) * 100 : null
         const width = span && start !== null ? Math.max(0.6, (((end ?? start) - start) / (span.last - span.first)) * 100) : null
         const nodeFlags = [...(flags.get(node.id) ?? [])].sort()
+        const rowStatus = statusOf({ axis: 'agent', status, live: !!doc.live.polling })
         return (
           <button
             key={node.id}
@@ -148,10 +149,10 @@ export function AgentTable({
               <span className="clip">{nameOf(node)}</span>
             </span>
             <span role="cell">
-              <StatusPill status={statusOf({ axis: 'agent', status, live: !!doc.live.polling })} title={state} />
+              <StatusPill status={rowStatus} title={state} />
             </span>
             <span role="cell" className="lane" title={start !== null ? `${duration((end ?? start) - start)} from ${new Date(start).toISOString().slice(11, 16)} UTC` : 'no recorded time'}>
-              {left !== null && width !== null && <i className={`seg tone-${statusOf({ axis: 'agent', status: node.status, live: !!doc.live.polling }).tone}`} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
+              {left !== null && width !== null && <i className={`seg tone-${rowStatus.tone}`} {...statusAttrs(rowStatus)} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
             </span>
             <span role="cell" className="num">{start !== null && end !== null ? duration(end - start) : '—'}</span>
             <span role="cell" className="num">{total !== null ? tokens(total) : '—'}</span>

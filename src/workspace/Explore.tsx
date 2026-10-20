@@ -1,7 +1,7 @@
 import { type DotGroup, ENDING_COLORS, ENDING_ORDER, type RateRow, rankedRates, unitDotLayout } from '@tangle-network/charts'
 import { DOT_MAP_CATEGORIES, DotMap, type DotMapLabel, type DotMapRect, FigureView } from '@tangle-network/charts/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useDocument } from './data.js'
+import { statusAttrs, statusOf, useDocument } from './data.js'
 
 /**
  * The fleet explorer (J5, J3): every Discovery run as one dot, packed in a rectangle per play, or every agent the Lab
@@ -62,16 +62,20 @@ const LENS_WORD: Record<string, string> = {
 /**
  * One taxonomy on every view: how a run ended, in @tangle-network/charts' words. The colours are the status tones
  * (styles.css overrides --chart-ending-*): solved green, live blue, every other ending neutral ink at its own strength.
- * A point carries no play order, so whether a newer run followed a crash is unknown and no death here is red. The
- * host's older word `ended` is `not solved`. The fleet line and the map count the same column.
+ * A death is red only while statusOf calls it a crash now: it ended under 24 h ago and no newer run of its play has
+ * started (the rows carry each run's play, start and wall hours). The host's older word `ended` is `not solved`. The
+ * fleet line and the map count the same column.
  */
 const endingWord = (value: Cell) => (String(value) === 'ended' ? 'not solved' : String(value ?? 'unknown'))
+const CRASHED_NOW = 'crashed, last 24 h'
 const FIXED: Record<string, Record<string, string>> = {
-  ending: { ...ENDING_COLORS },
+  ending: { ...ENDING_COLORS, [CRASHED_NOW]: 'var(--ar-c-fail)' },
 }
+/** The status of a crash on the map's legend, so its red is an earned fail that names its owner. */
+const CRASH_NOW_STATUS = statusOf({ axis: 'run', state: 'died', settledAt: new Date(0).toISOString(), newerRun: false, now: 0 })
 /** The play groups a fleet layout draws on their own; the rest fold into one rectangle. */
 const GROUPS_SHOWN = 40
-const ORDER_FIRST: Record<string, string[]> = { ending: [...ENDING_ORDER] }
+const ORDER_FIRST: Record<string, string[]> = { ending: [CRASHED_NOW, ...ENDING_ORDER] }
 
 const col = (table: Table, name: string) => table.columns.indexOf(name)
 const fmtInt = (n: number) => n.toLocaleString('en-US')
@@ -191,8 +195,18 @@ export function ExplorePage({ api }: { api: string }) {
       })
     }
     if (lens === 'ending') {
-      const k = col(runs, 'ending')
-      return runOfPoint.map((r) => endingWord(runs.rows[r]?.[k] ?? null))
+      const [k, pk, sk, wk] = [col(runs, 'ending'), col(runs, 'play'), col(runs, 'started'), col(runs, 'wallHours')]
+      const newest = new Map<string, number>()
+      for (const row of runs.rows) if (typeof row[sk] === 'number') newest.set(String(row[pk]), Math.max(newest.get(String(row[pk])) ?? 0, row[sk] as number))
+      const now = Date.now()
+      return runOfPoint.map((r) => {
+        const row = runs.rows[r]
+        const word = endingWord(row?.[k] ?? null)
+        const started = row?.[sk]
+        if (word !== 'died' || typeof started !== 'number') return word
+        const settledAt = new Date((started + (typeof row![wk] === 'number' ? (row![wk] as number) : 0) * 3600) * 1000).toISOString()
+        return statusOf({ axis: 'run', state: 'died', settledAt, newerRun: newest.get(String(row![pk]))! > started, now }).tone === 'fail' ? CRASHED_NOW : word
+      })
     }
     return field(lens)
   }, [runs, agents, lens, runOfPoint, clusterLabel, columnLabels, firstClassifier])
@@ -359,11 +373,12 @@ export function ExplorePage({ api }: { api: string }) {
           <ol className="explore-legend">
             {colored.categories.slice(0, 14).map((item) => {
               const slot = colored.slot.get(item.value)
+              const crash = item.value === CRASHED_NOW
               return (
-                <li key={item.value}>
+                <li key={item.value} {...(crash ? statusAttrs(CRASH_NOW_STATUS) : {})}>
                   <button type="button" onClick={() => toggleNamed(item.value)} aria-pressed={colored.fixed ? only === item.value : slot !== undefined} title={colored.fixed ? (only === item.value ? 'Shown alone; click to show every category' : 'Click to show only these') : slot !== undefined ? 'Named in colour; click to grey it' : 'Click to name it in colour'}>
                     <i style={{ background: colored.palette[slot ?? colored.palette.length - 1] }} data-named={slot !== undefined ? 'yes' : 'no'} />
-                    <span className="explore-legend-label">{item.value}</span>
+                    <span className="explore-legend-label">{item.value}{crash && ` · owner: ${CRASH_NOW_STATUS.owner}`}</span>
                     <span className="num faint">{fmtInt(item.count)}</span>
                   </button>
                 </li>

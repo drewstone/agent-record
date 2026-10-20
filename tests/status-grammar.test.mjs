@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AgentTable, PlayHeader, SpendBars, agentSpendRows, indexRecord } from '../dist/index.js'
+import { AgentTable, PlayHeader, SpendBars, StatusPill, agentSpendRows, indexRecord, newerRunOf, statusOf } from '../dist/index.js'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const PLAY = fixture('plays_magnetar-rust.json')
@@ -19,12 +19,24 @@ const DAY = 86_400_000
 /** The nodes part as the workspace indexes it: a node without a parent is a root. */
 const nodesIndex = () => indexRecord({ ...structuredClone(NODES_18B), nodes: NODES_18B.nodes.map((node) => ({ parent: null, ...node })) })
 
-/** Every `data-status` in the markup with the `data-live` section (if any) that contains it. */
+/**
+ * Every `data-status` in the markup, with whether a `data-live` element contains it and its `data-owner`. The live
+ * element ends at its matching close tag, found by counting nested tags of the same name, not at the first close.
+ */
 function statuses(html) {
+  const open = /<(\w+)[^>]*\sdata-live="[^"]*"[^>]*>/.exec(html)
+  let live = null
+  if (open) {
+    const tag = new RegExp(`<(/?)${open[1]}\\b[^>]*>`, 'g')
+    tag.lastIndex = open.index + open[0].length
+    for (let depth = 1, match; depth && (match = tag.exec(html)); ) if (!(depth += match[1] ? -1 : 1)) live = [open.index, match.index]
+    assert.ok(live, 'the live element closes')
+  }
   const out = []
-  const live = /<section[^>]*data-live="[^"]*"[^>]*>[\s\S]*?<\/section>/.exec(html)
-  for (const match of html.matchAll(/data-status="([^"]*)"/g))
-    out.push({ status: match[1], inLive: !!live && match.index > live.index && match.index < live.index + live[0].length })
+  for (const match of html.matchAll(/<[^>]*\sdata-status="([^"]*)"[^>]*>/g)) {
+    const at = html.indexOf('data-status=', match.index)
+    out.push({ status: match[1], owner: /\sdata-owner="([^"]*)"/.exec(match[0])?.[1] ?? null, inLive: !!live && at > live[0] && at < live[1] })
+  }
   return out
 }
 
@@ -42,13 +54,15 @@ test("a play header has no fail status except a live run's red blocker", () => {
   const fails = statuses(html).filter((mark) => mark.status.endsWith(':fail'))
   assert.equal(fails.length, 1)
   assert.ok(fails[0].inLive)
+  assert.equal(fails[0].owner, blocker.owner)
   assert.match(html, /owner: discovery-lab \(play repository access\)/)
 })
 
 test("a bar value is toned by its own comparison to the bar, the candidate's verdict a neutral word", () => {
   const html = renderToStaticMarkup(createElement(PlayHeader, { play: PLAY }))
   const proof = PLAY.bar.metrics.find((metric) => metric.nearest && !metric.best && metric.direction === 'down' && metric.target?.approx && metric.nearest.value < metric.target.approx * 1024)
-  if (proof) assert.match(html, new RegExp(`data-bar-metric="${proof.id}"[\\s\\S]*?class="tone-pass" data-status="result:Meets the bar:pass"`))
+  assert.ok(proof, 'the fixture holds a candidate whose value beats the bar (377 KiB against about 599 KiB)')
+  assert.match(html, new RegExp(`data-bar-metric="${proof.id}"[\\s\\S]*?class="tone-pass" data-status="result:Meets the bar:pass"`))
   assert.doesNotMatch(html, /mark-fail|glyph-fail/)
 })
 
@@ -71,6 +85,22 @@ test('a driver-failed run settled ten days before the clock reads Crashed, neutr
   const html = renderToStaticMarkup(createElement(PlayHeader, { play }))
   assert.match(html, /data-status="run:Crashed:neutral"><span class="status-shape" aria-hidden="true">□<\/span> Crashed</)
   assert.doesNotMatch(html, /:fail"/)
+})
+
+test('a crash is red, with its owner, only while no newer run of its play has started', () => {
+  // The play's served runs and live run say whether a newer run started; a run page reads them for a fresh crash.
+  const runs = [...PLAY.runs, PLAY.live]
+  const crash = (run) => statusOf({ axis: 'run', state: 'driver-failed', reason: 'driver-failed', settledAt: new Date(CLOCK - 2 * 3_600_000).toISOString(), newerRun: newerRunOf(runs, run), now: CLOCK })
+  const older = RUN_17C.run
+  assert.ok(newerRunOf(runs, older), '17c has newer runs on the play')
+  assert.deepEqual(crash(older), { axis: 'run', word: 'Crashed', tone: 'neutral', shape: '□' })
+  const newest = { id: PLAY.live.runId, startedAt: PLAY.live.startedAt }
+  assert.equal(newerRunOf(runs, newest), false)
+  const now = crash(newest)
+  assert.equal(now.tone, 'fail')
+  const html = renderToStaticMarkup(createElement(StatusPill, { status: now }))
+  assert.deepEqual(statuses(html), [{ status: 'run:Crashed:fail', owner: 'discovery-lab runner', inLive: false }])
+  assert.match(html, /Crashed · owner: discovery-lab runner<\/span>$/)
 })
 
 test("the 18b spend ledger prints each known amount and one line for what is not recorded", () => {

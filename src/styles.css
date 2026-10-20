@@ -11,7 +11,8 @@
   --ar-bg-sink: var(--ar-code-background, #f5f3ed);
   --ar-fg: var(--ar-foreground, #252522);
   --ar-fg-muted: var(--ar-muted, #66665f);
-  --ar-fg-faint: var(--ar-subtle, var(--ar-faint, #77776f));
+  /* 4.7:1 on the raised surface #f2f0e9; #77776f read 4.29:1 on cards. */
+  --ar-fg-faint: var(--ar-subtle, var(--ar-faint, #6b6b64));
   --ar-border: var(--ar-line, #deddd5);
   --ar-border-strong: var(--ar-line-strong, #c4c2b7);
   --ar-c-action: var(--ar-accent, #7760bd);
@@ -2146,6 +2147,8 @@
 .ar-ws .agent-row:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
 /* Selected wins over the shared button hover, which is more specific than one class. */
 .agent-record.ar-ws .agent-row.on, .agent-record.ar-ws .agent-row.on:hover { background: var(--ar-selected, color-mix(in srgb, var(--ws-accent) 14%, transparent)); box-shadow: inset 3px 0 0 var(--ws-frame); }
+/* Neutral ink reads 4.07:1 on the dark selected row; the word keeps its meaning in full ink there. */
+.agent-record.ar-ws .agent-row.on .state-pill.tone-neutral { color: var(--ar-fg); }
 .ar-ws .agent-row > * { min-width: 0; }
 .ar-ws .agent-row-head { position: sticky; top: 0; z-index: 1; cursor: default; background: var(--ws-panel); color: var(--ar-fg-muted); font-size: var(--ar-text-s); min-height: 38px; }
 .ar-ws .agent-row-head:hover { background: var(--ws-panel); }
@@ -2387,8 +2390,8 @@
 .ar-ws .scale-mark { position: absolute; top: -4px; bottom: -4px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--ws-accent); }
 .ar-ws .scale-ticks { display: flex; justify-content: space-between; color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
 .ar-ws .verdict-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
-.ar-ws .verdict-met { color: var(--ar-c-ok); }
-.ar-ws .verdict-not-met { color: var(--ar-c-fail); }
+/* Bookkeeping verdicts on a version: the word in neutral ink, never a status tone. */
+.ar-ws .verdict-met, .ar-ws .verdict-not-met { color: var(--ar-c-neutral); }
 @media (max-width: 1100px) {
   .ar-ws .lineage-layout { grid-template-columns: minmax(0, 1fr); height: auto; }
   .ar-ws .lineage-pane { border-right: 0; border-bottom: 1px solid var(--ar-border); max-height: 70vh; }
@@ -2640,7 +2643,8 @@
 .ar-ws .vg-chip.tone-run { color: var(--ar-c-live); background: color-mix(in srgb, var(--ar-c-live) 14%, transparent); }
 .ar-ws .vg-chip.tone-warn { color: var(--ar-c-neutral); background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); }
 .ar-ws .vg-chip.tone-muted { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); }
-.ar-ws .vg-chip.tone-accent { color: var(--ws-accent); background: color-mix(in srgb, var(--ws-accent) 14%, transparent); }
+/* Text mixed toward the ink so it holds 4.5:1 on its own tint and on a selected row. */
+.ar-ws .vg-chip.tone-accent { color: color-mix(in srgb, var(--ws-accent) 85%, var(--ar-fg)); background: color-mix(in srgb, var(--ws-accent) 14%, transparent); }
 .ar-ws .vg-chip.tone-info { color: var(--ar-fg); background: var(--ws-raised); font-weight: 500; }
 .ar-ws .vg-inspector-title { margin: 0; flex: 1 1 100%; font: 650 var(--ar-text-m, 1.05rem)/1.3 var(--ar-font-body); overflow-wrap: anywhere; }
 .ar-ws .vg-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -2796,7 +2800,8 @@
 .ar-ws .ov-chip { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 4px; font: 15px/1 var(--ar-font-mono); text-decoration: none; color: var(--ar-c-neutral); }
 .ar-ws .ov-chip.tone-live { color: var(--ar-c-live); }
 .ar-ws .ov-chip.tone-pass { color: var(--ar-c-pass); }
-.ar-ws .ov-chip.tone-fail { color: var(--ar-c-fail); }
+.ar-ws .ov-chip.tone-fail { color: var(--ar-c-fail); width: auto; grid-auto-flow: column; gap: 4px; padding: 0 4px; }
+.ar-ws .ov-chip small { font: 12px/1 var(--ar-font-body); }
 .ar-ws .ov-legend-shape { font: 600 1em/1 var(--ar-font-mono); }
 .ar-ws .ov-chip:hover, .ar-ws .ov-chip:focus-visible { outline: 2px solid var(--ar-fg); outline-offset: 1px; }
 .ar-ws .ov-week-more { font-size: .8em; color: var(--ar-fg-faint); }

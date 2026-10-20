@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace.js'
-import { statusData, statusOf, useDocument } from './data.js'
+import { newerRunOf, statusAttrs, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
 
@@ -110,12 +110,13 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
         {play.runs.map((run) => {
           // Newest first; the start bounds the settle from below, so a crash that started under a day ago is the only red one.
           const status = statusOf({ axis: 'run', state: run.state, settledAt: run.startedAt, live: run.state === 'running',
-            newerRun: play.runs.some((other) => !!other.startedAt && !!run.startedAt && other.startedAt > run.startedAt), now: Date.now() })
+            newerRun: newerRunOf(play.runs, run), now: Date.now() })
           return (
-            <a key={run.runId} className={`ov-chip tone-${status.tone}`} href={`/run/${encodeURIComponent(run.runId)}`} data-status={statusData(status)}
+            <a key={run.runId} className={`ov-chip tone-${status.tone}`} href={`/run/${encodeURIComponent(run.runId)}`} {...statusAttrs(status)}
               title={`${status.word} · started ${run.startedAt?.slice(0, 16).replace('T', ' ') ?? 'unknown'} UTC${run.lostHours ? ` · ${hours(run.lostHours)} lost` : ''}`}
               aria-label={`run ${run.runId}, ${status.word}`}>
               <span aria-hidden="true">{status.shape}</span>
+              {status.owner && <small>{status.word} · owner: {status.owner}</small>}
             </a>
           )
         })}
@@ -220,7 +221,7 @@ export function OverviewPage({ api }: { api: string }) {
                 // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall. The host
                 // composes the tone; a critical item is the page's earned fail, its owner and next action in visible text.
                 const tone = item.tone === 'crit' ? 'fail' : item.tone === 'warn' ? 'attention' : 'neutral'
-                return <li key={item.text} data-status={`run:Needs you:${tone}`}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
+                return <li key={item.text} {...statusAttrs({ axis: 'run', word: 'Needs you', tone, shape: '', owner: item.owner || 'Discovery operator' })}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
               })}
             </ul>
           ) : (

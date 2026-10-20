@@ -32,7 +32,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { duration, go, money, readRecord, stateClass, statusData, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { duration, go, money, newerRunOf, readRecord, stateClass, statusAttrs, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -751,7 +751,7 @@ function RunsTable({
               )}
               <td className="run-state">
                 <StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, live: run.state === 'running',
-                  newerRun: play.runs.some((other) => !!other.startedAt && !!run.startedAt && other.startedAt > run.startedAt), now: Date.now() })} />
+                  newerRun: newerRunOf(play.runs, run), now: Date.now() })} />
                 {run.reason && run.reason !== run.state && <small className="faint clamp-1" title={run.reason}>{run.reason}</small>}
               </td>
               <td>{when(run.startedAt)}</td>
@@ -916,6 +916,12 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [capturedStreams, setCapturedStreams] = useState<ReadonlySet<string>>(() => new Set())
   const openedLiveStream = useRef<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
+  // A crash is a fault now only while no newer run of its play has started. The run document does not say, so a run
+  // that would otherwise be red reads its play's served runs; until that answers, the crash stays neutral.
+  const ended = run.data?.run
+  const crashNow = !!ended && statusOf({ axis: 'run', state: ended.state, reason: ended.reason, settledAt: ended.settledAt, live: !!run.data?.live.polling, newerRun: false, now: Date.now() }).tone === 'fail'
+  const sibling = useDocument<Play>(crashNow ? `${api}/plays/${encodeURIComponent(ended!.play)}` : null)
+  const newerRun = crashNow && sibling.data ? newerRunOf([...sibling.data.runs, ...(sibling.data.live ? [sibling.data.live] : [])], ended!) : undefined
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
   const digest = run.data?.run.record.digest ?? null
@@ -951,8 +957,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
-        <DetailBar doc={doc} section={null} counts={overviewCounts(doc, index)} onOpen={open} onBack={() => undefined} />
+        <RunExecution doc={doc} newerRun={newerRun} onConversations={() => open('agents', { tab: undefined })} />
+        <DetailBar doc={doc} newerRun={newerRun} section={null} counts={overviewCounts(doc, index)} onOpen={open} onBack={() => undefined} />
         <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
@@ -972,8 +978,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const counts = overviewCounts(doc, index)
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
-      <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
-      <DetailBar doc={doc} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
+      <RunExecution doc={doc} newerRun={newerRun} onConversations={() => open('agents', { tab: undefined })} />
+      <DetailBar doc={doc} newerRun={newerRun} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
       {section === 'findings' &&
         (doc.findings?.total ? (
           <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
@@ -1141,7 +1147,7 @@ function overviewCounts(doc: RunDocument, index: RecordIndex | null): Partial<Re
  * answers the run's questions; these are the evidence behind each answer (conversations, the commit and profile graphs,
  * ledgers, assessments, capture and input), one click from the section that names them.
  */
-function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument; section: RunSection | null; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void; onBack: () => void }) {
+function DetailBar({ doc, newerRun, section, counts, onOpen, onBack }: { doc: RunDocument; newerRun?: boolean; section: RunSection | null; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void; onBack: () => void }) {
   const run = doc.run
   const views = DETAIL_VIEWS.filter(([value]) => value !== 'findings' || section === 'findings' || !!doc.findings?.total)
   // On the overview the bar is the way to each detail view (B4); in a detail view it leads back first.
@@ -1153,7 +1159,7 @@ function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument;
         </button>
       )}
       <span className="detail-run mono" title={run.id}>
-        {shortRun(run.play, run.id)} <StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, live: !!doc.live.polling, now: Date.now() })} />
+        {shortRun(run.play, run.id)} <StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason, settledAt: run.settledAt, live: !!doc.live.polling, newerRun, now: Date.now() })} />
       </span>
       <span className="detail-views">
         {views.map(([value, label]) => (
@@ -1361,19 +1367,19 @@ function RunBody({
   const model = node?.servedModel ? `${node.servedModel}` : node?.model ? `${node.model} (declared)` : null
   const measured = useMemo(() => measuredUsage(index, actor), [index, actor])
   const empty = !(index.byActor.get(actor) ?? []).length
+  const agentStatus = statusOf({ axis: 'agent', status: node?.status, live: !!doc.live.polling })
   return (
     <div className="agent-drawer" onScrollCapture={hideTooltip}>
       <section className="ws-panel" aria-label="Agent record">
         <div className="agent-head">
           <div className="agent-identity">
-            <span className={`agent-avatar ${node?.status === 'down' && doc.live.polling ? 'tone-fail' : ''}`} aria-hidden="true"
-              data-status={statusData(statusOf({ axis: 'agent', status: node?.status, live: !!doc.live.polling }))}>
+            <span className={`agent-avatar tone-${agentStatus.tone}`} aria-hidden="true" {...statusAttrs(agentStatus)}>
               {role.slice(0, 1).toUpperCase()}
             </span>
             <div>
               <h2 data-agent-title>{node?.label ?? actor}</h2>
               <p className="agent-meta">
-                {[role, model, node?.harness as string | undefined, agentState(node, measured, doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === actor)?.status ?? 'running') : null)].filter(Boolean).join(' · ')}
+                {[role, model, node?.harness as string | undefined, agentState(node, measured, doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === actor)?.status ?? 'running') : null), agentStatus.owner && `${agentStatus.word} · owner: ${agentStatus.owner}`].filter(Boolean).join(' · ')}
               </p>
             </div>
           </div>

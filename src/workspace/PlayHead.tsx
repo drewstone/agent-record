@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
-import { money, type Status, statusData, StatusPill, statusOf, type StatusTone } from './data.js'
+import { money, type Status, statusAttrs, StatusPill, statusOf, type StatusTone } from './data.js'
 import {
   barSide,
   checkerIndex,
@@ -46,7 +46,7 @@ function Sentence({ text, status }: { text: string; status: string }) {
     <p className="play-sentence" data-standing={status}>
       {lead ? (
         <>
-          <b className={`play-verdict tone-${verdict.tone}`} data-status={statusData(verdict)}>{lead}</b>
+          <b className={`play-verdict tone-${verdict.tone}`} {...statusAttrs(verdict)}>{lead}</b>
           {text.slice(lead.length)}
         </>
       ) : (
@@ -69,7 +69,7 @@ function Provenance({ play, best }: { play: Play; best: PlayBest | null | undefi
       <b className="mono">{shortTag(best.tag) ?? 'workspace'}</b>
       {best.runId && <span className="faint"> ({shortRun(play.id, best.runId)})</span>}
       {verdict && (
-        <span className={`goal-glyph tone-${verdict.tone}`} data-status={statusData(verdict)} title={verdict.word}>
+        <span className={`goal-glyph tone-${verdict.tone}`} {...statusAttrs(verdict)} title={verdict.word}>
           {' '}
           {verdict.shape}
         </span>
@@ -314,7 +314,7 @@ function BarRow({ play, metric }: { play: Play; metric: PlayBarMetric }) {
       <dd className="bar-value">
         {shown ? (
           <span className={best ? '' : 'bar-nearest'}>
-            <b className={`tone-${value.tone}`} data-status={statusData(value)}>{metricValue(shown.value, metric.unit)}</b> <span className="mono">{shortTag(shown.tag)}{mark && mark !== '✕' ? ` ${mark}` : ''}</span>
+            <b className={`tone-${value.tone}`} {...statusAttrs(value)}>{metricValue(shown.value, metric.unit)}</b> <span className="mono">{shortTag(shown.tag)}{mark && mark !== '✕' ? ` ${mark}` : ''}</span>
           </span>
         ) : (
           <span className="faint">not measured</span>
@@ -374,7 +374,7 @@ const ago = (since: string | null | undefined, until?: string | null) => (since 
 export function blockerStatus(blocker: PlayBlocker, current: boolean): Status {
   const word = BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')
   if (!current) return { axis: 'run', word, tone: 'neutral', shape: '○' }
-  return blocker.severity === 'red' ? { axis: 'run', word, tone: 'fail', shape: '■' } : blocker.severity === 'amber' ? { axis: 'run', word, tone: 'attention', shape: '▲' } : { axis: 'run', word, tone: 'neutral', shape: '○' }
+  return blocker.severity === 'red' ? { axis: 'run', word, tone: 'fail', shape: '■', owner: blocker.owner ?? 'discovery-lab' } : blocker.severity === 'amber' ? { axis: 'run', word, tone: 'attention', shape: '▲' } : { axis: 'run', word, tone: 'neutral', shape: '○' }
 }
 
 /**
@@ -390,7 +390,7 @@ export function BlockerChip({ blocker, until, wallHours, current = !until }: { b
   const whole = until && wallHours && lasted !== null && lasted >= wallHours * 3_600_000 * 0.9
   const age = whole ? 'the whole run' : ago(blocker.since, until)
   return (
-    <div className={`blocker-chip tone-${status.tone}`} data-blocker={blocker.class} data-status={statusData(status)}>
+    <div className={`blocker-chip tone-${status.tone}`} data-blocker={blocker.class} {...statusAttrs(status)}>
       <p>
         <b className="blocker-class">
           <span className="status-shape" aria-hidden="true">{status.shape}</span> {status.word}
@@ -402,7 +402,7 @@ export function BlockerChip({ blocker, until, wallHours, current = !until }: { b
             · {blocker.evidence}
           </span>
         )}
-        {status.tone === 'fail' && blocker.owner && <span className="blocker-owner"> · owner: {blocker.owner}</span>}
+        {status.owner && <span className="blocker-owner"> · owner: {status.owner}</span>}
       </p>
       {blocker.also?.map((item) => (
         <p key={item.class} className="blocker-also" data-blocker-also={item.class} title={[item.evidence, item.source && `source: ${item.source}`].filter(Boolean).join('\n') || undefined}>

@@ -3,7 +3,7 @@ import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
 import type { PlayDocument } from '../workspace.js'
-import { statusData, statusOf } from './data.js'
+import { statusAttrs, statusOf } from './data.js'
 import {
   checkerIndex,
   checkerLabel,
@@ -483,7 +483,7 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
                     <span
                       key={`${column.id}:${i}`}
                       className={`verdict-chip tone-${statusOf({ axis: 'result', verdict: row.verdict, checker: checkerLabel(play.checkers, row.checker), current: currentChecker }).tone}`}
-                      data-status={statusData(statusOf({ axis: 'result', verdict: row.verdict, checker: checkerLabel(play.checkers, row.checker), current: currentChecker }))}
+                      {...statusAttrs(statusOf({ axis: 'result', verdict: row.verdict, checker: checkerLabel(play.checkers, row.checker), current: currentChecker }))}
                       style={{ ['--checker' as string]: checkerColor(checkerIndex(play.checkers, row.checker) ?? 9) }}
                       title={[`${row.kind === 'gate' ? 'tag gate' : 'check'} under ${checkerLabel(play.checkers, row.checker)}: ${verdictWord(row.verdict)}`, row.line, utc(row.lastAt ?? row.firstAt)].filter(Boolean).join('\n')}
                     >

@@ -1,5 +1,5 @@
 import type { FeedItem, PlayDocument } from '../workspace.js'
-import { statusData, statusOf } from './data.js'
+import { statusAttrs, statusOf } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
 
@@ -43,7 +43,7 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
             <span
               key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`}
               className={`commit-chip tone-${commitStatus(play, commit).tone}`}
-              data-status={statusData(commitStatus(play, commit))}
+              {...statusAttrs(commitStatus(play, commit))}
               title={[`commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null].filter(Boolean).join('\n')}
             >
               {commit.tag ? <b>{shortTag(commit.tag)}</b> : <>commit {commit.sha.slice(0, 7)}</>}

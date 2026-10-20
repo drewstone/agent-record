@@ -126,9 +126,13 @@ export interface Status {
   word: string
   tone: StatusTone
   shape: string
+  /** Who acts on a `fail` status; every fail mark names it in visible text and in `data-owner`. */
+  owner?: string
 }
 
 const DAY_MS = 86_400_000
+/** The Lab's runner starts, stalls and resumes every run, so it owns a crash or a lost agent on one. */
+const RUNNER = 'discovery-lab runner'
 
 /**
  * One status grammar for every page: a word from the design system's fixed vocabulary, a tone, and a shape that keeps
@@ -141,7 +145,7 @@ const DAY_MS = 86_400_000
  * - agent: an agent row; Down is `fail` only while its run is live, otherwise the agent Ended.
  */
 export function statusOf(input: StatusInput): Status {
-  const status = (axis: StatusAxis, word: string, tone: StatusTone, shape: string): Status => ({ axis, word, tone, shape })
+  const status = (axis: StatusAxis, word: string, tone: StatusTone, shape: string): Status => (tone === 'fail' ? { axis, word, tone, shape, owner: RUNNER } : { axis, word, tone, shape })
   if (input.axis === 'agent') {
     switch (input.status) {
       case 'running':
@@ -243,15 +247,22 @@ export type StatusInput =
 
 /** `<axis>:<word>:<tone>`, the attribute every status mark carries so checks query meaning instead of pixels. */
 export const statusData = (value: Status) => `${value.axis}:${value.word}:${value.tone}`
+/** The attributes of a status mark: `data-status`, and `data-owner` on an earned fail. */
+export const statusAttrs = (value: Status) => ({ 'data-status': statusData(value), 'data-owner': value.tone === 'fail' ? value.owner : undefined })
 
-/** A status pill: the shape, then the word, toned and marked with `data-status`. */
+/** Whether another run of the same play started after `run`: a crash with a newer run is history, not a fault now. */
+export const newerRunOf = (runs: readonly { id?: string; runId?: string; startedAt?: string | null }[], run: { id?: string; runId?: string; startedAt?: string | null }) =>
+  !!run.startedAt && runs.some((other) => (other.id ?? other.runId) !== (run.id ?? run.runId) && !!other.startedAt && other.startedAt > run.startedAt!)
+
+/** A status pill: the shape, then the word, toned and marked with `data-status`; a fail names its owner. */
 export function StatusPill({ status: value, label, title, className }: { status: Status; label?: string; title?: string; className?: string }) {
   return createElement(
     'span',
-    { className: `state-pill tone-${value.tone}${className ? ` ${className}` : ''}`, 'data-status': statusData(value), title },
+    { className: `state-pill tone-${value.tone}${className ? ` ${className}` : ''}`, ...statusAttrs(value), title },
     createElement('span', { className: `status-shape${value.shape === ENDING_GLYPH.unknown ? ' is-dashed' : ''}`, 'aria-hidden': true }, value.shape),
     ' ',
     label ?? value.word,
+    value.tone === 'fail' && value.owner ? ` · owner: ${value.owner}` : null,
   )
 }
 

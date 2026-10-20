@@ -5,7 +5,7 @@ import { Conversation } from '../viewer/Conversation.js'
 import { compact, indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
-import { statusData, statusOf } from './data.js'
+import { statusAttrs, statusOf } from './data.js'
 import { BlockerChip } from './PlayHead.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
@@ -74,7 +74,7 @@ const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? nu
  * outcome reason), the newest tag gate that did not pass, and the turns a quota (HTTP 429) ended. The driver's own last
  * error and the runner log stay under Ending evidence.
  */
-export function RunExecution({ doc, onConversations }: { doc: RunDocument; onConversations: () => void }) {
+export function RunExecution({ doc, newerRun, onConversations }: { doc: RunDocument; newerRun?: boolean; onConversations: () => void }) {
   const execution = doc.execution
   const [now, setNow] = useState(Date.now)
   useEffect(() => {
@@ -87,7 +87,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const fix = diagnosis ? compact(diagnosis.fix) : ''
   const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
   const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
-  const status = statusOf({ axis: 'run', state: execution.alive ? 'running' : doc.run.state, reason: doc.run.reason, settledAt: doc.run.settledAt, live: execution.alive, now })
+  const status = statusOf({ axis: 'run', state: execution.alive ? 'running' : doc.run.state, reason: doc.run.reason, settledAt: doc.run.settledAt, live: execution.alive, newerRun, now })
   const raw = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
   const reason = raw ? humane(raw) : null
   const gate = doc.progress?.outcome?.gate
@@ -106,7 +106,7 @@ export function RunExecution({ doc, onConversations }: { doc: RunDocument; onCon
   const wallHours = doc.receipt?.work?.wallHours ?? null
   return <section className="run-execution" aria-label="Run status">
     <p role="status" data-run-status>
-      <strong className={`tone-${status.tone}`} data-status={statusData(status)}>{status.word}{!execution.alive && doc.run.settledAt ? ` ${clock(doc.run.settledAt)}` : ''}</strong>
+      <strong className={`tone-${status.tone}`} {...statusAttrs(status)}>{status.word}{!execution.alive && doc.run.settledAt ? ` ${clock(doc.run.settledAt)}` : ''}{status.owner ? ` · owner: ${status.owner}` : ''}</strong>
       {execution.alive ? <> · last activity {age !== null && Number.isFinite(age) ? `${age} s ago` : 'unknown'} · attempts failed {execution.failedAttempts}</> : <>
         {reason ? <span data-field="receipt.outcome.reason"> · {reason}</span> : <>
           {execution.endingError && <> · {execution.endingError.name}</>}

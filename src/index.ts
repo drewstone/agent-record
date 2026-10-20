@@ -34,7 +34,7 @@ export type { GraphNode, GraphEdge, WorkGraphModel } from './workspace/work-grap
 
 export { RunOverview, RunReceiptView } from './workspace/RunOverview.js'
 // One status grammar (design system §1): every status mark's word, tone and shape, and the surfaces its tests render.
-export { statusOf, statusData, StatusPill, stateClass, type Status, type StatusAxis, type StatusInput, type StatusTone } from './workspace/data.js'
+export { newerRunOf, statusOf, statusAttrs, statusData, StatusPill, stateClass, type Status, type StatusAxis, type StatusInput, type StatusTone } from './workspace/data.js'
 export { PlayHeader } from './workspace/PlayHead.js'
 export { AgentTable } from './workspace/RunTable.js'
 export { SpendBars, agentSpendRows } from './workspace/Spend.js'
