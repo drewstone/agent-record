@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { FeedItem, FindingsFeedDocument } from '../workspace.js'
+import type { FeedItem, FindingsFeedDocument } from '../workspace-model.js'
 import { useDocument } from './data.js'
 import { ReviewBadges } from './ScientificReviews.js'
 

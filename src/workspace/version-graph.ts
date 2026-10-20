@@ -1,4 +1,4 @@
-import type { VersionGraphDocument, VersionTag } from '../workspace.js'
+import type { VersionGraphDocument, VersionTag } from '../workspace-model.js'
 
 /**
  * One drawing for every versioned artifact: a run's deliverables and the profiles its agents wrote (`deliverables.git`),

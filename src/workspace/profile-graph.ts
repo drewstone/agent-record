@@ -1,4 +1,4 @@
-import type { ProfileDiff, ProfileGraphDocument, ProfileNode, ProfileParent } from '../workspace.js'
+import type { ProfileDiff, ProfileGraphDocument, ProfileNode, ProfileParent } from '../workspace-model.js'
 
 /**
  * The profile-version graph of one play, read for drawing. A node is one exact AgentProfile (by digest). Each node

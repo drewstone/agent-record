@@ -2,7 +2,7 @@ import { type ChartBand, type ChartMark, type MultiplePanel, smallMultiples, typ
 import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import {
   checkerIndex,
   checkerLabel,

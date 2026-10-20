@@ -1,8 +1,8 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react'
-import type { HumanGrade, PanelReview, Readout, ReadoutChart } from '../workspace.js'
+import type { HumanGrade, PanelReview, Readout, ReadoutChart } from '../workspace-model.js'
 import { useDocument, when } from './data.js'
 import { sameOriginHref } from './final-output.js'
-import { chartPairs, scoreRows, type ScoreRow } from './scores.js'
+import { chartPairs, scoreRows, type ScoreRow } from './scores-model.js'
 
 const pageHref = (href: string | null | undefined) => (typeof window === 'undefined' ? null : sameOriginHref(href, window.location.href))
 

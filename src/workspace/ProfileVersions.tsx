@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, ProfileParent, ProfileRun } from '../workspace.js'
+import type { ProfileDiff, ProfileDiffField, ProfileGraphDocument, ProfileNode, ProfileParent, ProfileRun } from '../workspace-model.js'
 import { CollapsibleValue } from './CollapsibleValue.js'
 import { stateClass, stateLabel, when } from './data.js'
 import type { Comparison } from './profile-compare.js'

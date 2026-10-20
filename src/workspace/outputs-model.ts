@@ -1,4 +1,4 @@
-import type { FinalOutput, OutputFile, ProgressBrief, Readout } from '../workspace.js'
+import type { FinalOutput, OutputFile, ProgressBrief, Readout } from '../workspace-model.js'
 
 /**
  * A run's outputs, read for the outputs view and the version comparison: each file the run delivered by its kind,

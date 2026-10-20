@@ -1,4 +1,4 @@
-import type { PlaysDocument } from '../workspace.js'
+import type { PlaysDocument } from '../workspace-model.js'
 
 type PlayRow = PlaysDocument['plays'][number]
 

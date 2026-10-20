@@ -1,4 +1,4 @@
-import type { ProfileEdgeEvent, ProfileGraphDocument, ProfileNode, ProfileParent } from '../workspace.js'
+import type { ProfileEdgeEvent, ProfileGraphDocument, ProfileNode, ProfileParent } from '../workspace-model.js'
 
 /**
  * The profile canvas of a run or a play, read for drawing. Its members are the profiles the scope ran or created (and

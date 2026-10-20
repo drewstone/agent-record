@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { VirtualList } from '../viewer/VirtualList.js'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { checkerIndex, metricValue, type PlayHead, type PlayRelease, RELEASE_STATE, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
 import { checkerColor } from '@tangle-network/charts'
 

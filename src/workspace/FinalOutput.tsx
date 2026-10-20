@@ -1,6 +1,6 @@
-import { latestNumericGrade } from './scores.js'
+import { latestNumericGrade } from './scores-model.js'
 import { useState } from 'react'
-import type { FinalOutput, OutputFile, Readout, TraceReview, TraceReviewQuestion } from '../workspace.js'
+import type { FinalOutput, OutputFile, Readout, TraceReview, TraceReviewQuestion } from '../workspace-model.js'
 import {
   byteSize,
   deliveryLabel,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PlayDocument } from '../workspace.js'
+import type { PlayDocument } from '../workspace-model.js'
 import { money } from './data.js'
 import {
   checkerIndex,

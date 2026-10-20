@@ -1,4 +1,4 @@
-import type { ProfileGraphDocument, ProfileNode, ProfileSearch } from '../workspace.js'
+import type { ProfileGraphDocument, ProfileNode, ProfileSearch } from '../workspace-model.js'
 
 /**
  * An optimizer search over a play's profile, read for the evolution view: every version it proposed, the edge to its

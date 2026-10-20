@@ -1,4 +1,4 @@
-import type { NodeSpend, Spend } from '../workspace.js'
+import type { NodeSpend, Spend } from '../workspace-model.js'
 import { duration, money, tokens } from './data.js'
 
 const seatWeekValue = (value: number | null | undefined) =>
