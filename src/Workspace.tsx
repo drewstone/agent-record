@@ -32,7 +32,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, go, money, readRecord, runStatus, standingSentence, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, go, money, readRecord, runStatus, standingSentence, stateClass, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -1358,12 +1358,13 @@ function RunBody({
   const model = node?.servedModel ? `${node.servedModel}` : node?.model ? `${node.model} (declared)` : null
   const measured = useMemo(() => measuredUsage(index, actor), [index, actor])
   const empty = !(index.byActor.get(actor) ?? []).length
+  const agentStatus = statusOf({ axis: 'agent', status: node?.status, live: doc.live.polling })
   return (
     <div className="agent-drawer" onScrollCapture={hideTooltip}>
       <section className="ws-panel" aria-label="Agent record">
         <div className="agent-head">
           <div className="agent-identity">
-            <span className={`agent-avatar tone-${statusOf({ axis: 'agent', status: node?.status, live: doc.live.polling }).tone}`} data-status={dataStatus(statusOf({ axis: 'agent', status: node?.status, live: doc.live.polling }))} aria-hidden="true">
+            <span className={`agent-avatar ${stateClass(agentStatus)}`} data-status={dataStatus(agentStatus)} aria-hidden="true">
               {role.slice(0, 1).toUpperCase()}
             </span>
             <div>
@@ -1628,6 +1629,8 @@ function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: str
   )
 }
 
+const CAPTURE_WORD: Record<string, string> = { complete: 'Captured', lossy: 'Partly captured', absent: 'Not captured' }
+
 /**
  * Each agent's capture and state. `index` holds only the selected agent's part, so whether an agent's usage was measured
  * comes from the nodes part's per-agent stats, as in the agents table; on magnetar-rust-20261018b the event scan alone
@@ -1649,7 +1652,7 @@ function Coverage({ index, doc, gaps: recordGaps, stats, onSelect }: { index: Re
               <tr key={node.id} className="clickable" onClick={() => onSelect(node.id)}>
                 <td className="mono">{node.label}</td>
                 <td className="mono">{capture?.channel ?? '—'}</td>
-                <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{capture?.status ?? 'unknown'}</span></td>
+                <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{CAPTURE_WORD[capture?.status ?? ''] ?? 'Capture unknown'}</span></td>
                 <td className="mono faint">{capture?.reason ?? ''}</td>
                 <td>{agentState(node, measured(node.id), doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === node.id)?.status ?? 'running') : null)}</td>
               </tr>

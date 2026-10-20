@@ -5,7 +5,7 @@ import type { RecordIndex } from '../viewer/model.js'
 import { agentState, ms, roleOf } from '../viewer/model.js'
 import type { RunDocument } from '../workspace.js'
 import { polarityOf, shownPolarity } from './Assessments.js'
-import { duration, money, StatusPill, statusOf, tokens } from './data.js'
+import { duration, money, stateClass, StatusPill, statusOf, tokens } from './data.js'
 import { briefLines } from './outputs.js'
 
 /** Per agent, from the record's `nodes` part: event count, first and last event, recorded usage and list price, tool
@@ -153,7 +153,7 @@ export function AgentTable({
               <StatusPill status={agent} title={state} />
             </span>
             <span role="cell" className="lane" title={start !== null ? `${duration((end ?? start) - start)} from ${new Date(start).toISOString().slice(11, 16)} UTC` : 'no recorded time'}>
-              {left !== null && width !== null && <i className={`seg tone-${agent.tone}`} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
+              {left !== null && width !== null && <i className={`seg ${stateClass(agent)}`} style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
             </span>
             <span role="cell" className="num">{start !== null && end !== null ? duration(end - start) : '—'}</span>
             <span role="cell" className="num">{total !== null ? tokens(total) : '—'}</span>

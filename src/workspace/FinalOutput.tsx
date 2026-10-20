@@ -78,9 +78,9 @@ const READOUT_LINKS = [
 ] as const
 
 /** The readout the Lab writes after the run settles: summary, deliverables, verdicts, judges, cost and its links. */
-function ReadoutSection({ readout, output, grading, run }: { readout: Readout; output: FinalOutput; grading?: Grading; run?: SettledRun }) {
+function ReadoutSection({ readout, output, grading, run, now }: { readout: Readout; output: FinalOutput; grading?: Grading; run?: SettledRun; now: number }) {
   // "Pending" holds only before its deadline, an hour after the run settled; after it, say what did not happen.
-  const overdue = run?.settledAt ? Date.now() - Date.parse(run.settledAt) > READOUT_DEADLINE_MS : false
+  const overdue = run?.settledAt ? now - Date.parse(run.settledAt) > READOUT_DEADLINE_MS : false
   if (readout.status === 'pending' && overdue && run) {
     return (
       <div className="final-readout" data-readout="missing">
@@ -351,7 +351,8 @@ export interface Grading {
 type SettledRun = { state: string | null | undefined; reason?: string | null; settledAt?: string | null; ending?: { at?: string | null } | null }
 const READOUT_DEADLINE_MS = 3_600_000
 
-export function FinalOutputPanel({ output, grading, run }: { output: FinalOutput | null | undefined; grading?: Grading; run?: SettledRun }) {
+/** `now` is the clock the readout's deadline is read against; a static render passes its document's own time. */
+export function FinalOutputPanel({ output, grading, run, now = Date.now() }: { output: FinalOutput | null | undefined; grading?: Grading; run?: SettledRun; now?: number }) {
   if (!output) return null
   const declared = output.declared
   return (
@@ -361,7 +362,7 @@ export function FinalOutputPanel({ output, grading, run }: { output: FinalOutput
         {declared && <span className="state-pill tone-neutral" data-final-status>{deliveryLabel(output.status)}</span>}
         {output.checkedAt && <span className="faint final-checked">checked {when(output.checkedAt)}</span>}
       </header>
-      {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} run={run} />}
+      {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} run={run} now={now} />}
       {output.traceReview && <TraceReviewSection review={output.traceReview} />}
       {declared ? (
         <>

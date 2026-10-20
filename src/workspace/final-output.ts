@@ -78,7 +78,8 @@ export function questionLabel(id: string): string {
 }
 
 
-/** Whether the review is the settled run's final one, or a live one with the time it was written. */
-export function reviewPhaseLabel(review: { final: boolean; phase: string }, written: string): string {
-  return review.final || review.phase === 'settled' ? 'Final review, after the run settled' : `Live review, ${written}`
+/** The settled run's final review by how many sessions it read, or a live one with the time it was written. */
+export function reviewPhaseLabel(review: { final: boolean; phase: string; sessions: { read: number | null } }, written: string): string {
+  const read = review.sessions.read
+  return review.final || review.phase === 'settled' ? `Reviewed: ${read === null ? 'sessions read not counted' : `${read} session${read === 1 ? '' : 's'} read`}` : `Live review, ${written}`
 }

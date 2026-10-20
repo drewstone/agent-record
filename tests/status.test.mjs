@@ -7,7 +7,8 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { agentSpendRows, AgentTable, indexRecord, parseRecord, PlayHeader, runStatus, SpendBars, StatusPill } from '../dist/index.js'
+import { agentSpendRows, AgentTable, FinalOutputPanel, finalOutputSchema, parseRecord, PlayHeader, SpendBars, StatusPill, statusOf } from '../dist/index.js'
+import { indexRecord } from '../src/viewer/model.ts'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const play = fixture('discovery-play-magnetar-rust.json')
@@ -53,6 +54,7 @@ test('a driver-failed run settled days ago reads Crashed, neutral, with the past
   const crashed = crashes[0]
   assert.ok(Date.parse(play.live.startedAt) - Date.parse(crashed.settledAt) > 2 * 24 * 3_600_000, 'a crash days old, with newer runs started')
   // A crash is a past fact at any age: it needs a person only when the host raises it as an act-now item.
+  const runStatus = (run) => statusOf({ axis: 'run', state: run.state, reason: run.reason, stopCause: run.stopCause })
   for (const run of crashes) {
     const status = runStatus(run)
     assert.deepEqual([status.word, status.tone, status.shape], ['Crashed (driver)', 'neutral', '□'])
@@ -72,4 +74,16 @@ test("18b's spend ledger prints each known amount and one line for every source 
   assert.equal((html.match(/Not recorded/g) ?? []).length, 1)
   assert.match(html, new RegExp(`Not recorded for ${agents.length} agents: subscription, API, sandbox \\(no per-agent meter\\)`))
   assert.doesNotMatch(html, /unknown/)
+})
+
+test("18b's readout is pending for an hour after it settled, then says no readout was written and how the run ended", () => {
+  const readout = { status: 'pending', generatedAt: null, settle: null, summary: null, deliverables: [], verdicts: [], judges: [],
+    links: { report: null, dossier: null, gist: null }, cost: { readoutUsd: null, runUsd: null }, error: null }
+  const output = finalOutputSchema.parse({ declared: null, status: 'none-declared', checkedAt: null, files: [], rootOutput: null, readout })
+  const settled = Date.parse(run18b.run.settledAt)
+  const at = (now) => visible(renderToStaticMarkup(createElement(FinalOutputPanel, { output, run: run18b.run, now })))
+  assert.match(at(settled + 10 * 60_000), /Readout pending/)
+  const late = at(settled + 21 * 3_600_000)
+  assert.doesNotMatch(late, /Readout pending/)
+  assert.match(late, /No readout was written: the run was stopped by Lab \(stall\) 03:27Z\./)
 })

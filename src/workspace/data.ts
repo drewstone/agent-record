@@ -252,6 +252,9 @@ export function standingSentence(text: string): { lead: Status | null; rest: str
   return head ? { lead: statusOf({ axis: 'result', verdict: LEAD_VERDICT[head] }), rest: rest.slice(head.length) } : { lead: null, rest }
 }
 
+/** The tone class for a status, or for the input `statusOf` reads: `tone-<tone>`. */
+export const stateClass = (input: Status | StatusInput) => `tone-${('word' in input ? input : statusOf(input)).tone}`
+
 /** The `data-status` every status mark carries, so checks query meaning instead of pixels. */
 export const dataStatus = (s: Status) => `${s.axis}:${s.word}:${s.tone}`
 
@@ -259,7 +262,7 @@ export const dataStatus = (s: Status) => `${s.axis}:${s.word}:${s.tone}`
 export function StatusPill({ status, title, children, className = 'state-pill' }: { status: Status; title?: string; children?: ReactNode; className?: string }) {
   return createElement(
     'span',
-    { className: `${className} tone-${status.tone}`, 'data-status': dataStatus(status), title },
+    { className: `${className} ${stateClass(status)}`, 'data-status': dataStatus(status), title },
     createElement('i', { className: 'status-shape', 'aria-hidden': true }, status.shape),
     ' ',
     children ?? status.word,
@@ -272,7 +275,6 @@ export function runStatus(run: { state: string | null | undefined; reason?: stri
   const at = run.ending?.at ?? run.settledAt
   return base.tone === 'neutral' && at && base.word.startsWith('Stopped') ? { ...base, word: `${base.word} ${at.slice(11, 16)}Z` } : base
 }
-
 
 /** Paid and list price, with unknown kept apart. */
 export function spendParts(spend: Spend | null | undefined) {
