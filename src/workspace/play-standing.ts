@@ -506,10 +506,12 @@ export const ENDING_GLYPH: Record<string, string> = {
 /** Release states, in the four words the pages use. */
 export const RELEASE_STATE: Record<string, string> = { published: 'published', withheld: 'not published', superseded: 'superseded', unknown: 'state unknown' }
 
-/** The host composes "withheld by the gate" (tangle-tools RELEASE_WORDS) until it words a gate-held release "not published". */
-export const releaseWords = (text: string) => text.replaceAll('withheld by the gate', RELEASE_STATE.withheld!)
-/** Host prose in the status grammar: a gate-held release reads "not published" and a research miss "no pass yet". */
-export const hostWords = (text: string) => releaseWords(text).replace(/\bnot solved\b/gi, VERDICT_WORDS['not-solved']!)
+/**
+ * Host prose in the status grammar: a gate-held release reads "not published" and a research miss "no pass yet". The host
+ * composes "withheld by the gate" (tangle-tools RELEASE_WORDS) until it words a gate-held release "not published".
+ */
+export const hostWords = (text: string) =>
+  text.replaceAll('withheld by the gate', RELEASE_STATE.withheld!).replace(/\bnot solved\b/gi, VERDICT_WORDS['not-solved']!)
 
 /** A checker's display label, found by digest or by label; null digests read "checker unrecorded". */
 export function checkerLabel(checkers: readonly PlayChecker[] | undefined, id: string | null | undefined): string {
