@@ -3310,6 +3310,9 @@
 .agent-record .run-blockers li > :not(strong) { color: var(--ar-fg); }
 .agent-record .run-blocker-line { font-family: var(--ar-font-mono); overflow-wrap: anywhere; }
 .ar-ws .rr-now-passes { margin: 0 0 10px; color: var(--ar-fg-muted); overflow-wrap: anywhere; }
+/* Each stage's calibration: small labels in neutral ink, never a status tone (they carry no data-status). */
+.ar-ws .rr-calibration { margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
+.ar-ws .rr-calibration-label { border: 1px solid var(--ar-border); border-radius: 4px; padding: 0 6px; overflow-wrap: anywhere; }
 .ar-ws .rr-behavior-line { border-top: 1px solid var(--ar-border); padding-top: 14px; font-size: var(--ar-text-s); overflow-wrap: anywhere; }
 /* X16: the run input's knowledge seed and budget, one line each. */
 .ar-ws .input-line { margin: 0 0 10px; font-size: var(--ar-text-s); color: var(--ar-fg); overflow-wrap: anywhere; }

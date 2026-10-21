@@ -71,6 +71,7 @@ test('a passed check leads with its solved label and the goal audit behind it', 
   assert.doesNotMatch(unaudited, /Now✓ Passed/)
   const contradicted = page({ ...passed, solved: false, solvedLabel: 'check passed; goal audit found a contradiction', goalAudit: { verdict: 'contradiction', at: '2026-10-18T02:26:00.000Z' } })
   assert.match(text(contradicted), /check passed; goal audit found a contradiction · checked 01:56 UTC on rc3 · goal audit found a contradiction at 02:26 UTC/)
-  assert.match(contradicted, /rr-now-failing/)
+  // A contradiction is a research finding, not a system fault: neutral, as statusOf tones it (design-system section 1).
+  assert.match(contradicted, /data-status="result:No pass yet:neutral"/)
   assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /Now✓ SOLVED · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
 })

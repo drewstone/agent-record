@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
+import type { OverviewAttention, OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
 import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
@@ -148,6 +148,38 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
 }
 
 /**
+ * What needs a person, one line per host attention item as composed: an undecided check dispute or a held pass is one
+ * line, and only a crit item is red (design-system section 1).
+ */
+export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
+  return (
+    <figure className="ov-card ov-attention" aria-label="Needs you">
+      <figcaption><span className="ov-card-title">Needs you</span></figcaption>
+      {attention.length ? (
+        <ul>
+          {attention.map((item) => {
+            const body = (
+              <>
+                {/* Only a crit item is red, and it names its owner in its own text; warn and info are neutral. */}
+                <StatusPill status={statusOf({ axis: 'alert', tone: item.tone, live: true })} className="ov-light">
+                  {item.tone === 'crit' ? `act now · ${item.owner || 'Discovery operator'}` : undefined}
+                </StatusPill>
+                <span className="ov-attention-text">{hostWords(item.text)}{item.detail ? <small>{hostWords(item.detail)}</small> : null}
+                  <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
+              </>
+            )
+            // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
+            return <li key={item.text}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
+          })}
+        </ul>
+      ) : (
+        <p className="ov-quiet">Nothing needs you.</p>
+      )}
+    </figure>
+  )
+}
+
+/**
  * The Discovery overview answers, in order: what is running now, what needs a person, what each play ran in the last
  * week and what it found; then the 30-day trends, then consumption (tokens, money, sandboxes, storage, seats). Every
  * number is what a store recorded; a series nobody measured says so instead of drawing zero.
@@ -214,29 +246,7 @@ export function OverviewPage({ api }: { api: string }) {
             </p>
           )}
         </figure>
-        <figure className="ov-card ov-attention" aria-label="Needs you">
-          <figcaption><span className="ov-card-title">Needs you</span></figcaption>
-          {attention.length ? (
-            <ul>
-              {attention.map((item) => {
-                const body = (
-                  <>
-                    {/* Only a crit item is red, and it names its owner in its own text; warn and info are neutral. */}
-                    <StatusPill status={statusOf({ axis: 'alert', tone: item.tone, live: true })} className="ov-light">
-                      {item.tone === 'crit' ? `act now · ${item.owner || 'Discovery operator'}` : undefined}
-                    </StatusPill>
-                    <span className="ov-attention-text">{hostWords(item.text)}{item.detail ? <small>{hostWords(item.detail)}</small> : null}
-                      <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
-                  </>
-                )
-                // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
-                return <li key={item.text}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
-              })}
-            </ul>
-          ) : (
-            <p className="ov-quiet">Nothing needs you.</p>
-          )}
-        </figure>
+        <NeedsYou attention={attention} />
       </div>
 
       <section className="ov-section" aria-label={`Last ${weekDays} days by play`}>

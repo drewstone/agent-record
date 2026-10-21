@@ -234,6 +234,9 @@ function resultAxis(input: Extract<StatusInput, { axis: 'result' }>): Status {
       : status('result', `Passed${checker ? ` ${checker}` : ''} (superseded)`, 'neutral', ENDING_GLYPH.ended)
   if (verdict === 'undecided' || verdict === 'inconclusive' || verdict === 'error' || verdict === null || verdict === undefined || verdict === 'unknown')
     return waiting ? status('result', 'Unverified', 'attention', ENDING_GLYPH.attention) : status('result', `Unverified${current ? '' : under}`, 'neutral', ENDING_GLYPH.unknown)
+  // A pass held for stages no known-good fixture has passed (tangle-tools check_summary `held`): the check passed, the run
+  // did not, and the fix is a fixture, not research. Neutral, never pass and never fail (design-system section 1).
+  if (verdict === 'held') return status('result', 'Passed, held', 'neutral', ENDING_GLYPH.ended)
   if (verdict === 'superseded') return status('result', 'Superseded', 'neutral', ENDING_GLYPH.ended)
   if (verdict === 'no-tag') return status('result', 'Not checked', 'neutral', ENDING_GLYPH.unknown)
   return status('result', `No pass yet${current ? '' : under}${count}`, 'neutral', ENDING_GLYPH.ended)
