@@ -1,0 +1,169 @@
+{
+ "schema": "agent-workspace.play-report.v1",
+ "id": "magnetar-rust",
+ "title": "magnetar-rust",
+ "asOf": "2026-10-19T22:43:19.768Z",
+ "built": {
+  "release": {
+   "tag": "rc16",
+   "runId": "magnetar-rust-20261018b",
+   "commit": "ca0416f0",
+   "basis": "best under the current checker",
+   "tree": "play-checks/magnetar-9154ce8fa470b6b5/src",
+   "builtAt": "2026-10-18T22:43:07.266Z"
+  },
+  "members": {
+   "value": [
+    "crates/mfield",
+    "crates/mhash",
+    "crates/mpoly",
+    "crates/msumcheck",
+    "crates/mpcs",
+    "crates/mspartan",
+    "crates/mmem",
+    "crates/mvm",
+    "crates/marith",
+    "crates/mprove",
+    "guests/tools/normalize"
+   ],
+   "unit": null,
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.toml",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "crates": {
+   "value": [
+    "marith",
+    "mfield",
+    "mhash",
+    "mmem",
+    "mpcs",
+    "mpoly",
+    "mprove",
+    "mspartan",
+    "msumcheck",
+    "mvm"
+   ],
+   "unit": null,
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.toml",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "lockedPackages": {
+   "value": 11,
+   "unit": "packages",
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.lock",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "externalCrates": {
+   "value": 0,
+   "unit": "crates",
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.lock",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "externalCrateNames": [],
+  "commands": {
+   "value": {
+    "build": [
+     "cargo",
+     "build",
+     "--release",
+     "--offline",
+     "--locked"
+    ],
+    "preprocess": [
+     "target/release/magnetar-preprocess"
+    ],
+    "prover": [
+     "target/release/magnetar-prove"
+    ],
+    "verifier": [
+     "target/release/magnetar-verify"
+    ]
+   },
+   "unit": null,
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/magnetar.json",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "guests": {
+   "value": 15,
+   "unit": "guests",
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/magnetar.json",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "docs": [
+   {
+    "path": "docs/ABI-TEST-MATRIX.md",
+    "title": "Magnetar guest workload — ABI test matrix (owner: vm lead)"
+   },
+   {
+    "path": "docs/ARCHITECTURE.md",
+    "title": "Magnetar-rust architecture (v2 — binding contracts)"
+   },
+   {
+    "path": "docs/MMEM.md",
+    "title": "MMEM — BinaryTwist / BinaryShout / BinaryRouter / output tape (design doc v1)"
+   },
+   {
+    "path": "docs/SOUNDNESS.md",
+    "title": "Soundness ledger — Magnetar-rust"
+   },
+   {
+    "path": "docs/VIRTUAL-ISA.md",
+    "title": "VIRTUAL-ISA — the Magnetar virtual-instruction layer (BINDING SPEC)"
+   },
+   {
+    "path": "docs/WORKLOADS.md",
+    "title": "Workload ABI — mandatory expansions (verbatim from the commission)"
+   },
+   {
+    "path": "docs/core-contracts.md",
+    "title": "Core crate API contracts (v1, core-lead owned)"
+   },
+   {
+    "path": "docs/pcs-design.md",
+    "title": "MosaicPCS / Ligerito design (pcs-lead working spec, v1)"
+   }
+  ],
+  "scripts": [
+   {
+    "path": "scripts/bench.sh",
+    "purpose": "bench.sh — Magnetar per-workload metrics harness (owner: core lead)."
+   },
+   {
+    "path": "scripts/selfcheck.sh",
+    "purpose": "selfcheck.sh — Magnetar development ruler. Mirrors the hidden acceptance check:"
+   }
+  ],
+  "benches": [
+   {
+    "dir": "audit-baseline",
+    "tag": null,
+    "table": true
+   },
+   {
+    "dir": "audit-baseline-v2",
+    "tag": null,
+    "table": true
+   },
+   {
+    "dir": "c3-rc14",
+    "tag": "rc14",
+    "table": true
+   },
+   {
+    "dir": "c3-rc15",
+    "tag": "rc15",
+    "table": true
+   },
+   {
+    "dir": "rc10-vm2",
+    "tag": "rc10",
+    "table": true
+   },
+   {
+    "dir": "rc10-vm2-2e20",
+    "tag": "rc10",
+    "table": true
+   }
+  ]
+ }
+}

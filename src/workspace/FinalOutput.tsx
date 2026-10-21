@@ -258,7 +258,7 @@ function QuestionDetail({ item }: { item: TraceReviewQuestion }) {
 
 /** The run's latest trace review: a model read the agents' sessions and answered each question with a 0–100 score
  * (higher is better), a verdict, quotes and suggestions. Advisory, like the persona panel. */
-export function TraceReviewSection({ review }: { review: TraceReview }) {
+export function TraceReviewSection({ review, runGoal = null }: { review: TraceReview; runGoal?: string | null }) {
   const { sessions } = review
   return (
     <div className="final-readout final-review" data-trace-review={review.final ? 'final' : 'live'}>
@@ -266,9 +266,12 @@ export function TraceReviewSection({ review }: { review: TraceReview }) {
         <h3>Trace review</h3>
         <span className="state-pill tone-neutral">{reviewPhaseLabel(review, when(review.generatedAt))}</span>
       </div>
-      <p className="final-summary">
-        <b>The requester's goal:</b> {review.goal ?? <span className="faint">not registered for this run</span>}
-      </p>
+      {/* A run with a goal never reads "not registered": the review simply did not restate it. */}
+      {(review.goal || !runGoal) && (
+        <p className="final-summary">
+          <b>The requester's goal:</b> {review.goal ?? <span className="faint">not registered for this run</span>}
+        </p>
+      )}
       <p className="final-links faint" data-review-sessions>
         <span>
           Read {sessions.read === null ? 'an unknown number of' : sessions.read} agent session{sessions.read === 1 ? '' : 's'}
@@ -348,7 +351,7 @@ export interface Grading {
 }
 
 /** The run a readout belongs to: how it ended and when, for the readout's deadline and its missing-readout sentence. */
-type SettledRun = { state: string | null | undefined; reason?: string | null; settledAt?: string | null; ending?: { at?: string | null } | null }
+type SettledRun = { state: string | null | undefined; reason?: string | null; settledAt?: string | null; ending?: { at?: string | null } | null; purpose?: string | null }
 const READOUT_DEADLINE_MS = 3_600_000
 
 /** `now` is the clock the readout's deadline is read against; a static render passes its document's own time. */
@@ -363,7 +366,7 @@ export function FinalOutputPanel({ output, grading, run, now = Date.now() }: { o
         {output.checkedAt && <span className="faint final-checked">checked {when(output.checkedAt)}</span>}
       </header>
       {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} run={run} now={now} />}
-      {output.traceReview && <TraceReviewSection review={output.traceReview} />}
+      {output.traceReview && <TraceReviewSection review={output.traceReview} runGoal={run?.purpose ?? null} />}
       {declared ? (
         <>
           <p className="final-declared">

@@ -65,13 +65,14 @@ test('a tag shows its score, the rule\'s pick and its flags on its commit', () =
   const rc2 = model.nodes.find((node) => node.id === sha('e'))
   assert.deepEqual(rc2.chips.map((chip) => [chip.label, chip.tone]), [
     ['merge', 'muted'],
-    ['rc2', 'accent'],
+    // A Knowledge-store version reads as pages vN, so "rc" means only a code release candidate.
+    ['pages v2', 'accent'],
     ['exact 4/4 · held-out 1/3 · blockers unknown · judge 81.3 (incomplete)', 'info'],
-    ['regression vs rc1: sampled', 'neutral'],
-    ['suspected judge-gaming vs rc1', 'neutral'],
+    ['regression vs pages v1: sampled', 'neutral'],
+    ['suspected judge-gaming vs pages v1', 'neutral'],
   ])
-  assert.equal(model.nodes.find((node) => node.id === sha('c')).chips[1].label, 'rc1 ★ picked by rule · not checked')
+  assert.equal(model.nodes.find((node) => node.id === sha('c')).chips[1].label, 'pages v1 ★ picked by rule · not checked')
   assert.equal(scoreLine({ ...doc.tags[0], score: null }), 'not scored yet')
-  assert.equal(flagLabel({ kind: 'other', tag: 'rc2', from: 'rc1', checks: [] }), 'other vs rc1')
+  assert.equal(flagLabel({ kind: 'other', tag: 'rc2', from: 'rc1', checks: [] }), 'other vs pages v1')
   assert.equal(model.nodes.find((node) => node.id === sha('d')).chips.length, 0, 'a plain write carries no chip')
 })

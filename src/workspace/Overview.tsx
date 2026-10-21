@@ -3,7 +3,10 @@ import type { OverviewAttention, OverviewDocument, OverviewLead, OverviewPlayWee
 import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
-import { hostWords } from './play-standing.js'
+import { hostWords, shortRun } from './play-standing.js'
+import { hm, newest, overviewAnswers } from './answers.js'
+import { AnswerStrip, AsOfStamp } from './AnswerStrip.js'
+import type { ReliabilityDocument } from './reliability-model.js'
 
 // Five ranked causes plus "other", none in a status hue: the series slots, then indigo, and "other" in faint ink.
 const LOSS_COLOR = [...SERIES.slice(0, 4), SERIES[4] ?? '#3a4bc4', 'var(--ar-fg-faint)']
@@ -102,7 +105,8 @@ function RunningRow({ run }: { run: OverviewRun }) {
           <span>{run.findingsPending ? 'findings not available yet' : `${run.results} results · ${run.claims} claims`}</span>
         </span>
         {run.purpose && <span className="ov-running-purpose">{run.purpose}</span>}
-        {run.lead && <Lead lead={run.lead} />}
+        {/* Only a passed check is a result here: a handoff page or a progress line is not what the run found. */}
+        {run.lead?.kind === 'check' && <Lead lead={run.lead} />}
       </a>
     </li>
   )
@@ -187,8 +191,17 @@ export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
   )
 }
 
+/** The last full day's clean share (a day before the document's own), else the week's. */
+function lastFullDay(doc: ReliabilityDocument | null | undefined) {
+  if (!doc || doc.schema !== 'discovery-lab.reliability.v1') return null
+  const today = doc.at.slice(0, 10)
+  const day = [...doc.daily].reverse().find((item) => item.day < today && item.runs > 0 && item.rate !== null)
+  return day ? { rate: day.rate, clean: day.clean, settled: day.runs, day: day.day } : { rate: doc.rate, clean: doc.runs.clean, settled: doc.runs.settled, day: null }
+}
+
 export function OverviewPage({ api }: { api: string }) {
   const doc = useDocument<OverviewDocument>(`${api}/overview`, 60_000, true)
+  const reliability = useDocument<ReliabilityDocument>(`${api}/reliability`)
   // The day charts and the totals above them follow this range; histograms and causes are the composed 30 days.
   const [range, setRange] = useState(14)
   const [weekShown, setWeekShown] = useState(25)
@@ -224,20 +237,33 @@ export function OverviewPage({ api }: { api: string }) {
   const weekClaims = sumOf(week.map((p) => p.claims))
   const weekCostTotal = week.reduce((sum, play) => sum + (play.apiEquivalentUsd ?? play.subscriptionUsd ?? play.listUsd ?? 0), 0)
   const weekCostUnknown = week.some((play) => (play.costUnknownRuns ?? 0) > 0)
+  // Running now is read at `runningAt` (change 1), the rest of the overview at its composition: one as-of, the newer.
+  const runningAt = d.runningAt ?? null
+  const asOf = { at: newest(runningAt, d.composedAt) ?? d.composedAt, meaning: runningAt ? 'when the running runs were read; the rest was composed earlier' : 'when the overview was composed', source: '/api/discovery/overview' }
+  const live = new Set(running.map((run) => run.runId))
+  const disagree = runningAt && runningAt !== d.composedAt ? week.flatMap((play) => play.runs.filter((run) => run.state === 'running' && !live.has(run.runId)).map((run) => ({ play: play.play, run }))) : []
   return (
     <div className="ws-page ov-page" data-overview>
+      <div className="ws-title-row ov-head">
+        <h1>Discovery</h1>
+        <AsOfStamp asOf={asOf} />
+      </div>
+      <AnswerStrip answers={overviewAnswers(d, lastFullDay(reliability.data))} label="Answers" />
       <div className="ov-now">
         <figure className="ov-card ov-now-runs" aria-label="Running now">
           <figcaption>
             <span className="ov-card-title">Running now</span>
             {/* A copy served while the overview recomposes says when it was composed; its running runs are read now. */}
-            {doc.stale && <span className="ov-stale" data-stale>as of {d.composedAt.slice(11, 16)}Z · refreshing</span>}
+            {doc.stale && <span className="ov-stale" data-stale>refreshing</span>}
             <span className="ov-card-sub">
               {running.length} running · {state.queued} queued
               {/* An unread census is left out rather than printed as "— (unknown)"; a census read earlier says how old it is. */}
               {state.sandboxesRunning != null && <> · {state.sandboxesRunning} sandboxes{state.sandboxesByKind.discovery != null ? ` (${state.sandboxesByKind.discovery} Discovery)` : ''}{state.censusAt ? `, census ${ago(state.censusAt)}` : ''}</>}
             </span>
           </figcaption>
+          {disagree.map(({ play, run }) => (
+            <p key={run.runId} className="ov-note" data-disagree={run.runId}>{shortRun(play, run.runId)}: running at {hm(d.composedAt)}, not at {hm(runningAt!)}</p>
+          ))}
           {running.length ? (
             <ol className="ov-running">{running.map((run) => <RunningRow key={run.runId} run={run} />)}</ol>
           ) : (

@@ -22,20 +22,27 @@ const pills = (html) => [...html.matchAll(/class="state-pill[^"]*" data-status="
 // The words a reader sees: text outside tags, so hover titles and the host's verbatim check lines stay out.
 const visible = (html) => html.replace(/<[^>]*>/g, ' ')
 
-test('the play header renders no red while nothing needs a person, and red only inside the live box for a red blocker', () => {
+// The tile and its drawer for one answer slot: the strip renders tiles first, then each slot's drawer.
+const drawerOf = (html, slot) => {
+  const start = html.indexOf(`data-drawer-for="${slot}"`)
+  const next = html.indexOf('data-drawer-for="', start + 1)
+  return html.slice(start, next < 0 ? html.indexOf('</section>', start) : next)
+}
+
+test('the play header renders no red while nothing needs a person, and red only for the needs-me item of a red blocker', () => {
   assert.equal(play.live.blocker, null)
   const calm = renderToStaticMarkup(createElement(PlayHeader, { play }))
   assert.deepEqual(statuses(calm).filter((status) => status.endsWith(':fail')), [])
-  assert.ok(statuses(calm).includes('run:Running 3.1 h:attention'), 'the live run is amber')
+  assert.ok(statuses(drawerOf(calm, 'is-it-working')).includes('run:Running 3.1 h:attention'), 'the live run is amber')
   assert.match(visible(calm), /No pass yet/)
   assert.doesNotMatch(visible(calm), /NOT SOLVED|withheld/)
 
   const blocker = { class: 'check-infra', severity: 'red', since: '2026-10-20T03:00:00Z', evidence: 'the check host refused the push', owner: 'Lab operator' }
   const red = renderToStaticMarkup(createElement(PlayHeader, { play: { ...play, live: { ...play.live, blocker } } }))
-  const live = red.slice(red.indexOf('data-live='), red.indexOf('</section>', red.indexOf('data-live=')))
+  const needs = drawerOf(red, 'needs-me')
   assert.deepEqual(marks(red).filter((status) => status.endsWith(':fail')), ['alert:act now:fail'])
-  assert.ok(statuses(live).includes('alert:act now:fail'), 'the fail mark sits inside [data-live]')
-  assert.match(live, /act now: Lab operator/, 'the fail mark names its owner in its own text')
+  assert.ok(statuses(needs).includes('alert:act now:fail'), 'the fail mark sits in the needs-me drawer')
+  assert.match(visible(needs), /act now: Lab operator/, 'the fail mark names its owner in its own text')
 
   // The same red blocker on a run that has ended is past: neutral.
   const ended = { ...play, live: null, standing: { ...play.standing, lastEnding: { runId: 'magnetar-rust-20261019f', run: '19f', word: 'cancelled', at: '2026-10-19T23:10:41Z', blocker } } }
@@ -177,7 +184,7 @@ test("the play's last run, a crash an hour old, is red only while no newer run o
   assert.equal(crash.state, 'driver-failed')
   const lastEnding = { runId: crash.id, run: '19b', word: 'died', at: new Date(Date.now() - 3_600_000).toISOString(), startedAt: crash.startedAt, reason: crash.reason ?? null, blocker: null }
   const head = (runs) => renderToStaticMarkup(createElement(PlayHeader, { play: { ...play, live: null, runs, standing: { ...play.standing, lastEnding } } }))
-  const lastRun = (html) => html.slice(html.indexOf('data-last-run='), html.indexOf('</section>', html.indexOf('data-last-run=')))
+  const lastRun = (html) => drawerOf(html, 'is-it-working')
 
   const newer = play.runs.filter((run) => Date.parse(run.startedAt) > Date.parse(crash.startedAt))
   assert.ok(newer.length >= 5, `${newer.length} newer runs recorded`)

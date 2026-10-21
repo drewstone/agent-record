@@ -1,0 +1,1296 @@
+{
+ "schema": "agent-workspace.run.v1",
+ "run": {
+  "id": "magnetar-rust-20261017c",
+  "group": "magnetar-rust-20261017c",
+  "kind": "run",
+  "play": "magnetar-rust",
+  "purpose": "Play magnetar-rust: Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's …",
+  "purposeBasis": "acceptance.purpose",
+  "format": "runtime",
+  "state": "no-winner",
+  "reason": "cancelled",
+  "playCheck": null,
+  "check": {
+   "latest": {
+    "at": "2026-10-18T03:14:36.703Z",
+    "tag": "rc102",
+    "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4",
+    "checker": "639c17a4485f",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+    "score": null,
+    "source": "play-check.json",
+    "verdict": "not-solved"
+   },
+   "best": {
+    "at": "2026-10-17T07:54:25.884Z",
+    "tag": "rc5",
+    "commit": "f41ba873e7cc58aa0a67340a04c5ea3071500f94",
+    "checker": "639c17a4485f",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: magnetar.json is missing: no deliverable to build",
+    "score": null,
+    "source": "play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   "passes": [],
+   "checkers": [
+    {
+     "checker": "639c17a4485f",
+     "from": "2026-10-17T07:54:25.884Z",
+     "to": "2026-10-18T03:14:36.703Z",
+     "checks": 54,
+     "solved": 0
+    }
+   ],
+   "gate": null,
+   "gateUnknown": null,
+   "counts": {
+    "checks": 57,
+    "known": 54,
+    "solved": 0,
+    "gates": 0,
+    "gateUnknown": 0
+   },
+   "headline": "rc102 NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this (10-18 03:14 UTC)",
+   "checkerNames": [
+    {
+     "sha256": "639c17a4485f",
+     "label": "v1",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "3d2b3f1e7a1c",
+     "label": "v2",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "a3cf95c7cd4a",
+     "label": "v3",
+     "ruling": "referee ruling 10-18 19:48Z",
+     "current": false
+    },
+    {
+     "sha256": "041435d77c69",
+     "label": "v4",
+     "ruling": "operator amendment 10-18 20:52Z",
+     "current": true
+    }
+   ]
+  },
+  "ending": {
+   "name": "cancelled",
+   "state": "no-winner",
+   "at": "2026-10-17T21:58:52.140Z",
+   "reason": "stopping to continue in a fresh press with the closed check loop (contract feedback to managers, pre-tag gate, dense score, seat cap 8); 17c was over the Coding Plan cap (12 vs 8) and blocked at the build step since 20:23Z; its code is preserved at tangle-discovery/magnetar-rust main = rc101 0394d1eeb",
+   "sentence": "The operator stopped this run.",
+   "by": "operator"
+  },
+  "startedAt": "2026-10-17T06:59:09.952Z",
+  "settledAt": "2026-10-17T21:58:52.140Z",
+  "durationMs": 53982188,
+  "nodes": 27,
+  "depth": 2,
+  "inputDigest": "9feb9570ef439ee3be383805cb55f41eb8d1f476bbf98f29be9d1d37a4dff93f",
+  "predecessor": null,
+  "supersedes": null,
+  "forkedFrom": null,
+  "lostHours": 59.78,
+  "hidden": null,
+  "harnesses": [],
+  "models": [],
+  "keys": [],
+  "location": {
+   "kind": "none",
+   "path": null
+  },
+  "record": {
+   "status": "ready",
+   "digest": null,
+   "builtAt": null,
+   "reason": null
+  },
+  "versions": null
+ },
+ "input": null,
+ "spend": null,
+ "versions": [],
+ "live": {
+  "mirrorAt": null,
+  "polling": false
+ },
+ "progress": {
+  "schema": "discovery.run-progress",
+  "runId": "magnetar-rust-20261017c",
+  "generatedAt": "2026-10-18T11:25:53.574Z",
+  "phase": "settled",
+  "final": true,
+  "startedAt": "2026-10-17T06:59:05.403Z",
+  "files": 43,
+  "outcome": {
+   "solved": false,
+   "checkedAt": "2026-10-17T21:58:58.296Z",
+   "firstFailingLine": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 0 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-24b6890684e5d434/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+   "stage": "hidden",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "lastStreamAt": "2026-10-17T21:55:03.246Z",
+   "minutesSinceLastStream": 810.8,
+   "latestCheck": {
+    "at": "2026-10-18T03:14:36.703Z",
+    "tag": "magnetar-rust-20261017c/rc102",
+    "line": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+    "stage": "hidden",
+    "known": true,
+    "solved": false,
+    "score": null
+   },
+   "gate": null,
+   "score": null,
+   "disputes": []
+  },
+  "blocker": null,
+  "endBlocker": null,
+  "spend": {
+   "runUsd": null,
+   "provenance": null
+  },
+  "briefs": [],
+  "samples": [
+   {
+    "at": "2026-10-17T20:21:38.239Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:26:26.367Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:31:09.304Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:35:44.139Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:40:37.228Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:45:36.031Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:50:10.034Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:54:49.716Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T20:59:27.758Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:04:13.676Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:08:41.609Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:13:29.138Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:18:21.867Z",
+    "files": 41,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:22:18.268Z",
+    "files": 42,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:27:09.317Z",
+    "files": 42,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:31:40.302Z",
+    "files": 42,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:35:04.367Z",
+    "files": 43,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:39:56.731Z",
+    "files": 43,
+    "working": 7,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:43:57.388Z",
+    "files": 43,
+    "working": 6,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:48:28.028Z",
+    "files": 43,
+    "working": 6,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:53:18.142Z",
+    "files": 43,
+    "working": 6,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T21:57:11.105Z",
+    "files": 43,
+    "working": 6,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-17T22:12:45.334Z",
+    "files": 43,
+    "working": 5,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-18T11:25:53.574Z",
+    "files": 43,
+    "working": 5,
+    "runUsd": null
+   }
+  ],
+  "agents": [
+   {
+    "node": "magnetar-rust-20261017c",
+    "label": "root",
+    "status": "no-winner",
+    "lastActiveAt": null,
+    "startedAt": "2026-10-17T06:59:09.952Z",
+    "endedAt": null,
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0",
+    "label": "lead-core",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T21:58:15.302Z",
+    "startedAt": "2026-10-17T07:12:51.911Z",
+    "endedAt": "2026-10-17T21:58:15.302Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1",
+    "label": "lead-vm",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T16:46:41.965Z",
+    "startedAt": "2026-10-17T07:13:20.208Z",
+    "endedAt": "2026-10-17T16:46:41.965Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s2",
+    "label": "lead-memory",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T11:24:23.678Z",
+    "startedAt": "2026-10-17T07:13:41.234Z",
+    "endedAt": "2026-10-17T11:24:23.678Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3",
+    "label": "lead-pcs",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T16:14:37.653Z",
+    "startedAt": "2026-10-17T07:14:01.930Z",
+    "endedAt": "2026-10-17T16:14:37.653Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s0",
+    "label": "mvm loader+interp+conformance",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T11:23:44.350Z",
+    "startedAt": "2026-10-17T07:23:51.719Z",
+    "endedAt": "2026-10-17T11:23:44.350Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s1",
+    "label": "virtual ISA + expansion + ROM",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T09:04:48.138Z",
+    "startedAt": "2026-10-17T07:24:46.569Z",
+    "endedAt": "2026-10-17T09:04:48.138Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s2",
+    "label": "15 guest workloads + normalizer",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T09:15:41.702Z",
+    "startedAt": "2026-10-17T07:25:43.863Z",
+    "endedAt": "2026-10-17T09:15:41.702Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s3",
+    "label": "marith layout + trace + dual relations",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T13:19:57.511Z",
+    "startedAt": "2026-10-17T07:26:36.834Z",
+    "endedAt": "2026-10-17T13:19:57.511Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s1",
+    "label": "mpoly+msumcheck",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T08:37:57.856Z",
+    "startedAt": "2026-10-17T07:27:38.580Z",
+    "endedAt": "2026-10-17T08:37:57.856Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s0",
+    "label": "mfield fast paths",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T08:35:06.633Z",
+    "startedAt": "2026-10-17T07:27:35.819Z",
+    "endedAt": "2026-10-17T08:35:06.633Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s2",
+    "label": "mhash crate",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T13:20:29.672Z",
+    "startedAt": "2026-10-17T07:27:38.871Z",
+    "endedAt": "2026-10-17T13:20:29.672Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s3",
+    "label": "mspartan reductions",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T13:19:55.898Z",
+    "startedAt": "2026-10-17T07:34:19.595Z",
+    "endedAt": "2026-10-17T13:19:55.898Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s0",
+    "label": "Ligerito port: tower+FFT+RS+commit+evalarg",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T11:36:23.944Z",
+    "startedAt": "2026-10-17T08:00:16.057Z",
+    "endedAt": "2026-10-17T11:36:23.944Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s1",
+    "label": "Ring switching + Mosaic layer",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T09:08:36.715Z",
+    "startedAt": "2026-10-17T08:01:19.390Z",
+    "endedAt": "2026-10-17T09:08:36.715Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s2",
+    "label": "PCS parameters + soundness ledger rows",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T09:08:37.008Z",
+    "startedAt": "2026-10-17T08:02:26.534Z",
+    "endedAt": "2026-10-17T09:08:37.008Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s4",
+    "label": "apply D4/D5 + AUIPC gate re-enable",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T12:52:51.174Z",
+    "startedAt": "2026-10-17T09:06:53.266Z",
+    "endedAt": "2026-10-17T12:52:51.174Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s4",
+    "label": "contract consolidation",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T13:21:11.546Z",
+    "startedAt": "2026-10-17T11:36:50.159Z",
+    "endedAt": "2026-10-17T13:21:11.546Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s5",
+    "label": "Construction 3 in mprove",
+    "status": "done",
+    "lastActiveAt": "2026-10-17T19:23:46.246Z",
+    "startedAt": "2026-10-17T11:37:27.232Z",
+    "endedAt": "2026-10-17T19:23:46.246Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s3",
+    "label": "M4 PCS perf: parallel encode + hashing",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T13:19:51.729Z",
+    "startedAt": "2026-10-17T11:45:24.255Z",
+    "endedAt": "2026-10-17T13:19:51.729Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s6",
+    "label": "Twist/Router/Shout wiring map",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T16:06:32.574Z",
+    "startedAt": "2026-10-17T11:59:00.555Z",
+    "endedAt": "2026-10-17T16:06:32.574Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s4",
+    "label": "referee",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T21:58:14.824Z",
+    "startedAt": "2026-10-17T12:37:06.424Z",
+    "endedAt": "2026-10-17T21:58:14.824Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s7",
+    "label": "Twist/Router/Shout wiring v2",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T21:58:04.145Z",
+    "startedAt": "2026-10-17T16:06:23.974Z",
+    "endedAt": "2026-10-17T21:58:04.145Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s8",
+    "label": "mfield GF(2^256) tower",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T20:09:32.393Z",
+    "startedAt": "2026-10-17T16:09:14.412Z",
+    "endedAt": "2026-10-17T20:09:32.393Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s9",
+    "label": "F256 challenge sweep",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T21:58:06.638Z",
+    "startedAt": "2026-10-17T16:27:36.523Z",
+    "endedAt": "2026-10-17T21:58:06.638Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s10",
+    "label": "mspartan F256 twin",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T21:58:32.249Z",
+    "startedAt": "2026-10-17T18:09:15.714Z",
+    "endedAt": "2026-10-17T21:58:32.249Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s11",
+    "label": "C3 prove/verify desync debug",
+    "status": "down",
+    "lastActiveAt": "2026-10-17T21:41:50.492Z",
+    "startedAt": "2026-10-17T18:41:50.499Z",
+    "endedAt": "2026-10-17T21:41:50.492Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   }
+  ]
+ },
+ "execution": {
+  "alive": false,
+  "lastActivityAt": "2026-10-17T21:58:52.140Z",
+  "failedAttempts": 1923,
+  "settleKind": "no-winner",
+  "endingError": null,
+  "lastAttempt": {
+   "at": "2026-10-17T21:58:21.770Z",
+   "error": "bridgeExecutor: turn aborted",
+   "classification": "terminal",
+   "madeProgress": false,
+   "retryInMs": null
+  },
+  "diagnoses": [],
+  "diagnosisError": null,
+  "resume": {
+   "status": "unknown",
+   "reason": "",
+   "command": null
+  },
+  "runnerTail": null
+ },
+ "receipt": {
+  "schema": "discovery-lab.run-receipt",
+  "runId": "magnetar-rust-20261017c",
+  "tag": "rc2",
+  "title": "Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's own tables, and then better.",
+  "brief": null,
+  "outcome": {
+   "status": "cancelled",
+   "sentence": "The operator stopped this run.",
+   "at": "2026-10-19T13:02:53.433Z",
+   "reason": "stopping to continue in a fresh press with the closed check loop (contract feedback to managers, pre-tag gate, dense score, seat cap 8); 17c was over the Coding Plan cap (12 vs 8) and blocked at the build step since 20:23Z; its code is preserved at tangle-discovery/magnetar-rust main = rc101 0394d1eeb",
+   "class": "operator"
+  },
+  "chosen": {
+   "tag": "rc2",
+   "commit": "04b24ff6f80f96cbcb65e1bd793680629a99d3d2",
+   "why": "exact checks, then held-out checks, then fewest open referee blockers, then judges, counted over the checks measured on both tags; ties keep the earlier tag; candidates are the declared tags and the newest clock snapshot"
+  },
+  "check": {
+   "passed": false,
+   "at": "2026-10-17T21:58:58.296Z",
+   "detail": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this\nIf you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.",
+   "source": "play-check.json",
+   "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "checkedOn": "magnetar-rust-20261017c/rc102",
+   "thisTag": false,
+   "known": true,
+   "output": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this\nIf you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.",
+   "checker": {
+    "path": "inputs/check.py",
+    "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7"
+   },
+   "inputs": {
+    "source": "https://github.com/tangle-discovery/magnetar-rust.git@magnetar-rust-20261017c/rc102",
+    "sha256": "003be3c031844ee17b07e8314cd378378276f0e0a79abbf65c890f63ecdce6bc",
+    "count": null
+   },
+   "rerun": "disco scorecard magnetar-rust-20261017c --play-check --recheck --force --queue --commit 2fde0fbe28d954939cb3ae09096ec67629e3c2d4 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\""
+  },
+  "files": [],
+  "decisions": [
+   {
+    "id": "take",
+    "label": "Take this version",
+    "consequence": "Save this version as your choice.",
+    "command": "curl 'https://drew-gtr-pro.taild10bfc.ts.net:8770/api/discovery/runs/magnetar-rust-20261017c/decisions' -H 'Origin: https://drew-gtr-pro.taild10bfc.ts.net:8770' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc2\\\",\\\"commit\\\":\\\"04b24ff6f80f96cbcb65e1bd793680629a99d3d2\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
+    "enabled": false,
+    "reason": "No play check ran on rc2 (04b24ff6)."
+   },
+   {
+    "id": "continue",
+    "label": "Continue from this version",
+    "consequence": "Start another run from this version.",
+    "command": "disco fork magnetar-rust-20261017c --at rc2 --spec <child-registration.json> --out <child-record.json> [--press]",
+    "enabled": false,
+    "reason": "Add a brief for the next run before continuing."
+   },
+   {
+    "id": "rerun",
+    "label": "Rerun the check",
+    "consequence": "Wait for any active check, then run this check again.",
+    "command": "disco scorecard magnetar-rust-20261017c --play-check --recheck --force --queue --commit 2fde0fbe28d954939cb3ae09096ec67629e3c2d4 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\"",
+    "enabled": true,
+    "reason": null
+   }
+  ],
+  "work": {
+   "wallHours": 15,
+   "recordedHours": 136.15549027777777,
+   "agentHours": 16.48531527777778,
+   "idleHours": 93.29683138888889,
+   "untracedHours": 26.37334361111111,
+   "partition": {
+    "status": "complete",
+    "reason": null
+   },
+   "toolCalls": null,
+   "tokens": {
+    "fresh": null,
+    "cached": null,
+    "output": null,
+    "cacheWrite": null,
+    "total": null
+   },
+   "tries": 2069
+  },
+  "waste": {
+   "afterPass": {
+    "hours": null,
+    "tokens": null,
+    "usd": null
+   },
+   "verdictDelay": {
+    "minutes": null,
+    "refusedChecks": null
+   }
+  },
+  "cost": {
+   "apiEquivalentUsd": {
+    "usd": 501.678811,
+    "estimated": 501.678811,
+    "provenance": "estimated"
+   },
+   "billedUsd": {
+    "model": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "compute": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "total": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "fill": "disco cost --refresh --run=magnetar-rust-20261017c"
+   },
+   "clause": "API-equivalent $501.68, billed unknown (fill with disco cost --refresh --run=magnetar-rust-20261017c)",
+   "provenance": "API-equivalent: estimated (Runtime totals, every token at API list price, whoever paid). Billed model: not reconciled. Billed compute: not reconciled."
+  },
+  "scores": {
+   "source": "current evaluator set",
+   "vector": {
+    "mandate": [
+     0,
+     0
+    ],
+    "exact": [
+     1,
+     1
+    ],
+    "heldOut": [
+     0,
+     0
+    ],
+    "blockers": null,
+    "judge": null,
+    "unscored": []
+   },
+   "complete": true,
+   "rule": "exact checks, then held-out checks, then fewest open referee blockers, then judges, counted over the checks measured on both tags; ties keep the earlier tag; candidates are the declared tags and the newest clock snapshot",
+   "checks": [
+    {
+     "id": "deliverables-present",
+     "tier": "exact",
+     "result": "pass",
+     "label": "handoff page present"
+    },
+    {
+     "id": "open-blockers",
+     "tier": "referee",
+     "result": "fail"
+    }
+   ],
+   "checkFirst": true
+  },
+  "contract": [],
+  "codeRepository": {
+   "url": "https://github.com/tangle-discovery/magnetar-rust",
+   "forkCommit": "59875cbd7b3efd6654e69755198c636e62bfe8f7",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4"
+  },
+  "generatedAt": "2026-10-19T13:02:53.433Z",
+  "continue": {
+   "fork": "disco fork magnetar-rust-20261017c --at rc2 --spec <child-registration.json> --out <child-record.json> [--press]",
+   "seed": "disco fork seed magnetar-rust-20261017c <seed-dir>",
+   "run": "disco run <child-registration.json> --knowledge-seed <seed-dir>",
+   "registration": null
+  },
+  "timeline": {
+   "start": null,
+   "end": null,
+   "deadline": null,
+   "lanes": [],
+   "marks": []
+  },
+  "sources": {},
+  "system": {
+   "play": {
+    "scores": [
+     {
+      "at": "2026-10-17T07:38:25.943Z",
+      "firstAt": "2026-10-17T07:08:20.989Z",
+      "tag": null,
+      "commit": null,
+      "solved": false,
+      "progress": null,
+      "checker": null,
+      "score": null
+     },
+     {
+      "at": "2026-10-17T07:54:25.884Z",
+      "firstAt": "2026-10-17T07:54:25.884Z",
+      "tag": "magnetar-rust-20261017c/rc5",
+      "commit": "f41ba873e7cc58aa0a67340a04c5ea3071500f94",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T08:09:26.523Z",
+      "firstAt": "2026-10-17T08:09:26.523Z",
+      "tag": "magnetar-rust-20261017c/rc8",
+      "commit": "fc16a0042d93ed726888703567897c8cd24ae3c9",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T08:28:16.663Z",
+      "firstAt": "2026-10-17T08:28:16.663Z",
+      "tag": "magnetar-rust-20261017c/rc12",
+      "commit": "54f6ddaaddc6ec5b39438a15352d94ec5a8adbd4",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T08:43:26.909Z",
+      "firstAt": "2026-10-17T08:43:26.909Z",
+      "tag": "magnetar-rust-20261017c/rc20",
+      "commit": "7f436f8b00d98ddc78b0f1be2285acb60435d888",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T08:58:28.632Z",
+      "firstAt": "2026-10-17T08:58:28.632Z",
+      "tag": "magnetar-rust-20261017c/rc33",
+      "commit": "e29ff94255ce8051ec2980cb69dbfcee4a95697f",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T09:14:28.202Z",
+      "firstAt": "2026-10-17T09:14:28.202Z",
+      "tag": "magnetar-rust-20261017c/rc42",
+      "commit": "d415a8d8fda35c798713b32b1c8907f1e415471f",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T09:30:05.842Z",
+      "firstAt": "2026-10-17T09:30:05.842Z",
+      "tag": "magnetar-rust-20261017c/rc49",
+      "commit": "32713e6a19184e6fd3c1f6eaf31e2e42640b418b",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T11:04:38.787Z",
+      "firstAt": "2026-10-17T09:48:20.792Z",
+      "tag": "magnetar-rust-20261017c/rc50",
+      "commit": "59e1b0b62f48bd955983cdfd0c39246e1ce3492b",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T11:20:34.740Z",
+      "firstAt": "2026-10-17T11:20:34.740Z",
+      "tag": "magnetar-rust-20261017c/rc52",
+      "commit": "0a756c483910b6a69623319bd91ea80be2c602b2",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T11:39:36.714Z",
+      "firstAt": "2026-10-17T11:39:36.714Z",
+      "tag": "magnetar-rust-20261017c/rc64",
+      "commit": "b8568ef35fe5fa54e90a6160254e3db109e75b66",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T11:55:34.704Z",
+      "firstAt": "2026-10-17T11:55:34.704Z",
+      "tag": "magnetar-rust-20261017c/rc69",
+      "commit": "a7dd111b9d59989f695f27905b42e3f9c8351bca",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T12:10:35.436Z",
+      "firstAt": "2026-10-17T12:10:35.436Z",
+      "tag": "magnetar-rust-20261017c/rc70",
+      "commit": "035c402abdc4f08f87f1ed4730c75d733293f485",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T12:25:35.518Z",
+      "firstAt": "2026-10-17T12:25:35.518Z",
+      "tag": "magnetar-rust-20261017c/rc71",
+      "commit": "c0f372dfd9b34d851e781b8f4badad897220e2ad",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T12:41:05.666Z",
+      "firstAt": "2026-10-17T12:41:05.666Z",
+      "tag": "magnetar-rust-20261017c/rc72",
+      "commit": "c0f372dfd9b34d851e781b8f4badad897220e2ad",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T12:57:25.158Z",
+      "firstAt": "2026-10-17T12:57:25.158Z",
+      "tag": "magnetar-rust-20261017c/rc74",
+      "commit": "2a689840f35e3adf92d9af777772fd20062e86ab",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T13:13:25.491Z",
+      "firstAt": "2026-10-17T13:13:25.491Z",
+      "tag": "magnetar-rust-20261017c/rc80",
+      "commit": "2b7a0226042b61007ac6a41eb9c28efbb35ec3a6",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T15:56:05.566Z",
+      "firstAt": "2026-10-17T13:33:32.690Z",
+      "tag": "magnetar-rust-20261017c/rc83",
+      "commit": "bbff0d492dfeacf5073999ff8c076d4e20e5faed",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T16:12:13.615Z",
+      "firstAt": "2026-10-17T16:12:13.615Z",
+      "tag": "magnetar-rust-20261017c/rc84",
+      "commit": "92e2e3bc96c982e7dfe100224e2eac759cfa1cab",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T16:28:05.304Z",
+      "firstAt": "2026-10-17T16:28:05.304Z",
+      "tag": "magnetar-rust-20261017c/rc87",
+      "commit": "69b599c1d3a8fe23bd5fbb397adb0d2113edb5ba",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T16:43:06.313Z",
+      "firstAt": "2026-10-17T16:43:06.313Z",
+      "tag": "magnetar-rust-20261017c/rc88",
+      "commit": "5e054e218c50d4ff3dee8fcaebd5365928924477",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T16:58:21.075Z",
+      "firstAt": "2026-10-17T16:58:21.075Z",
+      "tag": "magnetar-rust-20261017c/rc90",
+      "commit": "0af355683c1b625c9e1bd514de0eb02c65ebc83f",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T17:45:13.416Z",
+      "firstAt": "2026-10-17T17:14:06.082Z",
+      "tag": "magnetar-rust-20261017c/rc92",
+      "commit": "2e8f7feca9ace9c8829b9c4a8bc4c27a96f51560",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T18:17:05.323Z",
+      "firstAt": "2026-10-17T18:01:05.766Z",
+      "tag": "magnetar-rust-20261017c/rc93",
+      "commit": "bec7bcc986424463a60c4d8f76fc394595baadcd",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T19:05:05.513Z",
+      "firstAt": "2026-10-17T18:33:06.064Z",
+      "tag": "magnetar-rust-20261017c/rc95",
+      "commit": "c806cd4f238220d7eda81c85d2fee2644721ca37",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T19:21:05.699Z",
+      "firstAt": "2026-10-17T19:21:05.699Z",
+      "tag": "magnetar-rust-20261017c/rc98",
+      "commit": "cf4a1aa5d3e3df989db9495721eccb0b36dd63e6",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T19:36:10.425Z",
+      "firstAt": "2026-10-17T19:36:10.425Z",
+      "tag": "magnetar-rust-20261017c/rc99",
+      "commit": "1e3e1e36426bb49a35fb1955b63a97f30bb224c4",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T21:12:42.381Z",
+      "firstAt": "2026-10-17T19:51:24.288Z",
+      "tag": "magnetar-rust-20261017c/rc100",
+      "commit": "5633fb23bc923cf2f8d7a11cd81fa35c45680943",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-17T21:50:58.228Z",
+      "firstAt": "2026-10-17T21:28:06.995Z",
+      "tag": "magnetar-rust-20261017c/rc101",
+      "commit": "0394d1eeb0758e3874bafe3d44338ef2f76c3288",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-18T03:14:36.703Z",
+      "firstAt": "2026-10-18T03:14:36.703Z",
+      "tag": "magnetar-rust-20261017c/rc102",
+      "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7",
+       "basis": "row"
+      },
+      "score": null
+     }
+    ],
+    "firstPassAt": null
+   },
+   "attempts": {
+    "tries": 2069,
+    "failed": 1923,
+    "hours": 76.27,
+    "failedHours": 59.78,
+    "causes": [
+     {
+      "cause": "completed",
+      "label": "completed",
+      "tries": 146,
+      "hours": 16.49
+     },
+     {
+      "cause": "platform-lost",
+      "label": "platform lost or killed the turn",
+      "tries": 1278,
+      "hours": 8.58
+     },
+     {
+      "cause": "rate-limited",
+      "label": "a 429 killed the turn",
+      "tries": 637,
+      "hours": 48.43
+     },
+     {
+      "cause": "stopped",
+      "label": "stopped by the Lab or an operator",
+      "tries": 4,
+      "hours": 2.37
+     },
+     {
+      "cause": "other",
+      "label": "other",
+      "tries": 4,
+      "hours": 0.41
+     }
+    ],
+    "outcomes": [
+     {
+      "outcome": "ok",
+      "tries": 146,
+      "hours": 16.49
+     },
+     {
+      "outcome": "quota",
+      "tries": 570,
+      "hours": 34.18
+     },
+     {
+      "outcome": "lost",
+      "tries": 1271,
+      "hours": 6.04
+     },
+     {
+      "outcome": "rate-limit",
+      "tries": 67,
+      "hours": 14.25
+     },
+     {
+      "outcome": "oom",
+      "tries": 7,
+      "hours": 2.54
+     },
+     {
+      "outcome": "aborted",
+      "tries": 4,
+      "hours": 2.37
+     },
+     {
+      "outcome": "other",
+      "tries": 4,
+      "hours": 0.41
+     }
+    ],
+    "open": {
+     "nodes": 15,
+     "tokens": 689148234,
+     "agent": null,
+     "since": null,
+     "hours": null
+    }
+   },
+   "workers": {
+    "count": 26,
+    "neverFinished": 9,
+    "neverFinishedHours": 45.2,
+    "hours": 121.17
+   }
+  }
+ },
+ "finalOutput": null,
+ "findings": null
+}
