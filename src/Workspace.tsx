@@ -46,7 +46,10 @@ import { AgentTable } from './workspace/RunTable.js'
 import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
-import { LiveTranscript, RunExecution } from './workspace/LiveTranscript.js'
+import { LiveTranscript } from './workspace/LiveTranscript.js'
+import { RunFold, RunStatusLine, RunWhy } from './workspace/RunFold.js'
+import { newestAgent } from './workspace/run-answers.js'
+import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -376,6 +379,8 @@ const PLAY_TAB_REDIRECTS: Record<string, { tab: PlayTab; patch?: Record<string, 
 function PlayPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
   const play = useDocument<Play>(`${api}/plays/${encodeURIComponent(id)}`)
+  // The report's `built` answers "Built" until the play serves `play_head.built`; fetched once.
+  const report = useDocument<PlayReportDocument>(`${api}/plays/${encodeURIComponent(id)}/report`)
   // The head the host inlined in the shell paints the first screen before the play document arrives (B3).
   const inlined = useMemo(() => inlinedPlayHead(id), [id])
   const requested = params.get('tab') ?? 'standing'
@@ -445,7 +450,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     <Status loading={play.loading} error={play.error && `This play is unavailable: ${play.error}`}>
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
-          <PlayHeader play={doc} fallback={<PlayStanding play={doc} />} />
+          <PlayHeader play={doc} report={report.data} compact={tab !== 'standing'} fallback={<PlayStanding play={doc} />} />
           <Tabs
             label="Play"
             value={tab}
@@ -853,39 +858,6 @@ function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; ru
   )
 }
 
-/** The run page's detail views, by the `section` URL key; without one the page shows the run's overview. */
-type RunSection = 'findings' | 'progress' | 'agents' | 'graph' | 'versions' | 'profiles' | 'readout' | 'outputs' | 'spend' | 'assessments' | 'input' | 'coverage'
-const RUN_SECTIONS: readonly (readonly [RunSection, string])[] = [
-  ['findings', 'Findings'],
-  ['progress', 'Progress'],
-  ['agents', 'Agents'],
-  ['spend', 'Spend'],
-  ['readout', 'Readout'],
-  ['outputs', 'Outputs'],
-  ['graph', 'Graph'],
-  ['versions', 'Versions'],
-  ['profiles', 'Profiles'],
-  ['assessments', 'Assessments'],
-  ['input', 'Input'],
-  ['coverage', 'Coverage'],
-]
-/** Sections that draw from the selected agent's record part (every node, that agent's events). */
-const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'spend', 'assessments', 'coverage'])
-
-/** The detail view a URL asks for, or null for the run's overview; links from before the overview (`section`, `view`,
- * `tab`, `node`) still land on the view they named. `progress` now lives in the overview. */
-function sectionOf(params: URLSearchParams): RunSection | null {
-  const asked = params.get('section')
-  const known = RUN_SECTIONS.find(([value]) => value === asked)?.[0]
-  if (known) return known === 'progress' ? null : known
-  const view = params.get('view')
-  if (view === 'readout' || view === 'outputs') return view
-  const tab = params.get('tab')
-  if (tab === 'spend' || tab === 'assessments' || tab === 'input' || tab === 'coverage') return tab
-  if (params.get('node') || params.get('event') || tab) return 'agents'
-  return null
-}
-
 /**
  * The run page: a header, the run's answer in one strip, and one tab bar. Findings (what the agents wrote) open first;
  * Agents is a rail of the run's agents beside the selected agent's conversation; the other sections are the run's
@@ -911,6 +883,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [capturedStreams, setCapturedStreams] = useState<ReadonlySet<string>>(() => new Set())
   const openedLiveStream = useRef<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
+  // The play supplies the run's best against the play's, its lineage and the run that continued it.
+  const play = useDocument<Play>(run.data ? `${api}/plays/${encodeURIComponent(run.data.run.play)}` : null)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
   const digest = run.data?.run.record.digest ?? null
@@ -943,12 +917,17 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const doc = run.data!
   // One URL key per section: the section, plus what that section shows (the agent, its tab, the file).
   const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
+  const counts = overviewCounts(doc, index)
+  const tabs = <RunTabBar section={section} counts={counts} onOpen={(next) => (next ? open(next, { tab: undefined }) : update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined }))} />
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
-        <DetailBar doc={doc} section={null} counts={overviewCounts(doc, index)} onOpen={open} onBack={() => undefined} />
-        <RunOverview api={api} doc={run.data!} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
+        <div className="fold">
+          <RunFold doc={doc} play={play.data} />
+        </div>
+        {tabs}
+        <RunWhy doc={doc} play={play.data} />
+        <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
   const openFinding = (sha: string) => {
@@ -964,11 +943,10 @@ function RunPage({ api, id }: { api: string; id: string }) {
         : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
     </p>
   )
-  const counts = overviewCounts(doc, index)
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
-      <RunExecution doc={doc} onConversations={() => open('agents', { tab: undefined })} />
-      <DetailBar doc={doc} section={section} counts={counts} onOpen={open} onBack={() => update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined })} />
+      <RunStatusLine doc={doc} play={play.data} />
+      {tabs}
       {section === 'findings' &&
         (doc.findings?.total ? (
           <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
@@ -1038,7 +1016,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           <InputView input={doc.input} api={api} />
         </section>
       )}
-      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={!doc.execution.alive && recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
+      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested ?? (doc.execution.alive ? newestAgent(doc) : null)} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={!doc.execution.alive && recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
       {index && section === 'agents' && !streamConversation && actor && (
         <div className="agents-layout">
           <aside className="agent-rail" aria-label="Agents">
@@ -1130,59 +1108,6 @@ function overviewCounts(doc: RunDocument, index: RecordIndex | null): Partial<Re
     outputs: doc.finalOutput?.files.length,
   }
 }
-
-/**
- * A detail view's bar: back to the run's overview, the run and its state, and the other detail views. The overview
- * answers the run's questions; these are the evidence behind each answer (conversations, the commit and profile graphs,
- * ledgers, assessments, capture and input), one click from the section that names them.
- */
-function DetailBar({ doc, section, counts, onOpen, onBack }: { doc: RunDocument; section: RunSection | null; counts: Partial<Record<RunSection, number>>; onOpen: (section: RunSection) => void; onBack: () => void }) {
-  const run = doc.run
-  const views = DETAIL_VIEWS.filter(([value]) => value !== 'findings' || section === 'findings' || !!doc.findings?.total)
-  // On the overview the bar is the way to each detail view (B4); in a detail view it leads back first.
-  return (
-    <nav className="run-tabs detail-bar" aria-label="Detail views" data-detail-bar={section ?? 'overview'}>
-      {section !== null && (
-        <button type="button" className="run-tab detail-back" onClick={onBack} data-section-tab="overview">
-          ← Overview
-        </button>
-      )}
-      <span className="detail-run mono" title={run.id}>
-        {shortRun(run.play, run.id)} <StatusPill status={runStatus(run)} />
-      </span>
-      <span className="detail-views">
-        {views.map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={`run-tab ${section === value ? 'on' : ''}`}
-            aria-current={section === value ? 'page' : undefined}
-            data-section-tab={value}
-            onClick={() => onOpen(value)}
-          >
-            {label}
-            {counts[value] ? <span className="run-tab-count">{counts[value]}</span> : null}
-          </button>
-        ))}
-      </span>
-    </nav>
-  )
-}
-
-/** The detail views, in the order a reader reaches for evidence. */
-const DETAIL_VIEWS: readonly (readonly [RunSection, string])[] = [
-  ['agents', 'Conversations'],
-  ['versions', 'Versions'],
-  ['profiles', 'Profiles'],
-  ['outputs', 'Outputs'],
-  ['readout', 'Readout'],
-  ['spend', 'Spend ledger'],
-  ['findings', 'Findings'],
-  ['graph', 'Graph'],
-  ['assessments', 'Assessments'],
-  ['coverage', 'Capture'],
-  ['input', 'Input'],
-]
 
 /** Spend, input and gaps for a run without a record. */
 function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {

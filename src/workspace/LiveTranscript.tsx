@@ -1,19 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RecordEvent, RunRecord } from '../record.js'
-import type { RunDocument } from '../workspace-model.js'
 import { Conversation } from '../viewer/Conversation.js'
-import { compact, indexRecord } from '../viewer/model.js'
+import { indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 import { EventDetail } from './EventDetail.js'
-import { dataStatus, runStatus, StatusPill, statusOf } from './data.js'
-import { BlockerChip } from './PlayHead.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
 type StreamPage = { runId: string; node: string; generation?: string; reset?: boolean; events: StreamRow[]; firstSeq: number | null; lastSeq: number | null; hasEarlier: boolean; hasMore: boolean; alive: boolean; nodes: StreamNode[] }
 const LIMIT = 200
 const RETAIN = 2000
-const FIX_PREVIEW = 180
 
 /** Project the runtime's normalized stream into the existing Conversation and its tool-pairing model. */
 function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: StreamRow[]): RunRecord {
@@ -62,79 +58,6 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
     }, { id: node, start: group[0]!.at }, stream, { sha256: '' }, group, { where: (i) => ({ line: group[i]!.seq + 1 }), full: () => null }, () => 'other')
   }
   return { schema: 'agent-record.v1', runId, title: runId, nodes: nodes.map((item) => ({ ...item, kind: 'agent' })), events, sources: [], assignment: { objective: '', suppliedKnowledge: '', deliverables: '', constraints: '', source: null }, terminal: null, coverage: { completeOriginalCapture: false, publicContent: 'Live stream window', categoryMethod: 'Runtime event kind', cost: 'Unknown' } }
-}
-
-const clock = (at: string | null | undefined) => at ? `${new Date(at).toISOString().slice(11, 16)} UTC` : null
-/** A Lab sentence with its ISO timestamps as `10-19 02:42Z`, the way the rest of the page writes times. */
-const humane = (text: string) => text.replace(/\b\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)(?::\d\d(?:\.\d+)?)?Z\b/g, '$1-$2 $3Z')
-const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
-
-/**
- * The run's status first, with what blocks it as the headline (M4): how it ended in one name and why (the receipt's
- * outcome reason), the newest tag gate that did not pass, and the turns a quota (HTTP 429) ended. The driver's own last
- * error and the runner log stay under Ending evidence.
- */
-export function RunExecution({ doc, onConversations }: { doc: RunDocument; onConversations: () => void }) {
-  const execution = doc.execution
-  const [now, setNow] = useState(Date.now)
-  useEffect(() => {
-    if (!execution?.alive) return
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000)
-    return () => window.clearInterval(timer)
-  }, [execution?.alive])
-  if (!execution) return null
-  const diagnosis = execution.diagnoses[0]
-  const fix = diagnosis ? compact(diagnosis.fix) : ''
-  const fixLine = fix.length > FIX_PREVIEW ? `${fix.slice(0, FIX_PREVIEW - 1).trimEnd()}…` : fix
-  const age = execution.lastActivityAt ? Math.max(0, Math.floor((now - Date.parse(execution.lastActivityAt)) / 1000)) : null
-  const ending = execution.alive ? statusOf({ axis: 'run', state: 'running' }) : doc.run.ending || doc.run.state === 'stalled' ? runStatus(doc.run) : statusOf({ axis: 'run', state: execution.settleKind ?? 'unknown' })
-  const raw = (doc.receipt?.outcome?.reason ?? doc.run.ending?.reason ?? (doc.run.state === 'stalled' ? doc.run.reason : null))?.replace(/^stalled:\s*/, '') ?? null
-  const reason = raw ? humane(raw) : null
-  const gate = doc.progress?.outcome?.gate
-  const blockedGate = gate?.line && gate.verdict && gate.verdict !== 'pass' ? gate : null
-  // The gate's newest verdicts that could not decide (the host's check summary): the prover ran past its limit N times.
-  // The Lab's blocker leads; a list line that repeats one of its classes is left out.
-  const live = execution.alive ? (doc.progress?.blocker ?? null) : (doc.progress?.endBlocker ?? null)
-  const classes = new Set([live?.class, ...(live?.also ?? []).map((item) => item.class)].filter(Boolean))
-  const undecided = doc.run.check?.gateUnknown?.count && !classes.has('gate-undecided') ? doc.run.check.gateUnknown : null
-  const quota = classes.has('quota-wall') ? null : (doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null)
-  const resume = execution.resume.status === 'preserved' || execution.resume.reason || execution.resume.command
-  // What blocked the run, as the play page shows it (discovery-lab blockerOf): the live blocker, or for an ended run what
-  // blocked it just before it ended. 19b's page said only "driver-failed" while the Lab had its stuck turn and refused push.
-  const block = live
-  const ended = execution.alive ? null : (doc.run.ending?.at ?? execution.lastActivityAt ?? null)
-  const wallHours = doc.receipt?.work?.wallHours ?? null
-  // What blocks a live run is attention; on an ended run the same lines are history, neutral.
-  const blocking = statusOf({ axis: 'alert', severity: 'amber', live: execution.alive })
-  return <section className="run-execution" aria-label="Run status">
-    <p role="status" data-run-status>
-      <StatusPill status={ending} />
-      {execution.alive ? <> · last activity {age !== null && Number.isFinite(age) ? `${age} s ago` : 'unknown'} · attempts failed {execution.failedAttempts}</> : <>
-        {reason ? <span data-field="receipt.outcome.reason"> · {reason}</span> : <>
-          {execution.endingError && <> · {execution.endingError.name}</>}
-          {execution.lastAttempt && <> · last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</>}
-        </>}
-        {diagnosis && <span> · {diagnosis.id}: {fixLine}</span>}
-      </>}
-    </p>
-    {block && <div className="run-end-blocker" data-run-blocker={block.class}><BlockerChip blocker={block} until={ended} wallHours={wallHours} /></div>}
-    {(blockedGate || undecided || quota) && <ul className="run-blockers" aria-label="What blocks the run">
-      {undecided && <li data-field="run.check.gateUnknown" data-status={dataStatus(blocking)}><strong>{blocking.shape} Tag gate unverified {undecided.count}×</strong> {clock(undecided.from)}{undecided.count > 1 && <>–{clock(undecided.to)}</>}{undecided.tags?.length ? <> on <code>{undecided.tags.join(', ')}</code></> : null}{undecided.line && <>: <span className="run-blocker-line">{undecided.line}</span></>}</li>}
-      {blockedGate && <li data-field="progress.outcome.gate" data-status={dataStatus(blocking)}><strong>{blocking.shape} Tag gate {blockedGate.verdict}</strong>{shortTag(blockedGate.tag) && <> on <code>{shortTag(blockedGate.tag)}</code></>}{clock(blockedGate.at) && <> at {clock(blockedGate.at)}</>}: <span className="run-blocker-line">{blockedGate.line}</span></li>}
-      {quota && <li data-field="receipt.system.attempts.causes" data-status={dataStatus(blocking)}><strong>{blocking.shape} {quota.tries} quota hits</strong>: {quota.label ?? 'a 429 ended the turn'}{quota.hours ? ` (${quota.hours} h of turns)` : ''}</li>}
-    </ul>}
-    <div className="run-execution-next">
-      {resume ? <span>{execution.resume.status === 'preserved' ? 'Source sandbox preserved. Resume with ' : execution.resume.reason ? `${execution.resume.reason} ` : ''}{execution.resume.command && <code>{execution.resume.command}</code>}</span> : <span />}
-      <button type="button" className="ui-button" onClick={onConversations}>Conversations</button>
-    </div>
-    {!execution.alive && (execution.endingError?.message || execution.runnerTail || execution.diagnosisError || execution.diagnoses.length > 0 || (reason && execution.lastAttempt)) && <details><summary>Ending evidence</summary>
-      {reason && execution.lastAttempt && <p>Last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</p>}
-      {execution.diagnoses.length > 0 && <dl>{execution.diagnoses.map((item) => <div key={item.id}><dt><strong>{item.id}</strong></dt><dd>{item.fix}</dd></div>)}</dl>}
-      {execution.endingError?.message && <pre>{execution.endingError.message}</pre>}
-      {execution.diagnosisError && <p>Known failure lookup unavailable: {execution.diagnosisError}</p>}
-      {execution.runnerTail && <><p>Runner log tail</p><pre>{execution.runnerTail}</pre></>}
-    </details>}
-  </section>
 }
 
 /** A bounded stream window. Only the selected agent is fetched; settled runs load once, without a timer. */

@@ -54,6 +54,12 @@ function resolveLink(from: string, href: string): string | null {
   return parts.join('/')
 }
 
+/** A run whose deliverable is its code repository, with no release tag cut yet. */
+const codeOnly = (doc: RunDocument) => {
+  const repo = (doc.receipt as { codeRepository?: { url?: string | null; tag?: string | null } | null } | null | undefined)?.codeRepository
+  return Boolean(repo?.url && !repo.tag)
+}
+
 /**
  * The run's outputs in the drawer: each deliverable the readout names with the files under it, and the selected file
  * drawn by its kind. A link inside a delivered page opens the file it names when the run delivered it.
@@ -90,7 +96,7 @@ export function OutputsView({ doc, grading, selected, onSelect, onClose }: { doc
         <div className="outputs-body">
           {!output || (groups.length === 0 && !output.rootOutput) ? (
             <p className="chat-empty">
-              {output?.status === 'none-declared' ? 'This run declared no deliverable and its readout names none.' : 'No output file is listed for this run.'}
+              {output?.status === 'none-declared' ? (codeOnly(doc) ? 'The deliverable is code: no release tag yet.' : 'This run declared no deliverable and its readout names none.') : 'No output file is listed for this run.'}
             </p>
           ) : null}
           {output?.readout?.charts?.length ? (

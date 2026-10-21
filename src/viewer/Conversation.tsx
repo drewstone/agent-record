@@ -257,8 +257,9 @@ export function Conversation({
   // else, the rows above keep their measured heights and the reading place does not move.
   const following = useRef(false)
   useLayoutEffect(() => {
-    following.current = false
-    if (scroll.current && !targetRef.current) scroll.current.scrollTop = 0
+    // A live conversation opens at its newest event and follows it; a recorded one opens at its first message.
+    following.current = live && !targetRef.current
+    if (scroll.current && !targetRef.current) scroll.current.scrollTop = live ? scroll.current.scrollHeight : 0
   }, [actor])
   useEffect(() => {
     const element = scroll.current

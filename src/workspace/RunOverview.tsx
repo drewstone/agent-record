@@ -11,21 +11,26 @@ import { CalibrationLabels } from './Calibration.js'
 import { dataStatus, StatusPill, statusOf } from './data.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
+import { type Play, plainWords } from './answers.js'
+import { lineReason } from './play-standing.js'
+import { fixedIn, successorOf } from './run-answers.js'
+import { pagesVersion } from './version-graph.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
 const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
 
 /** All measures and decisions belong to the Lab document. This component only formats them. */
-export function RunOverview({ api, doc, open, print = false }: { api: string; doc: RunDocument; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
+export function RunOverview({ api, doc, play = null, open, print = false }: { api: string; doc: RunDocument; play?: Play | null; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
   const r = doc.receipt
+  const successor = successorOf(play, doc.run?.id ?? r?.runId ?? '')
   const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
   // A run without a Lab receipt still has its check facts on the run document: its verdict, a held pass, its disputes and
   // its calibration draw from them.
-  if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p>
+  if (!r?.outcome || !r.work) return <section className="rr-page"><h2>Run receipt</h2><p className="rr-muted">No receipt recorded yet.</p>
     <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} settled={settled} check={doc.run?.check ?? null} /></section>
   // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
   const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null}
+  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} successor={successor}
     check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} actNow={!settled && block?.severity === 'red' ? (block.owner ?? 'Discovery operator') : null} />
 }
 
@@ -59,23 +64,46 @@ export function checkerName(check: RunCheck | null | undefined, digest: string |
   return found?.label ? `${found.label} (${found.ruling ?? 'as pressed'})` : `checker ${digest.slice(0, 8)}`
 }
 
-function earlierPasses(r: RunReceipt, outcome: Outcome | null, check: RunCheck | null) {
+/**
+ * `named` writes the check versions by their labels (`v3 (referee ruling 10-18 19:48Z)`), for "How the check works";
+ * elsewhere the page says "an earlier check", so version labels stay in that drawer (design-system section 6).
+ */
+function earlierPasses(r: RunReceipt, outcome: Outcome | null, check: RunCheck | null, named = false) {
   if (outcome?.solved !== false) return null
   // The host's passes count every solved row per tag and checker (rc14 under v3: 3×, 20:14–20:46), as the play page does.
   const group = check?.passes?.at(-1)
   if (group) {
     const current = check?.checkerNames?.find((item) => item.current)
-    return `Nothing passes the current check${current?.label ? ` (${current.label}, ${current.ruling ?? 'as pressed'})` : ''}; ${shortTag(group.tag) ?? 'a version'} passed ${checkerName(check, group.checker)} ${group.count}×, ${clock(group.firstAt)}${group.count > 1 ? `–${clock(group.lastAt)}` : ''}`
+    return `Nothing passes the current check${named && current?.label ? ` (${current.label}, ${current.ruling ?? 'as pressed'})` : ''}; ${shortTag(group.tag) ?? 'a version'} passed ${named ? checkerName(check, group.checker) : 'an earlier check'} ${group.count}×, ${clock(group.firstAt)}${group.count > 1 ? `–${clock(group.lastAt)}` : ''}`
   }
   const passes = (r.system?.play?.scores ?? []).filter((point) => point.solved)
   const last = passes.at(-1)
   if (last) {
     const same = passes.filter((point) => point.tag === last.tag && checkerOf(point) === checkerOf(last))
     const checker = checkerOf(last)
-    return `Nothing passes the current check; ${shortTag(last.tag) ?? last.commit?.slice(0, 8) ?? 'a version'} passed${checker ? ` under checker ${checker.slice(0, 8)}` : ''} ${same.length}×, ${clock(same[0]!.at)}${same.length > 1 ? `–${clock(last.at)}` : ''}`
+    return `Nothing passes the current check; ${shortTag(last.tag) ?? last.commit?.slice(0, 8) ?? 'a version'} passed${checker ? (named ? ` under checker ${checker.slice(0, 8)}` : ' an earlier check') : ''} ${same.length}×, ${clock(same[0]!.at)}${same.length > 1 ? `–${clock(last.at)}` : ''}`
   }
   const first = r.system?.play?.firstPassAt
   return first ? `Nothing passes the current check; the check first passed at ${clock(first)}` : null
+}
+
+/**
+ * What the check says now, before its method: whether a release passed, how many checks ran since when, and the newest
+ * check's line. `No release yet · 12 checks since 20:24Z, newest 23:03Z: could not read play repository …`.
+ */
+function checkResult(r: RunReceipt, check: RunCheck | null) {
+  const latest = check?.latest ?? null
+  const count = check?.counts?.checks ?? null
+  const first = (r.system?.play?.scores ?? []).map((point) => point.at).sort()[0] ?? null
+  const head = r.check?.passed ? `Passed on ${shortTag(r.check.tag) ?? 'its release'}` : r.check?.tag ? `Not passed on ${shortTag(r.check.tag)}` : 'No release yet'
+  const tail = [count !== null ? `${count} ${count === 1 ? 'check' : 'checks'}${first ? ` since ${first.slice(11, 16)}Z` : ''}` : null, latest?.at ? `newest ${latest.at.slice(11, 16)}Z${latest.line ? `: ${plainWords(lineReason(latest.line))}` : ''}` : null].filter(Boolean)
+  return [head, ...tail].join(' · ')
+}
+
+/** A contract line's first clause, for the table; the full line is in its drawer. */
+const lineShort = (line: string) => {
+  const head = line.replace(/^NOT SOLVED:\s*/, '').split(/[:;|]/)[0]!.trim()
+  return head.length > 72 ? `${head.slice(0, 71)}…` : head
 }
 
 const RESOLVED: Record<string, string> = { passed: 'the check passed', released: 'its public stages passed and the tag was published', moved: 'a later stage failed instead' }
@@ -177,12 +205,13 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
   const result = held
     ? statusOf({ axis: 'result', verdict: 'held', held })
     : outcome && outcome.solved !== null && outcome.solved !== undefined
-      ? statusOf({ axis: 'result', verdict: outcome.solved ? 'solved' : 'not-solved', current: named?.current ?? true, checker: named?.current === false ? (named.label ?? null) : null })
+      ? statusOf({ axis: 'result', verdict: outcome.solved ? 'solved' : 'not-solved', current: named?.current ?? true, checker: named?.current === false ? 'an earlier check' : null })
       : null
   // The host's label leads (it composes the sentence); a held pass and a verdict under a retired check read as statusOf words them.
   const verdict = result && (held || named?.current === false) ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet'))
   const audit = outcome?.goalAudit ?? null
   const passes = r && earlierPasses(r, outcome, check)
+  const versions = check?.checkerNames ?? []
   return <section className="rr-now" aria-labelledby="rr-now-title" data-section="now">
     <h2 id="rr-now-title">Now</h2>
     {outcome && <p className="rr-now-verdict" data-field="progress.outcome.solved">
@@ -190,12 +219,15 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
       {untagged?.line && <span data-field="run.check.latest"> · newest {untagged.at ? clock(untagged.at) : ''}: {untagged.line}</span>}
       {audit?.verdict && <span data-field="progress.outcome.goalAudit"> · {GOAL_AUDIT[audit.verdict]}{audit.at && ` ${audit.verdict === 'unaudited' ? 'last tried' : 'at'} ${clock(audit.at)}`}</span>}
-      {/* A settled run's last stream is a time, not an age that froze when its progress was last written (B6). */}
-      {settled ? outcome.lastStreamAt && <span data-field="progress.outcome.lastStreamAt"> · last agent stream {clock(outcome.lastStreamAt)}</span>
-        : outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
     </p>}
     {check?.calibration && <CalibrationLabels calibration={check.calibration} field="run.check.calibration" />}
     {passes && <p className="rr-now-passes" data-field="system.play.firstPassAt">{passes}</p>}
+    {versions.length > 0 && <details className="check-works" data-check-works>
+      <summary>How the check works</summary>
+      <ul>{versions.map((item) => <li key={item.sha256}>{item.label ?? item.sha256.slice(0, 8)}{item.current ? ' (current)' : ''}: {item.ruling ?? 'as pressed'}</li>)}</ul>
+      {named && <p>The newest verdict ran under {named.label ?? named.sha256.slice(0, 8)}{named.current ? ', the current version' : ', a retired version'}.</p>}
+      {r && passes && <p>{earlierPasses(r, outcome, check, true)}</p>}
+    </details>}
     {outcome?.checkWait && <p className="rr-now-wait" data-field="progress.outcome.checkWait">
       <strong>{shortTag(outcome.checkWait.tag) ?? 'The newest version'} is not checked yet</strong>
       {outcome.checkWait.publishedAt && <span> · published {clock(outcome.checkWait.publishedAt)}</span>}
@@ -210,15 +242,17 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
         {d.referees?.length ? <span data-field={`progress.outcome.disputes.${i}.referees`}>Referees: {refereeText(d.referees)}</span> : null}
       </li>)}</ol></>}
     {figure && <div className="rr-chart" data-field="system.play.scores"><FigureView figure={figure} /></div>}
-    {contract.length > 0 && <><h3>Contract lines sent</h3><ol className="rr-contract" data-field="contract">{contract.map((d, i) => {
+    {contract.length > 0 && r && <><h3>Contract lines sent</h3><div className="rr-table" data-field="contract"><table className="rr-contract-table"><thead><tr><th>Line</th><th>Sent</th><th>Fixed in</th><th>Then</th></tr></thead><tbody>{contract.map((d, i) => {
       const acks = d.acknowledgements ?? []
-      return <li key={`${d.at}-${i}`} data-field={`contract.${i}`}>
-        <code className="rr-contract-line">{d.line}</code>
-        <span>Sent {clock(d.at)} on <code>{shortTag(d.tag) ?? d.commit?.slice(0, 8) ?? '?'}</code> to {d.targets.length === 1 ? 'the root' : `${d.targets.length} agents`}</span>
-        <span data-field={`contract.${i}.acknowledgements`}>Acknowledged: {acks.length === 0 ? 'none recorded' : acks.map((ack) => `${shortAgent(ack.worker, r?.runId ?? '')} ${ack.effect}`).join(', ')}</span>
-        <span data-field={`contract.${i}.fixCommit`}>{d.fixCommit ? <>Fixed in <code>{d.fixCommit.slice(0, 8)}</code>{d.resolvedOn && shortTag(d.resolvedOn) !== d.fixCommit ? <> (<code>{shortTag(d.resolvedOn)}</code>)</> : null}: </> : null}{contractState(d)}</span>
-      </li>
-    })}</ol></>}
+      // "Fixed in" names a release only when that release was cut after the line was sent.
+      const fix = fixedIn(r, d)
+      return <tr key={`${d.at}-${i}`} data-field={`contract.${i}`}>
+        <td><details className="rr-contract-line"><summary>{lineShort(d.line)}</summary><code>{d.line}</code><p data-field={`contract.${i}.acknowledgements`}>To {d.targets.length === 1 ? 'the root' : `${d.targets.length} agents`}; acknowledged: {acks.length === 0 ? 'none recorded' : acks.map((ack) => `${shortAgent(ack.worker, r.runId)} ${ack.effect}`).join(', ')}</p></details></td>
+        <td data-sent={d.at}>{clock(d.at)} on <code>{shortTag(d.tag) ?? d.commit?.slice(0, 8) ?? '?'}</code></td>
+        <td data-field={`contract.${i}.fixCommit`}>{fix ? <>Fixed in <code>{fix.tag}</code>{fix.commit && fix.commit !== fix.tag ? <> (<code>{fix.commit}</code>)</> : null}</> : 'not fixed by a later release'}</td>
+        <td>{contractState(d)}</td>
+      </tr>
+    })}</tbody></table></div></>}
   </section>
 }
 
@@ -300,7 +334,7 @@ function TurnEndings({ causes, live, actNow }: { causes: TurnCause[]; live: bool
   })}</ul>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null, successor = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null; successor?: { runId: string; run: string } | null }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -311,13 +345,13 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const chosenChecked = r.chosen.checked ?? (r.chosen.commit ? checkedCommits.has(r.chosen.commit) : false)
   const unchecked = hasRelease && !chosenChecked ? `No play check ran on ${shortTag(r.chosen.tag)} (${r.chosen.commit!.slice(0, 8)}), so there is no checked version to act on.` : null
   // A live run's controls (wrapup, stop) act on the run, not on a version, so they need no checked release.
+  // A run a newer run of its play continued offers no rerun of its check: the work went on there.
   const decisions = r.decisions.map((decision, i) => ({ ...decision, index: i, blocked: decision.id === 'rerun' || RUN_CONTROLS.has(decision.id) ? null : unchecked })).filter((decision) =>
-    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) : RUN_CONTROLS.has(decision.id) || hasRelease))
+    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) && !successor : RUN_CONTROLS.has(decision.id) || hasRelease))
   const equivalent = r.cost.apiEquivalentUsd?.usd ?? null
   // What was billed: the receipt's reconciled total, else the host's reading of a seat-paid host placement ($0 per call).
   const billed = r.cost.billedUsd.total.usd ?? billing?.billedUsd ?? null
   const plan = r.cost.plan ?? (billing?.seat ? `${billing.seat} seat` : null)
-  const quota = r.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
   const failures = (r.system?.attempts?.causes ?? []).filter((cause) => cause.cause !== 'completed' && cause.tries > 0)
   const workers = r.system?.workers ?? null
   const firstPassAt = r.system?.play?.firstPassAt ?? null
@@ -348,30 +382,30 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const figure = timeline(lanes, { measure: 'Recorded agent time', ...(r.timeline.end ? { now: Date.parse(r.timeline.end) } : {}), marks })
   const versionFigure = r.versions?.rows.length && r.versions.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
   return <article className={`rr-page${print ? ' rr-print' : ''}`} data-overview data-receipt={r.runId}>
-    <header className={`rr-verdict rr-${r.outcome.status}`}>
-      <div className="rr-title-row"><h1 data-field="title" title={r.title}>{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
-      <p data-field="outcome.sentence">{r.outcome.sentence}</p>
-      <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{quota && <span data-field="system.attempts.causes">{quota.tries} quota hits</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
+    {/* The run page's fold is its head; a printed receipt names its run and tag, never the goal as a title. */}
+    {print && <header className={`rr-verdict rr-${r.outcome.status}`}>
+      <div className="rr-title-row"><h1 data-field="runId">Receipt {r.tag} · {r.runId}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
+    </header>}
+    <div className="rr-head">
+      <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
       {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
-    </header>
+    </div>
     <RunNow receipt={r} outcome={outcome} settled={settled} check={check} />
     <div className="rr-columns">
       <div className="rr-evidence">
         {r.files.length > 0 ? <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>)}</ul></section> : !hasRelease && <p className="rr-muted">No release recorded yet.</p>}
         {r.check && [r.check.output, r.check.tag, r.check.commit, r.check.at, r.check.rerun, r.check.checker.sha256, r.check.checker.path, r.check.inputs.sha256, r.check.inputs.source].some(recorded) ? <section aria-labelledby="rr-check"><h2 id="rr-check">The check</h2>
+          <p className="rr-check-result" data-field="check.result">{checkResult(r, check)}</p>
+          {/* The check's raw output and its hashes are the method, not the answer: they sit in a closed drawer. */}
+          <Drawer title="Data and method" print={print}>
           {recorded(r.check.output) && <pre className="rr-output" data-field="check.output">{r.check.output}</pre>}<dl className="rr-facts">
             <Fact label="Ran on" when={[r.check.tag, r.check.commit].some(recorded)}><Field path="check.tag" value={r.check.tag} />{recorded(r.check.tag) && recorded(r.check.commit) && ' '}<code><Field path="check.commit" value={r.check.commit} /></code></Fact>
             <Fact label="At" when={recorded(r.check.at)}><Field path="check.at" value={r.check.at} format={utcClock} /></Fact>
             <Fact label="Inputs SHA-256" when={[r.check.inputs.sha256, r.check.inputs.source].some(recorded)}><code><Field path="check.inputs.sha256" value={r.check.inputs.sha256} /></code><span className="rr-muted"><Field path="check.inputs.source" value={r.check.inputs.source} /></span></Fact>
             <Fact label="Checker SHA-256" when={[r.check.checker.sha256, r.check.checker.path].some(recorded)}><code><Field path="check.checker.sha256" value={r.check.checker.sha256} /></code><span className="rr-muted"><Field path="check.checker.path" value={r.check.checker.path} /></span></Fact>
-          </dl>{r.check.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check.rerun}</code>{!print && <Copy text={r.check.rerun} />}</div>}</section> : null}
+          </dl>{r.check.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check.rerun}</code>{!print && <Copy text={r.check.rerun} />}</div>}</Drawer></section> : null}
       </div>
       <aside>
-        {decisions.length > 0 && <section aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2><div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
-          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { if (decision.id !== 'stop' || window.confirm(`Stop ${r.runId} now? ${decision.consequence}`)) void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
-          {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}
-          {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
-        </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
         {[r.work.recordedHours, r.work.agentHours, r.work.idleHours, r.work.untracedHours, r.work.tokens.fresh, r.work.tokens.cached, r.work.tokens.total, ...Object.values(r.waste.afterPass), ...Object.values(r.waste.verdictDelay)].some(recorded) && <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2>
           {recorded(r.work.recordedHours) && <div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: stuck ? 'Stuck (a turn open)' : 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>}
           <dl className="rr-facts rr-measures">
@@ -387,9 +421,14 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
         </section>}
       </aside>
     </div>
+    {(decisions.length > 0 || successor) && <section className="rr-decide" aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2>{successor && <p data-continued-as={successor.runId}>Continued as <a href={`/run/${encodeURIComponent(successor.runId)}`}>{successor.run}</a></p>}<div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
+          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { if (decision.id !== 'stop' || window.confirm(`Stop ${r.runId} now? ${decision.consequence}`)) void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
+          {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}
+          {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
+        </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
     {behavior && <ProfileBehavior reading={behavior} print={print} />}
     {(lanes.length > 0 || marks.length > 0) && <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div></Drawer>}
-    {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><Field path={`versions.rows.${i}.tag`} value={row.tag} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
+    {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><span data-field={`versions.rows.${i}.tag`} data-value={row.tag} title={row.tag}>{pagesVersion(row.tag)}</span></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
     {(recorded(r.work.toolCalls) || recorded(r.work.tries) || lanes.length > 0 || (r.lineage?.chain.length ?? 0) > 1 || recorded(r.outcome.reason) || Boolean(r.system?.errors?.top.length) || failures.length > 0 || Boolean(workers?.count) || Boolean(open)) && <Drawer title="How it ran" print={print}>
       {failures.length > 0 && <div className="rr-chart" data-field="system.attempts.causes"><p className="rr-muted">Where turns ended: {r.system!.attempts!.failed} of {r.system!.attempts!.tries} tries, hours each cause took</p><TurnEndings causes={failures} live={!settled} actNow={actNow} /></div>}
       <dl className="rr-facts">

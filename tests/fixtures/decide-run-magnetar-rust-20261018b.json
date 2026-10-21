@@ -1,0 +1,1820 @@
+{
+ "schema": "agent-workspace.run.v1",
+ "run": {
+  "id": "magnetar-rust-20261018b",
+  "group": "magnetar-rust-20261018b",
+  "kind": "run",
+  "play": "magnetar-rust",
+  "purpose": "Play magnetar-rust: Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's …",
+  "purposeBasis": "acceptance.purpose",
+  "format": "runtime",
+  "state": "stalled",
+  "reason": "stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper woke the root at 2026-10-19T03:10:59.035Z and nothing streamed for 15 min",
+  "playCheck": {
+   "at": "2026-10-18T20:14:04.270Z",
+   "source": "play-checks.jsonl",
+   "lines": [
+    "SCORE {\"stage\": \"hidden\", \"reached\": 6, \"of\": 6, \"hidden\": true, \"workloads\": {\"passed\": 15, \"total\": 15}, \"partial\": 0, \"proofBytes\": 11290, \"verifyMs\": 14.97}",
+    "SOLVED: 15 RV64I workloads preprocessed to <= 4096 B keys, proved, and verified (verifier given only the key, program absent) declaring 1-bit security; reference execution matched; every byte-flip, wrong-output and cross-program probe rejected; proof and verify time both succinct (2.0x / 8.0x caps held). The run continues toward Table 2/3 (7.2-8.7 Mcps, ~599 KiB, 11-13 ms, 6 GiB at 2^22).",
+    "build: cached at /home/…12730  155  15.23  2672…"
+   ],
+   "solved": "SOLVED: 15 RV64I workloads preprocessed to <= 4096 B keys, proved, and verified (verifier given only the key, program absent) declaring 1-bit security; reference execution matched; every byte-flip, wrong-output and cross-program probe rejected; proof and verify time both succinct (2.0x / 8.0x caps held). The run continues toward Table 2/3 (7.2-8.7 Mcps, ~599 KiB, 11-13 ms, 6 GiB at 2^22).",
+   "tag": "rc14",
+   "checker": "a3cf95c7cd4a"
+  },
+  "check": {
+   "latest": {
+    "at": "2026-10-19T03:28:20.652Z",
+    "tag": "rc14",
+    "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+    "checker": "041435d77c69",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+    "score": {
+     "stage": "manifest",
+     "reached": 1,
+     "of": 6,
+     "partial": 0,
+     "hidden": false,
+     "workloads": {
+      "passed": 0,
+      "total": 15
+     },
+     "proofBytes": null,
+     "verifyMs": null,
+     "value": null
+    },
+    "source": "play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   "best": {
+    "at": "2026-10-18T20:14:04.270Z",
+    "tag": "rc14",
+    "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+    "checker": "a3cf95c7cd4a",
+    "known": true,
+    "solved": true,
+    "line": "SOLVED: 15 RV64I workloads preprocessed to <= 4096 B keys, proved, and verified (verifier given only the key, program absent) declaring 1-bit security; reference execution matched; every byte-flip, wrong-output and cross-program probe rejected; proof and verify time both succinct (2.0x / 8.0x caps held). The run continues toward Table 2/3 (7.2-8.7 Mcps, ~599 KiB, 11-13 ms, 6 GiB at 2^22).",
+    "score": {
+     "stage": "hidden",
+     "reached": 6,
+     "of": 6,
+     "partial": 0,
+     "hidden": true,
+     "workloads": {
+      "passed": 15,
+      "total": 15
+     },
+     "proofBytes": 11290,
+     "verifyMs": 14.97,
+     "value": null
+    },
+    "source": "play-checks.jsonl",
+    "verdict": "solved"
+   },
+   "passes": [
+    {
+     "tag": "rc14",
+     "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+     "checker": "a3cf95c7cd4a",
+     "count": 3,
+     "firstAt": "2026-10-18T20:14:04.270Z",
+     "lastAt": "2026-10-18T20:46:10.316Z"
+    }
+   ],
+   "checkers": [
+    {
+     "checker": "3d2b3f1e7a1c",
+     "from": "2026-10-18T04:57:17.785Z",
+     "to": "2026-10-18T19:41:15.502Z",
+     "checks": 15,
+     "solved": 0
+    },
+    {
+     "checker": "a3cf95c7cd4a",
+     "from": "2026-10-18T19:58:47.238Z",
+     "to": "2026-10-18T20:46:10.316Z",
+     "checks": 4,
+     "solved": 3
+    },
+    {
+     "checker": "041435d77c69",
+     "from": "2026-10-18T21:01:42.927Z",
+     "to": "2026-10-19T03:28:20.652Z",
+     "checks": 12,
+     "solved": 0
+    }
+   ],
+   "gate": {
+    "at": "2026-10-19T03:24:08.889Z",
+    "decidedAt": "2026-10-19T03:30:52.023Z",
+    "tag": "rc18",
+    "commit": "d42042742bf8ce7c6dff0b468457e5711bfe1baa",
+    "verdict": "unknown",
+    "line": "UNKNOWN: prover for pointer-chase at 4096 cycles did not finish in 300 s",
+    "score": {
+     "stage": "workloads",
+     "reached": 5,
+     "of": 6,
+     "partial": 0.2,
+     "hidden": false,
+     "workloads": {
+      "passed": 3,
+      "total": 15
+     },
+     "proofBytes": 356988,
+     "verifyMs": 293.98,
+     "value": null
+    },
+    "build": "/home/drew/.cache/disco/play-checks/magnetar-37d62879d7be15a9"
+   },
+   "gateUnknown": {
+    "count": 21,
+    "from": "2026-10-18T23:55:59.970Z",
+    "to": "2026-10-19T03:24:08.889Z",
+    "line": "UNKNOWN: prover for pointer-chase at 4096 cycles did not finish in 300 s",
+    "tags": [
+     "rc17",
+     "rc18"
+    ]
+   },
+   "counts": {
+    "checks": 43,
+    "known": 31,
+    "solved": 3,
+    "gates": 39,
+    "gateUnknown": 22
+   },
+   "headline": "rc14 NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security) (10-19 03:28 UTC); rc14 passed 3× under v3 (referee ruling 10-18 19:48Z) (10-18 20:14 UTC to 10-18 20:46 UTC); v4 (operator amendment 10-18 20:52Z) current since 10-18 21:01 UTC",
+   "checkerNames": [
+    {
+     "sha256": "639c17a4485f",
+     "label": "v1",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "3d2b3f1e7a1c",
+     "label": "v2",
+     "ruling": "as pressed",
+     "current": false
+    },
+    {
+     "sha256": "a3cf95c7cd4a",
+     "label": "v3",
+     "ruling": "referee ruling 10-18 19:48Z",
+     "current": false
+    },
+    {
+     "sha256": "041435d77c69",
+     "label": "v4",
+     "ruling": "operator amendment 10-18 20:52Z",
+     "current": true
+    }
+   ]
+  },
+  "ending": {
+   "name": "cancelled after stall",
+   "state": "stalled",
+   "at": "2026-10-19T03:27:08.452Z",
+   "reason": "stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper woke the root at 2026-10-19T03:10:59.035Z and nothing streamed for 15 min",
+   "sentence": "The operator stopped this run.",
+   "by": "operator"
+  },
+  "startedAt": "2026-10-18T01:19:04.494Z",
+  "settledAt": "2026-10-19T03:27:08.452Z",
+  "durationMs": 94083958,
+  "nodes": 15,
+  "depth": 2,
+  "inputDigest": "011a6fd932786238e91f2f6886591b20d302ae3355e97b04fe8afce814d8d234",
+  "predecessor": null,
+  "supersedes": null,
+  "forkedFrom": null,
+  "lostHours": 44.45,
+  "hidden": null,
+  "harnesses": [],
+  "models": [],
+  "keys": [],
+  "location": {
+   "kind": "none",
+   "path": null
+  },
+  "record": {
+   "status": "ready",
+   "digest": null,
+   "builtAt": null,
+   "reason": null
+  },
+  "versions": null
+ },
+ "input": null,
+ "spend": null,
+ "versions": [],
+ "live": {
+  "mirrorAt": null,
+  "polling": false
+ },
+ "progress": {
+  "schema": "discovery.run-progress",
+  "runId": "magnetar-rust-20261018b",
+  "generatedAt": "2026-10-19T11:32:37.875Z",
+  "phase": "settled",
+  "final": true,
+  "startedAt": "2026-10-18T01:19:02.503Z",
+  "files": 95,
+  "outcome": {
+   "solved": false,
+   "checkedAt": "2026-10-19T03:28:20.652Z",
+   "firstFailingLine": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+   "stage": "contract",
+   "tag": "magnetar-rust-20261018b/rc14",
+   "lastStreamAt": "2026-10-19T05:25:19.437Z",
+   "minutesSinceLastStream": 367.3,
+   "latestCheck": {
+    "at": "2026-10-19T03:28:20.652Z",
+    "tag": "magnetar-rust-20261018b/rc14",
+    "line": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+    "stage": "contract",
+    "known": true,
+    "solved": false,
+    "score": {
+     "stage": "manifest",
+     "reached": 1,
+     "of": 6,
+     "partial": 0,
+     "hidden": false,
+     "workloads": {
+      "passed": 0,
+      "total": 15
+     },
+     "proofBytes": null,
+     "verifyMs": null,
+     "value": 0
+    }
+   },
+   "gate": {
+    "at": "2026-10-18T22:43:07.266Z",
+    "tag": "magnetar-rust-20261018b/rc16",
+    "line": "NOT SOLVED: prover for binary-search at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: internal: self-check failed: mosaic batch: mosaic batch: round 0 sum check failed | Command exited with non-zero status 1",
+    "stage": "contract",
+    "verdict": "fail",
+    "score": {
+     "stage": "workloads",
+     "reached": 5,
+     "of": 6,
+     "partial": 0.267,
+     "hidden": false,
+     "workloads": {
+      "passed": 4,
+      "total": 15
+     },
+     "proofBytes": 385792,
+     "verifyMs": 319.08,
+     "value": 0.711
+    }
+   },
+   "score": {
+    "at": "2026-10-19T03:28:20.652Z",
+    "tag": "magnetar-rust-20261018b/rc14",
+    "source": "check",
+    "stage": "manifest",
+    "reached": 1,
+    "of": 6,
+    "partial": 0,
+    "hidden": false,
+    "workloads": {
+     "passed": 0,
+     "total": 15
+    },
+    "proofBytes": null,
+    "verifyMs": null,
+    "value": 0
+   },
+   "disputes": [
+    {
+     "id": "f81edc942b30",
+     "at": "2026-10-18T18:18:30.442Z",
+     "line": "a hidden check line (disputed by the keeper)",
+     "state": "rejected",
+     "ruledAt": "2026-10-18T18:22:25.656Z",
+     "by": "operator",
+     "attempts": 2
+    },
+    {
+     "id": "2669615819ad",
+     "at": "2026-10-18T19:26:16.740Z",
+     "line": "a hidden check line (disputed by the keeper)",
+     "state": "upheld",
+     "ruledAt": "2026-10-18T19:48:40.017Z",
+     "by": "referee",
+     "attempts": 1
+    },
+    {
+     "id": "operator-041435d77c69",
+     "at": "2026-10-18T20:52:08.860Z",
+     "line": "operator amendment",
+     "state": "upheld",
+     "ruledAt": "2026-10-18T20:52:08.860Z",
+     "by": "operator",
+     "attempts": 0
+    }
+   ],
+   "checkWait": null,
+   "solvedLabel": "not solved",
+   "goalAudit": null
+  },
+  "blocker": null,
+  "endBlocker": {
+   "class": "gate-undecided",
+   "since": "2026-10-18T23:55:59.970Z",
+   "evidence": "21 gate decisions in a row reached no verdict, the newest on rc18: UNKNOWN: prover for pointer-chase at 4096 cycles did not finish in 300 s",
+   "source": "tag-gate.jsonl",
+   "cause": null,
+   "severity": "amber",
+   "owner": "discovery-lab (tag gate)",
+   "also": [
+    {
+     "class": "stuck-turn",
+     "since": "2026-10-19T02:42:11.149Z",
+     "evidence": "a turn open since 02:42Z with only keepalives (87 by 03:26Z), no model event since 02:42Z (retained_events)",
+     "source": "/home/drew/.cache/disco/host/magnetar-rust-20261018b/state/bridge/sessions.sqlite",
+     "cause": null
+    }
+   ]
+  },
+  "spend": {
+   "runUsd": null,
+   "provenance": null
+  },
+  "briefs": [],
+  "samples": [
+   {
+    "at": "2026-10-19T01:48:28.640Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T01:52:44.765Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T01:57:44.290Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:02:36.418Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:07:34.873Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:09:11.352Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:17:26.603Z",
+    "files": 94,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:22:11.927Z",
+    "files": 95,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:23:39.319Z",
+    "files": 95,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:27:54.959Z",
+    "files": 95,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:37:21.336Z",
+    "files": 95,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:39:01.815Z",
+    "files": 95,
+    "working": 2,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:47:27.155Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:52:18.054Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:57:16.432Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T02:59:51.067Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T03:04:35.863Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T03:06:50.774Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T03:13:15.434Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T03:15:49.729Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T03:21:35.581Z",
+    "files": 95,
+    "working": 1,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T03:32:30.419Z",
+    "files": 95,
+    "working": 0,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T10:35:50.532Z",
+    "files": 95,
+    "working": 0,
+    "runUsd": null
+   },
+   {
+    "at": "2026-10-19T11:32:37.875Z",
+    "files": 95,
+    "working": 0,
+    "runUsd": null
+   }
+  ],
+  "agents": [
+   {
+    "node": "magnetar-rust-20261018b",
+    "label": "root",
+    "status": "stalled",
+    "lastActiveAt": null,
+    "startedAt": "2026-10-18T01:19:04.494Z",
+    "endedAt": null,
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s0",
+    "label": "worker",
+    "status": "done",
+    "lastActiveAt": "2026-10-18T04:46:12.387Z",
+    "startedAt": "2026-10-18T01:35:51.941Z",
+    "endedAt": "2026-10-18T04:46:12.387Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s1",
+    "label": "worker",
+    "status": "done",
+    "lastActiveAt": "2026-10-18T05:44:50.329Z",
+    "startedAt": "2026-10-18T01:36:40.580Z",
+    "endedAt": "2026-10-18T05:44:50.329Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s2",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T05:37:29.750Z",
+    "startedAt": "2026-10-18T01:36:59.230Z",
+    "endedAt": "2026-10-18T05:37:29.750Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s3",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T04:54:56.835Z",
+    "startedAt": "2026-10-18T01:37:23.965Z",
+    "endedAt": "2026-10-18T04:54:56.835Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s3:s0",
+    "label": "guest coverage + robustness audit",
+    "status": "done",
+    "lastActiveAt": "2026-10-18T02:43:21.600Z",
+    "startedAt": "2026-10-18T01:50:06.130Z",
+    "endedAt": "2026-10-18T02:43:21.600Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s4",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T07:19:45.376Z",
+    "startedAt": "2026-10-18T02:08:14.527Z",
+    "endedAt": "2026-10-18T07:19:45.376Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s5",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T06:04:50.057Z",
+    "startedAt": "2026-10-18T03:57:56.393Z",
+    "endedAt": "2026-10-18T06:04:50.057Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s6",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T09:54:32.795Z",
+    "startedAt": "2026-10-18T04:56:21.522Z",
+    "endedAt": "2026-10-18T09:54:32.795Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s7",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T07:39:55.313Z",
+    "startedAt": "2026-10-18T05:31:42.316Z",
+    "endedAt": "2026-10-18T07:39:55.313Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s8",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T09:46:36.364Z",
+    "startedAt": "2026-10-18T05:38:57.615Z",
+    "endedAt": "2026-10-18T09:46:36.364Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s9",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T10:16:36.760Z",
+    "startedAt": "2026-10-18T05:46:36.290Z",
+    "endedAt": "2026-10-18T10:16:36.760Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s10",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T16:18:20.516Z",
+    "startedAt": "2026-10-18T09:47:42.517Z",
+    "endedAt": "2026-10-18T16:18:20.516Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s11",
+    "label": "worker",
+    "status": "down",
+    "lastActiveAt": "2026-10-18T17:42:52.656Z",
+    "startedAt": "2026-10-18T09:58:38.961Z",
+    "endedAt": "2026-10-18T17:42:52.656Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261018b:s12",
+    "label": "worker",
+    "status": "done",
+    "lastActiveAt": "2026-10-19T02:46:23.619Z",
+    "startedAt": "2026-10-18T17:46:54.319Z",
+    "endedAt": "2026-10-19T02:46:23.619Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   }
+  ]
+ },
+ "execution": {
+  "alive": false,
+  "lastActivityAt": "2026-10-19T03:27:08.452Z",
+  "failedAttempts": 240,
+  "settleKind": "no-winner",
+  "endingError": null,
+  "lastAttempt": {
+   "at": "2026-10-19T03:27:08.452Z",
+   "error": "bridgeExecutor: turn aborted",
+   "classification": "terminal",
+   "madeProgress": false,
+   "retryInMs": null
+  },
+  "diagnoses": [],
+  "diagnosisError": null,
+  "resume": {
+   "status": "unknown",
+   "reason": "",
+   "command": null
+  },
+  "runnerTail": null
+ },
+ "receipt": {
+  "schema": "discovery-lab.run-receipt",
+  "runId": "magnetar-rust-20261018b",
+  "tag": "rc3",
+  "title": "Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's own tables, and then better.",
+  "brief": null,
+  "outcome": {
+   "status": "cancelled",
+   "sentence": "The operator stopped this run.",
+   "at": "2026-10-19T22:10:36.390Z",
+   "reason": "stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper woke the root at 2026-10-19T03:10:59.035Z and nothing streamed for 15 min",
+   "class": "operator"
+  },
+  "chosen": {
+   "tag": "rc3",
+   "commit": "ec14bf66ec8c96310dc0ae1e7c8ef0db166e0002",
+   "why": "exact checks, then held-out checks, then fewest open referee blockers, then judges, counted over the checks measured on both tags; ties keep the earlier tag; candidates are the declared tags and the newest clock snapshot"
+  },
+  "check": {
+   "passed": false,
+   "at": "2026-10-19T03:28:20.652Z",
+   "detail": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+   "source": "play-checks.jsonl",
+   "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+   "tag": "magnetar-rust-20261018b/rc14",
+   "checkedOn": "magnetar-rust-20261018b/rc14",
+   "thisTag": false,
+   "known": true,
+   "output": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+   "checker": {
+    "path": "inputs/check.py",
+    "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28"
+   },
+   "inputs": {
+    "source": "https://github.com/tangle-discovery/magnetar-rust.git@magnetar-rust-20261018b/rc14",
+    "sha256": "3bc442345e0eff5f85a674f67af83ea6fb8b8a517a10c6c3e4ec380e934532df",
+    "count": null
+   },
+   "rerun": "disco scorecard magnetar-rust-20261018b --play-check --recheck --force --queue --commit 48a3930a69b90b314c9b2ac0b42ba6fe18633dee --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\""
+  },
+  "files": [],
+  "decisions": [
+   {
+    "id": "take",
+    "label": "Take this version",
+    "consequence": "Save this version as your choice.",
+    "command": "curl 'https://workspace.example.invalid/api/discovery/runs/magnetar-rust-20261018b/decisions' -H 'Origin: https://workspace.example.invalid' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc3\\\",\\\"commit\\\":\\\"ec14bf66ec8c96310dc0ae1e7c8ef0db166e0002\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
+    "enabled": false,
+    "reason": "No play check ran on rc3 (ec14bf66)."
+   },
+   {
+    "id": "continue",
+    "label": "Continue from this version",
+    "consequence": "Start another run from this version.",
+    "command": "disco fork magnetar-rust-20261018b --at rc3 --spec <child-registration.json> --out <child-record.json> [--press]",
+    "enabled": false,
+    "reason": "Add a brief for the next run before continuing."
+   },
+   {
+    "id": "rerun",
+    "label": "Rerun the check",
+    "consequence": "Wait for any active check, then run this check again.",
+    "command": "disco scorecard magnetar-rust-20261018b --play-check --recheck --force --queue --commit 48a3930a69b90b314c9b2ac0b42ba6fe18633dee --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\"",
+    "enabled": true,
+    "reason": null
+   },
+   {
+    "id": "wrapup",
+    "label": "Wrap up",
+    "consequence": "Tell the root to start no new work, publish its best release and submit.",
+    "command": "disco steer magnetar-rust-20261018b --wrapup",
+    "enabled": false,
+    "reason": "The run has ended."
+   },
+   {
+    "id": "stop",
+    "label": "Stop now",
+    "consequence": "Cancel the run now. Its records and releases stay.",
+    "command": "disco cancel magnetar-rust-20261018b --reason \"stopped from the run page\"",
+    "enabled": false,
+    "reason": "The run has ended."
+   }
+  ],
+  "work": {
+   "wallHours": 26.14,
+   "recordedHours": 87.87984916666667,
+   "agentHours": 15.927676111111111,
+   "idleHours": 53.410981666666665,
+   "untracedHours": 18.54119138888889,
+   "partition": {
+    "status": "complete",
+    "reason": null
+   },
+   "toolCalls": null,
+   "tokens": {
+    "fresh": null,
+    "cached": null,
+    "output": null,
+    "cacheWrite": null,
+    "total": null
+   },
+   "tries": 324
+  },
+  "waste": {
+   "afterPass": {
+    "hours": 8.74,
+    "tokens": 92067811,
+    "usd": null
+   },
+   "verdictDelay": {
+    "minutes": null,
+    "refusedChecks": null
+   }
+  },
+  "cost": {
+   "apiEquivalentUsd": {
+    "usd": 891.0586218,
+    "estimated": 891.0586218,
+    "provenance": "estimated"
+   },
+   "billedUsd": {
+    "model": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "compute": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "total": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "fill": "disco cost --refresh --run=magnetar-rust-20261018b"
+   },
+   "clause": "API-equivalent $891.06, billed unknown (fill with disco cost --refresh --run=magnetar-rust-20261018b)",
+   "provenance": "API-equivalent: estimated (Runtime totals, every token at API list price, whoever paid). Billed model: not reconciled. Billed compute: not reconciled."
+  },
+  "scores": {
+   "source": "current evaluator set",
+   "vector": {
+    "mandate": [
+     0,
+     0
+    ],
+    "exact": [
+     1,
+     1
+    ],
+    "heldOut": [
+     0,
+     0
+    ],
+    "blockers": 6,
+    "judge": null,
+    "unscored": []
+   },
+   "complete": true,
+   "rule": "exact checks, then held-out checks, then fewest open referee blockers, then judges, counted over the checks measured on both tags; ties keep the earlier tag; candidates are the declared tags and the newest clock snapshot",
+   "checks": [
+    {
+     "id": "deliverables-present",
+     "tier": "exact",
+     "result": "pass",
+     "label": "handoff page present"
+    },
+    {
+     "id": "open-blockers",
+     "tier": "referee",
+     "result": "fail"
+    }
+   ],
+   "checkFirst": true
+  },
+  "contract": [
+   {
+    "at": "2026-10-18T01:34:39.768Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:3f78491b7bb3316585c1a578ecab4c5961988f99ff374a2cab4ed83c9ad7c476",
+    "line": "NOT SOLVED: prover for keccak-f1600 at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: guest did not halt within --cycles (invalid execution) | Command exited with non-zero status 1",
+    "tag": "magnetar-rust-20261018b/rc1",
+    "commit": "2cbb076eff36e18d77bf334c85e7dccb8468c603",
+    "checkAt": "2026-10-18T01:34:30.280Z",
+    "targets": [
+     "magnetar-rust-20261018b",
+     "magnetar-rust-20261018b:s0",
+     "magnetar-rust-20261018b:s1",
+     "magnetar-rust-20261018b:s2",
+     "magnetar-rust-20261018b:s3"
+    ],
+    "resolvedAt": "2026-10-18T02:04:17.870Z",
+    "resolution": "moved",
+    "resolvedOn": "magnetar-rust-20261018b/rc2",
+    "fixCommit": "c80716694c4a784540d76a3a63559555661a7238",
+    "lastFailingAt": null,
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T01:34:37.587Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s0",
+      "effect": "delivered",
+      "at": "2026-10-18T01:40:59.851Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s1",
+      "effect": "delivered",
+      "at": "2026-10-18T01:41:02.296Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s2",
+      "effect": "delivered",
+      "at": "2026-10-18T01:41:04.401Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s3",
+      "effect": "delivered",
+      "at": "2026-10-18T01:41:07.160Z"
+     }
+    ]
+   },
+   {
+    "at": "2026-10-18T02:04:37.678Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:920eba63e413de06f0566af0a263c38d93ee0fd3d7c5f1f5250b5dfeb9a3f3a5",
+    "line": "NOT SOLVED: prover for radix-sort-u64 at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: missing step j | Command exited with non-zero status 1",
+    "tag": "magnetar-rust-20261018b/rc2",
+    "commit": "c80716694c4a784540d76a3a63559555661a7238",
+    "checkAt": "2026-10-18T02:04:17.870Z",
+    "targets": [
+     "magnetar-rust-20261018b",
+     "magnetar-rust-20261018b:s0",
+     "magnetar-rust-20261018b:s1",
+     "magnetar-rust-20261018b:s2",
+     "magnetar-rust-20261018b:s3"
+    ],
+    "resolvedAt": "2026-10-18T02:53:03.897Z",
+    "resolution": "moved",
+    "resolvedOn": "magnetar-rust-20261018b/rc3",
+    "fixCommit": "36ce37c2d59906f17e798f24afbb9f94c7d16dbe",
+    "lastFailingAt": null,
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T02:04:29.610Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s0",
+      "effect": "delivered",
+      "at": "2026-10-18T02:04:33.571Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s1",
+      "effect": "delivered",
+      "at": "2026-10-18T02:04:34.904Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s2",
+      "effect": "delivered",
+      "at": "2026-10-18T02:04:35.786Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s3",
+      "effect": "delivered",
+      "at": "2026-10-18T02:04:36.793Z"
+     }
+    ]
+   },
+   {
+    "at": "2026-10-18T02:53:21.601Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:e0fe649580aed982014c789d87039bca3517b2bc07d67f71a9da7de52e4c54dd",
+    "line": "NOT SOLVED: prover for keccak-f1600 at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: guest did not halt within --cycles (invalid execution) | Command exited with non-zero status 1",
+    "tag": "magnetar-rust-20261018b/rc3",
+    "commit": "36ce37c2d59906f17e798f24afbb9f94c7d16dbe",
+    "checkAt": "2026-10-18T02:53:03.897Z",
+    "targets": [
+     "magnetar-rust-20261018b",
+     "magnetar-rust-20261018b:s0",
+     "magnetar-rust-20261018b:s1",
+     "magnetar-rust-20261018b:s2",
+     "magnetar-rust-20261018b:s3"
+    ],
+    "resolvedAt": "2026-10-18T04:44:11.563Z",
+    "resolution": "released",
+    "resolvedOn": "magnetar-rust-20261018b/rc5",
+    "fixCommit": "e4af3028a44600ca3addb3b482ae89aa2f3f664c",
+    "lastFailingAt": "2026-10-18T03:57:44.079Z",
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T02:53:10.678Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s0",
+      "effect": "delivered",
+      "at": "2026-10-18T02:53:11.552Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s1",
+      "effect": "delivered",
+      "at": "2026-10-18T02:53:13.692Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s2",
+      "effect": "delivered",
+      "at": "2026-10-18T02:53:17.243Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s3",
+      "effect": "delivered",
+      "at": "2026-10-18T02:53:19.101Z"
+     }
+    ]
+   },
+   {
+    "at": "2026-10-18T03:58:09.779Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:2e521259372e341b3dc82431cd0d46f7491c3bc799c142d1b65596f25e7decbc",
+    "line": "NOT SOLVED: prover for keccak-f1600 at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: guest did not halt within --cycles (invalid execution) | Command exited with non-zero status 1",
+    "tag": "magnetar-rust-20261018b/rc3",
+    "commit": "c3b09bf6e341e56ec09d11311c86e75bb1cbff2c",
+    "checkAt": "2026-10-18T03:57:44.079Z",
+    "targets": [
+     "magnetar-rust-20261018b",
+     "magnetar-rust-20261018b:s0",
+     "magnetar-rust-20261018b:s1",
+     "magnetar-rust-20261018b:s2",
+     "magnetar-rust-20261018b:s3"
+    ],
+    "resolvedAt": "2026-10-18T04:44:11.563Z",
+    "resolution": "released",
+    "resolvedOn": "magnetar-rust-20261018b/rc5",
+    "fixCommit": "e4af3028a44600ca3addb3b482ae89aa2f3f664c",
+    "lastFailingAt": null,
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T03:57:55.262Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s0",
+      "effect": "delivered",
+      "at": "2026-10-18T03:57:58.138Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s1",
+      "effect": "delivered",
+      "at": "2026-10-18T03:58:00.281Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s2",
+      "effect": "delivered",
+      "at": "2026-10-18T03:58:02.594Z"
+     },
+     {
+      "worker": "magnetar-rust-20261018b:s3",
+      "effect": "delivered",
+      "at": "2026-10-18T03:58:06.398Z"
+     }
+    ]
+   },
+   {
+    "at": "2026-10-18T19:24:50.406Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:a39ec04d7ff4eb5487b795176850f858305e1bbbffc032c54b759a4dab1c3b67",
+    "line": "NOT SOLVED: prover for binary-search at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: internal: self-check failed: mosaic batch: mosaic batch: round 0 sum check failed | Command exited with non-zero status 1",
+    "tag": "magnetar-rust-20261018b/rc15",
+    "commit": "28ee03f74c1e21c3f8dd14906278ae21ef178891",
+    "checkAt": "2026-10-18T19:21:22.302Z",
+    "targets": [
+     "magnetar-rust-20261018b"
+    ],
+    "resolvedAt": null,
+    "resolution": null,
+    "resolvedOn": null,
+    "fixCommit": null,
+    "lastFailingAt": "2026-10-18T22:43:07.266Z",
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T19:24:48.917Z"
+     }
+    ]
+   },
+   {
+    "at": "2026-10-18T21:01:55.072Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:d49a180014c5d971d1d7275a68ed4f83e814690f05f092573ee71d2d1f431cd3",
+    "line": "NOT SOLVED: magnetar.json must declare security_bits as an integer of at least 120 (the Deliverable's 120-bit provable security)",
+    "tag": "magnetar-rust-20261018b/rc14",
+    "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+    "checkAt": "2026-10-18T21:01:42.927Z",
+    "targets": [
+     "magnetar-rust-20261018b"
+    ],
+    "resolvedAt": "2026-10-18T22:43:07.266Z",
+    "resolution": "moved",
+    "resolvedOn": "magnetar-rust-20261018b/rc16",
+    "fixCommit": "ca0416f00bc576a55615037d8c7942ceaefec5fc",
+    "lastFailingAt": "2026-10-18T22:26:03.411Z",
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T21:01:51.610Z"
+     }
+    ]
+   },
+   {
+    "at": "2026-10-18T22:47:00.585Z",
+    "operationId": "contract-feedback:magnetar-rust-20261018b:1f4b3f12173b0639313c5d0bdf8fb14f1478a2d527ea835716f6351b1162a3df",
+    "line": "NOT SOLVED: prover for binary-search at 4096 cycles exited 1 or wrote no regular proof/public files: magnetar-prove: internal: self-check failed: mosaic batch: mosaic batch: round 0 sum check failed | Command exited with non-zero status 1",
+    "tag": "magnetar-rust-20261018b/rc16",
+    "commit": "ca0416f00bc576a55615037d8c7942ceaefec5fc",
+    "checkAt": "2026-10-18T22:43:07.266Z",
+    "targets": [
+     "magnetar-rust-20261018b"
+    ],
+    "resolvedAt": null,
+    "resolution": null,
+    "resolvedOn": null,
+    "fixCommit": null,
+    "lastFailingAt": null,
+    "acknowledgements": [
+     {
+      "worker": "magnetar-rust-20261018b",
+      "effect": "delivered",
+      "at": "2026-10-18T22:46:54.702Z"
+     }
+    ]
+   }
+  ],
+  "codeRepository": {
+   "url": "https://github.com/tangle-discovery/magnetar-rust",
+   "forkCommit": "0394d1eeb0758e3874bafe3d44338ef2f76c3288",
+   "tag": "magnetar-rust-20261018b/rc14",
+   "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee"
+  },
+  "generatedAt": "2026-10-19T22:10:36.390Z",
+  "continue": {
+   "fork": "disco fork magnetar-rust-20261018b --at rc3 --spec <child-registration.json> --out <child-record.json> [--press]",
+   "seed": "disco fork seed magnetar-rust-20261018b <seed-dir>",
+   "run": "disco run <child-registration.json> --knowledge-seed <seed-dir>",
+   "registration": null
+  },
+  "timeline": {
+   "start": null,
+   "end": null,
+   "deadline": null,
+   "lanes": [],
+   "marks": []
+  },
+  "sources": {},
+  "system": {
+   "play": {
+    "scores": [
+     {
+      "at": "2026-10-18T01:34:30.280Z",
+      "firstAt": "2026-10-18T01:34:30.280Z",
+      "tag": "magnetar-rust-20261018b/rc1",
+      "commit": "2cbb076eff36e18d77bf334c85e7dccb8468c603",
+      "solved": false,
+      "progress": 0.767,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.6,
+       "workloads": {
+        "passed": 9,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 21.39
+      }
+     },
+     {
+      "at": "2026-10-18T02:04:17.870Z",
+      "firstAt": "2026-10-18T02:04:17.870Z",
+      "tag": "magnetar-rust-20261018b/rc2",
+      "commit": "c80716694c4a784540d76a3a63559555661a7238",
+      "solved": false,
+      "progress": 0.722,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.333,
+       "workloads": {
+        "passed": 5,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 24.95
+      }
+     },
+     {
+      "at": "2026-10-18T03:57:44.079Z",
+      "firstAt": "2026-10-18T02:53:03.897Z",
+      "tag": "magnetar-rust-20261018b/rc3",
+      "commit": "c3b09bf6e341e56ec09d11311c86e75bb1cbff2c",
+      "solved": false,
+      "progress": 0.767,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.6,
+       "workloads": {
+        "passed": 9,
+        "total": 15
+       },
+       "proofBytes": 11490,
+       "verifyMs": 23.91
+      }
+     },
+     {
+      "at": "2026-10-18T04:36:13.543Z",
+      "firstAt": "2026-10-18T01:40:57.137Z",
+      "tag": null,
+      "commit": null,
+      "solved": false,
+      "progress": null,
+      "checker": null,
+      "score": null
+     },
+     {
+      "at": "2026-10-18T04:44:11.563Z",
+      "firstAt": "2026-10-18T04:44:11.563Z",
+      "tag": "magnetar-rust-20261018b/rc5",
+      "commit": "e4af3028a44600ca3addb3b482ae89aa2f3f664c",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 1,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 18.31
+      }
+     },
+     {
+      "at": "2026-10-18T05:12:34.285Z",
+      "firstAt": "2026-10-18T04:57:17.785Z",
+      "tag": "magnetar-rust-20261018b/rc5",
+      "commit": "e4af3028a44600ca3addb3b482ae89aa2f3f664c",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "hidden",
+       "reached": 6,
+       "of": 6,
+       "hidden": true,
+       "partial": 0,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 51.29
+      }
+     },
+     {
+      "at": "2026-10-18T05:15:19.278Z",
+      "firstAt": "2026-10-18T05:15:19.278Z",
+      "tag": "magnetar-rust-20261018b/rc6",
+      "commit": "ad0b1c88551d62e7f432a2b603b0a3af63bd045c",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 1,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11490,
+       "verifyMs": 50.43
+      }
+     },
+     {
+      "at": "2026-10-18T07:23:20.206Z",
+      "firstAt": "2026-10-18T05:28:56.449Z",
+      "tag": "magnetar-rust-20261018b/rc6",
+      "commit": "ad0b1c88551d62e7f432a2b603b0a3af63bd045c",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "hidden",
+       "reached": 6,
+       "of": 6,
+       "hidden": true,
+       "partial": 0,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 20.24
+      }
+     },
+     {
+      "at": "2026-10-18T07:32:09.588Z",
+      "firstAt": "2026-10-18T07:32:09.588Z",
+      "tag": "magnetar-rust-20261018b/rc7",
+      "commit": "0818e532475c68dc093ca0623beee0426953fd8d",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 1,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 22.17
+      }
+     },
+     {
+      "at": "2026-10-18T18:03:53.478Z",
+      "firstAt": "2026-10-18T18:03:53.478Z",
+      "tag": "magnetar-rust-20261018b/rc12",
+      "commit": "9488d2065297a94b5fff9bb9f767b9330e26a9be",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-18T18:03:53.479Z",
+      "firstAt": "2026-10-18T18:03:53.479Z",
+      "tag": "magnetar-rust-20261018b/rc11",
+      "commit": "5cb80414d13d4f77c3b0a98487ce7906e572fab9",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-18T18:03:53.479Z",
+      "firstAt": "2026-10-18T18:03:53.479Z",
+      "tag": "magnetar-rust-20261018b/rc10",
+      "commit": "517b30ab5eadf2fc022ab7a9da8f67442a384870",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-18T18:03:53.479Z",
+      "firstAt": "2026-10-18T18:03:53.479Z",
+      "tag": "magnetar-rust-20261018b/rc9",
+      "commit": "9cf1e9654242933c686e93efdb215562fec2a244",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-18T18:03:53.479Z",
+      "firstAt": "2026-10-18T18:03:53.479Z",
+      "tag": "magnetar-rust-20261018b/rc8",
+      "commit": "b8ad17487a2843c87e9be5b268fea874620a75a1",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-18T18:03:53.479Z",
+      "firstAt": "2026-10-18T18:03:53.479Z",
+      "tag": "magnetar-rust-20261018b/rc13",
+      "commit": "bb9ea5b994ce2096cc45fdc10226d8f7a90fefbc",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 1,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 17.09
+      }
+     },
+     {
+      "at": "2026-10-18T18:36:45.916Z",
+      "firstAt": "2026-10-18T18:05:08.173Z",
+      "tag": "magnetar-rust-20261018b/rc13",
+      "commit": "bb9ea5b994ce2096cc45fdc10226d8f7a90fefbc",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "hidden",
+       "reached": 6,
+       "of": 6,
+       "hidden": true,
+       "partial": 0,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11458,
+       "verifyMs": 16.94
+      }
+     },
+     {
+      "at": "2026-10-18T18:39:52.742Z",
+      "firstAt": "2026-10-18T18:39:52.742Z",
+      "tag": "magnetar-rust-20261018b/rc14",
+      "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 1,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 14.43
+      }
+     },
+     {
+      "at": "2026-10-18T19:21:22.302Z",
+      "firstAt": "2026-10-18T19:21:22.302Z",
+      "tag": "magnetar-rust-20261018b/rc15",
+      "commit": "28ee03f74c1e21c3f8dd14906278ae21ef178891",
+      "solved": false,
+      "progress": 0.711,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.267,
+       "workloads": {
+        "passed": 4,
+        "total": 15
+       },
+       "proofBytes": 385792,
+       "verifyMs": 323.25
+      }
+     },
+     {
+      "at": "2026-10-18T19:41:15.502Z",
+      "firstAt": "2026-10-18T18:51:53.017Z",
+      "tag": "magnetar-rust-20261018b/rc14",
+      "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "3d2b3f1e7a1c029876b187e3056a47efe225a9032695504e8191934c9bf2c7ad",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "hidden",
+       "reached": 6,
+       "of": 6,
+       "hidden": true,
+       "partial": 0,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 22.12
+      }
+     },
+     {
+      "at": "2026-10-18T19:58:47.238Z",
+      "firstAt": "2026-10-18T19:58:47.238Z",
+      "tag": "magnetar-rust-20261018b/rc14",
+      "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+      "solved": false,
+      "progress": 0.833,
+      "checker": {
+       "sha256": "a3cf95c7cd4a6c3245c0f4ccb130604bd496ac60f519bb0c40961838a6d2084d",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "hidden",
+       "reached": 6,
+       "of": 6,
+       "hidden": true,
+       "partial": 0,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 17.62
+      }
+     },
+     {
+      "at": "2026-10-18T20:46:10.316Z",
+      "firstAt": "2026-10-18T20:14:04.270Z",
+      "tag": "magnetar-rust-20261018b/rc14",
+      "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+      "solved": true,
+      "progress": 1,
+      "checker": {
+       "sha256": "a3cf95c7cd4a6c3245c0f4ccb130604bd496ac60f519bb0c40961838a6d2084d",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "hidden",
+       "reached": 6,
+       "of": 6,
+       "hidden": true,
+       "partial": 0,
+       "workloads": {
+        "passed": 15,
+        "total": 15
+       },
+       "proofBytes": 11290,
+       "verifyMs": 16.02
+      }
+     },
+     {
+      "at": "2026-10-18T22:35:47.223Z",
+      "firstAt": "2026-10-18T22:35:47.223Z",
+      "tag": "magnetar-rust-20261018b/rc16",
+      "commit": "ca0416f00bc576a55615037d8c7942ceaefec5fc",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.2,
+       "workloads": {
+        "passed": 3,
+        "total": 15
+       },
+       "proofBytes": 356988,
+       "verifyMs": 308.85
+      }
+     },
+     {
+      "at": "2026-10-18T22:43:07.266Z",
+      "firstAt": "2026-10-18T22:43:07.266Z",
+      "tag": "magnetar-rust-20261018b/rc16",
+      "commit": "ca0416f00bc576a55615037d8c7942ceaefec5fc",
+      "solved": false,
+      "progress": 0.711,
+      "checker": {
+       "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.267,
+       "workloads": {
+        "passed": 4,
+        "total": 15
+       },
+       "proofBytes": 385792,
+       "verifyMs": 319.08
+      }
+     },
+     {
+      "at": "2026-10-19T01:50:27.565Z",
+      "firstAt": "2026-10-18T23:55:59.970Z",
+      "tag": "magnetar-rust-20261018b/rc17",
+      "commit": "2df7898fec16d5f1f934d1216dcb1ba908ccdce8",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.4,
+       "workloads": {
+        "passed": 6,
+        "total": 15
+       },
+       "proofBytes": 385792,
+       "verifyMs": 296.31
+      }
+     },
+     {
+      "at": "2026-10-19T01:59:29.522Z",
+      "firstAt": "2026-10-19T01:59:29.522Z",
+      "tag": "magnetar-rust-20261018b/rc17",
+      "commit": "2df7898fec16d5f1f934d1216dcb1ba908ccdce8",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28",
+       "basis": "time"
+      },
+      "score": null
+     },
+     {
+      "at": "2026-10-19T03:24:08.889Z",
+      "firstAt": "2026-10-19T01:59:29.524Z",
+      "tag": "magnetar-rust-20261018b/rc18",
+      "commit": "d42042742bf8ce7c6dff0b468457e5711bfe1baa",
+      "solved": false,
+      "progress": null,
+      "checker": {
+       "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28",
+       "basis": "time"
+      },
+      "score": {
+       "stage": "workloads",
+       "reached": 5,
+       "of": 6,
+       "hidden": false,
+       "partial": 0.2,
+       "workloads": {
+        "passed": 3,
+        "total": 15
+       },
+       "proofBytes": 356988,
+       "verifyMs": 293.98
+      }
+     },
+     {
+      "at": "2026-10-19T03:28:20.652Z",
+      "firstAt": "2026-10-18T21:01:42.927Z",
+      "tag": "magnetar-rust-20261018b/rc14",
+      "commit": "48a3930a69b90b314c9b2ac0b42ba6fe18633dee",
+      "solved": false,
+      "progress": 0,
+      "checker": {
+       "sha256": "041435d77c693004d9809e309a01ea3a9a9b99c9cf9cf085c01e1f2b50d67f28",
+       "basis": "row"
+      },
+      "score": {
+       "stage": "manifest",
+       "reached": 1,
+       "of": 6,
+       "hidden": false,
+       "partial": 0,
+       "workloads": {
+        "passed": 0,
+        "total": 15
+       }
+      }
+     }
+    ],
+    "firstPassAt": "2026-10-18T20:14:04.270Z"
+   },
+   "attempts": {
+    "tries": 324,
+    "failed": 240,
+    "hours": 60.38,
+    "failedHours": 44.45,
+    "causes": [
+     {
+      "cause": "completed",
+      "label": "completed",
+      "tries": 84,
+      "hours": 15.93
+     },
+     {
+      "cause": "platform-lost",
+      "label": "platform lost or killed the turn",
+      "tries": 14,
+      "hours": 12.35
+     },
+     {
+      "cause": "rate-limited",
+      "label": "a 429 killed the turn",
+      "tries": 219,
+      "hours": 12.13
+     },
+     {
+      "cause": "budget-exhausted",
+      "label": "supervisor budget exhausted",
+      "tries": 2,
+      "hours": 4.34
+     },
+     {
+      "cause": "stopped",
+      "label": "stopped by the Lab or an operator",
+      "tries": 5,
+      "hours": 15.63
+     }
+    ],
+    "outcomes": [
+     {
+      "outcome": "ok",
+      "tries": 84,
+      "hours": 15.93
+     },
+     {
+      "outcome": "quota",
+      "tries": 219,
+      "hours": 12.13
+     },
+     {
+      "outcome": "lost",
+      "tries": 2,
+      "hours": 2.43
+     },
+     {
+      "outcome": "oom",
+      "tries": 12,
+      "hours": 9.92
+     },
+     {
+      "outcome": "aborted",
+      "tries": 5,
+      "hours": 15.63
+     },
+     {
+      "outcome": "other",
+      "tries": 2,
+      "hours": 4.34
+     }
+    ],
+    "open": {
+     "nodes": 7,
+     "tokens": 359095917,
+     "agent": null,
+     "since": null,
+     "hours": null
+    }
+   },
+   "workers": {
+    "count": 14,
+    "neverFinished": 8,
+    "neverFinishedHours": 37.92,
+    "hours": 61.75
+   }
+  }
+ },
+ "finalOutput": null,
+ "findings": null
+}

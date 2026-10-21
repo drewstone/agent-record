@@ -2131,8 +2131,6 @@
 .agent-record svg[data-tokens] .axis-label { font-size: 10px; }
 /* Graph rows select as a whole: a transparent hit area behind each node's dot and label. */
 /* The selected profile's detail beside its graph, kept in view while the graph scrolls. */
-@media (max-width: 1100px) {
-}
 /* The default filter: what it hides, counted where it is seen first; failures lead in the failure colour. */
 .ar-ws .hidden-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 10px 14px; border-radius: 8px; background: var(--ws-raised); color: var(--ar-fg); }
 .ar-ws .ws-content > .hidden-summary { border: 1px solid var(--ar-border); background: var(--ws-panel); }
@@ -3037,15 +3035,6 @@
 .ar-ws .edge-fork { stroke: var(--ws-accent); stroke-width: 2.4; }
 .ar-ws .edge-swatch.edge-fork { border-color: var(--ws-accent); }
 
-/* A detail view's bar: back to the overview, the run, and the other detail views. */
-.ar-ws .detail-bar { align-items: center; gap: 4px 10px; }
-.ar-ws .detail-run { display: inline-flex; align-items: center; gap: 8px; padding: 0 6px; font-size: var(--ar-text-s); color: var(--ar-fg); }
-.ar-ws .detail-views { display: flex; flex-wrap: wrap; gap: 2px; margin-left: auto; }
-.agent-record.ar-ws .detail-back { color: var(--ar-fg); }
-
-@media (max-width: 700px) {
-  .ar-ws .detail-views { margin-left: 0; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
-}
 @media (max-width: 700px) {
   .ar-ws .ws-page[data-section="overview"] { padding-left: 0; padding-right: 0; }
 }
@@ -3270,14 +3259,6 @@
   --chart-ending-cancelled:color-mix(in srgb, var(--ar-c-neutral) 40%, var(--ar-bg));
   --chart-outcome-quota:#9b59b6; --chart-outcome-rate-limit:color-mix(in srgb, #9b59b6 55%, var(--ar-bg));
 }
-.agent-record .run-execution {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--ar-border);
-  overflow-wrap: anywhere;
-}
-.agent-record .run-execution p { margin: 0 0 8px; }
-.agent-record .run-execution-next { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.agent-record .run-execution pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; }
 
 /* Behavior-battery lane under the timeline: one tick per cited yes-verdict. */
 .agent-record svg .behavior-tick {
@@ -3317,8 +3298,6 @@
 /* X16: the run input's knowledge seed and budget, one line each. */
 .ar-ws .input-line { margin: 0 0 10px; font-size: var(--ar-text-s); color: var(--ar-fg); overflow-wrap: anywhere; }
 .ar-ws .input-line b { color: var(--ar-fg-muted); font-weight: 600; margin-right: 6px; }
-/* B4: the run overview's section bar sits under the status, not stuck over the receipt. */
-.ar-ws .ws-run[data-section="overview"] > .detail-bar { position: static; box-shadow: none; }
 @media (max-width: 700px) {
   /* B1: on a phone the page's own gutters, the section frames and wrapped tab rows took the first screen and left cards 284 px
      wide. The host page already pads the viewer; sections lose their side padding and frame, and tabs scroll in one row. */
@@ -3332,86 +3311,19 @@
   .ar-ws .feed-card { padding: 12px; }
   /* B2: the run page fits 390 px: no side padding of its own, and no chart or command wider than the column. */
   .ar-ws .rr-page { padding: 12px 0; }
-  .agent-record .run-execution { padding: 12px 0; }
   .ar-ws .rr-page .rr-chart, .ar-ws .rr-page .tgc-figure, .ar-ws .rr-page svg { max-width: 100%; min-width: 0; }
-  .ar-ws .detail-bar { flex-wrap: nowrap; overflow-x: auto; }
 }
 
 /* ---------- The focused play page (J7): header, climb, bar, ledger, teams, findings, releases ---------- */
 .ar-ws .play-head { gap: 10px; }
-.ar-ws .play-goal { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.ar-ws .play-goal p { margin: 0; max-width: 118ch; color: var(--ar-fg); font-size: var(--ar-text-m); line-height: 1.4; overflow-wrap: anywhere; }
-.ar-ws .play-goal .link-button { flex: none; font-size: var(--ar-text-s); }
 .ar-ws .play-sentence { margin: 0; max-width: 132ch; font-size: var(--ar-text-m); line-height: 1.45; overflow-wrap: anywhere; }
 .ar-ws .play-verdict { font-family: var(--ar-font-mono); font-weight: 700; letter-spacing: .02em; }
-.ar-ws .play-goal-grid { display: grid; grid-template-columns: minmax(0, 2.7fr) minmax(300px, 1fr); gap: 12px; min-width: 0; }
-.ar-ws .goal-block { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(0, 1.35fr); gap: 4px 24px; padding: 10px 14px; border: 1px solid var(--ar-border); border-radius: 8px; min-width: 0; }
-.ar-ws .goal-block h4, .ar-ws .live-box h4 { margin: 0 0 6px; font: 600 var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
-.ar-ws .goal-rows, .ar-ws .bar-rows { margin: 0; display: grid; gap: 3px; font-size: var(--ar-text-s); }
-.ar-ws .goal-rows > div { display: grid; grid-template-columns: 7.6em minmax(0, 1fr); gap: 8px; align-items: baseline; }
-.ar-ws .goal-rows dt, .ar-ws .bar-row dt { color: var(--ar-fg-muted); }
-.ar-ws .goal-rows dd, .ar-ws .bar-row dd { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ar-ws .goal-rows b, .ar-ws .bar-value b { font-family: var(--ar-font-mono); font-variant-numeric: tabular-nums; }
-.ar-ws .goal-check h4 { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.ar-ws .goal-check .checker-chip { flex: none; }
-.ar-ws .goal-ruling { display: block; flex: 1; min-width: 0; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* The current check as a ladder of its stages: passed cells in the checker's hue, the stopping stage filled to its partial
-   progress with a fail ring, SOLVED last; a pass under an earlier checker is a dashed ring on SOLVED. */
-.ar-ws .stage-ladder { display: flex; gap: 3px; margin: 2px 0 8px; padding: 0; list-style: none; min-width: 0; }
-.ar-ws .stage-ladder li { flex: 1 1 0; min-width: 0; display: grid; gap: 3px; }
-.ar-ws .stage-ladder li.stage-solved { flex: .8 1 0; }
-.ar-ws .stage-ladder i { display: block; height: 10px; border-radius: 2px; background: var(--ws-raised); box-shadow: inset 0 0 0 1px var(--ar-border); }
-.ar-ws .stage-ladder li[data-state='passed'] i { background: color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent); box-shadow: none; }
-.ar-ws .stage-ladder li[data-state='failed'] i { background: linear-gradient(90deg, color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent) var(--fill, 0%), var(--ws-raised) var(--fill, 0%)); box-shadow: inset 0 0 0 1.5px var(--ar-fg-muted); }
-.ar-ws .stage-ladder li[data-earlier='yes'] i { box-shadow: inset 0 0 0 1.5px var(--ar-c-neutral); border-style: dashed; background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ar-c-neutral) 30%, transparent) 3px 5px); }
-.ar-ws .stage-ladder span { font-size: 11px; line-height: 1.2; color: var(--ar-fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ar-ws .stage-ladder li[data-state='failed'] span { color: var(--ar-fg); }
-.ar-ws .stage-ladder li[data-earlier='yes'] span { color: var(--ar-c-neutral); }
-.ar-ws .goal-check { --checker: var(--ar-c-info); }
-.ar-ws .goal-progress { display: flex; align-items: center; gap: 8px; }
-.ar-ws .progress-track { flex: 0 1 160px; height: 10px; border-radius: 2px; background: var(--ws-raised); box-shadow: inset 0 0 0 1px var(--ar-border); overflow: hidden; }
-.ar-ws .progress-track i { display: block; height: 100%; min-width: 2px; background: color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent); }
-.ar-ws .workload-dots { display: inline-flex; align-items: center; gap: 8px; }
-.ar-ws .workload-dots > span { display: inline-flex; gap: 2px; }
-.ar-ws .workload-dots i { width: 7px; height: 10px; border-radius: 1.5px; background: var(--ws-raised); box-shadow: inset 0 0 0 1px var(--ar-border); }
-.ar-ws .workload-dots i[data-passed='yes'] { background: color-mix(in srgb, var(--checker, var(--ar-c-info)) 80%, transparent); box-shadow: none; }
-/* Distance to the bar: one track per metric on its own log scale, the target shaded, the stretch dashed, the value a mark. */
-.ar-ws .bar-track-cell { overflow: visible !important; }
-.ar-ws .bar-track { position: relative; display: block; height: 14px; margin: 0 6px; }
-.ar-ws .bar-track::before { content: ''; position: absolute; left: 0; right: 0; top: 6px; height: 2px; border-radius: 1px; background: var(--ar-border); }
-.ar-ws .bar-track .bar-gapline { position: absolute; top: 6px; height: 0; border-top: 2px dashed color-mix(in srgb, var(--ar-fg-muted) 70%, transparent); }
-/* The bar is a target, not a status: a neutral band. The value's dot takes the tone of its own comparison to the bar. */
-.ar-ws .bar-track .bar-target { position: absolute; top: 2px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--ar-fg-muted) 30%, transparent); }
-.ar-ws .bar-track .bar-stretch { position: absolute; top: 1px; height: 12px; border-radius: 2px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-fg-muted) 55%, transparent); background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ar-fg-muted) 18%, transparent) 3px 5px); }
-.ar-ws .bar-track .bar-dot { position: absolute; top: 0; transform: translateX(-50%); font: 700 12px/14px var(--ar-font-mono); text-shadow: 0 0 2px var(--ws-panel), 0 0 2px var(--ws-panel); }
-.ar-ws .goal-bar .bar-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 22px; }
-.ar-ws .bar-row { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); grid-template-areas: 'label target' 'value value' 'track track'; gap: 0 10px; align-items: baseline; min-width: 0; }
-.ar-ws .bar-row dt { grid-area: label; }
-.ar-ws .bar-row .bar-value { grid-area: value; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 8px; white-space: normal; overflow: visible; }
-.ar-ws .bar-row .bar-value .bar-gap { flex: none; font-size: 13px; font-weight: 600; }
-.ar-ws .bar-row .bar-target { grid-area: target; text-align: right; }
-.ar-ws .bar-row .bar-track-cell { grid-area: track; margin-top: 2px; }
-.ar-ws .bar-nearest { font-family: var(--ar-font-mono); color: var(--ar-fg-muted); }
-.ar-ws .bar-target { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
-.ar-ws .bar-gap { color: var(--ar-fg); }
-/* The caption says why values do not count and under what conditions the play measures: it wraps, never cut. */
-.ar-ws .bar-caption { grid-column: 1 / -1; margin: 8px 0 0; font-size: 12px; line-height: 1.4; white-space: normal; }
-.ar-ws .checker-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--ar-fg); font-family: var(--ar-font-mono); font-weight: 650; }
-.ar-ws .checker-chip::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--checker); }
-.ar-ws .live-box { padding: 10px 14px; border: 1px solid var(--ar-border); border-left: 3px solid var(--ar-border-strong); border-radius: 8px; min-width: 0; font-size: var(--ar-text-s); }
-.ar-ws .live-box[data-status$=':fail'] { border-left-color: var(--ar-c-fail); color: inherit; }
-.ar-ws .live-box[data-status$=':attention'] { border-left-color: var(--ar-c-run); color: inherit; }
-.ar-ws .live-box p { margin: 0; }
 .ar-ws .blocker-chip { display: grid; gap: 2px; min-width: 0; }
 .ar-ws .blocker-chip p { overflow-wrap: anywhere; }
 .ar-ws .blocker-class { text-transform: uppercase; letter-spacing: .03em; font-family: var(--ar-font-mono); font-weight: 700; }
 .ar-ws .blocker-age { font-family: var(--ar-font-mono); font-weight: 600; }
-.ar-ws .blocker-source { font-size: 13px; }
-.ar-ws .blocker-source code { font-size: 12px; }
 .ar-ws .blocker-also { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .blocker-also b { font-family: var(--ar-font-mono); text-transform: uppercase; font-size: 13px; }
-.ar-ws .kill-checkpoints { margin: 8px 0 0; padding: 6px 0 0; list-style: none; border-top: 1px solid var(--ar-border); display: grid; gap: 2px; }
-.ar-ws .kill-checkpoints li[data-due='no'] { color: var(--ar-fg); }
 .ar-ws .play-cost { margin: 0; font-size: var(--ar-text-s); }
 .ar-ws .play-cost-usd { color: var(--ar-fg); font-family: var(--ar-font-mono); }
 .ar-ws .ending-glyph { font-family: var(--ar-font-mono); }
@@ -3440,9 +3352,6 @@
 .ar-ws .ledger-best { font-size: var(--ar-text-s); }
 .ar-ws .ledger-best.verdict-solved { color: var(--ar-c-ok); }
 .ar-ws .ledger-best.is-superseded, .ar-ws .ledger-best.is-unscored { color: var(--ar-fg-muted); }
-.ar-ws .ending-reason { margin-top: 4px !important; font-size: 13px; }
-.ar-ws .live-box .nowrap { white-space: nowrap; }
-.ar-ws .kill-checkpoints li[data-missed='yes'] { color: var(--ar-fg); font-weight: 600; }
 /* The hatch sits in a left stub so the word stays on a plain ground and reads. */
 .ar-ws .unpriced { display: inline-flex; align-items: center; gap: 6px; color: var(--ar-fg-muted); font-size: 13px; }
 .ar-ws .unpriced::before { content: ''; display: inline-block; width: 14px; height: 12px; border-radius: 2px; background: var(--ws-hatch); }
@@ -3456,7 +3365,6 @@
 .ar-ws .run-end-blocker { margin: 6px 0 2px; }
 /* A 27-agent team would run a page tall: the panel scrolls inside 640 px. */
 .ar-ws .team-panel .tgc-timeline-view { max-height: 640px; overflow-y: auto; overscroll-behavior: contain; }
-.ar-ws .goal-block.no-bar { grid-template-columns: minmax(0, 1fr); }
 .ar-ws .team-single { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
 .ar-ws .finding-group { margin: 0 0 6px; }
 .ar-ws .finding-group > summary { cursor: pointer; padding: 4px 0; font-size: var(--ar-text-s); }
@@ -3482,35 +3390,10 @@
 .ar-ws .verdict-cell { font-family: var(--ar-font-mono); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .release-row > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .play-judged-link { margin: 0; }
-@media (max-width: 1100px) {
-  .ar-ws .play-goal-grid { grid-template-columns: minmax(0, 1fr); }
-}
 @media (max-width: 700px) {
-  /* 390: goal, standing, the live blocker and its checkpoint, one check line, one sideways bar strip, then the tabs. */
   .ar-ws .play-head { gap: 6px; }
-  .ar-ws .play-goal p, .ar-ws .play-sentence { font-size: var(--ar-text-s); }
+  .ar-ws .play-sentence { font-size: var(--ar-text-s); }
   .ar-ws .play-sentence { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .ar-ws .play-goal-grid { gap: 6px; }
-  .ar-ws .live-box { order: -1; padding: 6px 10px; }
-  .ar-ws .live-box .blocker-source, .ar-ws .live-box .blocker-also { display: none; }
-  .ar-ws .live-box .blocker-chip p:first-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .ar-ws .kill-checkpoints { margin-top: 4px; padding-top: 4px; }
-  .ar-ws .kill-checkpoints li + li { display: none; }
-  .ar-ws .goal-block { display: block; padding: 6px 10px; border: 0; background: var(--ws-raised); }
-  .ar-ws .goal-block h4 { display: inline; margin-right: 8px; }
-  .ar-ws .goal-check { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
-  .ar-ws .goal-rows { display: flex; flex-wrap: wrap; gap: 0 12px; }
-  .ar-ws .goal-rows > div { display: inline-flex; gap: 4px; }
-  .ar-ws .goal-rows .goal-prov, .ar-ws .goal-rows .faint, .ar-ws .goal-rows .goal-best { display: none; }
-  .ar-ws .goal-bar .bar-rows { display: flex; }
-  .ar-ws .goal-bar { margin-top: 4px; }
-  .ar-ws .goal-bar h4 { display: none; }
-  .ar-ws .bar-rows { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; }
-  .ar-ws .bar-row { display: flex; flex: none; gap: 5px; white-space: nowrap; }
-  .ar-ws .bar-row .bar-target, .ar-ws .bar-caption, .ar-ws .bar-row .bar-track-cell { display: none; }
-  .ar-ws .bar-row .bar-value { display: inline-flex; }
-  .ar-ws .stage-ladder { flex-basis: 100%; margin: 2px 0 4px; }
-  .ar-ws .stage-ladder span { font-size: 10px; }
   .ar-ws .play-cost { display: none; }
   .ar-ws .finding-row { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .finding-meta { white-space: normal; }
@@ -3606,8 +3489,6 @@
 .ar-ws .climb-brush-tick { position: absolute; bottom: 2px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: none; box-shadow: inset 0 0 0 1px var(--ar-c-neutral); opacity: .8; }
 .ar-ws .climb-brush-tick.is-pass { background: var(--ar-c-neutral); }
 .ar-ws .climb-brush-window { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--ar-c-info) 22%, transparent); border-left: 2px solid var(--ar-c-info); border-right: 2px solid var(--ar-c-info); pointer-events: none; }
-.ar-ws .bar-gap-candidate { color: var(--ar-fg-muted); font-weight: 500; font-size: 12px; }
-.ar-ws .goal-rows dd.releases-row { white-space: normal; overflow: visible; }
 
 /* ---------- One agent's attempts as beads on a string (run page, under the replay) ---------- */
 .ar-ws .bead-string { display: grid; gap: 4px; padding: 6px 14px 8px; border-bottom: 1px solid var(--ar-border); }
@@ -3629,3 +3510,90 @@
 .agent-record .topology-tree { border-block: 1px solid var(--ar-border); margin: 0.3rem 0.85rem; }
 .agent-record .topology-tree > summary { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg-muted); padding: 0.4rem 0; cursor: pointer; }
 .agent-record .topology-tree[open] > summary { margin-bottom: 0.5rem; }
+
+/* ---------- Decision pages open with their answers (change 4; design-system sections 3 and 6) ---------- */
+.ar-ws .as-of { margin-left: auto; font-size: 12.5px; color: var(--ar-fg-muted); white-space: nowrap; cursor: help; }
+.ar-ws .ov-head { display: flex; align-items: baseline; gap: 12px; }
+.ar-ws .ov-head h1 { margin: 0; }
+.ar-ws .answer-strip { display: grid; gap: 12px; min-width: 0; }
+.ar-ws .answer-tiles { display: grid; gap: 12px; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); }
+.ar-ws .answer-tile { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 16px 13px; border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); }
+.ar-ws .answer-tile[data-open='true'] { border-color: var(--ws-accent); box-shadow: inset 0 0 0 1px var(--ws-accent); }
+.ar-ws .answer-tile-label { padding-right: 24px; font-size: 12px; font-weight: 600; color: var(--ar-fg-muted); }
+.ar-ws .answer-tile-head { font-size: 15.5px; font-weight: 620; line-height: 1.3; }
+.ar-ws .answer-tile-figure { display: flex; align-items: baseline; min-height: 36px; cursor: help; }
+.ar-ws .answer-tile-figure [data-num] b { font-size: 30px; line-height: 1.15; font-weight: 620; font-variant-numeric: tabular-nums; }
+.ar-ws .answer-tile-figure small { font-size: 13px; color: var(--ar-fg-muted); }
+.ar-ws .answer-tile-figure [data-spark] { display: inline-flex; align-items: center; gap: 6px; }
+.ar-ws .answer-tile-figure [data-spark] svg { width: 96px; height: 30px; }
+.ar-ws .answer-tile-sub { font-size: 12.5px; line-height: 1.4; color: var(--ar-fg-muted); }
+.ar-ws .answer-tile-more { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--ar-fg-faint); cursor: pointer; }
+.ar-ws .answer-tile-more[aria-expanded='true'] span { display: inline-block; transform: rotate(180deg); }
+.ar-ws .answer-drawer { padding: 14px 18px; border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); font-size: 13px; }
+.ar-ws .answer-drawer dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 18px; margin: 0; }
+.ar-ws .answer-drawer dl > div { display: contents; }
+.ar-ws .answer-drawer dt { color: var(--ar-fg-muted); }
+.ar-ws .answer-drawer dd { margin: 0; overflow-wrap: anywhere; }
+.ar-ws .check-works { border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); font-size: 13px; }
+.ar-ws .check-works > summary { padding: 10px 16px; cursor: pointer; font-weight: 600; }
+.ar-ws .check-works > :not(summary) { margin: 0 16px 8px; }
+.ar-ws .check-bars { padding-left: 18px; }
+/* Off the Standing tab the play's header is one 56 px sticky line, so a tab's first section starts near the top. */
+.ar-ws .play-head.is-compact { position: sticky; top: 0; z-index: 5; display: flex; flex-direction: row; align-items: center; gap: 12px; height: 56px; padding-top: 0; padding-bottom: 0; }
+.ar-ws .play-head.is-compact h1 { margin: 0; font-size: var(--ar-text-l, 18px); }
+/* The run's first screen: head, four slots, and the tabs below it. */
+.ar-ws .fold { display: flex; flex-direction: column; min-height: calc(100svh - 52px); }
+.ar-ws .run-fold { display: grid; gap: 12px; padding: 4px 0 16px; }
+.ar-ws .run-fold .crumbs { font-size: 13px; }
+.ar-ws .run-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.ar-ws .run-head h1 { margin: 0; }
+.ar-ws .run-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ar-ws .run-slot { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 16px; border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); }
+.ar-ws .run-slot.is-state { grid-column: 1 / -1; border: 0; padding: 0; background: none; }
+.ar-ws .run-state { margin: 0; font-size: 17px; line-height: 1.45; max-width: 96ch; }
+.ar-ws .run-slot-label { font-size: 12px; font-weight: 600; color: var(--ar-fg-muted); }
+.ar-ws .run-slot-sub { font-size: 12.5px; color: var(--ar-fg-muted); }
+.ar-ws .run-slot-spark svg { width: 160px; height: 32px; }
+.ar-ws .run-meter { position: relative; display: block; height: 8px; margin: 6px 0 2px; border: 1px solid var(--ar-border); border-radius: 4px; background: var(--ws-raised); }
+.ar-ws .run-meter i { position: absolute; left: 0; top: -1px; bottom: -1px; border-radius: 4px; background: var(--ar-fg); }
+.ar-ws .run-meter .run-meter-prev { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ar-fg-muted); }
+.ar-ws .run-meter .run-meter-bar { position: absolute; right: -1px; top: -5px; bottom: -5px; width: 2px; background: var(--ar-fg); opacity: .6; }
+.ar-ws .run-why { margin: 0 0 12px; border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); font-size: var(--ar-text-s); overflow-wrap: anywhere; }
+.ar-ws .run-why > summary { padding: 10px 16px; cursor: pointer; font-weight: 600; }
+.ar-ws .run-why > :not(summary) { margin: 0 16px 8px; }
+.ar-ws .run-why pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; }
+/* On a run's tab pages the status block is one 32 px sticky line. */
+.ar-ws .run-status-line { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; height: 32px; margin: 0; padding: 0 4px; background: var(--ar-bg); font-size: var(--ar-text-s); white-space: nowrap; overflow: hidden; }
+.ar-ws .run-tabs { display: grid; gap: 6px; }
+.ar-ws .run-tab-strip { display: flex; gap: 2px; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .run-tab-select { display: none; }
+.ar-ws .run-tab-parts { display: flex; flex-wrap: wrap; gap: 2px; }
+.ar-ws .run-part { padding: 4px 10px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--ar-fg-muted); cursor: pointer; }
+.ar-ws .run-part.on { border-color: var(--ar-border); color: var(--ar-fg); font-weight: 600; }
+.ar-ws .rr-head { padding: 4px 0 8px; }
+.ar-ws .rr-check-result { margin: 0 0 8px; overflow-wrap: anywhere; }
+.ar-ws .rr-contract-table td { vertical-align: top; }
+.ar-ws .rr-contract-line summary { cursor: pointer; }
+.ar-ws .rr-contract-line code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ar-ws .work-graph-list ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.ar-ws .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 720px) {
+  .ar-ws .answer-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .ar-ws .answer-tiles { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .ar-ws .answer-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label label' 'head fig' 'sub sub'; gap: 2px 12px; padding: 11px 14px 10px; }
+  .ar-ws .answer-tile-label { grid-area: label; }
+  .ar-ws .answer-tile-head { grid-area: head; align-self: center; }
+  .ar-ws .answer-tile-figure { grid-area: fig; min-height: 0; justify-self: end; }
+  .ar-ws .answer-tile-figure [data-num] b { font-size: 24px; }
+  .ar-ws .answer-tile-figure small { display: none; }
+  .ar-ws .answer-tile-sub { grid-area: sub; }
+  .ar-ws .run-slots { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .run-state { font-size: 15.5px; }
+  .ar-ws .as-of { margin-left: 0; width: 100%; }
+}
+@media (max-width: 520px) {
+  .ar-ws .run-tab-strip { display: none; }
+  .ar-ws .run-tab-select { display: block; }
+}
