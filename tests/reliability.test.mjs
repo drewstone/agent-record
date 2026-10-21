@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { liveCauses, percent } from '../src/workspace/reliability.ts'
+import { liveCauses, percent } from '../src/workspace/reliability-model.ts'
 
 const cause = (id, runsLost, lastSeen, lostAgentHours = 1, runsHit = 0) => ({ id, layer: 'infra', owner: 'o', title: id, runsLost, runsHit, lostAgentHours, lastSeen })
 const doc = (causes) => ({ schema: 'discovery-lab.reliability.v1', at: '2026-10-06T02:39:49.508Z', window: { since: '', until: '', days: 7 }, definition: '', runs: {}, rate: 0.362, completed: 0.405, lostAgentHours: 1, causes, daily: [] })

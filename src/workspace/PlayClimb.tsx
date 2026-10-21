@@ -3,6 +3,7 @@ import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
+import { dataStatus, statusOf } from './data.js'
 import {
   checkerIndex,
   checkerLabel,
@@ -11,6 +12,8 @@ import {
   compactNumber,
   displayUnitFor,
   ENDING_GLYPH,
+  hostWords,
+  lineReason,
   markVerdict,
   metricValue,
   type PlayBarMetric,
@@ -21,6 +24,7 @@ import {
   tagsWords,
   targetWords,
   utc,
+  VERDICT_WORDS,
   verdictWord,
 } from './play-standing.js'
 
@@ -53,7 +57,7 @@ export function releaseAxis(play: Play, climb: Climb) {
   const runOf: string[] = []
   const bands: ChartBand[] = []
   const groups = climb.groups
-  const glyphOf = (group: Climb['groups'][number]) => group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
+  const glyphOf = (group: Climb['groups'][number]) => (group.end ? (ENDING_GLYPH[group.end.kind] ?? group.end.glyph ?? '') : '')
   const runName = (group: Climb['groups'][number]) => shortRun(play.id, group.runId) || group.label
   // Runs with check rows but no checked release (16a-17b, 19a-19b on magnetar-rust) fold into one narrow column each
   // stretch, so the axis names every run without a bracket per run too narrow to read; the hover lists each one.
@@ -88,11 +92,11 @@ export function releaseAxis(play: Play, climb: Climb) {
     const counts = [
       tagged && group.checked !== null && group.checked !== undefined ? `${group.checked} checked` : null,
       tagged && group.published !== null && group.published !== undefined ? `${group.published} published` : null,
-      group.withheld ? `${group.withheld} withheld` : null,
+      group.withheld ? `${group.withheld} not published` : null,
       (group.untagged ?? group.noTag) ? `${group.untagged ?? group.noTag} untagged` : null,
     ].filter(Boolean)
     const lineage = group.lineage?.kind === 'fork' && group.lineage.parentRun ? `forked from ${shortRun(play.id, group.lineage.parentRun)}${group.lineage.parentTag ? `@${shortTag(group.lineage.parentTag)}` : ''}` : group.lineage?.kind === 'wrong-base' ? `wrong base ${group.lineage.why ?? ''}` : null
-    const label = [`${glyphOf(group) ? `${glyphOf(group)} ` : ''}${runName(group)}`, ...counts, lineage, group.unscored ? 'no score line' : null, runSpan(group.from, group.to)].filter(Boolean).join(' · ')
+    const label = [`${glyphOf(group) ? `${glyphOf(group)} ` : ''}${runName(group)}`, ...counts, lineage, group.unscored ? 'score line not recorded' : null, runSpan(group.from, group.to)].filter(Boolean).join(' · ')
     bands.push({ from, to: categories.length - 1, label, kind: 'group' })
   }
   flush()
@@ -144,7 +148,7 @@ function climbFigure(play: Play, climb: Climb, width: number) {
       marker: mark.kind === 'gate' ? 'diamond' : 'circle',
       ...(mark.verdict === 'solved' ? { glyph: 'check' as const } : {}),
       ...(workloads && mark.progress !== null ? { label: workloads } : {}),
-      annotation: [`${mark.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(mark.verdict)}${mark.scope === 'contract' ? ' (contract stages)' : ''}`, stage, workloads ? `${workloads} workloads` : null, mark.line, mark.source].filter(Boolean).join(' · '),
+      annotation: [`${mark.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(mark.verdict)}${mark.scope === 'contract' ? ' (contract stages)' : ''}`, stage, workloads ? `${workloads} workloads` : null, lineReason(mark.line), mark.source].filter(Boolean).join(' · '),
     }
     row(mark.checker, climb.columns.find((column) => column.id === mark.columnId)?.runId ?? '').points.push(point)
   }
@@ -160,9 +164,9 @@ function climbFigure(play: Play, climb: Climb, width: number) {
       ...timeOf(item),
       marker: item.kind === 'gate' ? 'diamond' : 'circle',
       annotation: [
-        `${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}, no score`,
+        `${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}, score not recorded`,
         item.score?.workloads?.total ? `printed ${item.score.workloads.passed ?? '?'}/${item.score.workloads.total} workloads before it stopped` : null,
-        item.line,
+        lineReason(item.line),
         item.source,
       ]
         .filter(Boolean)
@@ -210,7 +214,7 @@ function climbFigure(play: Play, climb: Climb, width: number) {
     id: `climb-${play.id}`,
     x: { label: 'Release', domain: axis.domain, categories: axis.categories },
     // Headroom above SOLVED keeps ruling heads off the solved marks.
-    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}), strip: 'no score' },
+    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}), strip: 'score not recorded' },
     formatY: stageAt(climb),
     markers: { circle: 'check', diamond: 'gate' },
     bands: axis.bands,
@@ -290,7 +294,7 @@ function climbTimeFigure(play: Play, climb: Climb, width: number, window: [numbe
       ...(item.verdict === 'superseded' ? {} : { verdict: markVerdict(item.verdict) }),
       marker: item.kind === 'gate' ? 'diamond' : 'circle',
       ...(item.verdict === 'solved' ? { glyph: 'check' as const } : {}),
-      annotation: [`${tag ?? 'untagged'} · ${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}`, workloads ? `${workloads} workloads` : null, item.count && item.count > 1 ? `${item.count}× from ${utc(item.firstAt)} to ${utc(item.lastAt)}` : utc(item.firstAt), item.line].filter(Boolean).join(' · '),
+      annotation: [`${tag ?? 'untagged'} · ${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}`, workloads ? `${workloads} workloads` : null, item.count && item.count > 1 ? `${item.count}× from ${utc(item.firstAt)} to ${utc(item.lastAt)}` : utc(item.firstAt), lineReason(item.line)].filter(Boolean).join(' · '),
     }
     const series = row(item.checker, runId)
     if (item.count && item.count > 1 && last > first) {
@@ -337,7 +341,7 @@ function climbTimeFigure(play: Play, climb: Climb, width: number, window: [numbe
   return timeSeries(series, {
     id: `climb-time-${play.id}`,
     x: { label: 'Time (UTC)', domain: [lo, hi] },
-    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}), strip: 'no score' },
+    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}), strip: 'score not recorded' },
     formatX: (x) => {
       const iso = new Date(x).toISOString()
       return span < 36 * 3_600_000 ? `${iso.slice(11, 16)}Z` : `${iso.slice(5, 10)} ${iso.slice(11, 13)}h`
@@ -446,7 +450,8 @@ function ClimbBrush({ play, climb, extent, window, onWindow }: { play: Play; cli
           </span>
         ))}
         {ticks.map((tick, i) => (
-          <i key={i} className={`climb-brush-tick tone-${markVerdict(tick.verdict) === 'pass' ? 'ok' : markVerdict(tick.verdict) === 'fail' ? 'fail' : 'unknown'}`} style={{ left: at(tick.x) }} />
+          // Ticks are history in neutral ink: a pass is filled, every other verdict an outline.
+          <i key={i} className={`climb-brush-tick${markVerdict(tick.verdict) === 'pass' ? ' is-pass' : ''}`} style={{ left: at(tick.x) }} />
         ))}
         {shown && <span className="climb-brush-window" style={{ left: at(shown[0]), width: `calc(${at(shown[1])} - ${at(shown[0])})` }} />}
       </div>
@@ -465,7 +470,7 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
     <ol className="verdict-strip" data-verdict-strip>
       {climb.groups.map((group) => {
         const columns = climb.columns.filter((column) => column.runId === group.runId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        const glyph = group.end?.glyph ?? (group.end ? (ENDING_GLYPH[group.end.kind] ?? '') : '')
+        const glyph = (group.end ? (ENDING_GLYPH[group.end.kind] ?? group.end.glyph ?? '') : '')
         return (
           <li key={group.runId}>
             <a className="mono verdict-strip-run" href={`/run/${encodeURIComponent(group.runId)}`} title={runSpan(group.from, group.to)}>
@@ -476,17 +481,21 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
               {columns.flatMap((column) =>
                 rows
                   .filter((row) => row.columnId === column.id)
-                  .map((row, i) => (
+                  .map((row, i) => {
+                    const status = statusOf({ axis: 'result', verdict: row.verdict, current: play.checkers?.find((item) => item.sha256 === row.checker || item.label === row.checker)?.current ?? true })
+                    return (
                     <span
                       key={`${column.id}:${i}`}
-                      className={`verdict-chip tone-${markVerdict(row.verdict) === 'pass' ? 'ok' : markVerdict(row.verdict) === 'fail' ? 'fail' : 'unknown'}`}
+                      className="verdict-chip"
+                      data-status={dataStatus(status)}
                       style={{ ['--checker' as string]: checkerColor(checkerIndex(play.checkers, row.checker) ?? 9) }}
                       title={[`${row.kind === 'gate' ? 'tag gate' : 'check'} under ${checkerLabel(play.checkers, row.checker)}: ${verdictWord(row.verdict)}`, row.line, utc(row.lastAt ?? row.firstAt)].filter(Boolean).join('\n')}
                     >
-                      {markVerdict(row.verdict) === 'pass' ? '✓' : markVerdict(row.verdict) === 'fail' ? '✕' : '?'} {shortTag(column.tag) ?? 'workspace'}
+                      {status.shape} {shortTag(column.tag) ?? 'workspace'}
                       {row.count && row.count > 1 ? ` ×${row.count}` : ''}
                     </span>
-                  )),
+                    )
+                  }),
               )}
             </span>
           </li>
@@ -548,6 +557,12 @@ function ChecksSaid({ play, climb }: { play: Play; climb: Climb }) {
   )
 }
 
+/**
+ * @tangle-network/charts 0.12 names an unknown verdict "undecided" in its key, data table and hover (plan item D6); the
+ * pages say "unverified" (design-system section 1). A figure is plain strings, so the word is replaced outside class names.
+ */
+const inGrammar = <T,>(figure: T): T => JSON.parse(JSON.stringify(figure).replace(/(?<![-\w])undecided\b/g, VERDICT_WORDS.undecided!)) as T
+
 const initialMode = (): 'release' | 'time' => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('climb') === 'time' ? 'time' : 'release')
 
 export function PlayClimb({ play }: { play: Play }) {
@@ -559,7 +574,7 @@ export function PlayClimb({ play }: { play: Play }) {
   const extent = useMemo(() => (climb ? timeExtent(climb) : null), [climb])
   const timed = mode === 'time' && !!extent
   // Drawn at the section's measured width, so the climb's labels and marks keep their set size on a wide page.
-  const figure = useCallback((width: number) => (timed ? climbTimeFigure(play, climb!, width, range ?? extent!) : climbFigure(play, climb!, width)), [play, climb, timed, range, extent])
+  const figure = useCallback((width: number) => inGrammar(timed ? climbTimeFigure(play, climb!, width, range ?? extent!) : climbFigure(play, climb!, width)), [play, climb, timed, range, extent])
   const choose = (next: 'release' | 'time') => {
     setMode(next)
     const url = new URL(window.location.href)
@@ -578,7 +593,7 @@ export function PlayClimb({ play }: { play: Play }) {
           {graded
             ? timed
               ? 'Check progress at the time each check ran, each run a band over the hours it ran; a release checked many times is a line from its first check to its last. Filled marks pass, rings fail; ◆ is a tag gate.'
-              : 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are undecided; ◆ is a tag gate.'
+              : 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are unverified; ◆ is a tag gate.'
             : 'This check passes or fails without partial progress: each run’s checked releases with their verdicts.'}
         </p>
         {graded && extent && (
@@ -642,7 +657,7 @@ export function PlayAgainstBar({ play }: { play: Play }) {
   const bar = play.bar ?? null
   const figure = useMemo(() => {
     if (!climb || !bar || !play.barSeries?.length) return null
-    return (width: number) => barFigure(play, climb, bar, width)
+    return (width: number) => inGrammar(barFigure(play, climb, bar, width))
   }, [play, climb, bar])
   if (!figure || !barPanels(play).length) return null
   return (
@@ -681,7 +696,7 @@ function barFigure(play: Play, climb: Climb, bar: NonNullable<Play['bar']>, widt
           verdict: markVerdict(point.verdict),
           comparable: point.comparable === undefined ? null : point.comparable,
           ...(failing && point.comparable !== false ? { glyph: 'cross' as const } : {}),
-          annotation: [metricValue(point.value, metric.unit), verdictWord(point.verdict), point.note, point.basis ? `from ${point.basis}` : null].filter(Boolean).join(' · '),
+          annotation: [metricValue(point.value, metric.unit), verdictWord(point.verdict), point.note ? hostWords(point.note) : null, point.basis ? `from ${point.basis}` : null].filter(Boolean).join(' · '),
         }
       })
     const domain = domainOf(metric, points.map((point) => point.y!).filter((value) => value !== null))

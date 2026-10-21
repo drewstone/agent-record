@@ -41,15 +41,10 @@ export function externalHref(href: string | null | undefined): string | null {
   }
 }
 
-const VERDICTS: Record<string, { label: string; tone: string }> = {
-  met: { label: 'met', tone: 'state-ok' },
-  'not-met': { label: 'not met', tone: 'state-fail' },
-  inconclusive: { label: 'inconclusive', tone: 'state-warn' },
-  'not-measured': { label: 'not measured', tone: 'state-unknown' },
-}
+const VERDICTS: Record<string, string> = { met: 'met', 'not-met': 'not met', inconclusive: 'inconclusive', 'not-measured': 'not measured' }
 
-/** A hypothesis verdict's label and tone; a value this viewer does not know is shown as written, in a neutral tone. */
-export const verdictView = (verdict: string) => VERDICTS[verdict] ?? { label: verdict.replaceAll('-', ' '), tone: 'state-unknown' }
+/** A hypothesis verdict's label; a value this viewer does not know is shown as written. Its tone comes from `statusOf`. */
+export const verdictView = (verdict: string) => ({ label: VERDICTS[verdict] ?? verdict.replaceAll('-', ' ') })
 
 /** `3/4`; a judge that gave no score reads `unknown/4`, never 0. */
 export function scoreLabel(score: number | null | undefined, max: number | null | undefined): string {
@@ -82,13 +77,9 @@ export function questionLabel(id: string): string {
   return words ? words[0].toUpperCase() + words.slice(1) : id
 }
 
-/** A 0–100 review score's tone: 70 and up good, under 40 poor, between mixed; no score is neutral. */
-export function reviewScoreTone(score: number | null | undefined): string {
-  if (score === null || score === undefined || !Number.isFinite(score)) return 'state-unknown'
-  return score >= 70 ? 'state-ok' : score < 40 ? 'state-fail' : 'state-warn'
-}
 
-/** Whether the review is the settled run's final one, or a live one with the time it was written. */
-export function reviewPhaseLabel(review: { final: boolean; phase: string }, written: string): string {
-  return review.final || review.phase === 'settled' ? 'Final review, after the run settled' : `Live review, ${written}`
+/** The settled run's final review by how many sessions it read, or a live one with the time it was written. */
+export function reviewPhaseLabel(review: { final: boolean; phase: string; sessions: { read: number | null } }, written: string): string {
+  const read = review.sessions.read
+  return review.final || review.phase === 'settled' ? `Reviewed: ${read === null ? 'sessions read not counted' : `${read} session${read === 1 ? '' : 's'} read`}` : `Live review, ${written}`
 }

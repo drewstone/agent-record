@@ -1,14 +1,17 @@
 import type { ReactNode } from 'react'
 import { ENDING_COLORS, ENDING_ORDER, type RunEnding } from '@tangle-network/charts'
 import { LIVE_SERIES, formatCompact } from '@tangle-network/charts/react'
+import { endingStatus } from './data.js'
 export { DayBars, HBars, Histogram, Lines, Meter, Spark, Gantt } from '@tangle-network/charts/react'
 
-// The shared chart palette supplies categorical slots; run states take the one ending palette every view shares.
-export const SERIES = LIVE_SERIES
+// The shared chart palette supplies categorical slots, except its third (#c98500), which is the stalled amber: status hues
+// mark status only (design-system section 5), so that slot is a violet at ΔE ≥ 24 from every series and status tone.
+// The palette itself is the charts library's to change (plan item D6).
+export const SERIES = [LIVE_SERIES[0]!, LIVE_SERIES[1]!, '#9b59b6', ...LIVE_SERIES.slice(3)]
 /**
- * A catalog state as the ending word every page shows (@tangle-network/charts ENDING_ORDER): green, red and amber mean
- * solved, died and stalled on the overview, the play page and the explorer alike. A state with no ending (no record,
- * unknown) draws hollow in the neutral grey.
+ * A catalog state as the ending word every page shows (@tangle-network/charts ENDING_ORDER). The ending colours are the
+ * status tones agent-record sets on `--chart-ending-*` (styles.css): green for solved, amber for live, and neutral for
+ * every other ending, told apart by shape. A state with no ending (no record, unknown) draws hollow.
  */
 export const ENDING_OF_STATE: Record<string, RunEnding> = {
   winner: 'solved',
@@ -21,12 +24,10 @@ export const ENDING_OF_STATE: Record<string, RunEnding> = {
   abandoned: 'cancelled',
   cancelled: 'cancelled',
 }
-export const STATE_COLOR: Record<string, string> = {
-  ...Object.fromEntries(Object.entries(ENDING_OF_STATE).map(([state, ending]) => [state, ENDING_COLORS[ending]])),
-  'no-record': 'var(--chart-outcome-other)',
-  unknown: 'var(--chart-outcome-other)',
-}
-/** Per-day counts by state folded into the ending words, in ENDING_ORDER; states without an ending are `unknown`. */
+/**
+ * Per-day counts by state folded into the ending words, in ENDING_ORDER; states without an ending are `unknown`. A count
+ * of running runs is data, drawn in ink: the running run's own row chip is its one amber mark on the page (v2 delta 3).
+ */
 export function byEnding(byState: Record<string, (number | null)[]>): Array<{ name: string; color: string; values: (number | null)[] }> {
   const sums = new Map<string, (number | null)[]>()
   for (const [state, values] of Object.entries(byState)) {
@@ -36,7 +37,7 @@ export function byEnding(byState: Record<string, (number | null)[]>): Array<{ na
   }
   return [...ENDING_ORDER, 'unknown' as const]
     .filter((ending) => (sums.get(ending) ?? []).some((value) => (value ?? 0) > 0))
-    .map((ending) => ({ name: ending, color: ending === 'unknown' ? 'var(--chart-outcome-other)' : ENDING_COLORS[ending], values: sums.get(ending)! }))
+    .map((ending) => ({ name: endingStatus(ending).word.replace(/ \(.*\)$/, ''), color: ending === 'unknown' ? 'var(--chart-outcome-other)' : ending === 'live' ? 'var(--ar-fg)' : ENDING_COLORS[ending], values: sums.get(ending)! }))
 }
 
 export const compact = formatCompact

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunSummary } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
-import { money, stateClass, stateLabel } from './data.js'
+import { dataStatus, money, statusOf } from './data.js'
 import { canvasModel, COL_W, lineageOf, neighbour, NODE_H, NODE_W, originChain, originText, originVerb, profileRunCost, runPlays } from './profile-canvas.js'
 import type { CanvasEdge, CanvasModel, CanvasNode, CanvasScope } from './profile-canvas.js'
 import { findProfile, profileGraph, profileState } from './profile-graph.js'
@@ -322,6 +322,7 @@ function NodeCard({
   }
   const profile = node.node!
   const state = profileState(profile)
+  const status = statusOf({ axis: 'run', state })
   const full = profile.name ?? profile.label ?? profile.short
   const contract = profile.runs.find((run) => run.contract?.version === 'research-contract-v2')?.contract
   // A registered profile is named after its run; the play is the page's, so the card shows the run's own part.
@@ -337,7 +338,7 @@ function NodeCard({
     >
       {node.foreign && node.play && <span className="pc-play mono">{node.play}</span>}
       <span className="pc-title">
-        <span className={`dot ${stateClass(state)}`} title={stateLabel(state)} />
+        <span className="dot" data-status={dataStatus(status)} title={status.word}>{status.shape}</span>
         <b>{name}</b>
         <span className="pc-kind">{KIND_LABEL[profile.kind] ?? profile.kind}</span>
       </span>

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { chartPairs, headlineScore, latestNumericGrade, median, scoreRows } from '../src/workspace/scores.ts'
+import { chartPairs, headlineScore, latestNumericGrade, median, scoreRows } from '../src/workspace/scores-model.ts'
 
 const readout = (judges) => ({ status: 'complete', judges })
 const review = (persona, overall, scores) => ({ panel: 'p1', persona, overall, decision: 'no', verdict: `${persona} verdict`, scores })

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { RecordNode } from '../record.js'
+import { dataStatus, statusOf } from '../workspace/data.js'
 import { ms, roleOf } from './model.js'
 import type { RecordIndex } from './model.js'
 
@@ -56,6 +57,7 @@ export function AgentTree({
             : undefined
         const future = begin !== undefined && begin > cutoff
         const ended = node.end !== undefined && ms(node.end) <= cutoff
+        const agent = statusOf({ axis: 'agent', status: node.status, live: !ended })
         const state = future
           ? 'Not yet started'
           : ended
@@ -78,10 +80,10 @@ export function AgentTree({
               title={`${node.label}${node.assignment ? ` · ${node.assignment}` : ''} · ${state}`}
               onClick={() => select(node.id)}
             >
-              <span
-                className={`graph-state ${ended && node.status === 'done' ? 'state-done' : ended && node.status === 'down' ? 'state-down' : 'state-unknown'}`}
-                aria-hidden="true"
-              />
+              {/* An agent that has ended is history, neutral; its mark is its status shape, so colour is never the only signal. */}
+              <span className="graph-state" data-status={dataStatus(agent)} aria-hidden="true">
+                {agent.shape}
+              </span>
               <span className="graph-copy">
                 <span className="graph-label">{node.label}</span>
                 <span className="graph-meta">{roleOf(node)} · {state}</span>

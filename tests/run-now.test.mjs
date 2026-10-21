@@ -19,7 +19,7 @@ test('the run page opens with the outcome, the score curve and each contract lin
   const now = html.indexOf('data-section="now"')
   assert.ok(now > 0 && now < html.indexOf('rr-columns'), 'the Now section comes before the evidence columns')
   const words = text(html)
-  assert.match(words, /Check passed · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
+  assert.match(words, /Now✓ Passed · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
   // The curve is the Lab's points: rc1 at 0, rc2 at 0.5, rc3 at 0.667 when its public stages passed, then 1. The paragraph
   // that repeated them in words is gone (X9); the chart's data table carries the values.
   assert.match(html, /data-field="system\.play\.scores"[^>]*>.*<svg/s)
@@ -44,10 +44,10 @@ test('a failing run shows its first failing line with its stage, and a page with
   const failing = { ...passed, solved: false, checkedAt: '2026-10-18T01:51:33.804Z', tag: 'test-contract-loop-20261018c/rc1', stage: 'contract',
     firstFailingLine: 'NOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)' }
   const words = text(page(failing))
-  assert.match(words, /Check not passing · checked 01:51 UTC on rc1/)
+  assert.match(words, /Now○ No pass yet · checked 01:51 UTC on rc1/)
   assert.match(words, /First failing line \(contract stage\)NOT SOLVED: manifest\.json build must be a cargo argv list/)
   const bare = text(page(undefined))
-  assert.doesNotMatch(bare, /Check passed|Check not passing/)
+  assert.doesNotMatch(bare, /Now✓ Passed|Now○ No pass yet/)
   assert.match(bare, /Contract lines sent/)
 })
 
@@ -58,7 +58,7 @@ test('a live run whose newest version waits for its check says which version and
     firstFailingLine: 'NOT SOLVED: (g) workload sha256: reference RV64I execution failed: not an RV64I instruction: 0x6b855593 at 0x10080' }
   const checkWait = { tag: 'magnetar-rust-20261018b/rc7', publishedAt: '2026-10-18T07:32:09.588Z', since: '2026-10-18T07:37:45.098Z', reason: 'the host is stood down: GTR memory 102/121 GB used' }
   const words = text(page({ ...failing, checkWait }))
-  assert.match(words, /Check not passing · checked 07:23 UTC on rc6/)
+  assert.match(words, /Now○ No pass yet · checked 07:23 UTC on rc6/)
   assert.match(words, /rc7 is not checked yet · published 07:32 UTC · the host is stood down: GTR memory 102\/121 GB used \(since 07:37 UTC\)/)
   assert.doesNotMatch(text(page({ ...failing, checkWait: null })), /not checked yet/)
 })
@@ -68,9 +68,9 @@ test('a live run whose newest version waits for its check says which version and
 test('a passed check leads with its solved label and the goal audit behind it', () => {
   const unaudited = text(page({ ...passed, solvedLabel: 'SOLVED (unaudited)', goalAudit: { verdict: 'unaudited', at: '2026-10-18T02:11:00.000Z' } }))
   assert.match(unaudited, /SOLVED \(unaudited\) · checked 01:56 UTC on rc3 · goal audit not ruled yet last tried 02:11 UTC/)
-  assert.doesNotMatch(unaudited, /Check passed/)
+  assert.doesNotMatch(unaudited, /Now✓ Passed/)
   const contradicted = page({ ...passed, solved: false, solvedLabel: 'check passed; goal audit found a contradiction', goalAudit: { verdict: 'contradiction', at: '2026-10-18T02:26:00.000Z' } })
   assert.match(text(contradicted), /check passed; goal audit found a contradiction · checked 01:56 UTC on rc3 · goal audit found a contradiction at 02:26 UTC/)
   assert.match(contradicted, /rr-now-failing/)
-  assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /NowSOLVED · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
+  assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /Now✓ SOLVED · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
 })
