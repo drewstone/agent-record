@@ -1,0 +1,291 @@
+{
+ "blocker": null,
+ "execution": {
+  "alive": true,
+  "diagnoses": [],
+  "diagnosisError": null,
+  "endingError": null,
+  "failedAttempts": 0,
+  "lastActivityAt": null,
+  "lastAttempt": null,
+  "resume": {
+   "command": null,
+   "reason": "",
+   "status": "unknown"
+  },
+  "runnerTail": null,
+  "settleKind": null
+ },
+ "finalOutput": {
+  "brief": null,
+  "checkedAt": null,
+  "declared": null,
+  "fallback": null,
+  "files": [],
+  "grades": {
+   "count": 0,
+   "latest": []
+  },
+  "panel": [],
+  "readout": {
+   "charts": [],
+   "cost": {
+    "apiEquivalentUsd": null,
+    "billedUsd": null,
+    "clause": null,
+    "readoutUsd": null,
+    "runUsd": null
+   },
+   "deliverables": [],
+   "error": null,
+   "generatedAt": null,
+   "judges": [],
+   "links": {
+    "dossier": null,
+    "gist": null,
+    "report": null
+   },
+   "settle": null,
+   "status": "pending",
+   "summary": null,
+   "verdicts": []
+  },
+  "rootOutput": null,
+  "status": "none-declared",
+  "traceReview": null
+ },
+ "findings": null,
+ "input": {
+  "acceptance": {
+   "play": {
+    "calibration": {
+     "at": "2026-10-20T20:05:35.908Z",
+     "check": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "deterministic": true,
+     "fixtures": "sha256:3232323232323232323232323232323232323232323232323232323232323232",
+     "schema": "discovery-lab.check-calibration.v1",
+     "stages": {
+      "build": "calibrated",
+      "contract": "calibrated",
+      "hidden": "uncalibrated",
+      "workloads": "uncalibrated"
+     },
+     "uncalibrated": [
+      "workloads",
+      "hidden"
+     ]
+    },
+    "check": {
+     "kind": "script",
+     "language": "python",
+     "script": "print(\"SOLVED\")"
+    },
+    "id": "codeplay"
+   }
+  },
+  "budget": null,
+  "completion": null,
+  "continuation": null,
+  "digest": "887422202920bb93e0296a4cca4d0569d6127c82ecfb500e086796bd67966933",
+  "files": [],
+  "instruction": null,
+  "knowledge": null,
+  "objective": null,
+  "profile": null,
+  "runId": "codeplay-20261020b",
+  "schema": null,
+  "source": {
+   "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261020b/run-input.json",
+   "sha256": "887422202920bb93e0296a4cca4d0569d6127c82ecfb500e086796bd67966933"
+  }
+ },
+ "lineage": [],
+ "live": {
+  "mirrorAt": null,
+  "polling": true
+ },
+ "progress": {
+  "agents": [],
+  "blocker": null,
+  "briefs": [],
+  "endBlocker": null,
+  "files": 0,
+  "final": false,
+  "generatedAt": "2026-10-21T00:48:29Z",
+  "graph": null,
+  "outcome": {
+   "checkedAt": null,
+   "disputes": [
+    {
+     "at": "2026-10-20T13:40:35.213Z",
+     "attempts": 8,
+     "by": "referee",
+     "id": "9c1e65a45fbc",
+     "line": "a hidden check line (disputed by the keeper)",
+     "referees": [
+      {
+       "family": "claude",
+       "seat": "anthropic/claude-opus-5-5",
+       "verdict": "rejected"
+      },
+      {
+       "family": "codex",
+       "seat": "openai/gpt-6.1-sol",
+       "verdict": "rejected"
+      }
+     ],
+     "ruledAt": "2026-10-20T15:44:08.759Z",
+     "state": "rejected"
+    },
+    {
+     "at": "2026-10-20T17:18:31.895Z",
+     "attempts": 12,
+     "by": null,
+     "id": "c309bb08b9af",
+     "line": "\"Scaling: vs:outer at T=2^16 (merkle) drops >= 3x (84.9s -> <28s) AND the per-doubling ratio at 2^14->2^16 falls below 2.5x\"",
+     "referees": [
+      {
+       "family": "claude",
+       "seat": "anthropic/claude-opus-5-5",
+       "verdict": "rejected"
+      },
+      {
+       "family": "codex",
+       "seat": "openai/gpt-6.1-sol",
+       "verdict": "undecided"
+      }
+     ],
+     "ruledAt": null,
+     "state": "undecided"
+    }
+   ],
+   "firstFailingLine": null,
+   "lastStreamAt": null,
+   "minutesSinceLastStream": null,
+   "solved": false,
+   "stage": null,
+   "tag": null
+  },
+  "output": null,
+  "phase": "running",
+  "runId": "codeplay-20261020b",
+  "samples": [],
+  "schema": "discovery.run-progress",
+  "sources": {},
+  "spend": {
+   "basis": null,
+   "provenance": null,
+   "runUsd": null
+  },
+  "startedAt": "2026-10-20T23:48:59Z",
+  "unknowns": []
+ },
+ "receipt": null,
+ "run": {
+  "check": null,
+  "depth": null,
+  "durationMs": null,
+  "ending": null,
+  "forkedFrom": null,
+  "format": "runtime",
+  "group": "codeplay-20261020b",
+  "harnesses": [],
+  "hidden": null,
+  "id": "codeplay-20261020b",
+  "inputDigest": null,
+  "keys": [],
+  "kind": "run",
+  "location": {
+   "kind": "dir",
+   "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261020b"
+  },
+  "lostHours": 0,
+  "models": [],
+  "nodes": 1,
+  "play": "codeplay",
+  "playCheck": null,
+  "predecessor": null,
+  "purpose": null,
+  "purposeBasis": null,
+  "reason": "running",
+  "record": {
+   "builtAt": null,
+   "capture": null,
+   "digest": null,
+   "reason": "not ingested yet",
+   "status": "missing"
+  },
+  "sandboxes": [],
+  "settledAt": null,
+  "spend": {
+   "apiEquivalentProvenance": "not recorded",
+   "apiEquivalentUsd": null,
+   "apiUsd": null,
+   "bySeat": [],
+   "costBasisUsd": null,
+   "gaps": [
+    {
+     "code": "spend-unknown",
+     "detail": "spend not read yet",
+     "nodeId": null,
+     "runId": "codeplay-20261020b"
+    }
+   ],
+   "listUsd": null,
+   "paidKnown": false,
+   "paidUsd": null,
+   "routerUsd": null,
+   "sandboxHours": null,
+   "sandboxUsd": null,
+   "seatWeeks": null,
+   "seatWeeksKnown": false,
+   "sources": [],
+   "subscriptionKnown": false,
+   "subscriptionUsd": null,
+   "tokens": null
+  },
+  "startedAt": "2026-10-20T23:48:59Z",
+  "state": "running",
+  "supersedes": null,
+  "versions": null
+ },
+ "schema": "agent-workspace.run.v1",
+ "spend": {
+  "apiEquivalentProvenance": "not recorded",
+  "apiEquivalentUsd": null,
+  "apiUsd": null,
+  "bySeat": [],
+  "costBasisUsd": null,
+  "gaps": [
+   {
+    "code": "spend-unknown",
+    "detail": "spend not read yet",
+    "nodeId": null,
+    "runId": "codeplay-20261020b"
+   }
+  ],
+  "listUsd": null,
+  "nodes": {},
+  "paidKnown": false,
+  "paidUsd": null,
+  "routerUsd": null,
+  "sandboxHours": null,
+  "sandboxUsd": null,
+  "seatWeeks": null,
+  "seatWeeksKnown": false,
+  "sources": [],
+  "subscriptionKnown": false,
+  "subscriptionUsd": null,
+  "tokens": null
+ },
+ "story": {
+  "clock": {
+   "basis": null,
+   "deadlineAt": null,
+   "inheritedFrom": null,
+   "spanMs": null
+  },
+  "profiles": []
+ },
+ "versions": []
+}

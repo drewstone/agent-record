@@ -84,7 +84,29 @@ function disputeState(d: Dispute) {
   if (d.state === 'operator') return 'Awaiting an operator ruling: the referee could not decide'
   if (d.state === 'upheld') return `Upheld by the ${d.by ?? 'referee'}${d.ruledAt ? ` at ${clock(d.ruledAt)}` : ''}: the check is amended for this run`
   if (d.state === 'rejected') return `Rejected by the ${d.by ?? 'referee'}${d.ruledAt ? ` at ${clock(d.ruledAt)}` : ''}: the line stands`
+  if (d.state === 'undecided') return 'Undecided: the referees disagree, so the check stays as pinned until an operator rules'
   return 'State not recorded'
+}
+
+/** Who ruled: each referee's seat, model family and verdict, as the Lab recorded the ruling or newest panel. */
+const refereeText = (referees: NonNullable<Dispute['referees']>) =>
+  referees.map((referee) => `${referee.seat ?? 'unrecorded seat'} (${referee.family ?? 'unrecorded family'}) ${referee.verdict ?? 'no ruling'}`).join('; ')
+
+type Calibration = NonNullable<RunCheck['calibration']>
+
+/**
+ * The calibration the verdict names (tangle-tools play_checks.check_calibration): the check's state, then each stage's,
+ * as small neutral labels. A calibration is a fact about the check, not a status, so none is toned. `unknown` names the
+ * record that would state it.
+ */
+function CalibrationLabels({ calibration }: { calibration: Calibration }) {
+  const answer = calibration.unknown ?? `${calibration.source ?? 'no record'} would state it`
+  return <p className="rr-now-calibration" data-field="run.check.calibration">
+    <span className="rr-calibration tone-neutral" data-calibration={calibration.state}>check {calibration.state}</span>
+    {calibration.stages.map((stage, i) => <span key={`${stage.name}-${i}`} className="rr-calibration tone-neutral" data-stage={stage.name ?? ''} data-calibration={stage.state}>
+      {stage.name ?? 'unnamed stage'} {stage.state}</span>)}
+    {calibration.state === 'unknown' || calibration.stages.some((stage) => stage.state === 'unknown') ? <span className="rr-muted" data-field="run.check.calibration.unknown">{answer}</span> : null}
+  </p>
 }
 
 function contractState(d: ContractDelivery) {
@@ -160,17 +182,23 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; 
   // The verdict is read against the check version it ran under: a miss under a retired check says so, neutral.
   const digest = check?.latest?.checker ?? null
   const named = digest ? (check?.checkerNames?.find((item) => digest.startsWith(item.sha256) || item.sha256.startsWith(digest)) ?? null) : null
-  const result = outcome && outcome.solved !== null && outcome.solved !== undefined
-    ? statusOf({ axis: 'result', verdict: outcome.solved ? 'solved' : 'not-solved', current: named?.current ?? true, checker: named?.current === false ? (named.label ?? null) : null })
+  // A pass held for stages no known-good fixture passed is its own verdict, never failing: the run's held pass, or the Lab's
+  // newest check marked uncalibratedPass with the check's uncalibrated stages (tangle-tools runs.held_pass).
+  const held = outcome && outcome.solved !== true && (check?.held || outcome.latestCheck?.uncalibratedPass === true)
+    ? (check?.held?.stages ?? check?.calibration?.stages.filter((stage) => stage.state !== 'calibrated').map((stage) => stage.name ?? 'unnamed stage') ?? [])
     : null
-  // The host's label leads (it composes the sentence); a verdict under a retired check reads as statusOf words it.
-  const verdict = result && named?.current === false ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet'))
+  const result = held
+    ? statusOf({ axis: 'result', verdict: 'held', held })
+    : outcome && outcome.solved !== null && outcome.solved !== undefined
+      ? statusOf({ axis: 'result', verdict: outcome.solved ? 'solved' : 'not-solved', current: named?.current ?? true, checker: named?.current === false ? (named.label ?? null) : null })
+      : null
+  // The host's label leads (it composes the sentence); a held pass and a verdict under a retired check read as statusOf words them.
+  const verdict = result && (held || named?.current === false) ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet'))
   const audit = outcome?.goalAudit ?? null
-  const tone = audit?.verdict === 'unaudited' ? 'unaudited' : outcome?.solved === true ? 'passed' : outcome?.solved === false ? 'failing' : 'unknown'
   const passes = earlierPasses(r, outcome, check)
   return <section className="rr-now" aria-labelledby="rr-now-title" data-section="now">
     <h2 id="rr-now-title">Now</h2>
-    {outcome && <p className={`rr-now-verdict rr-now-${tone}`} data-field="progress.outcome.solved">
+    {outcome && <p className="rr-now-verdict" data-field="progress.outcome.solved">
       <strong data-field="progress.outcome.solvedLabel" data-status={result ? dataStatus(result) : undefined}>{result && `${result.shape} `}{verdict}</strong>
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
       {untagged?.line && <span data-field="run.check.latest"> · newest {untagged.at ? clock(untagged.at) : ''}: {untagged.line}</span>}
@@ -179,6 +207,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; 
       {settled ? outcome.lastStreamAt && <span data-field="progress.outcome.lastStreamAt"> · last agent stream {clock(outcome.lastStreamAt)}</span>
         : outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
     </p>}
+    {check?.calibration && <CalibrationLabels calibration={check.calibration} />}
     {passes && <p className="rr-now-passes" data-field="system.play.firstPassAt">{passes}</p>}
     {outcome?.checkWait && <p className="rr-now-wait" data-field="progress.outcome.checkWait">
       <strong>{shortTag(outcome.checkWait.tag) ?? 'The newest version'} is not checked yet</strong>
@@ -191,6 +220,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt; 
         <code className="rr-contract-line">{d.line ?? '?'}</code>
         <span>Disputed {d.at ? clock(d.at) : 'at an unrecorded time'}{d.id && <> as <code>{d.id}</code></>}</span>
         <span data-field={`progress.outcome.disputes.${i}.state`}>{disputeState(d)}</span>
+        {d.referees?.length ? <span data-field={`progress.outcome.disputes.${i}.referees`}>Referees: {refereeText(d.referees)}</span> : null}
       </li>)}</ol></>}
     {figure && <div className="rr-chart" data-field="system.play.scores"><FigureView figure={figure} /></div>}
     {contract.length > 0 && <><h3>Contract lines sent</h3><ol className="rr-contract" data-field="contract">{contract.map((d, i) => {

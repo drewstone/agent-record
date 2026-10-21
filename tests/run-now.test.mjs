@@ -71,6 +71,47 @@ test('a passed check leads with its solved label and the goal audit behind it', 
   assert.doesNotMatch(unaudited, /Now✓ Passed/)
   const contradicted = page({ ...passed, solved: false, solvedLabel: 'check passed; goal audit found a contradiction', goalAudit: { verdict: 'contradiction', at: '2026-10-18T02:26:00.000Z' } })
   assert.match(text(contradicted), /check passed; goal audit found a contradiction · checked 01:56 UTC on rc3 · goal audit found a contradiction at 02:26 UTC/)
-  assert.match(contradicted, /rr-now-failing/)
+  // A check that passed is never toned as failing; red is only a person's act-now (CONTEXT.md, Status).
+  assert.doesNotMatch(contradicted, /data-status="[^"]*:fail"/)
   assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /Now✓ SOLVED · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
+})
+
+// tangle-tools #1562 (3b4faa91, 2026-10-20) serves who ruled each check dispute, each stage's calibration and a pass held
+// for stages no known-good fixture passed. These run documents are what its integration test
+// test_needs_you_asks_drew_to_rule_undecided_disputes_and_calibrate_held_passes_on_any_run served from
+// /api/discovery/runs/<id>, captured unchanged: 20c holds a pass, 20b carries magnetar-rust-20261020b's ruled and undecided
+// disputes, 20a was pressed before the Lab registered calibration. Their receipts are null there, so each is drawn with this
+// file's recorded receipt, as the run page draws a run whose Lab receipt exists.
+const served = async (id) => JSON.parse(await readFile(new URL(`./fixtures/discovery-run-${id}.json`, import.meta.url), 'utf8'))
+const runPage = (doc) => renderToStaticMarkup(createElement(RunOverview, { api: '/api/discovery', doc: { ...doc, receipt } }))
+
+test('a held pass reads as held in neutral, never failing, with each stage\'s calibration', async () => {
+  const html = runPage(await served('codeplay-20261020c'))
+  const words = text(html)
+  assert.match(words, /Now◌ check passed; held: stages workloads, hidden have no known-good fixture/)
+  assert.match(html, /data-status="result:check passed; held: stages workloads, hidden have no known-good fixture:neutral"/)
+  assert.doesNotMatch(html, /data-status="[^"]*:fail"/, 'nothing on the run page is red')
+  // The borrowed receipt's sections and score chart name its rc3 pass; this run's verdict line never says it passed.
+  const line = html.slice(html.indexOf('data-field="progress.outcome.solved"'), html.indexOf('</p>', html.indexOf('data-field="progress.outcome.solved"')))
+  assert.doesNotMatch(text(line), /Passed|SOLVED/)
+  for (const [stage, state] of [['build', 'calibrated'], ['contract', 'calibrated'], ['workloads', 'uncalibrated'], ['hidden', 'uncalibrated']])
+    assert.match(html, new RegExp(`data-stage="${stage}" data-calibration="${state}"[^>]*>${stage} ${state}<`))
+  assert.match(html, /data-calibration="uncalibrated"[^>]*>check uncalibrated</)
+  // A calibration is a label, never a status mark.
+  assert.doesNotMatch(html, /class="rr-calibration[^"]*" data-status/)
+})
+
+test('an undecided dispute shows its ruling sentence and its referees, as a ruled one shows who ruled', async () => {
+  const html = runPage(await served('codeplay-20261020b'))
+  const words = text(html)
+  assert.match(words, /Disputed 17:18 UTC as c309bb08b9afUndecided: the referees disagree, so the check stays as pinned until an operator rulesReferees: anthropic\/claude-opus-5-5 \(claude\) rejected; openai\/gpt-6\.1-sol \(codex\) undecided/)
+  assert.match(words, /Rejected by the referee at 15:44 UTC: the line standsReferees: anthropic\/claude-opus-5-5 \(claude\) rejected; openai\/gpt-6\.1-sol \(codex\) rejected/)
+  assert.doesNotMatch(words, /State not recorded/)
+  assert.doesNotMatch(html, /data-status="[^"]*:fail"/)
+})
+
+test('a run pressed before calibration was registered names the record that would state it', async () => {
+  const html = runPage(await served('codeplay-20261020a'))
+  assert.match(html, /data-calibration="unknown"[^>]*>check unknown</)
+  assert.match(text(html), /run-input\.json acceptance\.play\.calibration would state it/)
 })

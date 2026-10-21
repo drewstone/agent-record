@@ -141,9 +141,10 @@ export type StatusInput =
   | { axis: 'run'; state: string | null | undefined; reason?: string | null; stopCause?: string | null; elapsedMs?: number | null; endedAt?: string | null; newerStarted?: boolean; now?: number }
   /**
    * A verdict against a check. `current: false` is a verdict under a retired check version, named by `checker`;
-   * `waiting` is a live run waiting on an undecided check; `passed`/`total` are workloads.
+   * `waiting` is a live run waiting on an undecided check; `passed`/`total` are workloads. Verdict `held` is a pass through
+   * stages no known-good fixture passed, named by `held`: never Passed, never failing.
    */
-  | { axis: 'result'; verdict: string | null | undefined; current?: boolean; checker?: string | null; waiting?: boolean; passed?: number | null; total?: number | null }
+  | { axis: 'result'; verdict: string | null | undefined; current?: boolean; checker?: string | null; waiting?: boolean; passed?: number | null; total?: number | null; held?: readonly string[] | null }
   /** Something that may need a person: an overview `attention[]` tone, or a blocker's severity on a run that is or is not live. */
   | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean }
   /** An agent row: its recorded status while its run is or is not live. */
@@ -225,7 +226,9 @@ function runAxis(input: Extract<StatusInput, { axis: 'run' }>): Status {
 }
 
 function resultAxis(input: Extract<StatusInput, { axis: 'result' }>): Status {
-  const { verdict, current = true, checker, waiting = false, passed, total } = input
+  const { verdict, current = true, checker, waiting = false, passed, total, held } = input
+  // The host's words for a held pass (tangle-tools play_checks.held_label), so the run page and Needs you read the same.
+  if (verdict === 'held') return status('result', `check passed; held: stages ${held?.length ? held.join(', ') : '(not named)'} have no known-good fixture`, 'neutral', ENDING_GLYPH.unknown)
   const under = checker ? ` ${current ? '' : 'under '}${checker}${current ? '' : ' (retired)'}` : ''
   const count = passed !== null && passed !== undefined && total ? ` · ${passed}/${total}` : ''
   if (verdict === 'solved' || verdict === 'contract-held' || verdict === 'pass' || verdict === 'met')
