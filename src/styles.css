@@ -1689,6 +1689,8 @@
 /* Every status mark keeps its shape and an outline when the system forces colours. */
 @media (forced-colors: active) {
   .ar-ws .ov-chip, .ar-ws .state-pill, .ar-ws .vg-chip, .ar-ws [data-status] { forced-color-adjust: none; border: 1px solid CanvasText; }
+  /* A lane key is painted by its background, which forced colours would erase. */
+  .ar-ws .vg-swatch { forced-color-adjust: none; }
 }
 /* A status mark a reader points at (a link, a button, or one with a hover title) gets a 24 px target from a
    transparent box centred on it, so small marks such as the overview chips and verdict ticks keep their layout. */
