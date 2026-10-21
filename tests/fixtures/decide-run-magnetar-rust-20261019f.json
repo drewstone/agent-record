@@ -466,7 +466,7 @@
     "id": "take",
     "label": "Take this version",
     "consequence": "Save this version as your choice.",
-    "command": "curl 'https://drew-gtr-pro.taild10bfc.ts.net:8770/api/discovery/runs/magnetar-rust-20261019f/decisions' -H 'Origin: https://drew-gtr-pro.taild10bfc.ts.net:8770' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc2\\\",\\\"commit\\\":\\\"53e169fc6fe60250e9f2e4e4665e80227ff7a6e3\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
+    "command": "curl 'https://workspace.example.invalid/api/discovery/runs/magnetar-rust-20261019f/decisions' -H 'Origin: https://workspace.example.invalid' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc2\\\",\\\"commit\\\":\\\"53e169fc6fe60250e9f2e4e4665e80227ff7a6e3\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
     "enabled": false,
     "reason": "No play check ran on rc2 (53e169fc)."
    },
