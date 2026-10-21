@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import type { OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
+import type { OverviewAttention, OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
 import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
@@ -152,6 +152,41 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
  * week and what it found; then the 30-day trends, then consumption (tokens, money, sandboxes, storage, seats). Every
  * number is what a store recorded; a series nobody measured says so instead of drawing zero.
  */
+/**
+ * Needs you: each host `attention[]` line once. Red only where statusOf says act now: a crit item, or a pass held for
+ * stages with no known-good fixture, which waits on the person it names to add the fixture.
+ */
+export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
+  return (
+    <figure className="ov-card ov-attention" aria-label="Needs you">
+      <figcaption><span className="ov-card-title">Needs you</span></figcaption>
+      {attention.length ? (
+        <ul>
+          {attention.map((item) => {
+            const status = statusOf({ axis: 'alert', tone: item.tone, live: true, heldPass: Boolean(item.held?.length) })
+            const body = (
+              <>
+                {/* A red item names its owner in its own text; every other one is neutral. */}
+                <StatusPill status={status} className="ov-light">
+                  {status.tone === 'fail' ? `act now · ${item.owner || 'Discovery operator'}` : undefined}
+                </StatusPill>
+                {/* A dispute's "undecided" is the Lab's ruling state (its referees disagree), as the run page words it,
+                    not an unverified check, so its line keeps the host's words. */}
+                <span className="ov-attention-text">{item.dispute ? item.text : hostWords(item.text)}{item.detail ? <small>{hostWords(item.detail)}</small> : null}
+                  <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
+              </>
+            )
+            // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
+            return <li key={item.text} data-dispute={item.dispute} data-held={item.held?.join(' ')}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
+          })}
+        </ul>
+      ) : (
+        <p className="ov-quiet">Nothing needs you.</p>
+      )}
+    </figure>
+  )
+}
+
 export function OverviewPage({ api }: { api: string }) {
   const doc = useDocument<OverviewDocument>(`${api}/overview`, 60_000, true)
   // The day charts and the totals above them follow this range; histograms and causes are the composed 30 days.
@@ -214,29 +249,7 @@ export function OverviewPage({ api }: { api: string }) {
             </p>
           )}
         </figure>
-        <figure className="ov-card ov-attention" aria-label="Needs you">
-          <figcaption><span className="ov-card-title">Needs you</span></figcaption>
-          {attention.length ? (
-            <ul>
-              {attention.map((item) => {
-                const body = (
-                  <>
-                    {/* Only a crit item is red, and it names its owner in its own text; warn and info are neutral. */}
-                    <StatusPill status={statusOf({ axis: 'alert', tone: item.tone, live: true })} className="ov-light">
-                      {item.tone === 'crit' ? `act now · ${item.owner || 'Discovery operator'}` : undefined}
-                    </StatusPill>
-                    <span className="ov-attention-text">{hostWords(item.text)}{item.detail ? <small>{hostWords(item.detail)}</small> : null}
-                      <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
-                  </>
-                )
-                // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
-                return <li key={item.text}>{item.href ? <a href={item.href} target={item.href.startsWith('#') ? '_self' : undefined}>{body}</a> : <div>{body}</div>}</li>
-              })}
-            </ul>
-          ) : (
-            <p className="ov-quiet">Nothing needs you.</p>
-          )}
-        </figure>
+        <NeedsYou attention={attention} />
       </div>
 
       <section className="ov-section" aria-label={`Last ${weekDays} days by play`}>

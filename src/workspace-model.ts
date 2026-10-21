@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
+import { checkDisputeSchema, runCheckSchema } from './run-check-model.js'
 import { playBlockerSchema, playFindingFields, playPageFields } from './workspace/play-standing.js'
 
 /**
@@ -141,37 +142,7 @@ export const playCheckSchema = z
   })
   .catchall(z.unknown())
 
-/** One check or tag-gate row as the host reads it: when, on which tag and commit, under which checker, its verdict and line. */
-const checkRowSchema = z
-  .object({
-    at: time.nullable().optional(),
-    tag: z.string().nullable().optional(),
-    commit: z.string().nullable().optional(),
-    checker: z.string().nullable().optional(),
-    verdict: z.string().nullable().optional(),
-    line: z.string().nullable().optional(),
-    score: z
-      .object({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullable().optional() })
-      .catchall(z.unknown())
-      .nullable()
-      .optional(),
-  })
-  .catchall(z.unknown())
-const runCheckSchema = z
-  .object({
-    latest: checkRowSchema.nullable(),
-    best: checkRowSchema.nullable(),
-    passes: z.array(z.object({ tag: z.string().nullable(), checker: z.string().nullable(), count: z.number(), firstAt: time, lastAt: time }).catchall(z.unknown())).optional(),
-    gate: checkRowSchema.nullable().optional(),
-    /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
-    gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
-    headline: z.string().nullable().optional(),
-    counts: z.object({ checks: z.number(), known: z.number(), solved: z.number() }).partial().catchall(z.unknown()).nullable().optional(),
-    /** The play's checkers as its page labels them (v1..vN with the ruling that made each), by digest prefix. */
-    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional() }).catchall(z.unknown())).optional(),
-  })
-  .catchall(z.unknown())
-export type RunCheck = z.infer<typeof runCheckSchema>
+export type { RunCheck } from './run-check-model.js'
 
 export const runSummarySchema = z
   .object({
@@ -610,6 +581,8 @@ const checkLineSchema = z
     solved: z.boolean().nullable().optional(),
     verdict: z.string().nullable().optional(),
     score: checkScoreSchema.nullable().optional(),
+    /** The check passed through stages no known-good fixture passed (discovery-lab runner/run-progress.mjs): a held pass. */
+    uncalibratedPass: z.boolean().optional(),
   })
   .catchall(z.unknown())
 
@@ -690,21 +663,7 @@ export const runProgressSchema = z
         gate: checkLineSchema.nullable().optional(),
         score: checkScoreSchema.extend({ at: z.string().nullable().optional(), tag: z.string().nullable().optional(), source: z.string().nullable().optional() }).nullable().optional(),
         /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
-        disputes: z
-          .array(
-            z
-              .object({
-                id: z.string().nullable(),
-                at: time.nullable(),
-                line: z.string().nullable(),
-                state: z.enum(['open', 'operator', 'upheld', 'rejected']).nullable(),
-                ruledAt: time.nullable(),
-                by: z.enum(['referee', 'operator']).nullable(),
-                attempts: z.number().int().nonnegative().nullable(),
-              })
-              .catchall(z.unknown()),
-          )
-          .optional(),
+        disputes: z.array(checkDisputeSchema).optional(),
       })
       .catchall(z.unknown())
       .nullable()
@@ -1605,7 +1564,8 @@ export interface OverviewPlayWeek {
   /** The runs' API-equivalent dollars (each run receipt's cost.apiEquivalentUsd): every token at list price, whoever paid. */
   apiEquivalentUsd?: number | null
 }
-export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
+/** A Needs you line; `held` names a held pass's stages, `dispute` and `referees` an undecided check dispute (tangle-tools overview). */
+export interface OverviewAttention { tone: 'crit' | 'warn' | 'info' | 'neutral'; text: string; detail?: string | null; href?: string; owner?: string; next?: string; runId?: string; held?: string[]; dispute?: string; referees?: { seat: string | null; family: string | null; verdict: string | null }[] }
 
 export interface OverviewDocument {
   schema: 'agent-workspace.overview.v1'

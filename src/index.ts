@@ -25,6 +25,8 @@ export { FinalOutputPanel, TraceReviewSection } from './workspace/FinalOutput.js
 export { hostWords } from './workspace/play-standing.js'
 export { newerStarted, StatusPill, statusOf, type Status, type StatusAxis, type StatusInput, type StatusTone } from './workspace/data.js'
 export { PlayHeader } from './workspace/PlayHead.js'
+export { PlayClimb } from './workspace/PlayClimb.js'
+export { NeedsYou } from './workspace/Overview.js'
 export { AgentTable } from './workspace/RunTable.js'
 export { agentSpendRows, SpendBars } from './workspace/Spend.js'
 export { CollapsibleValue, ValueControls, ValueScope, VALUE_PREVIEW, followCommand, valueChars, valuePreview } from './workspace/CollapsibleValue.js'

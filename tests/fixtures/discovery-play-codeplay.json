@@ -1,0 +1,1342 @@
+{
+ "assessments": [],
+ "assessmentsIncluded": false,
+ "bar": null,
+ "barSeries": null,
+ "best": null,
+ "charter": null,
+ "checkers": [
+  {
+   "current": false,
+   "firstAt": "2026-10-20T23:18:59Z",
+   "label": "v1",
+   "rerunSpread": [
+    {
+     "capS": null,
+     "causes": [],
+     "checkers": [
+      "v1"
+     ],
+     "commit": "d4204274",
+     "max": null,
+     "median": null,
+     "min": null,
+     "n": 0,
+     "of": null,
+     "reruns": 3,
+     "tags": [
+      "20a rc1",
+      "20c rc2",
+      "20c rc3"
+     ],
+     "undecided": 0
+    }
+   ],
+   "rows": 3,
+   "ruling": null,
+   "runIds": [
+    "codeplay-20261020a",
+    "codeplay-20261020c"
+   ],
+   "sha256": "a1a1a1a1a1a1"
+  },
+  {
+   "current": true,
+   "firstAt": "2026-10-20T23:48:59Z",
+   "label": "v2",
+   "rerunSpread": [],
+   "rows": 0,
+   "ruling": null,
+   "runIds": [],
+   "sha256": "6fe6137ffb24"
+  }
+ ],
+ "climb": {
+  "best": null,
+  "bestEver": null,
+  "columns": [
+   {
+    "at": "2026-10-20T23:18:59Z",
+    "commit": "d4204274",
+    "id": "codeplay-20261020a@rc1",
+    "order": 0,
+    "runId": "codeplay-20261020a",
+    "state": "published",
+    "tag": "rc1",
+    "weight": 0.3
+   },
+   {
+    "at": "2026-10-20T23:18:59Z",
+    "commit": "d4204274",
+    "id": "codeplay-20261020c@rc2",
+    "order": 1,
+    "runId": "codeplay-20261020c",
+    "state": "published",
+    "tag": "rc2",
+    "weight": 0.3
+   },
+   {
+    "at": "2026-10-21T00:18:59Z",
+    "commit": "d4204274",
+    "id": "codeplay-20261020c@rc3",
+    "order": 2,
+    "runId": "codeplay-20261020c",
+    "state": "published",
+    "tag": "rc3",
+    "weight": 0.3
+   }
+  ],
+  "gaps": [],
+  "groups": [
+   {
+    "calibration": {
+     "at": null,
+     "deterministic": null,
+     "source": "run-input.json acceptance.play.calibration",
+     "stages": [],
+     "state": "unknown",
+     "uncalibrated": [],
+     "unknown": "calibration not recorded: the run was pressed before the Lab registered calibration (discovery-lab #2225); run-input.json acceptance.play.calibration would state it (disco calibrate)"
+    },
+    "checked": 1,
+    "end": {
+     "glyph": "\u25a0",
+     "kind": "not solved",
+     "label": "no-winner"
+    },
+    "from": "2026-10-20T21:48:59Z",
+    "held": null,
+    "label": "20a",
+    "lineage": {
+     "basis": "run-input",
+     "commit": null,
+     "kind": "fresh",
+     "parentRun": null,
+     "parentTag": null
+    },
+    "noTag": 0,
+    "note": null,
+    "published": 1,
+    "runId": "codeplay-20261020a",
+    "scoresBasis": "check-logs",
+    "superseded": 0,
+    "to": "2026-10-20T22:48:59Z",
+    "unscored": true,
+    "untagged": 0,
+    "withheld": 0
+   },
+   {
+    "calibration": {
+     "at": "2026-10-20T20:05:35.908Z",
+     "deterministic": true,
+     "source": "run-input.json acceptance.play.calibration",
+     "stages": [
+      {
+       "name": "build",
+       "state": "calibrated"
+      },
+      {
+       "name": "contract",
+       "state": "calibrated"
+      },
+      {
+       "name": "workloads",
+       "state": "uncalibrated"
+      },
+      {
+       "name": "hidden",
+       "state": "uncalibrated"
+      }
+     ],
+     "state": "uncalibrated",
+     "uncalibrated": [
+      "workloads",
+      "hidden"
+     ],
+     "unknown": null
+    },
+    "checked": 2,
+    "end": {
+     "glyph": "\u25a0",
+     "kind": "not solved",
+     "label": "no-winner"
+    },
+    "from": "2026-10-20T22:48:59Z",
+    "held": {
+     "at": "2026-10-21T00:18:59Z",
+     "checker": "a1a1a1a1a1a1",
+     "commit": "d4204274d4204274d4204274d4204274d4204274",
+     "held": [
+      "workloads",
+      "hidden"
+     ],
+     "known": true,
+     "label": "check passed; held: stages workloads, hidden have no known-good fixture",
+     "line": "NOT SOLVED: passed uncalibrated stages (workloads, hidden): no known-good fixture has passed them (disco calibrate), so this pass does not settle SOLVED",
+     "score": null,
+     "solved": false,
+     "source": "play-checks.jsonl",
+     "stages": [
+      "workloads",
+      "hidden"
+     ],
+     "tag": "rc3",
+     "verdict": "held"
+    },
+    "label": "20c",
+    "lineage": {
+     "basis": "run-input",
+     "commit": null,
+     "kind": "fresh",
+     "parentRun": null,
+     "parentTag": null
+    },
+    "noTag": 0,
+    "note": null,
+    "published": 2,
+    "runId": "codeplay-20261020c",
+    "scoresBasis": "check-logs",
+    "superseded": 0,
+    "to": "2026-10-21T00:38:59Z",
+    "unscored": true,
+    "untagged": 0,
+    "withheld": 0
+   },
+   {
+    "calibration": {
+     "at": "2026-10-20T20:05:35.908Z",
+     "deterministic": true,
+     "source": "run-input.json acceptance.play.calibration",
+     "stages": [
+      {
+       "name": "build",
+       "state": "calibrated"
+      },
+      {
+       "name": "contract",
+       "state": "calibrated"
+      },
+      {
+       "name": "workloads",
+       "state": "uncalibrated"
+      },
+      {
+       "name": "hidden",
+       "state": "uncalibrated"
+      }
+     ],
+     "state": "uncalibrated",
+     "uncalibrated": [
+      "workloads",
+      "hidden"
+     ],
+     "unknown": null
+    },
+    "checked": 0,
+    "end": {
+     "glyph": "\u25b6",
+     "kind": "live",
+     "label": "running"
+    },
+    "from": "2026-10-20T23:48:59Z",
+    "held": null,
+    "label": "20b",
+    "lineage": {
+     "basis": "run-input",
+     "commit": null,
+     "kind": "fresh",
+     "parentRun": null,
+     "parentTag": null
+    },
+    "noTag": 0,
+    "note": null,
+    "published": 0,
+    "runId": "codeplay-20261020b",
+    "scoresBasis": "check-logs",
+    "superseded": 0,
+    "to": null,
+    "unscored": true,
+    "untagged": 0,
+    "withheld": 0
+   }
+  ],
+  "marks": [],
+  "rulings": [],
+  "spread": [
+   {
+    "capS": null,
+    "causes": [],
+    "checkers": [
+     "v1"
+    ],
+    "commit": "d4204274",
+    "max": null,
+    "median": null,
+    "min": null,
+    "n": 0,
+    "of": null,
+    "reruns": 3,
+    "tags": [
+     "20a rc1",
+     "20c rc2",
+     "20c rc3"
+    ],
+    "undecided": 0
+   }
+  ],
+  "strip": [
+   {
+    "calibration": "unknown",
+    "checker": "v1",
+    "columnId": "codeplay-20261020a@rc1",
+    "count": 1,
+    "firstAt": "2026-10-20T23:18:59Z",
+    "kind": "check",
+    "lastAt": "2026-10-20T23:18:59Z",
+    "line": "NOT SOLVED: stage 2 of 4 (contract)",
+    "runId": "codeplay-20261020a",
+    "scores": [
+     {
+      "at": "2026-10-20T23:18:59Z",
+      "proofBytes": null,
+      "reached": null,
+      "stage": null,
+      "timedOut": null,
+      "verifyMs": null,
+      "workloads": null
+     }
+    ],
+    "source": "codeplay-20261020a/play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   {
+    "calibration": "uncalibrated",
+    "checker": "v1",
+    "columnId": "codeplay-20261020c@rc2",
+    "count": 1,
+    "firstAt": "2026-10-20T23:18:59Z",
+    "kind": "check",
+    "lastAt": "2026-10-20T23:18:59Z",
+    "line": "NOT SOLVED: stage 2 of 4 (contract)",
+    "runId": "codeplay-20261020c",
+    "scores": [
+     {
+      "at": "2026-10-20T23:18:59Z",
+      "proofBytes": null,
+      "reached": null,
+      "stage": null,
+      "timedOut": null,
+      "verifyMs": null,
+      "workloads": null
+     }
+    ],
+    "source": "codeplay-20261020c/play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   {
+    "calibration": "uncalibrated",
+    "checker": "v1",
+    "columnId": "codeplay-20261020c@rc3",
+    "count": 1,
+    "firstAt": "2026-10-21T00:18:59Z",
+    "kind": "check",
+    "lastAt": "2026-10-21T00:18:59Z",
+    "line": "NOT SOLVED: passed uncalibrated stages (workloads, hidden): no known-good fixture has passed them (disco calibrate), so this pass does not settle SOLVED",
+    "runId": "codeplay-20261020c",
+    "scores": [
+     {
+      "at": "2026-10-21T00:18:59Z",
+      "proofBytes": null,
+      "reached": null,
+      "stage": null,
+      "timedOut": null,
+      "verifyMs": null,
+      "workloads": null
+     }
+    ],
+    "source": "codeplay-20261020c/play-checks.jsonl",
+    "verdict": "held"
+   }
+  ],
+  "y": {
+   "gridlines": [
+    {
+     "at": 1,
+     "label": "SOLVED"
+    }
+   ],
+   "label": "Check progress"
+  }
+ },
+ "findings": [],
+ "frontier": null,
+ "gaps": [],
+ "goal": null,
+ "id": "codeplay",
+ "input": {
+  "acceptance": {
+   "play": {
+    "calibration": {
+     "at": "2026-10-20T20:05:35.908Z",
+     "check": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "deterministic": true,
+     "fixtures": "sha256:3232323232323232323232323232323232323232323232323232323232323232",
+     "schema": "discovery-lab.check-calibration.v1",
+     "stages": {
+      "build": "calibrated",
+      "contract": "calibrated",
+      "hidden": "uncalibrated",
+      "workloads": "uncalibrated"
+     },
+     "uncalibrated": [
+      "workloads",
+      "hidden"
+     ]
+    },
+    "check": {
+     "kind": "script",
+     "language": "python"
+    },
+    "id": "codeplay"
+   }
+  },
+  "budget": null,
+  "completion": null,
+  "continuation": null,
+  "digest": "887422202920bb93e0296a4cca4d0569d6127c82ecfb500e086796bd67966933",
+  "files": [],
+  "instruction": null,
+  "knowledge": null,
+  "objective": null,
+  "profile": null,
+  "runId": "codeplay-20261020b",
+  "schema": null,
+  "source": {
+   "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261020b/run-input.json",
+   "sha256": "887422202920bb93e0296a4cca4d0569d6127c82ecfb500e086796bd67966933"
+  }
+ },
+ "ledger": {
+  "olderSummary": null,
+  "page": 1,
+  "rows": [
+   {
+    "agentHours": null,
+    "agents": 1,
+    "best": null,
+    "completedShare": null,
+    "contractBlockedShare": null,
+    "cost": {
+     "apiUsd": null,
+     "billedUsd": null,
+     "provenance": "not recorded"
+    },
+    "depth": null,
+    "ending": {
+     "glyph": "\u25b6",
+     "reason": "running",
+     "word": "live"
+    },
+    "hoursByOutcome": {},
+    "idleHours": null,
+    "label": "20b",
+    "lineage": {
+     "basis": "run-input",
+     "commit": null,
+     "kind": "fresh",
+     "parentRun": null,
+     "parentTag": null
+    },
+    "open": null,
+    "outcomeBasis": null,
+    "outcomeNotes": {},
+    "runId": "codeplay-20261020b",
+    "seat": null,
+    "seatKind": null,
+    "settledAt": null,
+    "startedAt": "2026-10-20T23:48:59Z",
+    "tokens": {
+     "cacheRead": null,
+     "cacheWrite": null,
+     "in": null,
+     "known": 0,
+     "out": null
+    },
+    "triesByOutcome": {},
+    "untaggedChecks": null,
+    "wallHours": 1.0
+   },
+   {
+    "agentHours": null,
+    "agents": 1,
+    "best": null,
+    "completedShare": null,
+    "contractBlockedShare": null,
+    "cost": {
+     "apiUsd": null,
+     "billedUsd": null,
+     "provenance": "not recorded"
+    },
+    "depth": null,
+    "ending": {
+     "glyph": "\u25a0",
+     "reason": "no-winner",
+     "word": "not solved"
+    },
+    "hoursByOutcome": {},
+    "idleHours": null,
+    "label": "20c",
+    "lineage": {
+     "basis": "run-input",
+     "commit": null,
+     "kind": "fresh",
+     "parentRun": null,
+     "parentTag": null
+    },
+    "open": null,
+    "outcomeBasis": null,
+    "outcomeNotes": {},
+    "runId": "codeplay-20261020c",
+    "seat": null,
+    "seatKind": null,
+    "settledAt": "2026-10-21T00:38:59Z",
+    "startedAt": "2026-10-20T22:48:59Z",
+    "tokens": {
+     "cacheRead": null,
+     "cacheWrite": null,
+     "in": null,
+     "known": 0,
+     "out": null
+    },
+    "triesByOutcome": {},
+    "untaggedChecks": null,
+    "wallHours": 1.83
+   },
+   {
+    "agentHours": null,
+    "agents": 1,
+    "best": null,
+    "completedShare": null,
+    "contractBlockedShare": null,
+    "cost": {
+     "apiUsd": null,
+     "billedUsd": null,
+     "provenance": "not recorded"
+    },
+    "depth": null,
+    "ending": {
+     "glyph": "\u25a0",
+     "reason": "no-winner",
+     "word": "not solved"
+    },
+    "hoursByOutcome": {},
+    "idleHours": null,
+    "label": "20a",
+    "lineage": {
+     "basis": "run-input",
+     "commit": null,
+     "kind": "fresh",
+     "parentRun": null,
+     "parentTag": null
+    },
+    "open": null,
+    "outcomeBasis": null,
+    "outcomeNotes": {},
+    "runId": "codeplay-20261020a",
+    "seat": null,
+    "seatKind": null,
+    "settledAt": "2026-10-20T22:48:59Z",
+    "startedAt": "2026-10-20T21:48:59Z",
+    "tokens": {
+     "cacheRead": null,
+     "cacheWrite": null,
+     "in": null,
+     "known": 0,
+     "out": null
+    },
+    "triesByOutcome": {},
+    "untaggedChecks": null,
+    "wallHours": 1.0
+   },
+   {
+    "agentHours": null,
+    "agents": 1,
+    "best": null,
+    "completedShare": null,
+    "contractBlockedShare": null,
+    "cost": {
+     "apiUsd": null,
+     "billedUsd": null,
+     "provenance": "not recorded"
+    },
+    "depth": null,
+    "ending": {
+     "glyph": "\u25a0",
+     "reason": "no-winner",
+     "word": "not solved"
+    },
+    "hoursByOutcome": {},
+    "idleHours": null,
+    "label": "09a",
+    "lineage": null,
+    "open": null,
+    "outcomeBasis": null,
+    "outcomeNotes": {},
+    "runId": "codeplay-20261009a",
+    "seat": null,
+    "seatKind": null,
+    "settledAt": "2026-10-11T00:48:59Z",
+    "startedAt": "2026-10-10T00:48:59Z",
+    "tokens": {
+     "cacheRead": null,
+     "cacheWrite": null,
+     "in": null,
+     "known": 0,
+     "out": null
+    },
+    "triesByOutcome": {},
+    "untaggedChecks": null,
+    "wallHours": 24.0
+   }
+  ],
+  "runsShown": 4,
+  "runsTotal": 4
+ },
+ "line": "code",
+ "lineage": {
+  "deliverables": [],
+  "edges": [],
+  "forks": [],
+  "nodes": [
+   {
+    "record": {
+     "builtAt": null,
+     "capture": null,
+     "digest": null,
+     "reason": "not ingested yet",
+     "status": "missing"
+    },
+    "runId": "codeplay-20261020b",
+    "state": "running"
+   },
+   {
+    "record": {
+     "builtAt": null,
+     "capture": null,
+     "digest": null,
+     "reason": "not ingested yet",
+     "status": "missing"
+    },
+    "runId": "codeplay-20261020c",
+    "state": "no-winner"
+   },
+   {
+    "record": {
+     "builtAt": null,
+     "capture": null,
+     "digest": null,
+     "reason": "not ingested yet",
+     "status": "missing"
+    },
+    "runId": "codeplay-20261020a",
+    "state": "no-winner"
+   },
+   {
+    "record": {
+     "builtAt": null,
+     "capture": null,
+     "digest": null,
+     "reason": "not ingested yet",
+     "status": "missing"
+    },
+    "runId": "codeplay-20261009a",
+    "state": "no-winner"
+   }
+  ],
+  "releases": []
+ },
+ "live": {
+  "blocker": null,
+  "elapsedMs": 3602443,
+  "killCheckpoints": [],
+  "run": "20b",
+  "runId": "codeplay-20261020b",
+  "startedAt": "2026-10-20T23:48:59Z",
+  "word": "live"
+ },
+ "noProgram": false,
+ "playBasis": "run-input.pursuitId",
+ "program": "research",
+ "releases": [
+  {
+   "checks": {
+    "v1": {
+     "count": 1,
+     "of": null,
+     "progress": null,
+     "stage": null,
+     "verdict": "not-solved",
+     "workloads": null
+    }
+   },
+   "columnId": "codeplay-20261020a@rc1",
+   "commit": "d4204274",
+   "findings": [],
+   "firstCheckedAt": "2026-10-20T23:18:59Z",
+   "gate": null,
+   "metrics": {},
+   "run": "20a",
+   "runId": "codeplay-20261020a",
+   "state": "published",
+   "tag": "rc1",
+   "taggedAt": null,
+   "take": {
+    "enabled": false,
+    "why": "not solved under v2"
+   }
+  },
+  {
+   "checks": {
+    "v1": {
+     "count": 1,
+     "of": null,
+     "progress": null,
+     "stage": null,
+     "verdict": "not-solved",
+     "workloads": null
+    }
+   },
+   "columnId": "codeplay-20261020c@rc2",
+   "commit": "d4204274",
+   "findings": [],
+   "firstCheckedAt": "2026-10-20T23:18:59Z",
+   "gate": null,
+   "metrics": {},
+   "run": "20c",
+   "runId": "codeplay-20261020c",
+   "state": "published",
+   "tag": "rc2",
+   "taggedAt": null,
+   "take": {
+    "enabled": false,
+    "why": "not solved under v2"
+   }
+  },
+  {
+   "checks": {
+    "v1": {
+     "count": 1,
+     "of": null,
+     "progress": null,
+     "stage": null,
+     "verdict": "held",
+     "workloads": null
+    }
+   },
+   "columnId": "codeplay-20261020c@rc3",
+   "commit": "d4204274",
+   "findings": [],
+   "firstCheckedAt": "2026-10-21T00:18:59Z",
+   "gate": null,
+   "metrics": {},
+   "run": "20c",
+   "runId": "codeplay-20261020c",
+   "state": "published",
+   "tag": "rc3",
+   "taggedAt": null,
+   "take": {
+    "enabled": false,
+    "why": "not solved under v2"
+   }
+  }
+ ],
+ "runs": [
+  {
+   "check": null,
+   "depth": null,
+   "durationMs": null,
+   "ending": null,
+   "findings": null,
+   "forkedFrom": null,
+   "format": "runtime",
+   "group": "codeplay-20261020b",
+   "harnesses": [],
+   "hidden": null,
+   "id": "codeplay-20261020b",
+   "inputDigest": null,
+   "keys": [],
+   "kind": "run",
+   "location": {
+    "kind": "dir",
+    "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261020b"
+   },
+   "lostHours": 0,
+   "models": [],
+   "nodes": 1,
+   "play": "codeplay",
+   "playCheck": null,
+   "predecessor": null,
+   "purpose": null,
+   "purposeBasis": null,
+   "reason": "running",
+   "record": {
+    "builtAt": null,
+    "capture": null,
+    "digest": null,
+    "reason": "not ingested yet",
+    "status": "missing"
+   },
+   "sandboxes": [],
+   "settledAt": null,
+   "spend": {
+    "apiEquivalentProvenance": "not recorded",
+    "apiEquivalentUsd": null,
+    "apiUsd": null,
+    "bySeat": [],
+    "costBasisUsd": null,
+    "gaps": [
+     {
+      "code": "spend-unknown",
+      "detail": "spend not read yet",
+      "nodeId": null,
+      "runId": "codeplay-20261020b"
+     }
+    ],
+    "listUsd": null,
+    "paidKnown": false,
+    "paidUsd": null,
+    "routerUsd": null,
+    "sandboxHours": null,
+    "sandboxUsd": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "sources": [],
+    "subscriptionKnown": false,
+    "subscriptionUsd": null,
+    "tokens": null
+   },
+   "startedAt": "2026-10-20T23:48:59Z",
+   "state": "running",
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "check": {
+    "best": {
+     "at": "2026-10-20T23:18:59Z",
+     "checker": "a1a1a1a1a1a1",
+     "commit": "d4204274d4204274d4204274d4204274d4204274",
+     "known": true,
+     "line": "NOT SOLVED: stage 2 of 4 (contract)",
+     "score": null,
+     "solved": false,
+     "source": "play-checks.jsonl",
+     "tag": "rc2",
+     "verdict": "not-solved"
+    },
+    "checkers": [
+     {
+      "checker": "a1a1a1a1a1a1",
+      "checks": 2,
+      "from": "2026-10-20T23:18:59Z",
+      "solved": 0,
+      "to": "2026-10-21T00:18:59Z"
+     }
+    ],
+    "counts": {
+     "checks": 2,
+     "gateUnknown": 0,
+     "gates": 0,
+     "known": 2,
+     "solved": 0
+    },
+    "gate": null,
+    "gateUnknown": null,
+    "headline": "rc3 check passed; held: stages workloads, hidden have no known-good fixture (10-21 00:18 UTC)",
+    "held": {
+     "at": "2026-10-21T00:18:59Z",
+     "checker": "a1a1a1a1a1a1",
+     "commit": "d4204274d4204274d4204274d4204274d4204274",
+     "held": [
+      "workloads",
+      "hidden"
+     ],
+     "known": true,
+     "label": "check passed; held: stages workloads, hidden have no known-good fixture",
+     "line": "NOT SOLVED: passed uncalibrated stages (workloads, hidden): no known-good fixture has passed them (disco calibrate), so this pass does not settle SOLVED",
+     "score": null,
+     "solved": false,
+     "source": "play-checks.jsonl",
+     "stages": [
+      "workloads",
+      "hidden"
+     ],
+     "tag": "rc3",
+     "verdict": "held"
+    },
+    "latest": {
+     "at": "2026-10-21T00:18:59Z",
+     "checker": "a1a1a1a1a1a1",
+     "commit": "d4204274d4204274d4204274d4204274d4204274",
+     "held": [
+      "workloads",
+      "hidden"
+     ],
+     "known": true,
+     "line": "NOT SOLVED: passed uncalibrated stages (workloads, hidden): no known-good fixture has passed them (disco calibrate), so this pass does not settle SOLVED",
+     "score": null,
+     "solved": false,
+     "source": "play-checks.jsonl",
+     "tag": "rc3",
+     "verdict": "held"
+    },
+    "passes": []
+   },
+   "depth": null,
+   "durationMs": 6600000,
+   "ending": {
+    "at": "2026-10-21T00:38:59Z",
+    "by": null,
+    "name": "no winner",
+    "reason": "no-winner",
+    "sentence": null,
+    "state": "no-winner"
+   },
+   "findings": null,
+   "forkedFrom": null,
+   "format": "runtime",
+   "group": "codeplay-20261020c",
+   "harnesses": [],
+   "hidden": null,
+   "id": "codeplay-20261020c",
+   "inputDigest": null,
+   "keys": [],
+   "kind": "run",
+   "location": {
+    "kind": "dir",
+    "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261020c"
+   },
+   "lostHours": 0,
+   "models": [],
+   "nodes": 1,
+   "play": "codeplay",
+   "playCheck": null,
+   "predecessor": null,
+   "purpose": null,
+   "purposeBasis": null,
+   "reason": "no-winner",
+   "record": {
+    "builtAt": null,
+    "capture": null,
+    "digest": null,
+    "reason": "not ingested yet",
+    "status": "missing"
+   },
+   "sandboxes": [],
+   "settledAt": "2026-10-21T00:38:59Z",
+   "spend": {
+    "apiEquivalentProvenance": "not recorded",
+    "apiEquivalentUsd": null,
+    "apiUsd": null,
+    "bySeat": [],
+    "costBasisUsd": null,
+    "gaps": [
+     {
+      "code": "spend-unknown",
+      "detail": "spend not read yet",
+      "nodeId": null,
+      "runId": "codeplay-20261020c"
+     }
+    ],
+    "listUsd": null,
+    "paidKnown": false,
+    "paidUsd": null,
+    "routerUsd": null,
+    "sandboxHours": null,
+    "sandboxUsd": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "sources": [],
+    "subscriptionKnown": false,
+    "subscriptionUsd": null,
+    "tokens": null
+   },
+   "startedAt": "2026-10-20T22:48:59Z",
+   "state": "no-winner",
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "check": {
+    "best": {
+     "at": "2026-10-20T23:18:59Z",
+     "checker": "a1a1a1a1a1a1",
+     "commit": "d4204274d4204274d4204274d4204274d4204274",
+     "known": true,
+     "line": "NOT SOLVED: stage 2 of 4 (contract)",
+     "score": null,
+     "solved": false,
+     "source": "play-checks.jsonl",
+     "tag": "rc1",
+     "verdict": "not-solved"
+    },
+    "checkers": [
+     {
+      "checker": "a1a1a1a1a1a1",
+      "checks": 1,
+      "from": "2026-10-20T23:18:59Z",
+      "solved": 0,
+      "to": "2026-10-20T23:18:59Z"
+     }
+    ],
+    "counts": {
+     "checks": 1,
+     "gateUnknown": 0,
+     "gates": 0,
+     "known": 1,
+     "solved": 0
+    },
+    "gate": null,
+    "gateUnknown": null,
+    "headline": "rc1 NOT SOLVED: stage 2 of 4 (contract) (10-20 23:18 UTC)",
+    "held": null,
+    "latest": {
+     "at": "2026-10-20T23:18:59Z",
+     "checker": "a1a1a1a1a1a1",
+     "commit": "d4204274d4204274d4204274d4204274d4204274",
+     "known": true,
+     "line": "NOT SOLVED: stage 2 of 4 (contract)",
+     "score": null,
+     "solved": false,
+     "source": "play-checks.jsonl",
+     "tag": "rc1",
+     "verdict": "not-solved"
+    },
+    "passes": []
+   },
+   "depth": null,
+   "durationMs": 3600000,
+   "ending": {
+    "at": "2026-10-20T22:48:59Z",
+    "by": null,
+    "name": "no winner",
+    "reason": "no-winner",
+    "sentence": null,
+    "state": "no-winner"
+   },
+   "findings": null,
+   "forkedFrom": null,
+   "format": "runtime",
+   "group": "codeplay-20261020a",
+   "harnesses": [],
+   "hidden": null,
+   "id": "codeplay-20261020a",
+   "inputDigest": null,
+   "keys": [],
+   "kind": "run",
+   "location": {
+    "kind": "dir",
+    "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261020a"
+   },
+   "lostHours": 0,
+   "models": [],
+   "nodes": 1,
+   "play": "codeplay",
+   "playCheck": null,
+   "predecessor": null,
+   "purpose": null,
+   "purposeBasis": null,
+   "reason": "no-winner",
+   "record": {
+    "builtAt": null,
+    "capture": null,
+    "digest": null,
+    "reason": "not ingested yet",
+    "status": "missing"
+   },
+   "sandboxes": [],
+   "settledAt": "2026-10-20T22:48:59Z",
+   "spend": {
+    "apiEquivalentProvenance": "not recorded",
+    "apiEquivalentUsd": null,
+    "apiUsd": null,
+    "bySeat": [],
+    "costBasisUsd": null,
+    "gaps": [
+     {
+      "code": "spend-unknown",
+      "detail": "spend not read yet",
+      "nodeId": null,
+      "runId": "codeplay-20261020a"
+     }
+    ],
+    "listUsd": null,
+    "paidKnown": false,
+    "paidUsd": null,
+    "routerUsd": null,
+    "sandboxHours": null,
+    "sandboxUsd": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "sources": [],
+    "subscriptionKnown": false,
+    "subscriptionUsd": null,
+    "tokens": null
+   },
+   "startedAt": "2026-10-20T21:48:59Z",
+   "state": "no-winner",
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "check": null,
+   "depth": null,
+   "durationMs": 86400000,
+   "ending": {
+    "at": "2026-10-11T00:48:59Z",
+    "by": null,
+    "name": "no winner",
+    "reason": "no-winner",
+    "sentence": null,
+    "state": "no-winner"
+   },
+   "findings": null,
+   "forkedFrom": null,
+   "format": "runtime",
+   "group": "codeplay-20261009a",
+   "harnesses": [],
+   "hidden": null,
+   "id": "codeplay-20261009a",
+   "inputDigest": null,
+   "keys": [],
+   "kind": "run",
+   "location": {
+    "kind": "dir",
+    "path": "/tmp/pytest-of-drew/pytest-1769/test_needs_you_asks_drew_to_ru0/runs/codeplay-20261009a"
+   },
+   "lostHours": 0,
+   "models": [],
+   "nodes": 1,
+   "play": "codeplay",
+   "playCheck": null,
+   "predecessor": null,
+   "purpose": null,
+   "purposeBasis": null,
+   "reason": "no-winner",
+   "record": {
+    "builtAt": null,
+    "capture": null,
+    "digest": null,
+    "reason": "not ingested yet",
+    "status": "missing"
+   },
+   "sandboxes": [],
+   "settledAt": "2026-10-11T00:48:59Z",
+   "spend": {
+    "apiEquivalentProvenance": "not recorded",
+    "apiEquivalentUsd": null,
+    "apiUsd": null,
+    "bySeat": [],
+    "costBasisUsd": null,
+    "gaps": [
+     {
+      "code": "spend-unknown",
+      "detail": "spend not read yet",
+      "nodeId": null,
+      "runId": "codeplay-20261009a"
+     }
+    ],
+    "listUsd": null,
+    "paidKnown": false,
+    "paidUsd": null,
+    "routerUsd": null,
+    "sandboxHours": null,
+    "sandboxUsd": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "sources": [],
+    "subscriptionKnown": false,
+    "subscriptionUsd": null,
+    "tokens": null
+   },
+   "startedAt": "2026-10-10T00:48:59Z",
+   "state": "no-winner",
+   "supersedes": null,
+   "versions": null
+  }
+ ],
+ "runsRead": 4,
+ "runsTotal": 4,
+ "schema": "agent-workspace.play.v1",
+ "spend": {
+  "apiEquivalentRuns": {
+   "priced": 0,
+   "total": 4
+  },
+  "apiEquivalentUsd": null,
+  "apiUsd": null,
+  "bySeat": [],
+  "costBasisUsd": null,
+  "gaps": [
+   {
+    "code": "spend-unknown",
+    "detail": "spend not read yet",
+    "nodeId": null,
+    "runId": "codeplay-20261020b"
+   },
+   {
+    "code": "spend-unknown",
+    "detail": "spend not read yet",
+    "nodeId": null,
+    "runId": "codeplay-20261020c"
+   },
+   {
+    "code": "spend-unknown",
+    "detail": "spend not read yet",
+    "nodeId": null,
+    "runId": "codeplay-20261020a"
+   },
+   {
+    "code": "spend-unknown",
+    "detail": "spend not read yet",
+    "nodeId": null,
+    "runId": "codeplay-20261009a"
+   }
+  ],
+  "listKnown": false,
+  "listUsd": null,
+  "paidKnown": false,
+  "paidUsd": null,
+  "routerUsd": null,
+  "sandboxHours": null,
+  "sandboxUsd": null,
+  "seatWeeks": null,
+  "seatWeeksKnown": false,
+  "sources": [],
+  "subscriptionKnown": false,
+  "subscriptionUsd": null,
+  "tokenRuns": {
+   "known": 0,
+   "total": 4
+  },
+  "tokens": null,
+  "tokensKnown": false
+ },
+ "standing": {
+  "answer": {
+   "measurement": {
+    "asOf": "2026-10-21T00:18:59Z",
+    "numbers": {
+     "capS": null,
+     "undecided": 0,
+     "widest": null
+    },
+    "source": "play-checks.jsonl and tag-gate.jsonl of each run",
+    "text": "Check spread: no commit was scored twice; every gate decision decided."
+   },
+   "platform": {
+    "asOf": "2026-10-21T00:10:56.452Z",
+    "numbers": {
+     "first": {
+      "day": "2026-10-14",
+      "rate": 0.333,
+      "settled": 9
+     },
+     "latest": {
+      "day": "2026-10-20",
+      "rate": 0.154,
+      "settled": 13
+     },
+     "target": null
+    },
+    "source": "reliability.json beside the run catalog (discovery-lab tools/reliability.mjs; /api/discovery/reliability)",
+    "text": "Platform: 15% of 13 settled runs ran clean on 10-20, down from 33% of 9 on 10-14."
+   },
+   "producing": {
+    "asOf": "2026-10-21T00:49:01Z",
+    "numbers": {
+     "codeCommits": null,
+     "codeCommitsLastHour": null,
+     "lastPublished": {
+      "ageHours": 0.5,
+      "at": "2026-10-21T00:18:59Z",
+      "run": "20c",
+      "runId": "codeplay-20261020c",
+      "tag": "rc3"
+     },
+     "liveHours": 1.0,
+     "newestCodeCommitAt": null,
+     "runId": "codeplay-20261020b"
+    },
+    "source": "run progress",
+    "text": "20b live 1.0 h: code commits unknown; no release since 20c rc3, 0.5 h ago."
+   },
+   "solved": {
+    "asOf": "2026-10-21T00:18:59Z",
+    "numbers": {
+     "best": null,
+     "passed": 0,
+     "runs": 4
+    },
+    "source": "play-checks.jsonl and tag-gate.jsonl of each run",
+    "text": "Not solved: 0 of 4 runs passed the current check. No release is scored under it yet."
+   }
+  },
+  "bestCurrent": null,
+  "bestEver": null,
+  "cost": {
+   "apiEquivalentUsd": null,
+   "billed": "not-reconciled",
+   "neverStarted": [],
+   "priced": 0,
+   "provenance": null,
+   "runsCounted": 4,
+   "runsTotal": 4,
+   "seatNow": null,
+   "started": 4,
+   "unmetered": [],
+   "unpriced": [
+    "codeplay-20261020b",
+    "codeplay-20261020c",
+    "codeplay-20261020a",
+    "codeplay-20261009a"
+   ]
+  },
+  "current": null,
+  "lastEnding": {
+   "at": "2026-10-21T00:38:59Z",
+   "blocker": null,
+   "glyph": "\u25a0",
+   "killCheckpoints": [],
+   "reason": "no-winner",
+   "run": "20c",
+   "runId": "codeplay-20261020c",
+   "startedAt": "2026-10-20T22:48:59Z",
+   "wallHours": 1.83,
+   "word": "not solved"
+  },
+  "lastPublished": {
+   "ageHours": 0.5,
+   "at": "2026-10-21T00:18:59Z",
+   "run": "20c",
+   "runId": "codeplay-20261020c",
+   "tag": "rc3"
+  },
+  "releases": {
+   "checked": 3,
+   "checkedCurrent": 0,
+   "checkedCurrentTags": [],
+   "checker": "v2",
+   "neverChecked": 0,
+   "neverCheckedCurrent": 3,
+   "passingCurrent": 0,
+   "published": 3,
+   "source": "play-checks.jsonl and tag-gate.jsonl of each run; published tags from the play repository",
+   "superseded": 0,
+   "withheld": 0
+  },
+  "sentence": "NOT SOLVED under v2 (as pressed). v2 has not run on a commit yet.",
+  "status": "undecided"
+ },
+ "title": "codeplay"
+}

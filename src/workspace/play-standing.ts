@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { calibrationSchema, calibrationState } from '../run-check-model.js'
 
 /**
  * The focused play page's document: what the play is trying to do, where it stands under its current check, the
@@ -227,6 +228,9 @@ export const playClimbSchema = z
           /** Check rows of this run on no release tag, and the newest one's reason when the run has no checked tag. */
           untagged: n.optional(),
           note: s.optional(),
+          /** Each stage's calibration as the run's check registered it, and a pass held for its uncalibrated stages. */
+          calibration: calibrationSchema.nullable().optional(),
+          held: z.object({ stages: z.array(z.string()), label: s.optional() }).catchall(z.unknown()).nullable().optional(),
         })
         .catchall(z.unknown()),
     ),
@@ -268,6 +272,8 @@ export const playClimbSchema = z
           workloads: workloads.optional(),
           line: s.optional(),
           source: s.optional(),
+          /** The calibration state the verdict's check registered (its run group carries each stage's). */
+          calibration: calibrationState.nullable().optional(),
         })
         .catchall(z.unknown()),
     ),
@@ -285,6 +291,7 @@ export const playClimbSchema = z
             lastAt: s.optional(),
             line: s.optional(),
             source: s.optional(),
+            calibration: calibrationState.nullable().optional(),
             // The score an undecided gate printed before it timed out: drawn in the hover, never on the axis.
             score: z.object({ stage: s.optional(), reached: n.optional(), of: n.optional(), workloads: z.object({ passed: n.optional(), total: n.optional() }).nullable().optional() }).catchall(z.unknown()).nullable().optional(),
           })
@@ -476,6 +483,7 @@ export const VERDICT_WORDS: Record<string, string> = {
   'contract-held': 'contract held',
   'contract-failed': 'fails the contract',
   undecided: 'unverified',
+  held: 'check passed; held',
   superseded: 'superseded',
   'no-tag': 'not checked',
 }
