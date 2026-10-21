@@ -1,0 +1,222 @@
+{
+ "schema": "agent-workspace.play-report.v1",
+ "id": "magnetar-rust",
+ "title": "magnetar-rust",
+ "asOf": "2026-10-19T22:43:19.768Z",
+ "built": {
+  "release": {
+   "tag": "rc16",
+   "runId": "magnetar-rust-20261018b",
+   "commit": "ca0416f0",
+   "basis": "best under the current checker",
+   "tree": "play-checks/magnetar-9154ce8fa470b6b5/src",
+   "builtAt": "2026-10-18T22:43:07.266Z"
+  },
+  "members": {
+   "value": [
+    "crates/mfield",
+    "crates/mhash",
+    "crates/mpoly",
+    "crates/msumcheck",
+    "crates/mpcs",
+    "crates/mspartan",
+    "crates/mmem",
+    "crates/mvm",
+    "crates/marith",
+    "crates/mprove",
+    "guests/tools/normalize"
+   ],
+   "unit": null,
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.toml",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "crates": {
+   "value": [
+    "marith",
+    "mfield",
+    "mhash",
+    "mmem",
+    "mpcs",
+    "mpoly",
+    "mprove",
+    "mspartan",
+    "msumcheck",
+    "mvm"
+   ],
+   "unit": null,
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.toml",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "lockedPackages": {
+   "value": 11,
+   "unit": "packages",
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.lock",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "externalCrates": {
+   "value": 0,
+   "unit": "crates",
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/Cargo.lock",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "externalCrateNames": [],
+  "commands": {
+   "value": {
+    "build": [
+     "cargo",
+     "build",
+     "--release",
+     "--offline",
+     "--locked"
+    ],
+    "preprocess": [
+     "target/release/magnetar-preprocess"
+    ],
+    "prover": [
+     "target/release/magnetar-prove"
+    ],
+    "verifier": [
+     "target/release/magnetar-verify"
+    ]
+   },
+   "unit": null,
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/magnetar.json",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  },
+  "guests": {
+   "value": 15,
+   "unit": "guests",
+   "source": "play-checks/magnetar-9154ce8fa470b6b5/src/magnetar.json",
+   "asOf": "2026-10-18T22:43:07.266Z"
+  }
+ },
+ "rulers": [
+  {
+   "label": "v1",
+   "sha256": "639c17a4485f",
+   "firstAt": "2026-10-16T20:27:37.236Z",
+   "current": false,
+   "rows": 65,
+   "runIds": [
+    "magnetar-rust-20261016d",
+    "magnetar-rust-20261017c"
+   ],
+   "ruling": null,
+   "best": {
+    "tag": "rc102",
+    "runId": "magnetar-rust-20261017c",
+    "run": "17c",
+    "commit": "2fde0fbe",
+    "verdict": "not-solved",
+    "kind": "check",
+    "count": 1,
+    "stage": null,
+    "of": null,
+    "workloads": null,
+    "firstAt": null,
+    "source": "magnetar-rust-20261017c/play-checks.jsonl",
+    "asOf": "2026-10-18T03:14:36.703Z"
+   }
+  },
+  {
+   "label": "v2",
+   "sha256": "3d2b3f1e7a1c",
+   "firstAt": "2026-10-18T01:34:30.280Z",
+   "current": false,
+   "rows": 30,
+   "runIds": [
+    "magnetar-rust-20261018b"
+   ],
+   "ruling": null,
+   "best": {
+    "tag": "rc14",
+    "runId": "magnetar-rust-20261018b",
+    "run": "18b",
+    "commit": "48a3930a",
+    "verdict": "not-solved",
+    "kind": "check",
+    "count": 4,
+    "stage": 6,
+    "of": 6,
+    "workloads": {
+     "passed": 15,
+     "total": 15
+    },
+    "firstAt": "2026-10-18T18:51:53.017Z",
+    "source": "magnetar-rust-20261018b/play-checks.jsonl",
+    "asOf": "2026-10-18T19:41:15.502Z"
+   }
+  },
+  {
+   "label": "v3",
+   "sha256": "a3cf95c7cd4a",
+   "firstAt": "2026-10-18T19:58:47.238Z",
+   "current": false,
+   "rows": 4,
+   "runIds": [
+    "magnetar-rust-20261018b"
+   ],
+   "ruling": {
+    "at": "2026-10-18T19:48:40.017Z",
+    "by": "referee",
+    "verdict": "upheld",
+    "label": "referee ruling 10-18 19:48Z",
+    "reason": "Reproduced the disputed line exactly: check.py:1130 runs the check's own pure-Python RV64I interpreter (execute, check.py:221-309) on the delivered release/guests/keccak-f1600.elf with limit=cycles=40"
+   },
+   "best": {
+    "tag": "rc14",
+    "runId": "magnetar-rust-20261018b",
+    "run": "18b",
+    "commit": "48a3930a",
+    "verdict": "solved",
+    "kind": "check",
+    "count": 3,
+    "stage": 6,
+    "of": 6,
+    "workloads": {
+     "passed": 15,
+     "total": 15
+    },
+    "firstAt": "2026-10-18T20:14:04.270Z",
+    "source": "magnetar-rust-20261018b/play-checks.jsonl",
+    "asOf": "2026-10-18T20:46:10.316Z"
+   }
+  },
+  {
+   "label": "v4",
+   "sha256": "041435d77c69",
+   "firstAt": "2026-10-18T21:01:42.927Z",
+   "current": true,
+   "rows": 37,
+   "runIds": [
+    "magnetar-rust-20261018b",
+    "magnetar-rust-20261019f"
+   ],
+   "ruling": {
+    "at": "2026-10-18T20:52:08.860Z",
+    "by": "operator",
+    "verdict": "upheld",
+    "label": "operator amendment 10-18 20:52Z",
+    "reason": "The operator amended this run's check, so its SOLVED verdict on rc14 no longer stands. Two lines are now contract requirements, and you are told them: (1) magnetar.json must declare security_bits as a"
+   },
+   "best": {
+    "tag": "rc16",
+    "runId": "magnetar-rust-20261018b",
+    "run": "18b",
+    "commit": "ca0416f0",
+    "verdict": "contract-failed",
+    "kind": "gate",
+    "count": 1,
+    "stage": 5,
+    "of": 6,
+    "workloads": {
+     "passed": 4,
+     "total": 15
+    },
+    "firstAt": "2026-10-18T22:43:07.266Z",
+    "source": "magnetar-rust-20261018b/tag-gate.jsonl",
+    "asOf": "2026-10-18T22:43:07.266Z"
+   }
+  }
+ ]
+}

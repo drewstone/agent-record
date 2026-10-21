@@ -19,12 +19,16 @@ test('the run page opens with the outcome, the score curve and each contract lin
   const now = html.indexOf('data-section="now"')
   assert.ok(now > 0 && now < html.indexOf('rr-columns'), 'the Now section comes before the evidence columns')
   const words = text(html)
-  assert.match(words, /Now✓ Passed · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
+  assert.match(words, /Now✓ Passed · checked 01:56 UTC on rc3/)
+  // The page's one liveness clock is "last output" on its first screen; the verdict line states no second one.
+  assert.doesNotMatch(words, /last agent stream/)
   // The curve is the Lab's points: rc1 at 0, rc2 at 0.5, rc3 at 0.667 when its public stages passed, then 1. The paragraph
   // that repeated them in words is gone (X9); the chart's data table carries the values.
   assert.match(html, /data-field="system\.play\.scores"[^>]*>.*<svg/s)
-  assert.match(words, /manifest\.json build must be a cargo argv list \(argv\[0\] == cargo\)Sent 01:51 UTC on rc1 to 2 agentsAcknowledged: root delivered, s0 deliveredFixed in 47711253 \(rc2\): a later stage failed instead at 01:53 UTC/)
-  assert.match(words, /workloads\/beta\.txt must hold the single word betaSent 01:53 UTC on rc2 to the rootAcknowledged: root deliveredFixed in a6f78d9e \(rc3\): its public stages passed and the tag was published at 01:55 UTC/)
+  // One row per line: the line (whole in its drawer, with who acknowledged it), when and where it was sent, the later
+  // release that fixed it, and what happened next.
+  assert.match(words, /manifest\.json build must be a cargo argv list \(argv\[0\] == cargo\)Acknowledged: root delivered, s0 deliveredSent 01:51 UTC on rc1 to 2 agentsFixed in 47711253 \(rc2\)a later stage failed instead at 01:53 UTC/)
+  assert.match(words, /workloads\/beta\.txt must hold the single word betaAcknowledged: root deliveredSent 01:53 UTC on rc2 to the rootFixed in a6f78d9e \(rc3\)its public stages passed and the tag was published at 01:55 UTC/)
 })
 
 test('each check dispute shows under the outcome with its line and its ruling', () => {
@@ -73,7 +77,7 @@ test('a passed check leads with its solved label and the goal audit behind it', 
   assert.match(text(contradicted), /check passed; goal audit found a contradiction · checked 01:56 UTC on rc3 · goal audit found a contradiction at 02:26 UTC/)
   // A check that passed is never toned as failing; red is only a person's act-now (CONTEXT.md, Status).
   assert.doesNotMatch(contradicted, /data-status="[^"]*:fail"/)
-  assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /Now✓ SOLVED · checked 01:56 UTC on rc3 · last agent stream 2\.1 min ago/)
+  assert.match(text(page({ ...passed, solvedLabel: 'SOLVED', goalAudit: null })), /Now✓ SOLVED · checked 01:56 UTC on rc3/)
 })
 
 // tangle-tools #1562 (3b4faa91, 2026-10-20) serves who ruled each check dispute, each stage's calibration and a pass held

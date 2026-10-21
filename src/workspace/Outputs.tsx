@@ -58,6 +58,12 @@ function resolveLink(from: string, href: string): string | null {
  * The run's outputs in the drawer: each deliverable the readout names with the files under it, and the selected file
  * drawn by its kind. A link inside a delivered page opens the file it names when the run delivered it.
  */
+/** A run whose deliverable is a code repository with no release tag yet: its Outputs say so instead of "no deliverable". */
+const codeRun = (doc: RunDocument) => {
+  const repository = (doc.receipt as { codeRepository?: { url?: string | null; tag?: string | null } | null } | null | undefined)?.codeRepository
+  return !!repository?.url && !repository.tag
+}
+
 export function OutputsView({ doc, grading, selected, onSelect, onClose }: { doc: RunDocument; grading?: Grading; selected: string | null; onSelect: (path: string | null) => void; onClose: () => void }) {
   const output = doc.finalOutput ?? null
   const groups = useMemo(() => groupOutputs(output), [output])
@@ -90,7 +96,7 @@ export function OutputsView({ doc, grading, selected, onSelect, onClose }: { doc
         <div className="outputs-body">
           {!output || (groups.length === 0 && !output.rootOutput) ? (
             <p className="chat-empty">
-              {output?.status === 'none-declared' ? 'This run declared no deliverable and its readout names none.' : 'No output file is listed for this run.'}
+              {codeRun(doc) ? 'The deliverable is code: no release tag yet.' : output?.status === 'none-declared' ? 'This run declared no deliverable and its readout names none.' : 'No output file is listed for this run.'}
             </p>
           ) : null}
           {output?.readout?.charts?.length ? (

@@ -3,7 +3,7 @@ import { versionGraphDocumentSchema } from '../workspace-model.js'
 import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 import { money, useDocument, when } from './data.js'
-import { flagLabel, layoutVersionGraph, PICKED, runGraphModel, scoreLine } from './version-graph.js'
+import { flagLabel, pagesName, layoutVersionGraph, PICKED, runGraphModel, scoreLine } from './version-graph.js'
 import { RunRoles } from './RoleScorecards.js'
 import type { GraphModel, GraphNode } from './version-graph.js'
 
@@ -247,15 +247,15 @@ export function RunVersions({
 
 /** Every release tag in order with its score, the rule's pick and the flags. */
 function Releases({ doc, selected, onSelect }: { doc: VersionGraphDocument; selected: string | null; onSelect: (commit: string) => void }) {
-  if (doc.tags.length === 0) return <p className="faint vg-releases-empty">No release candidate is tagged yet.</p>
+  if (doc.tags.length === 0) return <p className="faint vg-releases-empty">No page version is tagged yet.</p>
   return (
-    <section className="vg-releases" aria-label="Release candidates">
-      <h3>Release candidates</h3>
+    <section className="vg-releases" aria-label="Page versions">
+      <h3>Page versions</h3>
       <div className="vg-table-scroll">
       <table className="data-table">
         <thead>
           <tr>
-            <th scope="col">Tag</th>
+            <th scope="col">Version</th>
             <th scope="col">Exact</th>
             <th scope="col">Held-out</th>
             <th scope="col">Open blockers</th>
@@ -274,7 +274,7 @@ function Releases({ doc, selected, onSelect }: { doc: VersionGraphDocument; sele
               onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && onSelect(tag.commit)}
             >
               <td>
-                <b className="mono">{tag.name}</b>
+                <b className="mono" title={tag.name}>{pagesName(tag.name)}</b>
                 {tag.best && <span className="vg-chip tone-neutral">{PICKED}</span>}
                 {tag.score && !tag.score.complete && <span className="vg-chip tone-muted">incomplete</span>}
               </td>
@@ -419,7 +419,7 @@ function TagDetail({ tag }: { tag: VersionTag }) {
   return (
     <section className="vg-tag-detail" data-tag-detail={tag.name}>
       <h3>
-        Release candidate {tag.name}
+        <span title={tag.name}>{pagesName(tag.name).replace(/^pages/, 'Pages')}</span>
         {tag.best && <span className="vg-chip tone-neutral">{PICKED}</span>}
       </h3>
       {tag.best && <p className="faint">The registered rule picks this tag as the run's deliverable.</p>}

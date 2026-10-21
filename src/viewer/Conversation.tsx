@@ -256,9 +256,10 @@ export function Conversation({
   // Follow the tail only while the reader is at the bottom: new rows of a live record keep them there; anywhere
   // else, the rows above keep their measured heights and the reading place does not move.
   const following = useRef(false)
+  // A live conversation opens at its newest event and follows it; a settled one opens at its first message.
   useLayoutEffect(() => {
-    following.current = false
-    if (scroll.current && !targetRef.current) scroll.current.scrollTop = 0
+    following.current = !!live && !targetRef.current
+    if (scroll.current && !targetRef.current) scroll.current.scrollTop = live ? scroll.current.scrollHeight : 0
   }, [actor])
   useEffect(() => {
     const element = scroll.current

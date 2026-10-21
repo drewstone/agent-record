@@ -52,8 +52,8 @@ test('run HTTP page reads bounded root and child streams and stops polling after
       res.setHeader('etag', etag)
       if (req.headers['if-none-match'] === etag) return res.writeHead(304).end()
       return json({
-      schema: 'agent-workspace.run.v1', run: { id: 'run-fixture', play: 'fixture', state: alive ? 'running' : 'failed', location: { kind: alive ? 'dir' : 'archive', path: null }, record: { status: alive ? 'missing' : 'ready', digest: null } },
-      input: null, spend: { nodes: {} }, versions: [], live: { polling: alive, mirrorAt: null },
+      schema: 'agent-workspace.run.v1', run: { id: 'run-fixture', play: 'fixture', state: alive ? 'running' : 'failed', location: { kind: alive ? 'dir' : 'archive', path: null }, record: { status: alive ? 'missing' : 'ready', digest: null }, keys: [] },
+      input: null, spend: { nodes: {}, gaps: [] }, versions: [], live: { polling: alive, mirrorAt: null },
       execution: { alive, lastActivityAt: at, failedAttempts: 2, settleKind: alive ? null : 'failed', endingError: alive ? null : { name: 'RetainedWorkspaceCapturePendingError', message: 'Workspace capture pending' }, lastAttempt: alive ? null : { error: 'HTTP 429', classification: 'transient' }, diagnoses: alive ? [] : [{ id: 'provider-rate-limit', fix: `Resume after provider capacity returns. ${'Keep the source sandbox and inspect the provider response. '.repeat(40)}` }, { id: 'retained-capture', fix: 'Capture the preserved workspace. '.repeat(40) }, { id: 'settle-capture', fix: 'Check retained evidence before judging the run. '.repeat(40) }], resume: { status: 'preserved', command: 'disco run --resume run-fixture', reason: 'Source sandbox preserved' } },
       })
     }
@@ -69,11 +69,12 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.goto(`http://127.0.0.1:${server.address().port}/run/run-fixture`)
-    await page.getByText('Running', { exact: true }).waitFor()
-    const initialStatus = await page.locator('[data-run-status]').textContent()
-    await page.waitForFunction((previous) => document.querySelector('[data-run-status]')?.textContent !== previous, initialStatus)
+    // The Now view opens with the run's name, its status and four slots, and states one liveness clock.
+    await page.locator('[data-fold] h1', { hasText: 'Run run-fixture' }).waitFor()
+    assert.equal(await page.locator('[data-slot]').count(), 4)
+    assert.equal((await page.locator('body').innerText()).match(/last output/g)?.length, 1, 'one liveness clock')
     assert.equal(requests.length, 0, 'overview does not fetch streams')
-    await page.getByRole('button', { name: 'Conversations', exact: true }).click()
+    await page.getByRole('tab', { name: 'Conversations' }).click()
     await page.getByText('Current answer', { exact: true }).waitFor()
     assert.equal(await page.locator('details.reasoning-body[open]').count(), 0)
     assert.equal(await page.locator('.reasoning-body .activity-prose').count(), 0, 'collapsed reasoning has no expanded body')
@@ -100,24 +101,25 @@ test('run HTTP page reads bounded root and child streams and stops polling after
     assert.equal(await page.getByText('Child partial', { exact: true }).count(), 0, 'native snapshot updates replace the prior part')
     alive = false
     child.push({ seq: 3, at, stream: 'worker/session', type: 'message.part.updated', data: { part: { id: 'text-1', type: 'text', text: 'Child final suffix', time: { start: Date.parse(at) } } } })
-    await page.getByText(/Stopped · failed/).waitFor({ timeout: 10_000 }).catch(async (error) => {
+    await page.locator('[data-run-status]', { hasText: 'Crashed' }).waitFor({ timeout: 10_000 }).catch(async (error) => {
       throw new Error(`${error.message}\nRun requests: ${JSON.stringify(runRequests)}\nPage errors: ${JSON.stringify(errors)}\nRendered page: ${await page.locator('body').innerText()}`, { cause: error })
     })
-    await page.getByText(/RetainedWorkspaceCapturePendingError/).waitFor()
-    await page.getByText(/provider-rate-limit: Resume after provider capacity returns/).waitFor()
     await page.getByText('Child final suffix', { exact: true }).waitFor()
-    await page.getByText('Ending evidence', { exact: true }).click()
-    await page.getByText('retained-capture', { exact: true }).waitFor()
-    await page.getByText('settle-capture', { exact: true }).waitFor()
-    await page.getByText('Ending evidence', { exact: true }).click()
     await page.waitForTimeout(500)
     const settledCount = requests.length
     await page.waitForTimeout(3500)
     assert.equal(requests.length, settledCount, 'settled transcript does not poll')
+    // Why the run stopped is on its Now view, folded under its ending sentence.
+    await page.getByRole('tab', { name: 'Now' }).click()
+    await page.getByText('Why it stopped', { exact: true }).click()
+    await page.getByText(/RetainedWorkspaceCapturePendingError: Workspace capture pending/).waitFor()
+    for (const id of ['provider-rate-limit', 'retained-capture', 'settle-capture']) await page.getByText(id, { exact: true }).waitFor()
+    await page.getByText('disco run --resume run-fixture', { exact: true }).waitFor()
     assert.equal(errors.length, 0, errors.join('\n'))
     await page.setViewportSize({ width: 390, height: 844 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'phone reflows')
-    assert.equal(await page.locator('.run-execution-next button').evaluate((button) => button.getBoundingClientRect().bottom <= innerHeight), true, 'long canonical fixes keep resume and Conversations above the phone fold')
+    await page.evaluate(() => scrollTo(0, 0))
+    assert.deepEqual(await page.locator('[data-slot]').evaluateAll((slots) => slots.map((slot) => slot.getBoundingClientRect().bottom <= innerHeight)), [true, true, true, true], 'the four slots fit the phone\'s first screen')
   } finally { releaseChildResponse(); await browser.close(); await new Promise((resolve) => server.close(resolve)) }
 })
 

@@ -1,0 +1,2025 @@
+{
+ "schema": "agent-workspace.run.v1",
+ "run": {
+  "id": "magnetar-rust-20261017c",
+  "group": "magnetar-rust-20261017c",
+  "kind": "run",
+  "play": "magnetar-rust",
+  "purpose": "Play magnetar-rust: Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's …",
+  "purposeBasis": "acceptance.purpose",
+  "location": {
+   "kind": "dir",
+   "path": "/mnt/traces/discovery-runs/magnetar-rust-20261017c"
+  },
+  "format": "runtime",
+  "state": "no-winner",
+  "reason": "cancelled",
+  "playCheck": null,
+  "check": {
+   "latest": {
+    "at": "2026-10-18T03:14:36.703Z",
+    "tag": "rc102",
+    "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4",
+    "checker": "639c17a4485f",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+    "score": null,
+    "source": "play-check.json",
+    "verdict": "not-solved"
+   },
+   "best": {
+    "at": "2026-10-17T07:54:25.884Z",
+    "tag": "rc5",
+    "commit": "f41ba873e7cc58aa0a67340a04c5ea3071500f94",
+    "checker": "639c17a4485f",
+    "known": true,
+    "solved": false,
+    "line": "NOT SOLVED: magnetar.json is missing: no deliverable to build",
+    "score": null,
+    "source": "play-checks.jsonl",
+    "verdict": "not-solved"
+   },
+   "passes": [],
+   "checkers": [
+    {
+     "checker": "639c17a4485f",
+     "from": "2026-10-17T07:54:25.884Z",
+     "to": "2026-10-18T03:14:36.703Z",
+     "checks": 54,
+     "solved": 0
+    }
+   ],
+   "gate": null,
+   "gateUnknown": null,
+   "counts": {
+    "checks": 57,
+    "known": 54,
+    "solved": 0,
+    "gates": 0,
+    "gateUnknown": 0
+   },
+   "headline": "rc102 NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this (10-18 03:14 UTC)",
+   "checkerNames": [
+    {
+     "sha256": "639c17a4485f",
+     "label": "v1",
+     "ruling": null,
+     "current": false
+    },
+    {
+     "sha256": "3d2b3f1e7a1c",
+     "label": "v2",
+     "ruling": null,
+     "current": false
+    },
+    {
+     "sha256": "a3cf95c7cd4a",
+     "label": "v3",
+     "ruling": null,
+     "current": false
+    },
+    {
+     "sha256": "041435d77c69",
+     "label": "v4",
+     "ruling": null,
+     "current": true
+    }
+   ]
+  },
+  "ending": {
+   "name": "cancelled",
+   "state": "no-winner",
+   "at": "2026-10-17T21:58:52.140Z",
+   "reason": "stopping to continue in a fresh press with the closed check loop (contract feedback to managers, pre-tag gate, dense score, seat cap 8); 17c was over the Coding Plan cap (12 vs 8) and blocked at the build step since 20:23Z; its code is preserved at tangle-discovery/magnetar-rust main = rc101 0394d1eeb",
+   "sentence": "The operator stopped this run.",
+   "by": "operator"
+  },
+  "startedAt": "2026-10-17T06:59:09.952Z",
+  "settledAt": "2026-10-17T21:58:52.140Z",
+  "durationMs": 53982188,
+  "nodes": 27,
+  "depth": 2,
+  "harnesses": [
+   "opencode"
+  ],
+  "models": [
+   "glm-5.3",
+   "zai-coding-plan/glm-5.3"
+  ],
+  "keys": [],
+  "spend": {
+   "paidUsd": null,
+   "subscriptionUsd": null,
+   "apiUsd": null,
+   "sandboxUsd": null,
+   "routerUsd": null,
+   "costBasisUsd": null,
+   "listUsd": null,
+   "tokens": {
+    "input": 61833396,
+    "output": 2500291,
+    "cacheRead": 1402040640,
+    "cacheWrite": 0
+   },
+   "subscriptionKnown": false,
+   "sandboxHours": null,
+   "seatWeeks": null,
+   "seatWeeksKnown": false,
+   "paidKnown": false,
+   "sources": [],
+   "gaps": [
+    {
+     "runId": "magnetar-rust-20261017c",
+     "nodeId": null,
+     "code": "spend-unknown",
+     "detail": "spend not read yet"
+    },
+    {
+     "runId": "magnetar-rust-20261017c",
+     "nodeId": null,
+     "code": "list-partial",
+     "detail": "usage unknown for 27 of 27 agents"
+    }
+   ],
+   "listKnown": false,
+   "byCategory": [
+    {
+     "category": "waiting",
+     "ms": 46009700,
+     "tokens": 1145969,
+     "listUsd": null
+    },
+    {
+     "category": "verification",
+     "ms": 32574075,
+     "tokens": 7860107,
+     "listUsd": null
+    },
+    {
+     "category": "compute",
+     "ms": 6403078,
+     "tokens": 22064134,
+     "listUsd": null
+    },
+    {
+     "category": "coordination",
+     "ms": 2798312,
+     "tokens": 13680969,
+     "listUsd": null
+    },
+    {
+     "category": "writing",
+     "ms": 654005,
+     "tokens": 4059166,
+     "listUsd": null
+    },
+    {
+     "category": "literature",
+     "ms": 70642,
+     "tokens": 7527977,
+     "listUsd": null
+    },
+    {
+     "category": "setup",
+     "ms": 13830,
+     "tokens": 15813,
+     "listUsd": null
+    },
+    {
+     "category": "other",
+     "ms": 29,
+     "tokens": 92220,
+     "listUsd": null
+    },
+    {
+     "category": "reasoning",
+     "ms": null,
+     "tokens": 7887332,
+     "listUsd": null
+    }
+   ],
+   "bySeat": [],
+   "byModel": [
+    {
+     "model": "zai-coding-plan/glm-5.3",
+     "paidUsd": null,
+     "listUsd": null,
+     "subscriptionUsd": null,
+     "apiUsd": null,
+     "sandboxUsd": null,
+     "tokens": 1466374327,
+     "agents": 25
+    },
+    {
+     "model": "glm-5.3",
+     "paidUsd": null,
+     "listUsd": null,
+     "subscriptionUsd": null,
+     "apiUsd": null,
+     "sandboxUsd": null,
+     "tokens": null,
+     "agents": 2
+    }
+   ],
+   "waste": [
+    {
+     "dimension": "E3",
+     "ms": 27836,
+     "tokens": null,
+     "listUsd": null
+    },
+    {
+     "dimension": "E4",
+     "ms": 157360633,
+     "tokens": null,
+     "listUsd": null
+    }
+   ],
+   "apiEquivalentUsd": 501.678811,
+   "apiEquivalentProvenance": "estimated",
+   "billing": {
+    "placement": "host",
+    "seat": "zai-coding-plan/glm-5.3",
+    "billedUsd": 0,
+    "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+   }
+  },
+  "record": {
+   "status": "ready",
+   "digest": "b29cbf1f25e8ceacf3918af93de5ce3b3a2c1a4e9e22e3ae4ffe7da1e98c6e8b",
+   "builtAt": "2026-10-19T10:34:58.784Z",
+   "reason": null,
+   "capture": {
+    "complete": 25,
+    "lossy": 0,
+    "absent": 2
+   }
+  },
+  "inputDigest": "9feb9570ef439ee3be383805cb55f41eb8d1f476bbf98f29be9d1d37a4dff93f",
+  "predecessor": null,
+  "supersedes": null,
+  "forkedFrom": null,
+  "lostHours": 59.78,
+  "versions": null,
+  "sandboxes": [],
+  "hidden": null
+ },
+ "input": null,
+ "spend": {
+  "paidUsd": null,
+  "subscriptionUsd": null,
+  "apiUsd": null,
+  "sandboxUsd": null,
+  "routerUsd": null,
+  "costBasisUsd": null,
+  "listUsd": 501.678811,
+  "tokens": {
+   "input": 61833396,
+   "output": 2500291,
+   "cacheRead": 1402040640,
+   "cacheWrite": 0
+  },
+  "subscriptionKnown": false,
+  "sandboxHours": null,
+  "seatWeeks": null,
+  "seatWeeksKnown": false,
+  "paidKnown": false,
+  "sources": [
+   "runtime:run-totals"
+  ],
+  "gaps": [
+   {
+    "runId": "magnetar-rust-20261017c",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   }
+  ],
+  "listKnown": true,
+  "byCategory": [
+   {
+    "category": "waiting",
+    "ms": 46009700,
+    "tokens": 1145969,
+    "listUsd": null
+   },
+   {
+    "category": "verification",
+    "ms": 32574075,
+    "tokens": 7860107,
+    "listUsd": null
+   },
+   {
+    "category": "compute",
+    "ms": 6403078,
+    "tokens": 22064134,
+    "listUsd": null
+   },
+   {
+    "category": "coordination",
+    "ms": 2798312,
+    "tokens": 13680969,
+    "listUsd": null
+   },
+   {
+    "category": "writing",
+    "ms": 654005,
+    "tokens": 4059166,
+    "listUsd": null
+   },
+   {
+    "category": "literature",
+    "ms": 70642,
+    "tokens": 7527977,
+    "listUsd": null
+   },
+   {
+    "category": "setup",
+    "ms": 13830,
+    "tokens": 15813,
+    "listUsd": null
+   },
+   {
+    "category": "other",
+    "ms": 29,
+    "tokens": 92220,
+    "listUsd": null
+   },
+   {
+    "category": "reasoning",
+    "ms": null,
+    "tokens": 7887332,
+    "listUsd": null
+   }
+  ],
+  "bySeat": [],
+  "byModel": [
+   {
+    "model": "zai-coding-plan/glm-5.3",
+    "paidUsd": null,
+    "listUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "tokens": 1466374327,
+    "agents": 25
+   },
+   {
+    "model": "glm-5.3",
+    "paidUsd": null,
+    "listUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "tokens": null,
+    "agents": 2
+   }
+  ],
+  "waste": [
+   {
+    "dimension": "E3",
+    "ms": 27836,
+    "tokens": null,
+    "listUsd": null
+   },
+   {
+    "dimension": "E4",
+    "ms": 157360633,
+    "tokens": null,
+    "listUsd": null
+   }
+  ],
+  "apiEquivalentUsd": 501.678811,
+  "apiEquivalentProvenance": "estimated",
+  "billing": {
+   "placement": "host",
+   "seat": "zai-coding-plan/glm-5.3",
+   "billedUsd": 0,
+   "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+  },
+  "nodes": {},
+  "asOf": "2026-10-18T11:25:53.574Z",
+  "basis": "estimated"
+ },
+ "versions": [],
+ "live": {
+  "mirrorAt": null,
+  "polling": false
+ },
+ "progress": {
+  "schema": "discovery.run-progress",
+  "runId": "magnetar-rust-20261017c",
+  "generatedAt": "2026-10-18T11:25:53.574Z",
+  "phase": "settled",
+  "final": true,
+  "startedAt": "2026-10-17T06:59:05.403Z",
+  "spend": {
+   "runUsd": 501.678811,
+   "provenance": "Runtime run totals, estimated",
+   "basis": "estimated"
+  },
+  "files": 43,
+  "sources": {
+   "observer": "2026-10-17T21:58:59.708Z",
+   "spawnJournal": "2026-10-17T21:58:52.139Z",
+   "runInput": "2026-10-17T06:58:01.421Z",
+   "outputs": "2026-10-17T21:57:51.207Z"
+  },
+  "blocker": null,
+  "endBlocker": null,
+  "outcome": {
+   "solved": false,
+   "checkedAt": "2026-10-17T21:58:58.296Z",
+   "firstFailingLine": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 0 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-24b6890684e5d434/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+   "stage": "hidden",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "lastStreamAt": "2026-10-17T21:55:03.246Z",
+   "minutesSinceLastStream": 810.8,
+   "latestCheck": {
+    "at": "2026-10-18T03:14:36.703Z",
+    "tag": "magnetar-rust-20261017c/rc102",
+    "line": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this",
+    "stage": "hidden",
+    "known": true,
+    "solved": false,
+    "score": null
+   },
+   "gate": null,
+   "score": null,
+   "disputes": []
+  },
+  "agents": [
+   {
+    "node": "magnetar-rust-20261017c",
+    "label": "root",
+    "status": "no-winner",
+    "parent": null,
+    "depth": 0,
+    "lastActiveAt": null,
+    "startedAt": "2026-10-17T06:59:09.952Z",
+    "endedAt": null,
+    "usd": null,
+    "usdEstimated": false,
+    "model": "glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0",
+    "label": "lead-core",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c",
+    "depth": 0,
+    "lastActiveAt": "2026-10-17T21:58:15.302Z",
+    "startedAt": "2026-10-17T07:12:51.911Z",
+    "endedAt": "2026-10-17T21:58:15.302Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1",
+    "label": "lead-vm",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c",
+    "depth": 0,
+    "lastActiveAt": "2026-10-17T16:46:41.965Z",
+    "startedAt": "2026-10-17T07:13:20.208Z",
+    "endedAt": "2026-10-17T16:46:41.965Z",
+    "usd": 244.5253302,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s2",
+    "label": "lead-memory",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c",
+    "depth": 0,
+    "lastActiveAt": "2026-10-17T11:24:23.678Z",
+    "startedAt": "2026-10-17T07:13:41.234Z",
+    "endedAt": "2026-10-17T11:24:23.678Z",
+    "usd": 78.7900762,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3",
+    "label": "lead-pcs",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c",
+    "depth": 0,
+    "lastActiveAt": "2026-10-17T16:14:37.653Z",
+    "startedAt": "2026-10-17T07:14:01.930Z",
+    "endedAt": "2026-10-17T16:14:37.653Z",
+    "usd": 129.84337539999999,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s0",
+    "label": "mvm loader+interp+conformance",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s1",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T11:23:44.350Z",
+    "startedAt": "2026-10-17T07:23:51.719Z",
+    "endedAt": "2026-10-17T11:23:44.350Z",
+    "usd": 52.00044200000001,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s1",
+    "label": "virtual ISA + expansion + ROM",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s1",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T09:04:48.138Z",
+    "startedAt": "2026-10-17T07:24:46.569Z",
+    "endedAt": "2026-10-17T09:04:48.138Z",
+    "usd": 62.8380498,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s2",
+    "label": "15 guest workloads + normalizer",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s1",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T09:15:41.702Z",
+    "startedAt": "2026-10-17T07:25:43.863Z",
+    "endedAt": "2026-10-17T09:15:41.702Z",
+    "usd": 48.969738199999995,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s3",
+    "label": "marith layout + trace + dual relations",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s1",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T13:19:57.511Z",
+    "startedAt": "2026-10-17T07:26:36.834Z",
+    "endedAt": "2026-10-17T13:19:57.511Z",
+    "usd": 0,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s1",
+    "label": "mpoly+msumcheck",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T08:37:57.856Z",
+    "startedAt": "2026-10-17T07:27:38.580Z",
+    "endedAt": "2026-10-17T08:37:57.856Z",
+    "usd": 4.4353516,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s0",
+    "label": "mfield fast paths",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T08:35:06.633Z",
+    "startedAt": "2026-10-17T07:27:35.819Z",
+    "endedAt": "2026-10-17T08:35:06.633Z",
+    "usd": 2.3835962,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s2",
+    "label": "mhash crate",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T13:20:29.672Z",
+    "startedAt": "2026-10-17T07:27:38.871Z",
+    "endedAt": "2026-10-17T13:20:29.672Z",
+    "usd": 0,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s3",
+    "label": "mspartan reductions",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T13:19:55.898Z",
+    "startedAt": "2026-10-17T07:34:19.595Z",
+    "endedAt": "2026-10-17T13:19:55.898Z",
+    "usd": 0.3577282,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s0",
+    "label": "Ligerito port: tower+FFT+RS+commit+evalarg",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s3",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T11:36:23.944Z",
+    "startedAt": "2026-10-17T08:00:16.057Z",
+    "endedAt": "2026-10-17T11:36:23.944Z",
+    "usd": 26.8110074,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s1",
+    "label": "Ring switching + Mosaic layer",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s3",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T09:08:36.715Z",
+    "startedAt": "2026-10-17T08:01:19.390Z",
+    "endedAt": "2026-10-17T09:08:36.715Z",
+    "usd": 17.7507728,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s2",
+    "label": "PCS parameters + soundness ledger rows",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s3",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T09:08:37.008Z",
+    "startedAt": "2026-10-17T08:02:26.534Z",
+    "endedAt": "2026-10-17T09:08:37.008Z",
+    "usd": 5.5755913999999995,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s1:s4",
+    "label": "apply D4/D5 + AUIPC gate re-enable",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s1",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T12:52:51.174Z",
+    "startedAt": "2026-10-17T09:06:53.266Z",
+    "endedAt": "2026-10-17T12:52:51.174Z",
+    "usd": 26.8663046,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s4",
+    "label": "contract consolidation",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T13:21:11.546Z",
+    "startedAt": "2026-10-17T11:36:50.159Z",
+    "endedAt": "2026-10-17T13:21:11.546Z",
+    "usd": 46.347592999999996,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s5",
+    "label": "Construction 3 in mprove",
+    "status": "done",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T19:23:46.246Z",
+    "startedAt": "2026-10-17T11:37:27.232Z",
+    "endedAt": "2026-10-17T19:23:46.246Z",
+    "usd": 223.5408286,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s3:s3",
+    "label": "M4 PCS perf: parallel encode + hashing",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s3",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T13:19:51.729Z",
+    "startedAt": "2026-10-17T11:45:24.255Z",
+    "endedAt": "2026-10-17T13:19:51.729Z",
+    "usd": 0,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s6",
+    "label": "Twist/Router/Shout wiring map",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T16:06:32.574Z",
+    "startedAt": "2026-10-17T11:59:00.555Z",
+    "endedAt": "2026-10-17T16:06:32.574Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   },
+   {
+    "node": "magnetar-rust-20261017c:s4",
+    "label": "referee",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c",
+    "depth": 0,
+    "lastActiveAt": "2026-10-17T21:58:14.824Z",
+    "startedAt": "2026-10-17T12:37:06.424Z",
+    "endedAt": "2026-10-17T21:58:14.824Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s7",
+    "label": "Twist/Router/Shout wiring v2",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T21:58:04.145Z",
+    "startedAt": "2026-10-17T16:06:23.974Z",
+    "endedAt": "2026-10-17T21:58:04.145Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s8",
+    "label": "mfield GF(2^256) tower",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T20:09:32.393Z",
+    "startedAt": "2026-10-17T16:09:14.412Z",
+    "endedAt": "2026-10-17T20:09:32.393Z",
+    "usd": 0,
+    "usdEstimated": true,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s9",
+    "label": "F256 challenge sweep",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T21:58:06.638Z",
+    "startedAt": "2026-10-17T16:27:36.523Z",
+    "endedAt": "2026-10-17T21:58:06.638Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s10",
+    "label": "mspartan F256 twin",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T21:58:32.249Z",
+    "startedAt": "2026-10-17T18:09:15.714Z",
+    "endedAt": "2026-10-17T21:58:32.249Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": "opencode/zai-coding-plan/glm-5.3"
+   },
+   {
+    "node": "magnetar-rust-20261017c:s0:s11",
+    "label": "C3 prove/verify desync debug",
+    "status": "down",
+    "parent": "magnetar-rust-20261017c:s0",
+    "depth": 1,
+    "lastActiveAt": "2026-10-17T21:41:50.492Z",
+    "startedAt": "2026-10-17T18:41:50.499Z",
+    "endedAt": "2026-10-17T21:41:50.492Z",
+    "usd": null,
+    "usdEstimated": false,
+    "model": null
+   }
+  ],
+  "briefs": [],
+  "samples": [
+   {
+    "at": "2026-10-17T07:00:38.586Z",
+    "runUsd": 0,
+    "files": 3,
+    "working": 1
+   },
+   {
+    "at": "2026-10-17T07:03:43.084Z",
+    "runUsd": 0,
+    "files": 3,
+    "working": 1
+   },
+   {
+    "at": "2026-10-17T07:14:36.051Z",
+    "runUsd": 4.743052799999999,
+    "files": 4,
+    "working": 5
+   },
+   {
+    "at": "2026-10-17T07:28:12.114Z",
+    "runUsd": 6.6809202,
+    "files": 9,
+    "working": 12
+   },
+   {
+    "at": "2026-10-17T07:41:18.185Z",
+    "runUsd": 7.0826342,
+    "files": 12,
+    "working": 13
+   },
+   {
+    "at": "2026-10-17T07:58:17.417Z",
+    "runUsd": 8.1687598,
+    "files": 16,
+    "working": 13
+   },
+   {
+    "at": "2026-10-17T08:03:55.875Z",
+    "runUsd": 8.1687598,
+    "files": 18,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:08:46.603Z",
+    "runUsd": 8.1687598,
+    "files": 18,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:13:30.708Z",
+    "runUsd": 8.1687598,
+    "files": 18,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:18:07.638Z",
+    "runUsd": 8.6335678,
+    "files": 18,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:23:06.116Z",
+    "runUsd": 8.6335678,
+    "files": 19,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:28:05.089Z",
+    "runUsd": 10.891174,
+    "files": 22,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:33:04.625Z",
+    "runUsd": 10.891174,
+    "files": 22,
+    "working": 16
+   },
+   {
+    "at": "2026-10-17T08:37:53.628Z",
+    "runUsd": 10.891174,
+    "files": 25,
+    "working": 15
+   },
+   {
+    "at": "2026-10-17T08:42:31.698Z",
+    "runUsd": 11.4131016,
+    "files": 25,
+    "working": 14
+   },
+   {
+    "at": "2026-10-17T08:47:02.604Z",
+    "runUsd": 11.4131016,
+    "files": 28,
+    "working": 14
+   },
+   {
+    "at": "2026-10-17T08:52:00.653Z",
+    "runUsd": 11.675886799999999,
+    "files": 29,
+    "working": 14
+   },
+   {
+    "at": "2026-10-17T08:56:31.191Z",
+    "runUsd": 11.675886799999999,
+    "files": 29,
+    "working": 14
+   },
+   {
+    "at": "2026-10-17T09:01:02.965Z",
+    "runUsd": 11.675886799999999,
+    "files": 29,
+    "working": 14
+   },
+   {
+    "at": "2026-10-17T09:06:02.859Z",
+    "runUsd": 13.319570599999999,
+    "files": 29,
+    "working": 13
+   },
+   {
+    "at": "2026-10-17T09:11:00.802Z",
+    "runUsd": 13.319570599999999,
+    "files": 29,
+    "working": 12
+   },
+   {
+    "at": "2026-10-17T09:15:43.734Z",
+    "runUsd": 13.319570599999999,
+    "files": 29,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T09:20:02.619Z",
+    "runUsd": 13.598450999999999,
+    "files": 31,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T09:25:00.704Z",
+    "runUsd": 13.598450999999999,
+    "files": 31,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T09:29:33.476Z",
+    "runUsd": 13.598450999999999,
+    "files": 31,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T09:32:45.602Z",
+    "runUsd": 13.598450999999999,
+    "files": 31,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T09:34:46.289Z",
+    "runUsd": 14.160928799999999,
+    "files": 31,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T11:23:14.544Z",
+    "runUsd": 14.8331042,
+    "files": 31,
+    "working": 11
+   },
+   {
+    "at": "2026-10-17T11:25:13.918Z",
+    "runUsd": 99.4985334,
+    "files": 31,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T11:28:33.617Z",
+    "runUsd": 100.6049606,
+    "files": 31,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T11:32:13.772Z",
+    "runUsd": 100.6049606,
+    "files": 31,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T12:09:05.194Z",
+    "runUsd": 103.9906502,
+    "files": 33,
+    "working": 12
+   },
+   {
+    "at": "2026-10-17T12:18:53.002Z",
+    "runUsd": 103.9906502,
+    "files": 33,
+    "working": 12
+   },
+   {
+    "at": "2026-10-17T12:27:30.780Z",
+    "runUsd": 104.37129519999999,
+    "files": 33,
+    "working": 12
+   },
+   {
+    "at": "2026-10-17T12:31:38.327Z",
+    "runUsd": 104.37129519999999,
+    "files": 33,
+    "working": 12
+   },
+   {
+    "at": "2026-10-17T14:28:05.824Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T14:33:02.403Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T14:37:33.311Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T14:42:04.218Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T14:46:35.686Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T14:51:06.596Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T14:55:37.528Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:00:08.481Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:04:39.434Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:09:10.399Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:13:41.354Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:18:12.217Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:23:04.043Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:27:34.994Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:32:02.991Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:36:36.709Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:41:07.712Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:46:03.644Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:50:34.597Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:55:06.276Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T15:59:37.183Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T16:04:11.180Z",
+    "runUsd": 106.6902346,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T16:08:42.524Z",
+    "runUsd": 110.2687794,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T16:13:35.703Z",
+    "runUsd": 110.673335,
+    "files": 35,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T16:18:11.577Z",
+    "runUsd": 241.35683819999997,
+    "files": 35,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T16:22:58.793Z",
+    "runUsd": 241.35683819999997,
+    "files": 36,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T16:27:42.068Z",
+    "runUsd": 241.35683819999997,
+    "files": 36,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T16:32:39.267Z",
+    "runUsd": 242.19897759999998,
+    "files": 36,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T16:37:10.905Z",
+    "runUsd": 242.19897759999998,
+    "files": 36,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T16:41:42.797Z",
+    "runUsd": 242.62250039999998,
+    "files": 37,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T16:46:41.121Z",
+    "runUsd": 242.62250039999998,
+    "files": 38,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T16:51:40.442Z",
+    "runUsd": 488.92284099999995,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T16:56:12.364Z",
+    "runUsd": 488.92284099999995,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:01:09.055Z",
+    "runUsd": 488.92284099999995,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:05:41.932Z",
+    "runUsd": 489.81381880000004,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:10:16.340Z",
+    "runUsd": 490.2613992,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:15:11.369Z",
+    "runUsd": 490.2613992,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:20:09.431Z",
+    "runUsd": 490.2613992,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:24:41.976Z",
+    "runUsd": 490.2613992,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:29:40.033Z",
+    "runUsd": 491.15758359999995,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:34:39.567Z",
+    "runUsd": 491.15758359999995,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:39:09.989Z",
+    "runUsd": 491.15758359999995,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:43:40.980Z",
+    "runUsd": 491.607852,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:48:12.009Z",
+    "runUsd": 491.607852,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:53:04.060Z",
+    "runUsd": 491.607852,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T17:57:40.968Z",
+    "runUsd": 492.50941420000004,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T18:02:14.286Z",
+    "runUsd": 492.50941420000004,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T18:07:09.380Z",
+    "runUsd": 492.50941420000004,
+    "files": 38,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T18:11:41.386Z",
+    "runUsd": 492.96242099999995,
+    "files": 38,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:16:39.432Z",
+    "runUsd": 492.96242099999995,
+    "files": 38,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:21:10.902Z",
+    "runUsd": 492.96242099999995,
+    "files": 38,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:25:41.864Z",
+    "runUsd": 494.3348128,
+    "files": 38,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:30:11.732Z",
+    "runUsd": 494.3348128,
+    "files": 40,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:35:10.770Z",
+    "runUsd": 494.3348128,
+    "files": 40,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:39:43.154Z",
+    "runUsd": 494.79508839999994,
+    "files": 40,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T18:44:24.479Z",
+    "runUsd": 494.79508839999994,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T18:49:12.344Z",
+    "runUsd": 494.79508839999994,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T18:54:10.345Z",
+    "runUsd": 494.79508839999994,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T18:59:08.428Z",
+    "runUsd": 495.7168732,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T19:03:39.410Z",
+    "runUsd": 495.7168732,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T19:08:10.528Z",
+    "runUsd": 495.7168732,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T19:13:09.435Z",
+    "runUsd": 496.1799754,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T19:17:11.434Z",
+    "runUsd": 496.1799754,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T19:21:42.181Z",
+    "runUsd": 496.1799754,
+    "files": 40,
+    "working": 9
+   },
+   {
+    "at": "2026-10-17T19:26:11.013Z",
+    "runUsd": 497.1074072,
+    "files": 40,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:30:41.997Z",
+    "runUsd": 497.1074072,
+    "files": 40,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:34:43.655Z",
+    "runUsd": 497.1074072,
+    "files": 40,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:39:28.086Z",
+    "runUsd": 497.1074072,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:44:09.452Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:48:55.556Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:53:33.233Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T19:58:08.589Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T20:02:57.102Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T20:07:53.722Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 8
+   },
+   {
+    "at": "2026-10-17T20:12:31.766Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:17:05.026Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:21:38.239Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:26:26.367Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:31:09.304Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:35:44.139Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:40:37.228Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:45:36.031Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:50:10.034Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:54:49.716Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T20:59:27.758Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:04:13.676Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:08:41.609Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:13:29.138Z",
+    "runUsd": 497.5733864,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:18:21.867Z",
+    "runUsd": 498.59009619999995,
+    "files": 41,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:22:18.268Z",
+    "runUsd": 498.59009619999995,
+    "files": 42,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:27:09.317Z",
+    "runUsd": 499.1008726,
+    "files": 42,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:31:40.302Z",
+    "runUsd": 499.1008726,
+    "files": 42,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:35:04.367Z",
+    "runUsd": 499.1008726,
+    "files": 43,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:39:56.731Z",
+    "runUsd": 500.1306992,
+    "files": 43,
+    "working": 7
+   },
+   {
+    "at": "2026-10-17T21:43:57.388Z",
+    "runUsd": 500.1306992,
+    "files": 43,
+    "working": 6
+   },
+   {
+    "at": "2026-10-17T21:48:28.028Z",
+    "runUsd": 500.1306992,
+    "files": 43,
+    "working": 6
+   },
+   {
+    "at": "2026-10-17T21:53:18.142Z",
+    "runUsd": 500.1306992,
+    "files": 43,
+    "working": 6
+   },
+   {
+    "at": "2026-10-17T21:57:11.105Z",
+    "runUsd": 501.678811,
+    "files": 43,
+    "working": 6
+   },
+   {
+    "at": "2026-10-17T22:12:45.334Z",
+    "runUsd": 501.678811,
+    "files": 43,
+    "working": 5
+   },
+   {
+    "at": "2026-10-18T11:25:53.574Z",
+    "runUsd": 501.678811,
+    "files": 43,
+    "working": 5
+   }
+  ]
+ },
+ "execution": {
+  "alive": false,
+  "lastActivityAt": "2026-10-17T21:58:52.140Z",
+  "failedAttempts": 1923,
+  "settleKind": "no-winner",
+  "endingError": null,
+  "lastAttempt": {
+   "at": "2026-10-17T21:58:21.770Z",
+   "error": "bridgeExecutor: turn aborted",
+   "classification": "terminal",
+   "madeProgress": false,
+   "retryInMs": null
+  },
+  "diagnoses": [],
+  "diagnosisError": null,
+  "resume": {
+   "status": "unknown",
+   "reason": "",
+   "command": null
+  },
+  "runnerTail": null
+ },
+ "receipt": {
+  "codeRepository": {
+   "url": "https://github.com/tangle-discovery/magnetar-rust",
+   "forkCommit": "59875cbd7b3efd6654e69755198c636e62bfe8f7",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4"
+  },
+  "schema": "discovery-lab.run-receipt",
+  "projectionCode": "c60eb34d2eb1f2e191129d09efbaa52c65da0211395b18fea4a7ab1eaa1337dd",
+  "runId": "magnetar-rust-20261017c",
+  "tag": "rc2",
+  "status": "chosen at the deadline",
+  "current": true,
+  "draft": false,
+  "generatedAt": "2026-10-19T13:02:53.433Z",
+  "commit": "04b24ff6f80f96cbcb65e1bd793680629a99d3d2",
+  "taggedAt": "2026-10-17T07:16:11+00:00",
+  "check": {
+   "passed": false,
+   "at": "2026-10-17T21:58:58.296Z",
+   "detail": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this\nIf you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.",
+   "source": "play-check.json",
+   "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4",
+   "tag": "magnetar-rust-20261017c/rc102",
+   "checkedOn": "magnetar-rust-20261017c/rc102",
+   "thisTag": false,
+   "known": true,
+   "output": "NOT SOLVED: `cargo build --release --offline --locked` failed (exit 101) in 1 s; offline build must be self-contained (vendored or std-only): error: the lock file /home/drew/.cache/disco/play-checks/magnetar-0c975ee9db2f8560/src/Cargo.lock needs to be updated but --locked was passed to prevent this\nIf you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.",
+   "checker": {
+    "path": "inputs/check.py",
+    "sha256": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7"
+   },
+   "inputs": {
+    "source": "https://github.com/tangle-discovery/magnetar-rust.git@magnetar-rust-20261017c/rc102",
+    "sha256": "003be3c031844ee17b07e8314cd378378276f0e0a79abbf65c890f63ecdce6bc",
+    "count": null
+   },
+   "rerun": "disco scorecard magnetar-rust-20261017c --play-check --recheck --force --queue --commit 2fde0fbe28d954939cb3ae09096ec67629e3c2d4 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\""
+  },
+  "summary": null,
+  "files": [],
+  "deliverables": [
+   {
+    "id": "handoff",
+    "present": true,
+    "files": 1
+   }
+  ],
+  "cost": {
+   "apiEquivalentUsd": {
+    "usd": 501.678811,
+    "estimated": 501.678811,
+    "provenance": "estimated"
+   },
+   "billedUsd": {
+    "model": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "compute": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "total": {
+     "usd": null,
+     "provenance": "not reconciled"
+    },
+    "fill": "disco cost --refresh --run=magnetar-rust-20261017c"
+   },
+   "clause": "API-equivalent $501.68, billed unknown (fill with disco cost --refresh --run=magnetar-rust-20261017c)",
+   "provenance": "API-equivalent: estimated (Runtime totals, every token at API list price, whoever paid). Billed model: not reconciled. Billed compute: not reconciled."
+  },
+  "lineage": {
+   "schema": "discovery-lab.run-lineage",
+   "runId": "magnetar-rust-20261017c",
+   "chain": [
+    "magnetar-rust-20261017c"
+   ],
+   "ancestors": [],
+   "inherited": {
+    "from": null,
+    "forkCommit": null,
+    "sourceCommit": null,
+    "tags": [],
+    "contentCommits": 0,
+    "pages": 0,
+    "apiEquivalentUsd": null,
+    "apiEquivalentComplete": true
+   },
+   "own": {
+    "tags": [
+     "rc1",
+     "rc10",
+     "rc11",
+     "rc12",
+     "rc13",
+     "rc14",
+     "rc15",
+     "rc16",
+     "rc17",
+     "rc18",
+     "rc19",
+     "rc2",
+     "rc20",
+     "rc21",
+     "rc22",
+     "rc23",
+     "rc3",
+     "rc4",
+     "rc5",
+     "rc6",
+     "rc7",
+     "rc8",
+     "rc9"
+    ],
+    "contentCommits": 163,
+    "pages": 40,
+    "cost": {
+     "apiEquivalentUsd": 501.678811,
+     "apiEquivalentProvenance": "estimated",
+     "billedUsd": null,
+     "billedProvenance": "not reconciled"
+    }
+   }
+  },
+  "system": {
+   "runId": "magnetar-rust-20261017c",
+   "at": "2026-10-19T11:49:32.215Z",
+   "live": false,
+   "caughtUp": true,
+   "attempts": {
+    "tries": 2069,
+    "failed": 1923,
+    "hours": 76.27,
+    "failedHours": 59.78,
+    "causes": [
+     {
+      "cause": "completed",
+      "label": "completed",
+      "tries": 146,
+      "hours": 16.49
+     },
+     {
+      "cause": "platform-lost",
+      "label": "platform lost or killed the turn",
+      "tries": 1278,
+      "hours": 8.58
+     },
+     {
+      "cause": "rate-limited",
+      "label": "a 429 killed the turn",
+      "tries": 637,
+      "hours": 48.43
+     },
+     {
+      "cause": "stopped",
+      "label": "stopped by the Lab or an operator",
+      "tries": 4,
+      "hours": 2.37
+     },
+     {
+      "cause": "other",
+      "label": "other",
+      "tries": 4,
+      "hours": 0.41
+     }
+    ],
+    "outcomes": [
+     {
+      "outcome": "ok",
+      "tries": 146,
+      "hours": 16.49
+     },
+     {
+      "outcome": "quota",
+      "tries": 570,
+      "hours": 34.18
+     },
+     {
+      "outcome": "lost",
+      "tries": 1271,
+      "hours": 6.04
+     },
+     {
+      "outcome": "rate-limit",
+      "tries": 67,
+      "hours": 14.25
+     },
+     {
+      "outcome": "oom",
+      "tries": 7,
+      "hours": 2.54
+     },
+     {
+      "outcome": "aborted",
+      "tries": 4,
+      "hours": 2.37
+     },
+     {
+      "outcome": "other",
+      "tries": 4,
+      "hours": 0.41
+     }
+    ],
+    "open": {
+     "nodes": 15,
+     "tokens": 689148234,
+     "agent": null,
+     "since": null,
+     "hours": null
+    }
+   },
+   "workers": {
+    "count": 26,
+    "neverFinished": 9,
+    "neverFinishedHours": 45.2,
+    "hours": 121.17
+   },
+   "context": null,
+   "waiting": null,
+   "startup": null,
+   "brief": {
+    "expected": null,
+    "received": null,
+    "hashesMatch": null,
+    "retried": false,
+    "mountedAt": null,
+    "failed": null,
+    "rootCalls": 0,
+    "firstCallAt": null,
+    "readAt": null,
+    "readAtCall": null,
+    "steeredAt": null,
+    "late": false
+   },
+   "play": {
+    "verdict": {
+     "passed": false,
+     "at": "2026-10-17T21:58:58.296Z",
+     "source": "play-check.json",
+     "commit": "2fde0fbe28d954939cb3ae09096ec67629e3c2d4"
+    },
+    "contract": {
+     "failedChecks": 0,
+     "undelivered": 0,
+     "firstSeconds": null,
+     "maxLagSeconds": null,
+     "blockedHours": 0,
+     "share": 0
+    },
+    "checks": 56,
+    "firstPassAt": null,
+    "hoursToFirstPass": null,
+    "afterPass": null,
+    "passedBySettle": false,
+    "reader": null,
+    "scoresVersion": 2,
+    "scores": [],
+    "rulings": [],
+    "checker": "639c17a4485fd86261d0119d500a01ec5b0b97dd0177e14587aeaa528265c8e7"
+   },
+   "capture": null,
+   "settle": {
+    "kind": "no-winner",
+    "class": "operator",
+    "why": "cancelled"
+   },
+   "traces": {
+    "runRoot": null,
+    "turns": 0,
+    "nodes": {
+     "traced": 0,
+     "settled": 21
+    },
+    "claims": {
+     "claims": 5520,
+     "verified": 0
+    }
+   }
+  },
+  "continue": {
+   "fork": "disco fork magnetar-rust-20261017c --at rc2 --spec <child-registration.json> --out <child-record.json> [--press]",
+   "seed": "disco fork seed magnetar-rust-20261017c <seed-dir>",
+   "run": "disco run <child-registration.json> --knowledge-seed <seed-dir>",
+   "registration": null
+  },
+  "title": "Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's own tables, and then better.",
+  "brief": null,
+  "contract": [],
+  "outcome": {
+   "status": "cancelled",
+   "sentence": "The operator stopped this run.",
+   "at": "2026-10-19T13:02:53.433Z",
+   "reason": "stopping to continue in a fresh press with the closed check loop (contract feedback to managers, pre-tag gate, dense score, seat cap 8); 17c was over the Coding Plan cap (12 vs 8) and blocked at the build step since 20:23Z; its code is preserved at tangle-discovery/magnetar-rust main = rc101 0394d1eeb",
+   "class": "operator"
+  },
+  "chosen": {
+   "tag": "rc2",
+   "commit": "04b24ff6f80f96cbcb65e1bd793680629a99d3d2",
+   "why": "exact checks, then held-out checks, then fewest open referee blockers, then judges, counted over the checks measured on both tags; ties keep the earlier tag; candidates are the declared tags and the newest clock snapshot"
+  },
+  "decisions": [
+   {
+    "id": "take",
+    "label": "Take this version",
+    "consequence": "Save this version as your choice.",
+    "command": "curl 'https://drew-gtr-pro.taild10bfc.ts.net:8770/api/discovery/runs/magnetar-rust-20261017c/decisions' -H 'Origin: https://drew-gtr-pro.taild10bfc.ts.net:8770' -H 'Content-Type: application/json' --data \"{\\\"decision\\\":\\\"take\\\",\\\"tag\\\":\\\"rc2\\\",\\\"commit\\\":\\\"04b24ff6f80f96cbcb65e1bd793680629a99d3d2\\\",\\\"operationId\\\":\\\"$(node -e 'console.log(crypto.randomUUID())')\\\"}\"",
+    "enabled": false,
+    "reason": "No play check ran on rc2 (04b24ff6)."
+   },
+   {
+    "id": "continue",
+    "label": "Continue from this version",
+    "consequence": "Start another run from this version.",
+    "command": "disco fork magnetar-rust-20261017c --at rc2 --spec <child-registration.json> --out <child-record.json> [--press]",
+    "enabled": false,
+    "reason": "Add a brief for the next run before continuing."
+   },
+   {
+    "id": "rerun",
+    "label": "Rerun the check",
+    "consequence": "Wait for any active check, then run this check again.",
+    "command": "disco scorecard magnetar-rust-20261017c --play-check --recheck --force --queue --commit 2fde0fbe28d954939cb3ae09096ec67629e3c2d4 --operation-id \"$(node -e 'console.log(crypto.randomUUID())')\"",
+    "enabled": true,
+    "reason": null
+   }
+  ],
+  "work": {
+   "wallHours": 15,
+   "recordedHours": 136.15549027777777,
+   "agentHours": 16.48531527777778,
+   "idleHours": 93.29683138888889,
+   "untracedHours": 26.37334361111111,
+   "partition": {
+    "status": "complete",
+    "reason": null
+   },
+   "toolCalls": null,
+   "tokens": {
+    "fresh": null,
+    "cached": null,
+    "output": null,
+    "cacheWrite": null,
+    "total": null
+   },
+   "tries": 2069
+  },
+  "waste": {
+   "afterPass": {
+    "hours": null,
+    "tokens": null,
+    "usd": null
+   },
+   "verdictDelay": {
+    "minutes": null,
+    "refusedChecks": null
+   }
+  },
+  "timeline": {
+   "start": "2026-10-17T06:59:09.952Z",
+   "end": "2026-10-17T21:58:58.296Z",
+   "deadline": "2026-10-19T06:58:51.397Z",
+   "lanes": [],
+   "bands": [
+    {
+     "from": "2026-10-17T09:35:23.867Z",
+     "to": "2026-10-17T11:16:31.000Z",
+     "kind": "blocked",
+     "cause": "usage-limit",
+     "label": "Usage limit (5-hour window), reset 11:16Z: 401 failed attempts on 11 agents"
+    },
+    {
+     "from": "2026-10-17T19:47:02.354Z",
+     "to": "2026-10-17T21:16:52.000Z",
+     "kind": "blocked",
+     "cause": "usage-limit",
+     "label": "Usage limit (5-hour window), reset 21:16Z: 169 failed attempts on 7 agents"
+    }
+   ],
+   "marks": []
+  }
+ },
+ "finalOutput": null,
+ "findings": null
+}

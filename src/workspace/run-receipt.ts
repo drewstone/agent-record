@@ -72,4 +72,14 @@ export const runReceiptSchema = z.object({
 export type RunReceipt = z.infer<typeof runReceiptSchema>
 export const hoursText = (value: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)} h`
 export const tokensText = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value)
+/**
+ * A receipt tag as its page names it: a code release keeps its tag (`rc14`); a run whose deliverable is its Knowledge
+ * store names the store's versions `pages v2`, so "rc" means one thing on run and receipt pages.
+ */
+export const versionName = (receipt: Pick<RunReceipt, 'tag'> & { codeRepository?: unknown }, tag: string) => {
+  const short = tag.split('/').pop() ?? tag
+  const code = !!(receipt.codeRepository as { url?: string | null } | null | undefined)?.url
+  const number = /^rc(\d+)$/.exec(short)?.[1]
+  return code || !number ? short : `pages v${number}`
+}
 export const utcClock = (value: string) => `${value.replace('T', ' ').replace(/\.\d+Z$/, ' UTC')}`

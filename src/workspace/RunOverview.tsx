@@ -2,31 +2,114 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { FigureView, Meter } from '@tangle-network/charts/react'
+import { FigureView, Meter, Spark } from '@tangle-network/charts/react'
 import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
-import type { RunCheck, RunDocument, RunProgress } from '../workspace-model.js'
+import type { PlayDocument, RunCheck, RunDocument, RunProgress } from '../workspace-model.js'
 import type { NodeStats } from './RunTable.js'
 import { CalibrationLabels } from './Calibration.js'
-import { dataStatus, StatusPill, statusOf } from './data.js'
+import { AsOf } from './AnswerStrip.js'
+import { clip } from './answers.js'
+import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
+import { BlockerChip } from './PlayHead.js'
+import { lineReason, type PlayHead } from './play-standing.js'
+import { fixedLater, type RunFold, runFold } from './run-fold.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
-import { hoursText, tokensText, utcClock } from './run-receipt.js'
+import { hoursText, tokensText, utcClock, versionName } from './run-receipt.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
 const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
 
-/** All measures and decisions belong to the Lab document. This component only formats them. */
-export function RunOverview({ api, doc, open, print = false }: { api: string; doc: RunDocument; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
+/**
+ * The run page's Now view (wall redesign v2): the first screen is the run's name, one status and one as-of, then four
+ * slots: what it is doing, its best release, what blocks it and its output. The detail views' tabs start below it, then
+ * the evidence. All measures and decisions belong to the Lab document; this component only formats them.
+ */
+export function RunOverview({ api, doc, open, print = false, play, now, tabs }: {
+  api: string
+  doc: RunDocument
+  nodes?: RecordNode[] | null
+  stats?: Record<string, NodeStats>
+  open?: OpenView
+  print?: boolean
+  /** The run's play, for its best release and the run that continued this one; fetched when not given. */
+  play?: (PlayDocument & PlayHead) | null
+  now?: number
+  /** The detail views' tab bar, drawn under the first screen. */
+  tabs?: ReactNode
+}) {
+  const playDoc = useDocument<PlayDocument & PlayHead>(play === undefined && doc.run?.play ? `${api}/plays/${encodeURIComponent(doc.run.play)}` : null)
   const r = doc.receipt
   const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
-  // A run without a Lab receipt still has its check facts on the run document: its verdict, a held pass, its disputes and
-  // its calibration draw from them.
-  if (!r?.outcome || !r.work) return <section className="rr-page"><h1>Run receipt</h1><p className="rr-muted">No receipt recorded yet.</p>
-    <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} settled={settled} check={doc.run?.check ?? null} /></section>
+  const fold = doc.run ? runFold({ doc, play: play === undefined ? (playDoc.data ?? null) : play, now: now ?? Date.now() }) : null
   // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
   const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null}
-    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} actNow={!settled && block?.severity === 'red' ? (block.owner ?? 'Discovery operator') : null} />
+  return <>
+    {fold && <RunFoldView fold={fold} />}
+    {tabs}
+    {fold && !fold.live && <WhyItStopped doc={doc} />}
+    {/* A run without a Lab receipt still has its check facts on the run document: its verdict, a held pass, its disputes
+        and its calibration draw from them. */}
+    {!r?.outcome || !r.work
+      ? <section className="rr-page"><p className="rr-muted">No receipt recorded yet.</p>
+        <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} check={doc.run?.check ?? null} /></section>
+      : <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} embedded
+        check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} actNow={!settled && block?.severity === 'red' ? (block.owner ?? 'Discovery operator') : null}
+        superseded={fold?.superseded ?? false} successor={fold?.successor ?? null} />}
+  </>
+}
+
+/** The first screen: the run's name, one status, one as-of, then exactly four slots. */
+function RunFoldView({ fold }: { fold: RunFold }) {
+  const short = fold.title.replace(/^Run /, '')
+  return <section className="run-fold" data-fold aria-label="The run now">
+    <nav className="crumbs" aria-label="Breadcrumbs"><a href="/plays">Research</a> › <a href={`/play/${encodeURIComponent(fold.play)}`}>{fold.play}</a> › {short}</nav>
+    <div className="run-fold-head"><h1>{fold.title}</h1><StatusPill status={fold.status} className="state-pill run-chip" /><AsOf at={fold.asOf} source="the run's progress document" /></div>
+    <p className="run-state" data-slot="state">{fold.state}</p>
+    <div className="run-slots">
+      <div className="run-slot" data-slot="best">
+        <span className="answer-label">Best release</span>
+        <span className="answer-headline">{fold.best.headline}</span>
+        {fold.best.meter && <span className="run-meter" title={`${fold.best.meter.used} of ${fold.best.meter.total} workloads; the bar is all ${fold.best.meter.total}`}><Meter used={fold.best.meter.used} total={fold.best.meter.total} text={`the bar: all ${fold.best.meter.total}`} /></span>}
+        <span className="answer-subline">{fold.best.subline}</span>
+        {fold.startPoint && <span className="run-start-point" data-start-point>{fold.startPoint}</span>}
+      </div>
+      <div className="run-slot" data-slot="blocker" data-blocker={fold.blocker.blocker?.class ?? 'none'}>
+        <span className="answer-label">Blocker</span>
+        <span className="answer-headline">{fold.blocker.status && <StatusPill status={fold.blocker.status} className="answer-mark" />} {fold.blocker.headline}</span>
+        <span className="answer-subline">{fold.blocker.subline}</span>
+      </div>
+    </div>
+    <div className="run-slot run-output" data-slot="output">
+      <span className="answer-label">Output</span>
+      {fold.output ? <span className="answer-spark" data-spark><Spark points={fold.output.points} max={Math.max(1, ...fold.output.points.map(([, y]) => y))} /><b>{fold.output.total} {fold.output.what}</b></span> : <span className="answer-subline">No output measured yet</span>}
+    </div>
+  </section>
+}
+
+/**
+ * Why an ended run stopped, folded under its ending sentence: what blocked it at the end, the checks that could not
+ * decide, quota, and the driver's own evidence. None of it is alarm-toned: the run is over.
+ */
+function WhyItStopped({ doc }: { doc: RunDocument }) {
+  const execution = doc.execution
+  const block = doc.progress?.endBlocker ?? null
+  const unknown = doc.run.check?.gateUnknown ?? null
+  const quota = doc.receipt?.system?.attempts?.causes.find((cause) => cause.cause === 'rate-limited' && cause.tries > 0) ?? null
+  const diagnoses = execution?.diagnoses ?? []
+  const resume = execution && (execution.resume.status === 'preserved' || execution.resume.reason || execution.resume.command) ? execution.resume : null
+  if (!block && !unknown?.count && !quota && !resume && !execution?.endingError && !execution?.runnerTail && !diagnoses.length && !execution?.lastAttempt) return null
+  return <details className="rr-drawer run-why" data-why-stopped><summary>Why it stopped</summary><div className="rr-drawer-body">
+    {block && <BlockerChip blocker={block} until={doc.run.ending?.at ?? doc.run.settledAt} wallHours={doc.receipt?.work?.wallHours ?? null} />}
+    {unknown?.count ? <p data-field="run.check.gateUnknown">{unknown.count} {unknown.count === 1 ? 'release' : 'releases'} unverified {clock(unknown.from)}{unknown.count > 1 && <>–{clock(unknown.to)}</>}{unknown.line && <>: {unknown.line}</>}</p> : null}
+    {quota && <p data-field="receipt.system.attempts.causes">{quota.tries} turns ended on quota{quota.hours ? ` (${quota.hours} h of turns)` : ''}</p>}
+    {resume && <p>{resume.status === 'preserved' ? 'Source sandbox preserved. Resume with ' : resume.reason ? `${resume.reason} ` : ''}{resume.command && <code>{resume.command}</code>}</p>}
+    {execution?.lastAttempt && <p>Last driver attempt: {execution.lastAttempt.error ?? 'no error recorded'} ({execution.lastAttempt.classification ?? 'classification unknown'})</p>}
+    {diagnoses.length > 0 && <dl>{diagnoses.map((item) => <div key={item.id}><dt><strong>{item.id}</strong></dt><dd>{item.fix}</dd></div>)}</dl>}
+    {execution?.endingError && <pre>{execution.endingError.name}: {execution.endingError.message}</pre>}
+    {execution?.diagnosisError && <p>Known failure lookup unavailable: {execution.diagnosisError}</p>}
+    {execution?.runnerTail && <><p>Runner log tail</p><pre>{execution.runnerTail}</pre></>}
+  </div></details>
 }
 
 /**
@@ -157,7 +240,7 @@ function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDeli
   })
 }
 
-function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt | null; outcome: Outcome | null; settled: boolean; check: RunCheck | null }) {
+function RunNow({ receipt: r, outcome, check }: { receipt: RunReceipt | null; outcome: Outcome | null; check: RunCheck | null }) {
   const scores = (r?.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
   const contract = r?.contract ?? []
   const disputes = outcome?.disputes ?? []
@@ -190,9 +273,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
       {outcome.checkedAt && <span> · checked {clock(outcome.checkedAt)}{outcome.tag && <> on <code>{shortTag(outcome.tag)}</code></>}</span>}
       {untagged?.line && <span data-field="run.check.latest"> · newest {untagged.at ? clock(untagged.at) : ''}: {untagged.line}</span>}
       {audit?.verdict && <span data-field="progress.outcome.goalAudit"> · {GOAL_AUDIT[audit.verdict]}{audit.at && ` ${audit.verdict === 'unaudited' ? 'last tried' : 'at'} ${clock(audit.at)}`}</span>}
-      {/* A settled run's last stream is a time, not an age that froze when its progress was last written (B6). */}
-      {settled ? outcome.lastStreamAt && <span data-field="progress.outcome.lastStreamAt"> · last agent stream {clock(outcome.lastStreamAt)}</span>
-        : outcome.minutesSinceLastStream !== null && <span data-field="progress.outcome.minutesSinceLastStream"> · last agent stream {outcome.minutesSinceLastStream} min ago</span>}
+      {/* The run's one liveness clock is on its first screen ("last output"); the verdict line states no second one. */}
     </p>}
     {check?.calibration && <CalibrationLabels calibration={check.calibration} field="run.check.calibration" />}
     {passes && <p className="rr-now-passes" data-field="system.play.firstPassAt">{passes}</p>}
@@ -210,16 +291,32 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
         {d.referees?.length ? <span data-field={`progress.outcome.disputes.${i}.referees`}>Referees: {refereeText(d.referees)}</span> : null}
       </li>)}</ol></>}
     {figure && <div className="rr-chart" data-field="system.play.scores"><FigureView figure={figure} /></div>}
-    {contract.length > 0 && <><h3>Contract lines sent</h3><ol className="rr-contract" data-field="contract">{contract.map((d, i) => {
-      const acks = d.acknowledgements ?? []
-      return <li key={`${d.at}-${i}`} data-field={`contract.${i}`}>
-        <code className="rr-contract-line">{d.line}</code>
-        <span>Sent {clock(d.at)} on <code>{shortTag(d.tag) ?? d.commit?.slice(0, 8) ?? '?'}</code> to {d.targets.length === 1 ? 'the root' : `${d.targets.length} agents`}</span>
-        <span data-field={`contract.${i}.acknowledgements`}>Acknowledged: {acks.length === 0 ? 'none recorded' : acks.map((ack) => `${shortAgent(ack.worker, r?.runId ?? '')} ${ack.effect}`).join(', ')}</span>
-        <span data-field={`contract.${i}.fixCommit`}>{d.fixCommit ? <>Fixed in <code>{d.fixCommit.slice(0, 8)}</code>{d.resolvedOn && shortTag(d.resolvedOn) !== d.fixCommit ? <> (<code>{shortTag(d.resolvedOn)}</code>)</> : null}: </> : null}{contractState(d)}</span>
-      </li>
-    })}</ol></>}
+    {contract.length > 0 && <ContractTable contract={contract} runId={r?.runId ?? ''} />}
   </section>
+}
+
+/**
+ * Each contract line sent to the fleet as one row: the line (short, whole in its drawer with who acknowledged it), when
+ * and on which release it was sent, the release that fixed it, and what happened next. "Fixed in" names a release only
+ * when that release was cut after the line was sent; a fix credited to the same or an older release is no fix.
+ */
+function ContractTable({ contract, runId }: { contract: ContractDelivery[]; runId: string }) {
+  return <><h3>Contract lines sent</h3><div className="rr-table"><table className="rr-contract-table" data-field="contract">
+    <thead><tr><th>Line</th><th>Sent</th><th>Fixed in</th><th>Then</th></tr></thead>
+    <tbody>{contract.map((d, i) => {
+      const acks = d.acknowledgements ?? []
+      const later = fixedLater(d)
+      return <tr key={`${d.at}-${i}`} data-field={`contract.${i}`}>
+        <td><details><summary>{clip(lineReason(d.line) || d.line, 8)}</summary>
+          <code className="rr-contract-line">{d.line}</code>
+          <span data-field={`contract.${i}.acknowledgements`}>Acknowledged: {acks.length === 0 ? 'none recorded' : acks.map((ack) => `${shortAgent(ack.worker, runId)} ${ack.effect}`).join(', ')}</span>
+        </details></td>
+        <td data-sent-tag={shortTag(d.tag) ?? undefined} data-sent-at={d.at}>Sent {clock(d.at)} on <code>{shortTag(d.tag) ?? d.commit?.slice(0, 8) ?? '?'}</code> to {d.targets.length === 1 ? 'the root' : `${d.targets.length} agents`}</td>
+        <td data-field={`contract.${i}.fixCommit`} data-fixed-tag={later ? (shortTag(d.resolvedOn) ?? undefined) : undefined}>{later ? <>Fixed in <code>{d.fixCommit!.slice(0, 8)}</code> (<code>{shortTag(d.resolvedOn)}</code>)</> : 'not fixed by a later release'}</td>
+        <td>{contractState(d)}</td>
+      </tr>
+    })}</tbody>
+  </table></div></>
 }
 
 function Field({ path, value, format = String, suffix = '', children }: { path: string; value: string | number | null | undefined; format?: (value: never) => string; suffix?: string; children?: ReactNode }) {
@@ -300,7 +397,7 @@ function TurnEndings({ causes, live, actNow }: { causes: TurnCause[]; live: bool
   })}</ul>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null, embedded = false, superseded = false, successor = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null; embedded?: boolean; superseded?: boolean; successor?: string | null }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -311,8 +408,9 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const chosenChecked = r.chosen.checked ?? (r.chosen.commit ? checkedCommits.has(r.chosen.commit) : false)
   const unchecked = hasRelease && !chosenChecked ? `No play check ran on ${shortTag(r.chosen.tag)} (${r.chosen.commit!.slice(0, 8)}), so there is no checked version to act on.` : null
   // A live run's controls (wrapup, stop) act on the run, not on a version, so they need no checked release.
+  // A run a newer run of its play superseded offers no rerun of its check: the newer run is where the work went on.
   const decisions = r.decisions.map((decision, i) => ({ ...decision, index: i, blocked: decision.id === 'rerun' || RUN_CONTROLS.has(decision.id) ? null : unchecked })).filter((decision) =>
-    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) : RUN_CONTROLS.has(decision.id) || hasRelease))
+    decision.enabled && (decision.id === 'rerun' ? Boolean(r.check?.rerun) && !superseded : RUN_CONTROLS.has(decision.id) || hasRelease))
   const equivalent = r.cost.apiEquivalentUsd?.usd ?? null
   // What was billed: the receipt's reconciled total, else the host's reading of a seat-paid host placement ($0 per call).
   const billed = r.cost.billedUsd.total.usd ?? billing?.billedUsd ?? null
@@ -348,30 +446,25 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const figure = timeline(lanes, { measure: 'Recorded agent time', ...(r.timeline.end ? { now: Date.parse(r.timeline.end) } : {}), marks })
   const versionFigure = r.versions?.rows.length && r.versions.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
   return <article className={`rr-page${print ? ' rr-print' : ''}`} data-overview data-receipt={r.runId}>
-    <header className={`rr-verdict rr-${r.outcome.status}`}>
-      <div className="rr-title-row"><h1 data-field="title" title={r.title}>{r.title}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
-      <p data-field="outcome.sentence">{r.outcome.sentence}</p>
-      <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{quota && <span data-field="system.attempts.causes">{quota.tries} quota hits</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
-      {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
-    </header>
-    <RunNow receipt={r} outcome={outcome} settled={settled} check={check} />
+    {/* On the run page the first screen names the run and states its ending; a receipt page names the receipt. The goal
+        is one muted line linking to the play's, never the title. */}
+    {!embedded && <header className={`rr-verdict rr-${r.outcome.status}`}>
+      <div className="rr-title-row"><h1 data-field="tag" title={r.tag}>Receipt {versionName(r, r.tag)}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
+      {r.title && <p className="rr-muted rr-goal clamp-1" title={r.title}>{r.title}</p>}
+    </header>}
+    <p className="rr-summary">{hasRelease && chosenChecked && <span title={r.chosen.tag}>Chosen <Field path="chosen.tag" value={r.chosen.tag} format={(tag: string) => versionName(r, tag)} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
+    {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
+    <RunNow receipt={r} outcome={outcome} check={check} />
     <div className="rr-columns">
       <div className="rr-evidence">
         {r.files.length > 0 ? <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>)}</ul></section> : !hasRelease && <p className="rr-muted">No release recorded yet.</p>}
-        {r.check && [r.check.output, r.check.tag, r.check.commit, r.check.at, r.check.rerun, r.check.checker.sha256, r.check.checker.path, r.check.inputs.sha256, r.check.inputs.source].some(recorded) ? <section aria-labelledby="rr-check"><h2 id="rr-check">The check</h2>
+        {r.check && [r.check.output, r.check.tag, r.check.commit, r.check.at].some(recorded) ? <section aria-labelledby="rr-check"><h2 id="rr-check">The check</h2>
           {recorded(r.check.output) && <pre className="rr-output" data-field="check.output">{r.check.output}</pre>}<dl className="rr-facts">
             <Fact label="Ran on" when={[r.check.tag, r.check.commit].some(recorded)}><Field path="check.tag" value={r.check.tag} />{recorded(r.check.tag) && recorded(r.check.commit) && ' '}<code><Field path="check.commit" value={r.check.commit} /></code></Fact>
             <Fact label="At" when={recorded(r.check.at)}><Field path="check.at" value={r.check.at} format={utcClock} /></Fact>
-            <Fact label="Inputs SHA-256" when={[r.check.inputs.sha256, r.check.inputs.source].some(recorded)}><code><Field path="check.inputs.sha256" value={r.check.inputs.sha256} /></code><span className="rr-muted"><Field path="check.inputs.source" value={r.check.inputs.source} /></span></Fact>
-            <Fact label="Checker SHA-256" when={[r.check.checker.sha256, r.check.checker.path].some(recorded)}><code><Field path="check.checker.sha256" value={r.check.checker.sha256} /></code><span className="rr-muted"><Field path="check.checker.path" value={r.check.checker.path} /></span></Fact>
-          </dl>{r.check.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check.rerun}</code>{!print && <Copy text={r.check.rerun} />}</div>}</section> : null}
+          </dl></section> : null}
       </div>
       <aside>
-        {decisions.length > 0 && <section aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2><div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
-          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { if (decision.id !== 'stop' || window.confirm(`Stop ${r.runId} now? ${decision.consequence}`)) void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
-          {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}
-          {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
-        </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
         {[r.work.recordedHours, r.work.agentHours, r.work.idleHours, r.work.untracedHours, r.work.tokens.fresh, r.work.tokens.cached, r.work.tokens.total, ...Object.values(r.waste.afterPass), ...Object.values(r.waste.verdictDelay)].some(recorded) && <section aria-labelledby="rr-cost"><h2 id="rr-cost">Cost and waste</h2>
           {recorded(r.work.recordedHours) && <div className="rr-chart" data-field="work"><Meter total={r.work.recordedHours} segments={[{ label: 'Work', value: r.work.agentHours }, { label: stuck ? 'Stuck (a turn open)' : 'Idle', value: r.work.idleHours }, { label: 'Untraced', value: r.work.untracedHours, kind: 'untraced' }]} format={hoursText} text="Recorded agent time" /></div>}
           <dl className="rr-facts rr-measures">
@@ -387,9 +480,14 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
         </section>}
       </aside>
     </div>
+    {(decisions.length > 0 || successor) && <section className="rr-decide" aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2>{successor && <p data-continued-as={successor}>Continued as <a href={`/run/${encodeURIComponent(successor)}`}>{successor}</a></p>}<div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
+          {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { if (decision.id !== 'stop' || window.confirm(`Stop ${r.runId} now? ${decision.consequence}`)) void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
+          {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}
+          {decision.command && <details className="rr-command" open={print || undefined}><summary>Command</summary><code data-field={`decisions.${decision.index}.command`}>{decision.command}</code></details>}
+        </div>)}</div>{notice && <p role="status">{notice}</p>}</section>}
     {behavior && <ProfileBehavior reading={behavior} print={print} />}
     {(lanes.length > 0 || marks.length > 0) && <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div></Drawer>}
-    {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><Field path={`versions.rows.${i}.tag`} value={row.tag} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
+    {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th title={row.tag}><Field path={`versions.rows.${i}.tag`} value={row.tag} format={(tag: string) => versionName(r, tag)} /></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
     {(recorded(r.work.toolCalls) || recorded(r.work.tries) || lanes.length > 0 || (r.lineage?.chain.length ?? 0) > 1 || recorded(r.outcome.reason) || Boolean(r.system?.errors?.top.length) || failures.length > 0 || Boolean(workers?.count) || Boolean(open)) && <Drawer title="How it ran" print={print}>
       {failures.length > 0 && <div className="rr-chart" data-field="system.attempts.causes"><p className="rr-muted">Where turns ended: {r.system!.attempts!.failed} of {r.system!.attempts!.tries} tries, hours each cause took</p><TurnEndings causes={failures} live={!settled} actNow={actNow} /></div>}
       <dl className="rr-facts">
@@ -400,6 +498,10 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       <Fact label="Lineage" when={(r.lineage?.chain.length ?? 0) > 1}><span data-field="lineage.chain">{r.lineage?.chain.join(' / ')}</span></Fact>
       <Fact label="Run ended" when={recorded(r.outcome.reason)}><span data-field="outcome.reason">{r.outcome.reason}</span></Fact>
     </dl>{r.system?.errors?.top.map((error, i) => <div key={i}><Field path={`system.errors.top.${i}.count`} value={error.count} /> × {error.tool}<pre data-field={`system.errors.top.${i}.message`}>{error.message}</pre></div>)}{open && !print && <button onClick={() => open('agents')}>Open conversations</button>}</Drawer>}
+    {r.check && [r.check.rerun, r.check.checker.sha256, r.check.checker.path, r.check.inputs.sha256, r.check.inputs.source].some(recorded) && <Drawer title="Data and method" print={print}><dl className="rr-facts">
+      <Fact label="Inputs SHA-256" when={[r.check.inputs.sha256, r.check.inputs.source].some(recorded)}><code><Field path="check.inputs.sha256" value={r.check.inputs.sha256} /></code><span className="rr-muted"><Field path="check.inputs.source" value={r.check.inputs.source} /></span></Fact>
+      <Fact label="Checker SHA-256" when={[r.check.checker.sha256, r.check.checker.path].some(recorded)}><code><Field path="check.checker.sha256" value={r.check.checker.sha256} /></code><span className="rr-muted"><Field path="check.checker.path" value={r.check.checker.path} /></span></Fact>
+    </dl>{r.check.rerun && <div className="rr-rerun"><code data-field="check.rerun">{r.check.rerun}</code>{!print && <Copy text={r.check.rerun} />}</div>}</Drawer>}
     {recorded(r.brief) && <Drawer title="What was asked" print={print}><div className="rr-brief" data-field="brief"><Markdown remarkPlugins={[remarkGfm]}>{r.brief!}</Markdown></div></Drawer>}
   </article>
 }

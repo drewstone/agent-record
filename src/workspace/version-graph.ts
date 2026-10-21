@@ -118,12 +118,22 @@ export function scoreLine(tag: VersionTag): string {
   return parts.join(' · ') + (tag.score.complete ? '' : ' (incomplete)')
 }
 
+/**
+ * A Knowledge store version as the pages name it: `pages v2` for the store's tag `rc2`, so "rc" means a code release
+ * candidate only. The raw tag goes in the tip.
+ */
+export const pagesName = (tag: string) => {
+  const number = /(?:^|\/)rc(\d+)$/.exec(tag)?.[1]
+  return number ? `pages v${number}` : tag
+}
+
 export function flagLabel(flag: VersionTag['flags'][number]): string {
+  const from = pagesName(flag.from)
   return flag.kind === 'suspected-judge-gaming'
-    ? `suspected judge-gaming vs ${flag.from}`
+    ? `suspected judge-gaming vs ${from}`
     : flag.kind === 'regression'
-      ? `regression vs ${flag.from}: ${flag.checks.join(', ')}`
-      : `${flag.kind} vs ${flag.from}`
+      ? `regression vs ${from}: ${flag.checks.join(', ')}`
+      : `${flag.kind} vs ${from}`
 }
 
 const KIND_LABEL: Record<string, string> = { write: 'write', integrate: 'merge', profile: 'profile' }
@@ -146,7 +156,7 @@ export function runGraphModel(doc: VersionGraphDocument, when: (iso: string) => 
       chips: [
         ...(commit.kind === 'write' ? [] : [{ label: KIND_LABEL[commit.kind] ?? commit.kind, tone: 'muted' as const }]),
         ...(tagsOf.get(commit.id) ?? []).flatMap((tag): GraphChip[] => [
-          { label: tag.best ? `${tag.name} ${PICKED}` : tag.name, tone: tag.best ? 'neutral' : 'accent', title: scoreLine(tag) },
+          { label: tag.best ? `${pagesName(tag.name)} ${PICKED}` : pagesName(tag.name), tone: tag.best ? 'neutral' : 'accent', title: `${tag.name}: ${scoreLine(tag)}` },
           { label: scoreLine(tag), tone: 'info' },
           ...tag.flags.map((flag) => ({ label: flagLabel(flag), tone: 'neutral' as const })),
         ]),

@@ -17,6 +17,13 @@ export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: s
   const graph = useMemo(() => doc.findings ? runWorkGraphModel(doc.findings) : null, [doc.findings])
   if (!graph || !graph.nodes.length)
     return <p className="ws-status run-panel">No results, claims or checks were written, so there is no graph to draw.</p>
+  // A graph of a few cards says nothing a list does not, and a canvas costs a pan to read it.
+  if (graph.nodes.length < 5)
+    return <ol className="run-panel work-graph-list" data-graph-list>{graph.nodes.map((node) => <li key={node.id} data-kind={node.kind}>
+      <span className="faint">{node.kind}</span>{' '}
+      {node.item ? <button type="button" className="link-button" onClick={() => onOpen(node.id)}>{node.title}</button> : node.href ? <a href={node.href}>{node.title}</a> : <b>{node.title}</b>}
+      {node.sub && <span className="faint"> · {node.sub}</span>}
+    </li>)}</ol>
   return <WorkGraphCanvas graph={graph} runUrl={runUrl} onOpen={onOpen} />
 }
 

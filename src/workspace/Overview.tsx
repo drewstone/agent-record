@@ -1,9 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import type { OverviewAttention, OverviewDocument, OverviewLead, OverviewPlayWeek, OverviewRun } from '../workspace-model.js'
+import { AnswerStrip, AsOf } from './AnswerStrip.js'
+import { attentionAge, attentionStatus, overviewAnswers } from './answers.js'
 import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
-import { hostWords } from './play-standing.js'
+import { hostWords, shortRun } from './play-standing.js'
+import type { ReliabilityDocument } from './reliability-model.js'
+import { runningAtOf } from './served-fields.js'
 
 // Five ranked causes plus "other", none in a status hue: the series slots, then indigo, and "other" in faint ink.
 const LOSS_COLOR = [...SERIES.slice(0, 4), SERIES[4] ?? '#3a4bc4', 'var(--ar-fg-faint)']
@@ -102,7 +106,8 @@ function RunningRow({ run }: { run: OverviewRun }) {
           <span>{run.findingsPending ? 'findings not available yet' : `${run.results} results · ${run.claims} claims`}</span>
         </span>
         {run.purpose && <span className="ov-running-purpose">{run.purpose}</span>}
-        {run.lead && <Lead lead={run.lead} />}
+        {/* Only a passed check answers what a running run found; a page it wrote (a handoff mirror) is not its result. */}
+        {run.lead?.kind === 'check' && <Lead lead={run.lead} />}
       </a>
     </li>
   )
@@ -156,14 +161,15 @@ function WeekRow({ play }: { play: OverviewPlayWeek }) {
  * Needs you: each host `attention[]` line once. Red only where statusOf says act now: a crit item, or a pass held for
  * stages with no known-good fixture, which waits on the person it names to add the fixture.
  */
-export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
+export function NeedsYou({ attention, composedAt, now }: { attention: OverviewAttention[]; composedAt?: string; now?: number }) {
   return (
     <figure className="ov-card ov-attention" aria-label="Needs you">
       <figcaption><span className="ov-card-title">Needs you</span></figcaption>
       {attention.length ? (
         <ul>
           {attention.map((item) => {
-            const status = statusOf({ axis: 'alert', tone: item.tone, live: true, heldPass: Boolean(item.held?.length) })
+            const status = attentionStatus(item)
+            const old = composedAt ? attentionAge(item, composedAt, now ?? Date.now()) : null
             const body = (
               <>
                 {/* A red item names its owner in its own text; every other one is neutral. */}
@@ -173,7 +179,8 @@ export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
                 {/* A dispute's "undecided" is the Lab's ruling state (its referees disagree), as the run page words it,
                     not an unverified check, so its line keeps the host's words. */}
                 <span className="ov-attention-text">{item.dispute ? item.text : hostWords(item.text)}{item.detail ? <small>{hostWords(item.detail)}</small> : null}
-                  <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small></span>
+                  <small>{item.owner || 'Discovery operator'} · {item.next || 'Review this item'}</small>
+                  {old && <small data-alert-age={old.basis}>{status.tone === 'fail' ? '' : `${status.word} · `}{old.basis} {old.at.slice(11, 16)}Z · {old.text}</small>}</span>
               </>
             )
             // An in-page anchor scrolls this page; the embed's <base target="_top"> would send it to the wall.
@@ -187,14 +194,51 @@ export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
   )
 }
 
+/**
+ * Running now: each running run with its own as-of (`runningAt` when the host serves it, else the composition), and where
+ * the week table, composed earlier, still lists a run as running that the newer read does not, it says so.
+ */
+function RunningNow({ doc: d, stale }: { doc: OverviewDocument; stale: boolean }) {
+  const running = d.now ?? []
+  const state = d.state
+  const stood = state.standdown
+  const runningAt = runningAtOf(d)
+  const ids = new Set(running.map((run) => run.runId))
+  const disagree = runningAt && runningAt !== d.composedAt ? (d.week ?? []).flatMap((play) => play.runs.filter((run) => run.state === 'running' && !ids.has(run.runId)).map((run) => ({ ...run, play: play.play }))) : []
+  return (
+    <figure className="ov-card ov-now-runs" aria-label="Running now">
+      <figcaption>
+        <span className="ov-card-title">Running now</span>
+        <span className="ov-card-sub">
+          {running.length} running · {state.queued} queued · as of {(runningAt ?? d.composedAt).slice(11, 16)}Z{stale && !runningAt ? ' · refreshing' : ''}
+          {state.sandboxesRunning != null && <> · {state.sandboxesRunning} sandboxes{state.sandboxesByKind.discovery != null ? ` (${state.sandboxesByKind.discovery} Discovery)` : ''}{state.censusAt ? `, census ${ago(state.censusAt)}` : ''}</>}
+        </span>
+      </figcaption>
+      {disagree.map((run) => <p key={run.runId} className="ov-note" data-disagree={run.runId}>{shortRun(run.play, run.runId)}: running at {d.composedAt.slice(11, 16)}Z, not at {runningAt!.slice(11, 16)}Z</p>)}
+      {running.length ? (
+        <ol className="ov-running">{running.map((run) => <RunningRow key={run.runId} run={run} />)}</ol>
+      ) : (
+        <p className="ov-quiet">
+          Nothing is running.{' '}
+          {stood
+            ? `Research is stood down${stood.reason ? `: ${stood.reason}` : ''}.`
+            : `The last Discovery run started ${state.lastRunStart ? `${state.lastRunStart.slice(0, 16).replace('T', ' ')} UTC, ${ago(state.lastRunStart)}` : 'never'}.`}
+        </p>
+      )}
+    </figure>
+  )
+}
+
 export function OverviewPage({ api }: { api: string }) {
   const doc = useDocument<OverviewDocument>(`${api}/overview`, 60_000, true)
+  const reliability = useDocument<ReliabilityDocument>(`${api}/reliability`)
   // The day charts and the totals above them follow this range; histograms and causes are the composed 30 days.
   const [range, setRange] = useState(14)
   const [weekShown, setWeekShown] = useState(25)
   if (doc.error && !doc.data) return <p className="ws-status" role="alert">The overview is unavailable: {doc.error}</p>
   if (!doc.data) return <p className="ws-status" role="status">Composing the overview…</p>
   const d = doc.data
+  const now = Date.now()
   const cut = (values: (number | null)[] | undefined) => (values ?? []).slice(-range)
   const days = d.days.slice(-range)
   const runsByDay = Object.fromEntries(Object.entries(d.runs.byDay).map(([k, v]) => [k, cut(v)]))
@@ -208,14 +252,12 @@ export function OverviewPage({ api }: { api: string }) {
   const hosts = d.fleet.hosts
   const history = d.fleet.history
   const seats = [...d.seats.now].sort((a, b) => (b.d7 ?? -1) - (a.d7 ?? -1))
-  const stood = state.standdown
   const cost = d.money.costByDay
   const costRuns = d.money.costRuns
   const infra = d.money.infra
   const infraDay = new Map(infra?.byDay?.map((row) => [row.date, row]))
   const infraValues = (field: 'hostUsd' | 'volumeUsd' | 'snapshotUsd' | 'r2Usd' | 'r2ListUsd' | 'r2StorageListUsd' | 'r2OperationsListUsd' | 'egressBytes' | 'egressUsd') =>
     days.map((day) => infraDay.get(day)?.[field] ?? null)
-  const running = d.now ?? []
   const attention = d.attention ?? []
   const week = d.week ?? []
   const weekDays = d.weekDays ?? 7
@@ -226,31 +268,14 @@ export function OverviewPage({ api }: { api: string }) {
   const weekCostUnknown = week.some((play) => (play.costUnknownRuns ?? 0) > 0)
   return (
     <div className="ws-page ov-page" data-overview>
-      <div className="ov-now">
-        <figure className="ov-card ov-now-runs" aria-label="Running now">
-          <figcaption>
-            <span className="ov-card-title">Running now</span>
-            {/* A copy served while the overview recomposes says when it was composed; its running runs are read now. */}
-            {doc.stale && <span className="ov-stale" data-stale>as of {d.composedAt.slice(11, 16)}Z · refreshing</span>}
-            <span className="ov-card-sub">
-              {running.length} running · {state.queued} queued
-              {/* An unread census is left out rather than printed as "— (unknown)"; a census read earlier says how old it is. */}
-              {state.sandboxesRunning != null && <> · {state.sandboxesRunning} sandboxes{state.sandboxesByKind.discovery != null ? ` (${state.sandboxesByKind.discovery} Discovery)` : ''}{state.censusAt ? `, census ${ago(state.censusAt)}` : ''}</>}
-            </span>
-          </figcaption>
-          {running.length ? (
-            <ol className="ov-running">{running.map((run) => <RunningRow key={run.runId} run={run} />)}</ol>
-          ) : (
-            <p className="ov-quiet">
-              Nothing is running.{' '}
-              {stood
-                ? `Research is stood down${stood.reason ? `: ${stood.reason}` : ''}.`
-                : `The last Discovery run started ${state.lastRunStart ? `${state.lastRunStart.slice(0, 16).replace('T', ' ')} UTC, ${ago(state.lastRunStart)}` : 'never'}.`}
-            </p>
-          )}
-        </figure>
-        <NeedsYou attention={attention} />
-      </div>
+      <div className="ws-title-row ov-head"><h1>Discovery</h1><AsOf at={d.composedAt} source="the overview from the wall API" /></div>
+      <AnswerStrip id="overview" tiles={overviewAnswers({ doc: d, reliability: reliability.data?.schema === 'discovery-lab.reliability.v1' ? reliability.data : null, now }).map((answer) => ({
+        ...answer,
+        drawer: answer.slot === 'needs-me' ? <NeedsYou attention={attention} composedAt={d.composedAt} now={now} />
+          : answer.slot === 'is-it-working' ? <RunningNow doc={d} stale={!!doc.stale} />
+          : answer.slot === 'is-discovery-reliable' ? <p className="ov-note">{reliability.data?.definition ?? 'The reliability record was not read.'}</p>
+          : <p className="ov-note">{week.filter((play) => play.lead?.kind === 'check').length} of {week.length} plays passed their check at least once in {weekDays} days; {weekRuns} runs. The table below lists each play.</p>,
+      }))} />
 
       <section className="ov-section" aria-label={`Last ${weekDays} days by play`}>
         <div className="ov-section-head">
