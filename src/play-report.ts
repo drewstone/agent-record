@@ -1,6 +1,8 @@
 import { parseResearchReport } from './report.js'
 import type { EvidenceReference, ResearchReportData } from './report.js'
 import { utcTime } from './viewer/model.js'
+import { endingStatus } from './workspace/data.js'
+import { hostWords, RELEASE_STATE, verdictWord } from './workspace/play-standing.js'
 
 /**
  * The play report the Lab host serves at `/api/discovery/plays/<id>/report` (tangle-tools `compose_play_report`).
@@ -153,7 +155,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
       value: text,
       ...(text !== null && value?.unit ? { unit: value.unit } : {}),
       ...(value?.source ? { source: evidence(value.source, value.asOf)[0] } : {}),
-      ...(text === null ? { why: value?.why ?? 'not recorded', ...(value?.record ? { record: value.record } : {}) } : {}),
+      ...(text === null ? { why: value?.why ? hostWords(value.why) : 'not recorded', ...(value?.record ? { record: value.record } : {}) } : {}),
       ...extra,
     })
   }
@@ -167,7 +169,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
     summaries['how-good'] = `${words(counts.published) ?? 'unknown'} releases published, ${words(counts.checked) ?? 'unknown'} checked, ${words(counts.passingCurrent) ?? 'unknown'} passing under ${checker}.`
     fact('how-good', 'published', 'Releases published', { value: counts.published ?? null, unit: 'releases', ...at })
     fact('how-good', 'checked', 'Releases checked', { value: counts.checked ?? null, unit: 'releases', ...at })
-    fact('how-good', 'withheld', 'Withheld by the gate', { value: counts.withheld ?? null, unit: 'releases', ...at })
+    fact('how-good', 'withheld', 'Not published (held by the gate)', { value: counts.withheld ?? null, unit: 'releases', ...at })
     fact('how-good', 'passing', `Passing under ${checker}`, { value: counts.passingCurrent ?? null, unit: 'releases', ...at })
     fact('how-good', 'never-checked', `Never checked under ${checker}`, { value: counts.neverCheckedCurrent ?? null, unit: 'releases', ...at })
   }
@@ -180,7 +182,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
       point ? { value: point.value, unit: metric.unit, source: point.source ?? metric.source, asOf: metric.asOf } : { value: null, source: metric.source, asOf: metric.asOf, why: metric.precondition ? 'a precondition the check enforces; no checked release recorded a value' : 'no checked release measured it', record: 'a play-check row with this metric' },
       {
         coverage: [target ? `bar ${target}${metric.unit ? ` ${metric.unit}` : ''}` : null, point?.ratioToTarget !== null && point?.ratioToTarget !== undefined ? `${number(point.ratioToTarget)}× the target` : null, where || null].filter(Boolean).join(' · ') || undefined,
-        ...(point ? { comparable: point.comparable ?? null, ...(point.short || point.why ? { note: point.short ?? point.why } : {}) } : {}),
+        ...(point ? { comparable: point.comparable ?? null, ...(point.short || point.why ? { note: hostWords((point.short ?? point.why)!) } : {}) } : {}),
       })
   }
   const measured = (how?.releases ?? []).filter((release) => release.metrics && Object.keys(release.metrics).length)
@@ -196,11 +198,11 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
         return [
           { text: release.tag },
           { text: release.run ?? shortRun(doc.id, release.runId), href: runHref(release.runId) },
-          { text: release.state ?? null },
-          { text: verdict },
+          { text: release.state ? (RELEASE_STATE[release.state] ?? release.state) : null },
+          { text: verdict ? verdictWord(verdict) : null },
           ...ids.map((id) => {
             const value = release.metrics?.[id]
-            return value ? { text: words(value.value), comparable: value.comparable ?? null, ...(value.note || value.checker ? { note: [value.note, value.checker].filter(Boolean).join(' · ') } : {}) } : { text: null, note: 'not measured' }
+            return value ? { text: words(value.value), comparable: value.comparable ?? null, ...(value.note || value.checker ? { note: hostWords([value.note, value.checker].filter(Boolean).join(' · ')) } : {}) } : { text: null, note: 'not measured' }
           }),
         ]
       }),
@@ -285,22 +287,23 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
   const unitOf = (rule: string) => doc.rules?.find((item) => item.id === rule)?.unit ?? null
 
   const verdict = doc.verdict ?? null
+  const sentence = verdict ? hostWords(verdict.sentence) : null
   const report = {
     schema: 'agent-research-report.v1',
     id: `${doc.id}-report`,
     title: doc.title,
     generatedAt: doc.asOf,
-    summary: verdict?.sentence ?? doc.goal?.text ?? '',
+    summary: sentence ?? doc.goal?.text ?? '',
     plays: [
       {
         id: doc.id,
         title: doc.title,
-        summary: verdict?.sentence ?? 'No verdict recorded.',
+        summary: sentence ?? 'No verdict recorded.',
         updatedAt: verdict?.asOf ?? doc.asOf,
         status: verdict?.status ?? null,
         claims: [],
         ...(doc.links?.play ? { href: doc.links.play } : {}),
-        ...(verdict ? { verdict: { sentence: verdict.sentence, status: verdict.status ?? null, evidence: evidence(verdict.source, verdict.asOf) } } : {}),
+        ...(verdict ? { verdict: { sentence: hostWords(verdict.sentence), status: verdict.status ?? null, evidence: evidence(verdict.source, verdict.asOf) } } : {}),
         questionCoverage: (doc.questions ?? []).map((question) => {
           const sources = evidence(question.source, question.asOf)
           // An answer with no source is not observed: it reads unknown and says so.
@@ -310,10 +313,10 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
             id: question.id,
             question: question.question,
             status: observed ? 'observed' : question.status === 'not_applicable' ? 'not_applicable' : 'unavailable',
-            ...(observed && question.answer ? { answer: question.answer } : {}),
+            ...(observed && question.answer ? { answer: hostWords(question.answer) } : {}),
             evidence: sources,
             ...(question.asOf ? { asOf: question.asOf } : {}),
-            ...(observed ? (gaps ? { why: gaps } : {}) : { why: question.why ?? (question.status === 'observed' ? 'the answer names no source' : 'not recorded') }),
+            ...(observed ? (gaps ? { why: gaps } : {}) : { why: question.why ? hostWords(question.why) : (question.status === 'observed' ? 'the answer names no source' : 'not recorded') }),
             ...(question.record ? { record: question.record } : {}),
           }
         }),
@@ -327,8 +330,8 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
             id: run.runId,
             label: run.run ?? shortRun(doc.id, run.runId),
             href: run.href ?? runHref(run.runId),
-            ending: [run.ending?.glyph, run.ending?.word].filter(Boolean).join(' ') || null,
-            reason: run.ending?.reason ?? null,
+            ending: run.ending?.word ? `${endingStatus(run.ending.word).shape} ${endingStatus(run.ending.word).word}` : null,
+            reason: run.ending?.reason ? hostWords(run.ending.reason) : null,
             wallHours: run.wallHours ?? null,
             agentHours: {
               id: `${run.runId}.agentHours`,
@@ -339,7 +342,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
             },
             hoursByOutcome: hours && typeof hours === 'object' ? (hours as Record<string, number>) : null,
             triesByOutcome: run.triesByOutcome ?? null,
-            best: best ? [best.verdict, best.tag, best.workloads ? `${best.workloads.passed}/${best.workloads.total}` : null, best.checker].filter(Boolean).join(' · ') : null,
+            best: best ? [best.verdict ? verdictWord(best.verdict) : null, best.tag, best.workloads ? `${best.workloads.passed}/${best.workloads.total}` : null, best.checker].filter(Boolean).join(' · ') : null,
             cost: run.cost?.apiUsd !== null && run.cost?.apiUsd !== undefined ? `$${number(run.cost.apiUsd)}${run.cost.provenance ? ` ${run.cost.provenance}` : ''}` : (run.cost?.provenance ?? null),
           }
         }),
@@ -358,7 +361,7 @@ export function playReportToResearchReport(doc: PlayReportDocument): ResearchRep
             })),
           }
         }),
-        unknowns: doc.unknowns ?? [],
+        unknowns: (doc.unknowns ?? []).map((item) => ({ ...item, why: hostWords(item.why) })),
       },
     ],
   }

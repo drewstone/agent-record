@@ -1,0 +1,2462 @@
+{
+ "schema": "agent-workspace.play.v1",
+ "id": "magnetar-rust",
+ "title": "magnetar-rust",
+ "program": "magnetar",
+ "line": "rust",
+ "playBasis": "run-input.pursuitId",
+ "noProgram": false,
+ "charter": null,
+ "frontier": null,
+ "input": null,
+ "goal": {
+  "text": "Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's own tables, and then better.",
+  "full": "Drew, 2026-10-17: \"use [free GLM 5.3 Flash] to actually build this zkvm out the most correct the most amazing ambitious thing\". Build the most correct, most complete Magnetar zkVM in Rust: every component of the paper, sound end to end, at 120 bits, measured against the paper's own tables, and then better.\n\nDrew, 2026-10-16, on Magnetar (Setty, Microsoft Research, ePrint 2026/2423): \"can it build\u2026",
+  "source": "acceptance.design.goal"
+ },
+ "checkers": [
+  {
+   "sha256": "639c17a4485f",
+   "label": "v1",
+   "firstAt": "2026-10-16T20:27:37.236Z",
+   "runIds": [
+    "magnetar-rust-20261016d",
+    "magnetar-rust-20261017c"
+   ],
+   "rows": 65,
+   "ruling": null,
+   "current": false
+  },
+  {
+   "sha256": "3d2b3f1e7a1c",
+   "label": "v2",
+   "firstAt": "2026-10-18T01:34:30.280Z",
+   "runIds": [
+    "magnetar-rust-20261018b"
+   ],
+   "rows": 30,
+   "ruling": null,
+   "current": false
+  },
+  {
+   "sha256": "a3cf95c7cd4a",
+   "label": "v3",
+   "firstAt": "2026-10-18T19:58:47.238Z",
+   "runIds": [
+    "magnetar-rust-20261018b"
+   ],
+   "rows": 4,
+   "ruling": {
+    "at": "2026-10-18T19:48:40.017Z",
+    "by": "referee",
+    "verdict": "upheld",
+    "label": "referee ruling 10-18 19:48Z",
+    "reason": "Reproduced the disputed line exactly: check.py:1130 runs the check's own pure-Python RV64I interpreter (execute, check.py:221-309) on the delivered release/guests/keccak-f1600.elf with limit=cycles=4096 (CYCLES_MAIN). Command `python3 /tmp/"
+   },
+   "current": false
+  },
+  {
+   "sha256": "041435d77c69",
+   "label": "v4",
+   "firstAt": "2026-10-18T21:01:42.927Z",
+   "runIds": [
+    "magnetar-rust-20261018b",
+    "magnetar-rust-20261019f"
+   ],
+   "rows": 38,
+   "ruling": {
+    "at": "2026-10-18T20:52:08.860Z",
+    "by": "operator",
+    "verdict": "upheld",
+    "label": "operator amendment 10-18 20:52Z",
+    "reason": "The operator amended this run's check, so its SOLVED verdict on rc14 no longer stands. Two lines are now contract requirements, and you are told them: (1) magnetar.json must declare security_bits as an integer of at least 120, the Deliverab"
+   },
+   "current": true
+  }
+ ],
+ "bar": {
+  "path": "plays/magnetar-rust/bar.json",
+  "digest": "791aaac8cb0e",
+  "source": "Magnetar (Setty, Microsoft Research), ePrint 2026/2423, Tables 2, 3 and 8",
+  "condition": "2^22-cycle executions on the 12 performance cores of an M4 Max MacBook Pro, 120-bit provable security",
+  "checkCondition": "2^12 = 4,096 cycles per workload, one jailed run on the Lab host",
+  "metrics": [
+   {
+    "id": "security_bits",
+    "label": "Provable security",
+    "unit": "bits",
+    "scale": "linear",
+    "direction": null,
+    "target": {
+     "min": 120
+    },
+    "precondition": true,
+    "best": null,
+    "nearest": null
+   },
+   {
+    "id": "rate_cps",
+    "label": "Proving rate",
+    "unit": "cycles/s",
+    "scale": "log",
+    "direction": "up",
+    "target": {
+     "min": 7200000,
+     "max": 8700000
+    },
+    "stretch": {
+     "min": 9500000,
+     "max": 12800000,
+     "label": "Magnetar (opt), Table 8"
+    },
+    "best": null,
+    "nearest": {
+     "value": 202021,
+     "columnId": "magnetar-rust-20261018b@rc14",
+     "tag": "rc14",
+     "runId": "magnetar-rust-20261018b",
+     "verdict": "solved",
+     "comparable": false,
+     "workloads": {
+      "passed": 15,
+      "total": 15
+     },
+     "why": "not comparable: declared 1 bits, the bar needs 120",
+     "short": "not comparable: 1-bit declared"
+    }
+   },
+   {
+    "id": "proof_bytes",
+    "label": "Proof size",
+    "unit": "B",
+    "scale": "log",
+    "direction": "down",
+    "target": {
+     "approx": 613376
+    },
+    "best": null,
+    "nearest": {
+     "value": 419000,
+     "columnId": "magnetar-rust-20261020b@rc1",
+     "tag": "rc1",
+     "runId": "magnetar-rust-20261020b",
+     "verdict": "contract-failed",
+     "comparable": false,
+     "workloads": {
+      "passed": 8,
+      "total": 15
+     },
+     "why": "failing candidate",
+     "short": "failing candidate (8/15)"
+    }
+   },
+   {
+    "id": "verify_ms",
+    "label": "Verify time",
+    "unit": "ms",
+    "scale": "log",
+    "direction": "down",
+    "target": {
+     "min": 11,
+     "max": 13
+    },
+    "stretch": {
+     "min": 8,
+     "max": 11,
+     "label": "Magnetar (opt), Table 8"
+    },
+    "best": null,
+    "nearest": {
+     "value": 164.53,
+     "columnId": "magnetar-rust-20261020b@rc1",
+     "tag": "rc1",
+     "runId": "magnetar-rust-20261020b",
+     "verdict": "contract-failed",
+     "comparable": false,
+     "workloads": {
+      "passed": 8,
+      "total": 15
+     },
+     "why": "failing candidate",
+     "short": "failing candidate (8/15)"
+    }
+   },
+   {
+    "id": "rss_kib",
+    "label": "Peak RSS",
+    "unit": "KiB",
+    "scale": "log",
+    "direction": "down",
+    "target": {
+     "approx": 6291456
+    },
+    "stretch": {
+     "max": 4194304,
+     "label": "Magnetar (opt), Table 8"
+    },
+    "best": null,
+    "nearest": {
+     "value": 2656,
+     "columnId": "magnetar-rust-20261018b@rc14",
+     "tag": "rc14",
+     "runId": "magnetar-rust-20261018b",
+     "verdict": "solved",
+     "comparable": false,
+     "workloads": {
+      "passed": 15,
+      "total": 15
+     },
+     "why": "not comparable: declared 1 bits, the bar needs 120",
+     "short": "not comparable: 1-bit declared"
+    }
+   }
+  ]
+ },
+ "standing": {
+  "status": "solved-earlier-checker",
+  "sentence": "NOT SOLVED under v4 (operator amendment 10-18 20:52Z). Best under v4: rc1 (20b) stage 5 of 6, 8 of 15 workloads, withheld by the gate. Best ever: rc14 passed v3 3\u00d7 20:14\u201320:46Z, superseded by v4.",
+  "current": {
+   "checker": "v4",
+   "tag": "rc1",
+   "runId": "magnetar-rust-20261020b",
+   "run": "20b",
+   "columnId": "magnetar-rust-20261020b@rc1",
+   "verdict": "contract-failed",
+   "kind": "gate",
+   "stage": "workloads",
+   "reached": 5,
+   "of": 6,
+   "workloads": {
+    "passed": 8,
+    "total": 15
+   },
+   "progress": 0.756,
+   "line": "NOT SOLVED: prover for sha256 at 4096 cycles exited 134 or wrote no regular proof/public files: SHIFTDBG j=30 lanes=(0x2000,0x0100) kind=Sra m=24 src=0x745c2d8c73af8bab apply=0x000000745c2d8c73 seg=0x0000000000000073 | thread 'main' (3) pan",
+   "at": "2026-10-20T03:52:59.984Z",
+   "count": 1,
+   "firstAt": "2026-10-20T03:52:59.984Z",
+   "lastAt": "2026-10-20T03:52:59.984Z",
+   "release": "withheld"
+  },
+  "bestCurrent": {
+   "checker": "v4",
+   "tag": "rc1",
+   "runId": "magnetar-rust-20261020b",
+   "run": "20b",
+   "columnId": "magnetar-rust-20261020b@rc1",
+   "verdict": "contract-failed",
+   "kind": "gate",
+   "stage": "workloads",
+   "reached": 5,
+   "of": 6,
+   "workloads": {
+    "passed": 8,
+    "total": 15
+   },
+   "progress": 0.756,
+   "line": "NOT SOLVED: prover for sha256 at 4096 cycles exited 134 or wrote no regular proof/public files: SHIFTDBG j=30 lanes=(0x2000,0x0100) kind=Sra m=24 src=0x745c2d8c73af8bab apply=0x000000745c2d8c73 seg=0x0000000000000073 | thread 'main' (3) pan",
+   "at": "2026-10-20T03:52:59.984Z",
+   "count": 1,
+   "firstAt": "2026-10-20T03:52:59.984Z",
+   "lastAt": "2026-10-20T03:52:59.984Z",
+   "release": "withheld"
+  },
+  "bestEver": {
+   "checker": "v3",
+   "tag": "rc14",
+   "runId": "magnetar-rust-20261018b",
+   "run": "18b",
+   "columnId": "magnetar-rust-20261018b@rc14",
+   "verdict": "solved",
+   "kind": "check",
+   "stage": "hidden",
+   "reached": 6,
+   "of": 6,
+   "workloads": {
+    "passed": 15,
+    "total": 15
+   },
+   "progress": 1,
+   "line": "SOLVED: 15 RV64I workloads preprocessed to <= 4096 B keys, proved, and verified (verifier given only the key, program absent) declaring 1-bit security; reference execution matched; every byte-flip, wrong-output and cross-program probe rejec",
+   "at": "2026-10-18T20:46:10.316Z",
+   "count": 3,
+   "firstAt": "2026-10-18T20:14:04.270Z",
+   "lastAt": "2026-10-18T20:46:10.316Z",
+   "release": "published",
+   "supersededBy": "v4"
+  },
+  "releases": {
+   "published": 107,
+   "checked": 48,
+   "withheld": 9,
+   "superseded": 5,
+   "passingCurrent": 0,
+   "neverChecked": 73,
+   "checker": "v4",
+   "checkedCurrent": 1,
+   "checkedCurrentTags": [
+    "rc14"
+   ],
+   "neverCheckedCurrent": 106,
+   "source": "play-checks.jsonl and tag-gate.jsonl of each run; published tags from the play repository"
+  },
+  "lastEnding": {
+   "runId": "magnetar-rust-20261020c",
+   "run": "20c",
+   "word": "cancelled",
+   "glyph": "\u2298",
+   "at": "2026-10-20T01:17:18.686Z",
+   "reason": "duplicate press: magnetar-rust-20261020b (pressed 01:14Z by agent-dev-container-9c) is the one successor to 19f/20a; 20c was armed by discovery-lab-6d before it saw 20b",
+   "startedAt": "2026-10-20T01:17:17.835Z",
+   "wallHours": 0.0,
+   "blocker": null,
+   "killCheckpoints": [
+    {
+     "label": "T+6h",
+     "at": "2026-10-20T07:17:17Z",
+     "clause": "By T+6h the workspace's field, hash and parallelism come from vendored audited crates with one GF(2^128) implementation, and the team's own benchmark at 2^20 cycles runs on every release tag",
+     "due": false,
+     "measured": null,
+     "ended": true
+    }
+   ]
+  },
+  "cost": {
+   "apiEquivalentUsd": 1518.92,
+   "provenance": "estimated",
+   "priced": 7,
+   "started": 15,
+   "unpriced": [
+    "magnetar-rust-20261016b",
+    "magnetar-rust-20261016a"
+   ],
+   "unmetered": [
+    "magnetar-rust-20261020c",
+    "magnetar-rust-20261020a",
+    "magnetar-rust-20261019d",
+    "magnetar-rust-20261019c",
+    "magnetar-rust-20261019b",
+    "magnetar-rust-20261019a"
+   ],
+   "neverStarted": [
+    "magnetar-rust-20261018a",
+    "magnetar-rust-20261019e",
+    "magnetar-rust-20261019g"
+   ],
+   "seatNow": {
+    "seat": "zai-coding-plan/glm-5.3",
+    "kind": "subscription"
+   },
+   "billed": "not-reconciled",
+   "runsCounted": 18,
+   "runsTotal": 18
+  },
+  "lastPublished": {
+   "tag": "rc14",
+   "runId": "magnetar-rust-20261018b",
+   "run": "18b",
+   "at": "2026-10-18T18:39:52.742Z",
+   "ageHours": 34.3
+  },
+  "answer": {
+   "solved": {
+    "text": "Not solved: 0 of 15 runs passed the current check. Best release passes 8 of 15 workloads at stage 5 of 6 (rc1, 20b).",
+    "numbers": {
+     "runs": 15,
+     "passed": 0,
+     "best": {
+      "tag": "rc1",
+      "runId": "magnetar-rust-20261020b",
+      "workloads": {
+       "passed": 8,
+       "total": 15
+      },
+      "reached": 5,
+      "of": 6
+     }
+    },
+    "asOf": "2026-10-20T03:52:59.984Z",
+    "source": "play-checks.jsonl and tag-gate.jsonl of each run"
+   },
+   "producing": {
+    "text": "20b live 3.1 h: 9 code commits, newest 04:51Z; no release since 18b rc14, 34.3 h ago.",
+    "numbers": {
+     "runId": "magnetar-rust-20261020b",
+     "liveHours": 3.1,
+     "codeCommits": 9,
+     "codeCommitsLastHour": 5,
+     "newestCodeCommitAt": "2026-10-20T04:51:58Z",
+     "lastPublished": {
+      "tag": "rc14",
+      "runId": "magnetar-rust-20261018b",
+      "run": "18b",
+      "at": "2026-10-18T18:39:52.742Z",
+      "ageHours": 34.3
+     }
+    },
+    "asOf": "2026-10-20T04:58:55Z",
+    "source": "/home/drew/.cache/disco/host/magnetar-rust-20261020b/main refs/heads/runs/magnetar-rust-20261020b/* not 85783c92"
+   },
+   "platform": {
+    "text": "Platform: 33% of 3 settled runs ran clean on 10-20, down from 100% of 1 on 10-13.",
+    "numbers": {
+     "latest": {
+      "day": "2026-10-20",
+      "rate": 0.333,
+      "settled": 3
+     },
+     "first": {
+      "day": "2026-10-13",
+      "rate": 1,
+      "settled": 1
+     },
+     "target": null
+    },
+    "asOf": "2026-10-20T04:28:33.445Z",
+    "source": "reliability.json beside the run catalog (discovery-lab tools/reliability.mjs; /api/discovery/reliability)"
+   },
+   "measurement": {
+    "text": "Check spread on one commit: 0\u20136 of 15 over 10 reruns; 23 gate decisions undecided at the 300 s prover cap.",
+    "numbers": {
+     "widest": {
+      "commit": "d4204274",
+      "tags": [
+       "18b rc18",
+       "19f rc102"
+      ],
+      "checkers": [
+       "v4"
+      ],
+      "reruns": 10,
+      "n": 10,
+      "min": 0,
+      "max": 6,
+      "median": 3.0,
+      "of": 15,
+      "undecided": 10,
+      "causes": [
+       {
+        "workload": "lz4-decode",
+        "n": 4
+       },
+       {
+        "workload": "pointer-chase",
+        "n": 3
+       },
+       {
+        "workload": "fibonacci",
+        "n": 3
+       }
+      ],
+      "capS": 300
+     },
+     "undecided": 23,
+     "capS": 300
+    },
+    "asOf": "2026-10-20T03:52:59.984Z",
+    "source": "play-checks.jsonl and tag-gate.jsonl of each run"
+   }
+  }
+ },
+ "live": {
+  "runId": "magnetar-rust-20261020b",
+  "run": "20b",
+  "startedAt": "2026-10-20T01:50:47.240Z",
+  "elapsedMs": 11288124,
+  "word": "live",
+  "blocker": null,
+  "killCheckpoints": [
+   {
+    "label": "T+6h",
+    "at": "2026-10-20T07:50:47Z",
+    "clause": "By T+6h the workspace's field, hash and parallelism come from vendored audited crates with one GF(2^128) implementation, and the team's own benchmark at 2^20 cycles runs on every release tag",
+    "due": true,
+    "measured": null
+   }
+  ]
+ },
+ "climb": {
+  "y": {
+   "label": "Check progress",
+   "gridlines": [
+    {
+     "at": 0.0,
+     "label": "manifest"
+    },
+    {
+     "at": 0.167,
+     "label": "stage 2"
+    },
+    {
+     "at": 0.333,
+     "label": "stage 3"
+    },
+    {
+     "at": 0.5,
+     "label": "stage 4"
+    },
+    {
+     "at": 0.667,
+     "label": "workloads"
+    },
+    {
+     "at": 0.833,
+     "label": "hidden"
+    },
+    {
+     "at": 1,
+     "label": "SOLVED"
+    }
+   ]
+  }
+ },
+ "barSeries": null,
+ "ledger": {
+  "rows": [
+   {
+    "runId": "magnetar-rust-20261020b",
+    "wallHours": 3.14,
+    "agents": 4,
+    "ending": {
+     "word": "live",
+     "glyph": "\u25b6",
+     "reason": null
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261020c",
+    "wallHours": 0.0,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "duplicate press: magnetar-rust-20261020b (pressed 01:14Z by agent-dev-container-9c) is the one successor to 19f/20a; 20c was armed by discovery-lab-6d before it saw 20b"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261020a",
+    "wallHours": 1.16,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "host-restart: gtr BIOS reboot at ~00:30Z (company-01, Drew); re-pressed from 85783c9 as the successor"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019f",
+    "wallHours": 2.96,
+    "agents": 7,
+    "ending": {
+     "word": "died",
+     "glyph": "\u2715",
+     "reason": "no-result-selected"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019d",
+    "wallHours": 0.84,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "superseded: Drew 2026-10-19 amended the play (battle-tested libraries for every primitive; one play owns everything), discovery-lab#2197; this run produced 0 model output waiting on the free seat"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019c",
+    "wallHours": 0.84,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "superseded: Drew 2026-10-19 amended the play (battle-tested libraries for every primitive; one play owns everything), discovery-lab#2197; this run produced 0 model output waiting on the free seat"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019b",
+    "wallHours": 4.0,
+    "agents": 1,
+    "ending": {
+     "word": "died",
+     "glyph": "\u2715",
+     "reason": "driver-failed"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019a",
+    "wallHours": 0.07,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "wrong base: fork.json seeds pages from d42042742 but repo.forkCommit cut the working branch at 0394d1ee (main), so agents would build 17c code while reading 18b pages; Lab fix first, then re-press"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261018b",
+    "wallHours": 26.13,
+    "agents": 15,
+    "ending": {
+     "word": "stalled",
+     "glyph": "\u23f8",
+     "reason": "cancelled 10-20 04:30Z: stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper woke the root at 2026-10-19T03:10:59.035Z and nothing streamed for 15 min"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261017c",
+    "wallHours": 15.0,
+    "agents": 27,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "stopping to continue in a fresh press with the closed check loop (contract feedback to managers, pre-tag gate, dense score, seat cap 8); 17c was over the Coding Plan cap (12 vs 8) and blocked at the build step since 20:23Z; its code is preserved at tangle-discovery/magnetar-rust main = rc101 0394d1eeb"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261017b",
+    "wallHours": 0.38,
+    "agents": 5,
+    "ending": {
+     "word": "died",
+     "glyph": "\u2715",
+     "reason": "driver-failed"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261017a",
+    "wallHours": 0.55,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "root turn stream dies on long quiet tool calls (Agent stream ended without a terminal event, 5 attempts, madeProgress false each, every retry restarts from zero); stopping until the stream path is fixed"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261016d",
+    "wallHours": 4.21,
+    "agents": 5,
+    "ending": {
+     "word": "died",
+     "glyph": "\u2715",
+     "reason": "all-children-down"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261016b",
+    "wallHours": 51.96,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "superseded by magnetar-rust-20261018b; supervisor gone 10-18"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261016a",
+    "wallHours": 0.35,
+    "agents": 1,
+    "ending": {
+     "word": "cancelled",
+     "glyph": "\u2298",
+     "reason": "root sandbox sidecar restarted at 18:36Z; retained session failed and the box holds no backend; re-pressing on a fresh box"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261018a",
+    "wallHours": null,
+    "agents": null,
+    "ending": {
+     "word": "never started",
+     "glyph": "\u25cb",
+     "reason": "no run record and no spawn journal; Runtime cannot enter it"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019e",
+    "wallHours": null,
+    "agents": null,
+    "ending": {
+     "word": "never started",
+     "glyph": "\u25cb",
+     "reason": "no run record and no spawn journal; Runtime cannot enter it"
+    }
+   },
+   {
+    "runId": "magnetar-rust-20261019g",
+    "wallHours": null,
+    "agents": null,
+    "ending": {
+     "word": "never started",
+     "glyph": "\u25cb",
+     "reason": "no run record and no spawn journal; Runtime cannot enter it"
+    }
+   }
+  ]
+ },
+ "releases": [],
+ "runs": [
+  {
+   "id": "magnetar-rust-20261020b",
+   "group": "magnetar-rust-20261020b",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261020b"
+   },
+   "format": "runtime",
+   "state": "running",
+   "reason": null,
+   "startedAt": "2026-10-20T01:50:47.240Z",
+   "settledAt": null,
+   "durationMs": 11265568,
+   "nodes": 4,
+   "depth": 1,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3",
+    "zai-coding-plan/glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": {
+     "input": 983507,
+     "output": 18305,
+     "cacheRead": 5269632,
+     "cacheWrite": 0
+    },
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261020b",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261020b",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 4 of 4 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 8.9656958,
+    "apiEquivalentProvenance": "estimated",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "0e322a1d0853b4ed5c572028c13463524d2068face13f811d4e3265e5adb752b",
+    "builtAt": "2026-10-20T04:58:53.936Z",
+    "reason": null,
+    "capture": {
+     "complete": 1,
+     "lossy": 0,
+     "absent": 3
+    }
+   },
+   "inputDigest": "504d547a00a318c7a707fc63701675d77e355493cf6d400af0a42e50fff79bc2",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261020c",
+   "group": "magnetar-rust-20261020c",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261020c"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-20T01:17:17.835Z",
+   "settledAt": "2026-10-20T01:17:18.686Z",
+   "durationMs": 851,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261020c",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261020c",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unmetered",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "e61974775ee7a67e56dd5df534bd4fc35bb93767c798dd7069b5d774a09e8419",
+    "builtAt": "2026-10-20T01:58:04.064Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 0,
+     "absent": 1
+    }
+   },
+   "inputDigest": "b6f72512275b113f8c29cfc3d98efd1b7a56043e870453d5ac6a104f848ead0f",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261020a",
+   "group": "magnetar-rust-20261020a",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261020a"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-20T00:04:33.547Z",
+   "settledAt": "2026-10-20T01:14:23.217Z",
+   "durationMs": 4189670,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261020a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261020a",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unmetered",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "8cfe1b57f253be99e354ade73f2f0fdf0f5c183f90e8d74d2084f396aa111004",
+    "builtAt": "2026-10-20T04:45:24.159Z",
+    "reason": null,
+    "capture": {
+     "complete": 1,
+     "lossy": 0,
+     "absent": 0
+    }
+   },
+   "inputDigest": "8b5ad3a2a5bdc430da1ce7c730f0abf7286aff4ae3c52f1e87435acdfbc2b847",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019f",
+   "group": "magnetar-rust-20261019f",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019f"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "no-result-selected",
+   "startedAt": "2026-10-19T20:13:03.317Z",
+   "settledAt": "2026-10-19T23:10:41.078Z",
+   "durationMs": 10657761,
+   "nodes": 7,
+   "depth": 1,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "zai-coding-plan/glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": {
+     "input": 3279181,
+     "output": 250107,
+     "cacheRead": 103358144,
+     "cacheWrite": 0
+    },
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019f",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019f",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 7 of 7 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 105.17278500000002,
+    "apiEquivalentProvenance": "estimated",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "5b8e979c9c260289fc9093b7a4a6ec282b61ea7f6ed48760c23bd691356b01e3",
+    "builtAt": "2026-10-20T03:31:22.383Z",
+    "reason": null,
+    "capture": {
+     "complete": 7,
+     "lossy": 0,
+     "absent": 0
+    }
+   },
+   "inputDigest": "ed33773f2baec185057a09a351a89a4b1b3e8e4027c4ba7ec0678d54d237a7bc",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019d",
+   "group": "magnetar-rust-20261019d",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019d"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-19T17:12:48.200Z",
+   "settledAt": "2026-10-19T18:03:26.779Z",
+   "durationMs": 3038579,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3-flash-free"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019d",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019d",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unmetered",
+    "billing": {
+     "placement": "host",
+     "seat": "opencode/glm-5.3-flash-free",
+     "billedUsd": 0.0,
+     "basis": "host placement on the opencode/glm-5.3-flash-free seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "8a5402e28ba01dd45e30620f521338031f92d3747cf70491299ebbdb1c4adb59",
+    "builtAt": "2026-10-20T02:17:20.466Z",
+    "reason": null,
+    "capture": {
+     "complete": 1,
+     "lossy": 0,
+     "absent": 0
+    }
+   },
+   "inputDigest": "5da3318934144cf4092111c14995930437cd83ca23beed83019d2eb8df341e53",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019c",
+   "group": "magnetar-rust-20261019c",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019c"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-19T17:09:56.635Z",
+   "settledAt": "2026-10-19T18:00:08.338Z",
+   "durationMs": 3011703,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3-flash-free"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019c",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019c",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unmetered",
+    "billing": {
+     "placement": "host",
+     "seat": "opencode/glm-5.3-flash-free",
+     "billedUsd": 0.0,
+     "basis": "host placement on the opencode/glm-5.3-flash-free seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "3d961f8057f17a495c0b164c7f9220837ec1a58997ac02d1bd8106fac6395e9a",
+    "builtAt": "2026-10-20T03:31:24.566Z",
+    "reason": null,
+    "capture": {
+     "complete": 1,
+     "lossy": 0,
+     "absent": 0
+    }
+   },
+   "inputDigest": "0fe74bee79e3e6866458dbe1f334b4705186149b7590c38671f8e3d60259357f",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019b",
+   "group": "magnetar-rust-20261019b",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019b"
+   },
+   "format": "runtime",
+   "state": "driver-failed",
+   "reason": "driver-failed",
+   "startedAt": "2026-10-19T06:28:41.779Z",
+   "settledAt": "2026-10-19T10:28:54.919Z",
+   "durationMs": 14413140,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3-flash-free"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019b",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019b",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unmetered",
+    "billing": {
+     "placement": "host",
+     "seat": "opencode/glm-5.3-flash-free",
+     "billedUsd": 0.0,
+     "basis": "host placement on the opencode/glm-5.3-flash-free seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "2e1eee7a6cbf57db42f5a4f068e9b438ada0eb9ae7a3fc79811ebb508b2e2a94",
+    "builtAt": "2026-10-20T02:17:23.348Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 0,
+     "absent": 1
+    }
+   },
+   "inputDigest": "b2bf736e48a3fd8033ac213974d2bac8d1d012a05a11491bdf0d14927d7ccdfb",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019a",
+   "group": "magnetar-rust-20261019a",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019a"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-19T06:09:50.040Z",
+   "settledAt": "2026-10-19T06:13:56.429Z",
+   "durationMs": 246389,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3-flash-free"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019a",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unmetered",
+    "billing": {
+     "placement": "host",
+     "seat": "opencode/glm-5.3-flash-free",
+     "billedUsd": 0.0,
+     "basis": "host placement on the opencode/glm-5.3-flash-free seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "00dd3cf5fff319907f941fbf1904a21c8ada5823f1764d40e88e5b93e4f51a1a",
+    "builtAt": "2026-10-20T03:31:46.358Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 0,
+     "absent": 1
+    }
+   },
+   "inputDigest": "042dbcbcdabaacc7f73829162ee2fa3c46d0eb29c2e8fa05d82434927dcdff10",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261018b",
+   "group": "magnetar-rust-20261018b",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261018b"
+   },
+   "format": "runtime",
+   "state": "stalled",
+   "reason": "stalled: no agent is live and the root has streamed nothing since 2026-10-19T02:42:12Z; no agent has streamed an event since 2026-10-19T03:08:31Z; the keeper w\u2026",
+   "startedAt": "2026-10-18T01:19:04.494Z",
+   "settledAt": "2026-10-19T03:27:08.452Z",
+   "durationMs": 94083958,
+   "nodes": 15,
+   "depth": 2,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "zai-coding-plan/glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": {
+     "input": 62499149,
+     "output": 1354970,
+     "cacheRead": 963086784,
+     "cacheWrite": 0
+    },
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261018b",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261018b",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 15 of 15 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 891.0586218,
+    "apiEquivalentProvenance": "estimated",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "538323ae1758d7e857a139424e38f505205324d0500e4a93a1edcd3e09a2252b",
+    "builtAt": "2026-10-20T03:44:44.568Z",
+    "reason": null,
+    "capture": {
+     "complete": 15,
+     "lossy": 0,
+     "absent": 0
+    }
+   },
+   "inputDigest": "011a6fd932786238e91f2f6886591b20d302ae3355e97b04fe8afce814d8d234",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261017c",
+   "group": "magnetar-rust-20261017c",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261017c"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-17T06:59:09.952Z",
+   "settledAt": "2026-10-17T21:58:52.140Z",
+   "durationMs": 53982188,
+   "nodes": 27,
+   "depth": 2,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3",
+    "zai-coding-plan/glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": {
+     "input": 61833396,
+     "output": 2500291,
+     "cacheRead": 1402040640,
+     "cacheWrite": 0
+    },
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261017c",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261017c",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 27 of 27 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 501.678811,
+    "apiEquivalentProvenance": "estimated",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "b29cbf1f25e8ceacf3918af93de5ce3b3a2c1a4e9e22e3ae4ffe7da1e98c6e8b",
+    "builtAt": "2026-10-19T10:34:58.784Z",
+    "reason": null,
+    "capture": {
+     "complete": 25,
+     "lossy": 0,
+     "absent": 2
+    }
+   },
+   "inputDigest": "9feb9570ef439ee3be383805cb55f41eb8d1f476bbf98f29be9d1d37a4dff93f",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261017b",
+   "group": "magnetar-rust-20261017b",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261017b"
+   },
+   "format": "runtime",
+   "state": "driver-failed",
+   "reason": "driver-failed",
+   "startedAt": "2026-10-17T06:29:17.897Z",
+   "settledAt": "2026-10-17T06:52:09.717Z",
+   "durationMs": 1371820,
+   "nodes": 5,
+   "depth": 1,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "zai-coding-plan/glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": {
+     "input": 317897,
+     "output": 20603,
+     "cacheRead": 6767296,
+     "cacheWrite": 0
+    },
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261017b",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261017b",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 5 of 5 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 8.5503966,
+    "apiEquivalentProvenance": "estimated",
+    "billing": {
+     "placement": "host",
+     "seat": "zai-coding-plan/glm-5.3",
+     "billedUsd": 0.0,
+     "basis": "host placement on the zai-coding-plan/glm-5.3 seat: no run key and no sandbox"
+    }
+   },
+   "record": {
+    "status": "ready",
+    "digest": "050a741dd6706ff804e950b06210934b4617eff82afebfb100c7d741d366ce38",
+    "builtAt": "2026-10-19T10:27:39.666Z",
+    "reason": null,
+    "capture": {
+     "complete": 5,
+     "lossy": 0,
+     "absent": 0
+    }
+   },
+   "inputDigest": "2907eccadb0b4e1a75bdbdd33606d1905a47a8f52401b15e03d630b740565a5d",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261017a",
+   "group": "magnetar-rust-20261017a",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261017a"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-17T00:32:17.767Z",
+   "settledAt": "2026-10-17T01:05:10.957Z",
+   "durationMs": 1973190,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261017a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "run predates the fleet key; sandbox compute was not on a key this host reads"
+     },
+     {
+      "runId": "magnetar-rust-20261017a",
+      "nodeId": null,
+      "code": "router-unknown",
+      "detail": "no complete Router reading for this run"
+     },
+     {
+      "runId": "magnetar-rust-20261017a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "no ledger rows matched this run"
+     },
+     {
+      "runId": "magnetar-rust-20261017a",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 1.48616476,
+    "apiEquivalentProvenance": "estimated"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "8ca1225fa153fb0c65525dcc580742eae479002490f794aeac0e49ec81476a93",
+    "builtAt": "2026-10-17T08:06:49.057Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 1,
+     "absent": 0
+    }
+   },
+   "inputDigest": "098ae7e38709e05ff8969a9f8c64e0cf0e6a620844d843f382aba19100abb3c4",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261016d",
+   "group": "magnetar-rust-20261016d",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261016d"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "all-children-down",
+   "startedAt": "2026-10-16T20:03:02.952Z",
+   "settledAt": "2026-10-17T00:15:31.751Z",
+   "durationMs": 15148799,
+   "nodes": 5,
+   "depth": 1,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261016d",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "run predates the fleet key; sandbox compute was not on a key this host reads"
+     },
+     {
+      "runId": "magnetar-rust-20261016d",
+      "nodeId": null,
+      "code": "router-unknown",
+      "detail": "no complete Router reading for this run"
+     },
+     {
+      "runId": "magnetar-rust-20261016d",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "no ledger rows matched this run"
+     },
+     {
+      "runId": "magnetar-rust-20261016d",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 5 of 5 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": 2.00879604,
+    "apiEquivalentProvenance": "estimated"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "899c9ef5a066a41e046935595779e487404c152b909673498aa36dcf86c2afca",
+    "builtAt": "2026-10-18T02:58:34.365Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 4,
+     "absent": 1
+    }
+   },
+   "inputDigest": "7a074593dc494ef640a704dda07fba00193d34f42573ad73d20ef67b7f5e97dc",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261016b",
+   "group": "magnetar-rust-20261016b",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261016b"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "budget-exhausted",
+   "startedAt": "2026-10-16T18:49:17.464Z",
+   "settledAt": "2026-10-18T22:46:41.605Z",
+   "durationMs": 187044141,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3-flash"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": {
+     "input": 29346,
+     "output": 506,
+     "cacheRead": 0,
+     "cacheWrite": 0
+    },
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [
+     "fleet-ledger:key_lgOfQE9OYIMsGGRP"
+    ],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261016b",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "no fleet-key rows for this run's sandboxes in 54 hour(s)"
+     },
+     {
+      "runId": "magnetar-rust-20261016b",
+      "nodeId": null,
+      "code": "router-unknown",
+      "detail": "Router key no longer resolves"
+     },
+     {
+      "runId": "magnetar-rust-20261016b",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "no ledger rows matched this run"
+     },
+     {
+      "runId": "magnetar-rust-20261016b",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unknown"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "2e1749f41e049a22ae449cd066fd5429b264d1131db6495bab010c02ca0e8f90",
+    "builtAt": "2026-10-18T22:50:04.258Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 1,
+     "absent": 0
+    }
+   },
+   "inputDigest": "776462d9426c97bf46dd66ea17c9d5caa3fd303ae147fcb1481eeb6adfa31ab5",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261016a",
+   "group": "magnetar-rust-20261016a",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261016a"
+   },
+   "format": "runtime",
+   "state": "no-winner",
+   "reason": "cancelled",
+   "startedAt": "2026-10-16T18:25:34.110Z",
+   "settledAt": "2026-10-16T18:46:17.520Z",
+   "durationMs": 1243410,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [
+    "opencode"
+   ],
+   "models": [
+    "glm-5.3-flash"
+   ],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261016a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "run predates the fleet key; sandbox compute was not on a key this host reads"
+     },
+     {
+      "runId": "magnetar-rust-20261016a",
+      "nodeId": null,
+      "code": "router-unknown",
+      "detail": "no complete Router reading for this run"
+     },
+     {
+      "runId": "magnetar-rust-20261016a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "no ledger rows matched this run"
+     },
+     {
+      "runId": "magnetar-rust-20261016a",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "unknown"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "b940395f69dcba3ddb8a14348d861226f1dc716d27258f9ab4ddb8a4d528e168",
+    "builtAt": "2026-10-17T08:08:17.973Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 1,
+     "absent": 0
+    }
+   },
+   "inputDigest": "0da41d43b599076a572d8af2cec91e0fe32eea3f2f284ec9ea12db2771ab5fe3",
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261018a",
+   "group": "magnetar-rust-20261018a",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261018a"
+   },
+   "format": "other",
+   "state": "legacy",
+   "reason": "no run record and no spawn journal; Runtime cannot enter it",
+   "startedAt": null,
+   "settledAt": null,
+   "durationMs": null,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [],
+   "models": [],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261018a",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261018a",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "not recorded"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "f1746e83f9da1af31ace0c69db8dfcfdfd8257239036588b36d16268b46d8bf4",
+    "builtAt": "2026-10-18T01:07:03.436Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 0,
+     "absent": 1
+    }
+   },
+   "inputDigest": null,
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019e",
+   "group": "magnetar-rust-20261019e",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019e"
+   },
+   "format": "other",
+   "state": "legacy",
+   "reason": "no run record and no spawn journal; Runtime cannot enter it",
+   "startedAt": null,
+   "settledAt": null,
+   "durationMs": null,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [],
+   "models": [],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019e",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019e",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "not recorded"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "9e1a9784ec3b72bd170b7036d245e202b833d5e6f4fb8303cf27e53a67101566",
+    "builtAt": "2026-10-19T19:58:12.789Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 0,
+     "absent": 1
+    }
+   },
+   "inputDigest": null,
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  },
+  {
+   "id": "magnetar-rust-20261019g",
+   "group": "magnetar-rust-20261019g",
+   "kind": "run",
+   "play": "magnetar-rust",
+   "location": {
+    "kind": "dir",
+    "path": "/mnt/traces/discovery-runs/magnetar-rust-20261019g"
+   },
+   "format": "other",
+   "state": "legacy",
+   "reason": "no run record and no spawn journal; Runtime cannot enter it",
+   "startedAt": null,
+   "settledAt": null,
+   "durationMs": null,
+   "nodes": 1,
+   "depth": 0,
+   "harnesses": [],
+   "models": [],
+   "keys": [],
+   "spend": {
+    "paidUsd": null,
+    "subscriptionUsd": null,
+    "apiUsd": null,
+    "sandboxUsd": null,
+    "routerUsd": null,
+    "costBasisUsd": null,
+    "listUsd": null,
+    "tokens": null,
+    "subscriptionKnown": false,
+    "sandboxHours": null,
+    "seatWeeks": null,
+    "seatWeeksKnown": false,
+    "paidKnown": false,
+    "sources": [],
+    "gaps": [
+     {
+      "runId": "magnetar-rust-20261019g",
+      "nodeId": null,
+      "code": "spend-unknown",
+      "detail": "spend not read yet"
+     },
+     {
+      "runId": "magnetar-rust-20261019g",
+      "nodeId": null,
+      "code": "list-partial",
+      "detail": "usage unknown for 1 of 1 agents"
+     }
+    ],
+    "listKnown": false,
+    "apiEquivalentUsd": null,
+    "apiEquivalentProvenance": "not recorded"
+   },
+   "record": {
+    "status": "ready",
+    "digest": "6acfb0343f6c02e823c86e3ed9a567d1af70cb84a5fe263bd600b976263a1de2",
+    "builtAt": "2026-10-19T23:37:50.999Z",
+    "reason": null,
+    "capture": {
+     "complete": 0,
+     "lossy": 0,
+     "absent": 1
+    }
+   },
+   "inputDigest": null,
+   "predecessor": null,
+   "supersedes": null,
+   "versions": null
+  }
+ ],
+ "lineage": {
+  "nodes": [],
+  "edges": []
+ },
+ "spend": {
+  "paidUsd": null,
+  "subscriptionUsd": null,
+  "apiUsd": null,
+  "sandboxUsd": null,
+  "routerUsd": null,
+  "costBasisUsd": null,
+  "listUsd": null,
+  "tokens": {
+   "input": 128942476,
+   "output": 4144782,
+   "cacheRead": 2480522496,
+   "cacheWrite": 0
+  },
+  "subscriptionKnown": false,
+  "sandboxHours": null,
+  "seatWeeks": null,
+  "seatWeeksKnown": false,
+  "paidKnown": false,
+  "sources": [
+   "fleet-ledger:key_lgOfQE9OYIMsGGRP"
+  ],
+  "gaps": [
+   {
+    "runId": "magnetar-rust-20261020b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261020b",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 4 of 4 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261020c",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261020c",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261020a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261020a",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019f",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019f",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 7 of 7 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019d",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019d",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019c",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019c",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019b",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019a",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261018b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261018b",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 15 of 15 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261017c",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261017c",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 27 of 27 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261017b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261017b",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 5 of 5 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261017a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "run predates the fleet key; sandbox compute was not on a key this host reads"
+   },
+   {
+    "runId": "magnetar-rust-20261017a",
+    "nodeId": null,
+    "code": "router-unknown",
+    "detail": "no complete Router reading for this run"
+   },
+   {
+    "runId": "magnetar-rust-20261017a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "no ledger rows matched this run"
+   },
+   {
+    "runId": "magnetar-rust-20261017a",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261016d",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "run predates the fleet key; sandbox compute was not on a key this host reads"
+   },
+   {
+    "runId": "magnetar-rust-20261016d",
+    "nodeId": null,
+    "code": "router-unknown",
+    "detail": "no complete Router reading for this run"
+   },
+   {
+    "runId": "magnetar-rust-20261016d",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "no ledger rows matched this run"
+   },
+   {
+    "runId": "magnetar-rust-20261016d",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 5 of 5 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261016b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "no fleet-key rows for this run's sandboxes in 54 hour(s)"
+   },
+   {
+    "runId": "magnetar-rust-20261016b",
+    "nodeId": null,
+    "code": "router-unknown",
+    "detail": "Router key no longer resolves"
+   },
+   {
+    "runId": "magnetar-rust-20261016b",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "no ledger rows matched this run"
+   },
+   {
+    "runId": "magnetar-rust-20261016b",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261016a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "run predates the fleet key; sandbox compute was not on a key this host reads"
+   },
+   {
+    "runId": "magnetar-rust-20261016a",
+    "nodeId": null,
+    "code": "router-unknown",
+    "detail": "no complete Router reading for this run"
+   },
+   {
+    "runId": "magnetar-rust-20261016a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "no ledger rows matched this run"
+   },
+   {
+    "runId": "magnetar-rust-20261016a",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261018a",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261018a",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019e",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019e",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   },
+   {
+    "runId": "magnetar-rust-20261019g",
+    "nodeId": null,
+    "code": "spend-unknown",
+    "detail": "spend not read yet"
+   },
+   {
+    "runId": "magnetar-rust-20261019g",
+    "nodeId": null,
+    "code": "list-partial",
+    "detail": "usage unknown for 1 of 1 agents"
+   }
+  ],
+  "tokensKnown": false,
+  "tokenRuns": {
+   "known": 6,
+   "total": 18
+  },
+  "apiEquivalentUsd": 1518.9213,
+  "apiEquivalentRuns": {
+   "priced": 7,
+   "total": 18
+  },
+  "listKnown": false
+ },
+ "assessments": [],
+ "assessmentsIncluded": false,
+ "gaps": [],
+ "best": null,
+ "findings": [],
+ "runsRead": 18,
+ "runsTotal": 18
+}

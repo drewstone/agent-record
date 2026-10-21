@@ -70,7 +70,7 @@ export function OutputsView({ doc, grading, selected, onSelect, onClose }: { doc
       <div className="drawer-head">
         <div className="outputs-title">
           <h2>Outputs</h2>
-          {output?.declared && <span className={`state-pill ${output.status === 'delivered' ? 'state-ok' : output.status === 'not-delivered' ? 'state-fail' : 'state-unknown'}`}>{deliveryLabel(output.status)}</span>}
+          {output?.declared && <span className="state-pill tone-neutral">{deliveryLabel(output.status)}</span>}
           <span className="faint">
             {deliverables.length ? `${present} of ${deliverables.length} deliverables present · ` : ''}
             {files.length} {files.length === 1 ? 'file' : 'files'}
@@ -138,7 +138,7 @@ function GroupView({ group, root, onSelect, grading, grades }: { group: OutputGr
       <header className="output-group-head">
         <h3>{deliverable ? deliverable.id : 'Other files under the declared folder'}</h3>
         {deliverable && (
-          <span className={`state-pill ${present === true ? 'state-ok' : present === false ? 'state-fail' : 'state-unknown'}`}>
+          <span className="state-pill tone-neutral">
             {present === true ? 'present' : present === false ? 'missing' : 'not checked'}
           </span>
         )}

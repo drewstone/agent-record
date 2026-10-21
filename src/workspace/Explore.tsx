@@ -1,7 +1,7 @@
 import { type DotGroup, ENDING_COLORS, ENDING_ORDER, type RateRow, rankedRates, unitDotLayout } from '@tangle-network/charts'
 import { DOT_MAP_CATEGORIES, DotMap, type DotMapLabel, type DotMapRect, FigureView } from '@tangle-network/charts/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useDocument } from './data.js'
+import { dataStatus, statusOf, useDocument } from './data.js'
 
 /**
  * The fleet explorer (J5, J3): every Discovery run as one dot, packed in a rectangle per play, or every agent the Lab
@@ -64,12 +64,18 @@ const LENS_WORD: Record<string, string> = {
  * stalled amber). The host's older word `ended` is `not solved`. The fleet line and the map count the same column.
  */
 const endingWord = (value: Cell) => (String(value) === 'ended' ? 'not solved' : String(value ?? 'unknown'))
+/**
+ * A crash in its first 24 h with no newer run of its play started: the one ending a person must act on (statusOf), and the
+ * only red on the map. Every older crash keeps the charts' neutral `died`. This is the category's label only, read at a
+ * fixed clock; which points take it is decided per render against ExplorePage's `now`.
+ */
+const FRESH_CRASH = statusOf({ axis: 'run', state: 'died', endedAt: new Date(0).toISOString(), now: 0, newerStarted: false })
 const FIXED: Record<string, Record<string, string>> = {
-  ending: { ...ENDING_COLORS },
+  ending: { [FRESH_CRASH.word]: 'var(--ar-c-fail)', ...ENDING_COLORS },
 }
 /** The play groups a fleet layout draws on their own; the rest fold into one rectangle. */
 const GROUPS_SHOWN = 40
-const ORDER_FIRST: Record<string, string[]> = { ending: [...ENDING_ORDER] }
+const ORDER_FIRST: Record<string, string[]> = { ending: [FRESH_CRASH.word, ...ENDING_ORDER] }
 
 const col = (table: Table, name: string) => table.columns.indexOf(name)
 const fmtInt = (n: number) => n.toLocaleString('en-US')
@@ -118,6 +124,12 @@ export function ExplorePage({ api }: { api: string }) {
   const [layout, setLayout] = useState<Layout>(() => (new URLSearchParams(window.location.search).get('layout') === 'agents' ? 'agents' : 'runs'))
   const [lens, setLens] = useState<Lens>(() => (layout === 'agents' ? 'cluster' : 'ending'))
   const [named, setNamed] = useState<string[] | null>(null)
+  // The 24 h fresh-crash cutoff moves with the clock, so a page left open recolours a crash once it is past.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
   const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [only, setOnly] = useState<string | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
@@ -189,11 +201,21 @@ export function ExplorePage({ api }: { api: string }) {
       })
     }
     if (lens === 'ending') {
-      const k = col(runs, 'ending')
-      return runOfPoint.map((r) => endingWord(runs.rows[r]?.[k] ?? null))
+      const [k, si, wi, pi] = [col(runs, 'ending'), col(runs, 'started'), col(runs, 'wallHours'), col(runs, 'play')]
+      // The newest start per play: a crash with a newer run after it is past, whatever its age.
+      const newest = new Map<string, number>()
+      for (const row of runs.rows) if (typeof row[si] === 'number') newest.set(String(row[pi]), Math.max(newest.get(String(row[pi])) ?? -Infinity, row[si] as number))
+      const endingOf = (row: Cell[] | undefined) => {
+        const word = endingWord(row?.[k] ?? null)
+        if (word !== 'died' || !row || typeof row[si] !== 'number' || typeof row[wi] !== 'number') return word
+        const started = row[si] as number
+        const endedAt = new Date((started + (row[wi] as number) * 3600) * 1000).toISOString()
+        return statusOf({ axis: 'run', state: 'died', endedAt, newerStarted: (newest.get(String(row[pi])) ?? started) > started, now }).tone === 'fail' ? FRESH_CRASH.word : word
+      }
+      return runOfPoint.map((r) => endingOf(runs.rows[r]))
     }
     return field(lens)
-  }, [runs, agents, lens, runOfPoint, clusterLabel, columnLabels, firstClassifier])
+  }, [runs, agents, lens, runOfPoint, clusterLabel, columnLabels, firstClassifier, now])
 
   const colored = useMemo(() => lensOf(values, named, lens), [values, named, lens])
 
@@ -358,10 +380,10 @@ export function ExplorePage({ api }: { api: string }) {
             {colored.categories.slice(0, 14).map((item) => {
               const slot = colored.slot.get(item.value)
               return (
-                <li key={item.value}>
+                <li key={item.value} data-status={lens === 'ending' && item.value === FRESH_CRASH.word ? dataStatus(FRESH_CRASH) : undefined}>
                   <button type="button" onClick={() => toggleNamed(item.value)} aria-pressed={colored.fixed ? only === item.value : slot !== undefined} title={colored.fixed ? (only === item.value ? 'Shown alone; click to show every category' : 'Click to show only these') : slot !== undefined ? 'Named in colour; click to grey it' : 'Click to name it in colour'}>
                     <i style={{ background: colored.palette[slot ?? colored.palette.length - 1] }} data-named={slot !== undefined ? 'yes' : 'no'} />
-                    <span className="explore-legend-label">{item.value}</span>
+                    <span className="explore-legend-label">{lens === 'ending' && item.value === FRESH_CRASH.word ? `${FRESH_CRASH.shape} ` : ''}{item.value}</span>
                     <span className="num faint">{fmtInt(item.count)}</span>
                   </button>
                 </li>

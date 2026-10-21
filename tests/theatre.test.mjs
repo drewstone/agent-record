@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { apiCost, axisTicks, billedCost, day, dollars, dotLabel, headlineBars, panelModel, playNames } from '../src/workspace/theatre.ts'
+import { apiCost, axisTicks, billedCost, day, dollars, dotLabel, headlineBars, panelModel, playNames } from '../src/workspace/theatre-model.ts'
 
 const act = (n, over = {}) => ({
   act: n, decided: `2026-10-0${n}T10:00:00.000Z`, proposer: 'operator', change: `change ${n}`, plays: [], onBar: [],

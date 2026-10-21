@@ -1,4 +1,8 @@
 import type { VersionGraphDocument, VersionTag } from '../workspace-model.js'
+import type { StatusTone } from './data.js'
+
+/** The registered rule's pick is bookkeeping, not a pass: no check ran on it for this mark. */
+export const PICKED = '★ picked by rule · not checked'
 
 /**
  * One drawing for every versioned artifact: a run's deliverables and the profiles its agents wrote (`deliverables.git`),
@@ -6,7 +10,8 @@ import type { VersionGraphDocument, VersionTag } from '../workspace-model.js'
  * into this model; `VersionGraph` draws it as lanes of commits, newest at the top, with merges and tags.
  */
 /** `muted` chips sit beside the title; any other tone gets the second line. */
-export type GraphTone = 'ok' | 'fail' | 'warn' | 'run' | 'accent' | 'info' | 'muted'
+/** A status tone from `statusOf`, or a non-status chip: `accent` for a series, `info` and `muted` for plain facts. */
+export type GraphTone = StatusTone | 'accent' | 'info' | 'muted'
 
 export interface GraphChip {
   readonly label: string
@@ -141,9 +146,9 @@ export function runGraphModel(doc: VersionGraphDocument, when: (iso: string) => 
       chips: [
         ...(commit.kind === 'write' ? [] : [{ label: KIND_LABEL[commit.kind] ?? commit.kind, tone: 'muted' as const }]),
         ...(tagsOf.get(commit.id) ?? []).flatMap((tag): GraphChip[] => [
-          { label: tag.best ? `${tag.name} ★ deliverable` : tag.name, tone: tag.best ? 'ok' : 'accent', title: scoreLine(tag) },
+          { label: tag.best ? `${tag.name} ${PICKED}` : tag.name, tone: tag.best ? 'neutral' : 'accent', title: scoreLine(tag) },
           { label: scoreLine(tag), tone: 'info' },
-          ...tag.flags.map((flag) => ({ label: flagLabel(flag), tone: flag.kind === 'regression' ? ('warn' as const) : ('fail' as const) })),
+          ...tag.flags.map((flag) => ({ label: flagLabel(flag), tone: 'neutral' as const })),
         ]),
       ],
     })),

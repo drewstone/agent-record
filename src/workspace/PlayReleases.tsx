@@ -3,17 +3,18 @@ import { VirtualList } from '../viewer/VirtualList.js'
 import type { PlayDocument } from '../workspace-model.js'
 import { checkerIndex, metricValue, type PlayHead, type PlayRelease, RELEASE_STATE, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
 import { checkerColor } from '@tangle-network/charts'
+import { dataStatus, type Status, statusOf } from './data.js'
 
 type Play = PlayDocument & PlayHead
 
 const GROUPS = [
   ['published', 'Published'],
-  ['withheld', 'Withheld by the gate'],
+  ['withheld', 'Not published'],
   ['superseded', 'Superseded'],
 ] as const
 const tagNumber = (tag: string) => Number(/(\d+)$/.exec(tag)?.[1] ?? 0)
-const tone = (verdict: string | null | undefined) => (verdict === 'solved' || verdict === 'contract-held' ? 'ok' : verdict === 'not-solved' || verdict === 'contract-failed' ? 'fail' : verdict ? 'unknown' : 'none')
-const glyph = (verdict: string | null | undefined) => (tone(verdict) === 'ok' ? '✓' : tone(verdict) === 'fail' ? '✕' : verdict ? '?' : '·')
+/** A verdict cell's status: pass only under the current check; a miss, an undecided row or a retired check is neutral. */
+const cellStatus = (verdict: string | null | undefined, current: boolean): Status | null => (verdict ? statusOf({ axis: 'result', verdict, current }) : null)
 
 type Row = { kind: 'head'; id: string; label: string; count: number } | { kind: 'release'; id: string; release: PlayRelease }
 
@@ -104,10 +105,10 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
       <span className="mono faint" title={[release.commit, release.taggedAt ? `tagged ${utc(release.taggedAt)}` : null, RELEASE_STATE[release.state ?? 'published']].filter(Boolean).join('\n')}>
         {release.commit?.slice(0, 7) ?? '—'}
       </span>
-      <span className={`verdict-cell tone-${tone(release.gate?.verdict)}`} title={release.gate?.line ?? undefined}>
+      <span className={`verdict-cell${release.gate ? '' : ' tone-neutral'}`} data-status={release.gate ? dataStatus(cellStatus(release.gate.verdict, true)!) : undefined} title={release.gate?.line ?? undefined}>
         {release.gate ? (
           <>
-            {glyph(release.gate.verdict)} {verdictWord(release.gate.verdict)}
+            {cellStatus(release.gate.verdict, true)!.shape} {verdictWord(release.gate.verdict)}
             {release.gate.count && release.gate.count > 1 ? ` ×${release.gate.count}` : ''}
           </>
         ) : (
@@ -118,10 +119,10 @@ function ReleaseRow({ play, release, metrics }: { play: Play; release: PlayRelea
         checkers.map((checker) => {
           const check = checks[checker.label] ?? checks[checker.sha256]
           return (
-            <span key={checker.sha256} className={`verdict-cell tone-${tone(check?.verdict)}`} title={check ? `${checker.label}: ${verdictWord(check.verdict)}${check.count && check.count > 1 ? ` ×${check.count}` : ''}` : `${checker.label}: not checked`}>
+            <span key={checker.sha256} className={`verdict-cell${check ? '' : ' tone-neutral'}`} data-status={check ? dataStatus(cellStatus(check.verdict, checker.current === true)!) : undefined} title={check ? `${checker.label}: ${verdictWord(check.verdict)}${check.count && check.count > 1 ? ` ×${check.count}` : ''}` : `${checker.label}: not checked`}>
               {check ? (
                 <>
-                  {glyph(check.verdict)}
+                  {cellStatus(check.verdict, checker.current === true)!.shape}
                   {check.count && check.count > 1 ? ` ×${check.count}` : ''}
                 </>
               ) : (
