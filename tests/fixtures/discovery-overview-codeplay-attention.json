@@ -1,0 +1,75 @@
+{
+ "attention": [
+  {
+   "detail": "Disputed line: \"Scaling: vs:outer at T=2^16 (merkle) drops >= 3x (84.9s -> <28s) AND the per-doubling ratio at 2^14->2^16 falls below 2.5x\"",
+   "dispute": "c309bb08b9af",
+   "href": "/run/codeplay-20261020b",
+   "next": "Rule: disco steer codeplay-20261020b \"<reason>\" --ruling c309bb08b9af --verdict upheld|rejected [--check FILE]",
+   "owner": "Drew",
+   "referees": [
+    {
+     "family": "claude",
+     "seat": "anthropic/claude-opus-5-5",
+     "verdict": "rejected"
+    },
+    {
+     "family": "codex",
+     "seat": "openai/gpt-6.1-sol",
+     "verdict": "undecided"
+    }
+   ],
+   "runId": "codeplay-20261020b",
+   "text": "codeplay 20b: check dispute c309bb08b9af is undecided, its referees disagree (anthropic/claude-opus-5-5 (claude) rejected; openai/gpt-6.1-sol (codex) undecided)",
+   "tone": "warn"
+  },
+  {
+   "href": "#seats",
+   "next": "Check seat resets before scheduling",
+   "owner": "Discovery operator",
+   "text": "8 of 16 subscription seats at their weekly limit \u00b7 first reset 10-21 20:00Z",
+   "tone": "warn"
+  },
+  {
+   "detail": "rc3 passed its check 10-21 00:18 UTC (play-checks.jsonl)",
+   "held": [
+    "workloads",
+    "hidden"
+   ],
+   "href": "/run/codeplay-20261020c",
+   "next": "Add a good or reach fixture for workloads, hidden, then run disco calibrate codeplay",
+   "owner": "Drew",
+   "runId": "codeplay-20261020c",
+   "text": "codeplay 20c: check passed; held: stages workloads, hidden have no known-good fixture",
+   "tone": "neutral"
+  },
+  {
+   "detail": "Disputed line: \"Scaling: vs:outer at T=2^16 (merkle) drops >= 3x (84.9s -> <28s) AND the per-doubling ratio at 2^14->2^16 falls below 2.5x\"",
+   "dispute": "c309bb08b9af",
+   "href": "/run/codeplay-20261009a",
+   "next": "Rule: disco steer codeplay-20261009a \"<reason>\" --ruling c309bb08b9af --verdict upheld|rejected [--check FILE]",
+   "owner": "Drew",
+   "referees": [
+    {
+     "family": "claude",
+     "seat": "anthropic/claude-opus-5-5",
+     "verdict": "rejected"
+    },
+    {
+     "family": "codex",
+     "seat": "openai/gpt-6.1-sol",
+     "verdict": "undecided"
+    }
+   ],
+   "runId": "codeplay-20261009a",
+   "text": "codeplay 09a: check dispute c309bb08b9af is undecided, its referees disagree (anthropic/claude-opus-5-5 (claude) rejected; openai/gpt-6.1-sol (codex) undecided)",
+   "tone": "neutral"
+  },
+  {
+   "detail": "fleet now states no research:play-success reading",
+   "next": "Check that fleet now runs",
+   "owner": "Fleet operator",
+   "text": "Play success on the wall is not measured",
+   "tone": "warn"
+  }
+ ]
+}

@@ -3,6 +3,7 @@ import { checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
+import { CalibrationLabels } from './Calibration.js'
 import { dataStatus, statusOf } from './data.js'
 import {
   checkerIndex,
@@ -148,7 +149,7 @@ function climbFigure(play: Play, climb: Climb, width: number) {
       marker: mark.kind === 'gate' ? 'diamond' : 'circle',
       ...(mark.verdict === 'solved' ? { glyph: 'check' as const } : {}),
       ...(workloads && mark.progress !== null ? { label: workloads } : {}),
-      annotation: [`${mark.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(mark.verdict)}${mark.scope === 'contract' ? ' (contract stages)' : ''}`, stage, workloads ? `${workloads} workloads` : null, lineReason(mark.line), mark.source].filter(Boolean).join(' · '),
+      annotation: [`${mark.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(mark.verdict)}${mark.scope === 'contract' ? ' (contract stages)' : ''}`, stage, workloads ? `${workloads} workloads` : null, lineReason(mark.line), mark.calibration ? `check ${mark.calibration}` : null, mark.source].filter(Boolean).join(' · '),
     }
     row(mark.checker, climb.columns.find((column) => column.id === mark.columnId)?.runId ?? '').points.push(point)
   }
@@ -167,6 +168,7 @@ function climbFigure(play: Play, climb: Climb, width: number) {
         `${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}, score not recorded`,
         item.score?.workloads?.total ? `printed ${item.score.workloads.passed ?? '?'}/${item.score.workloads.total} workloads before it stopped` : null,
         lineReason(item.line),
+        item.calibration ? `check ${item.calibration}` : null,
         item.source,
       ]
         .filter(Boolean)
@@ -232,6 +234,7 @@ interface TimedRow {
   checker: string | null | undefined
   verdict: string
   count: number | null | undefined
+  calibration: string | null
   firstAt: string | null | undefined
   lastAt: string | null | undefined
   line: string | null | undefined
@@ -241,8 +244,8 @@ interface TimedRow {
 
 /** Every timed row of the climb in one shape: its checks and gates with a score, and the strip of verdicts without one. */
 function timedRows(climb: Climb): TimedRow[] {
-  const marks = climb.marks.map((mark): TimedRow => ({ columnId: mark.columnId, runId: null, kind: mark.kind, checker: mark.checker, verdict: mark.verdict, count: mark.count, firstAt: mark.firstAt, lastAt: mark.lastAt, line: mark.line, progress: mark.progress ?? null, workloads: mark.workloads ?? null }))
-  const strip = (climb.strip ?? []).map((item): TimedRow => ({ columnId: item.columnId ?? null, runId: item.runId, kind: item.kind, checker: item.checker, verdict: item.verdict, count: item.count, firstAt: item.firstAt, lastAt: item.lastAt, line: item.line, progress: null, workloads: item.score?.workloads ?? null }))
+  const marks = climb.marks.map((mark): TimedRow => ({ columnId: mark.columnId, runId: null, kind: mark.kind, checker: mark.checker, verdict: mark.verdict, count: mark.count, firstAt: mark.firstAt, lastAt: mark.lastAt, line: mark.line, progress: mark.progress ?? null, workloads: mark.workloads ?? null, calibration: mark.calibration ?? null }))
+  const strip = (climb.strip ?? []).map((item): TimedRow => ({ columnId: item.columnId ?? null, runId: item.runId, kind: item.kind, checker: item.checker, verdict: item.verdict, count: item.count, firstAt: item.firstAt, lastAt: item.lastAt, line: item.line, progress: null, workloads: item.score?.workloads ?? null, calibration: item.calibration ?? null }))
   return [...marks, ...strip].filter((row) => ms(row.firstAt) !== undefined)
 }
 
@@ -294,7 +297,7 @@ function climbTimeFigure(play: Play, climb: Climb, width: number, window: [numbe
       ...(item.verdict === 'superseded' ? {} : { verdict: markVerdict(item.verdict) }),
       marker: item.kind === 'gate' ? 'diamond' : 'circle',
       ...(item.verdict === 'solved' ? { glyph: 'check' as const } : {}),
-      annotation: [`${tag ?? 'untagged'} · ${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}`, workloads ? `${workloads} workloads` : null, item.count && item.count > 1 ? `${item.count}× from ${utc(item.firstAt)} to ${utc(item.lastAt)}` : utc(item.firstAt), lineReason(item.line)].filter(Boolean).join(' · '),
+      annotation: [`${tag ?? 'untagged'} · ${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}`, workloads ? `${workloads} workloads` : null, item.count && item.count > 1 ? `${item.count}× from ${utc(item.firstAt)} to ${utc(item.lastAt)}` : utc(item.firstAt), lineReason(item.line), item.calibration ? `check ${item.calibration}` : null].filter(Boolean).join(' · '),
     }
     const series = row(item.checker, runId)
     if (item.count && item.count > 1 && last > first) {
@@ -482,14 +485,15 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
                 rows
                   .filter((row) => row.columnId === column.id)
                   .map((row, i) => {
-                    const status = statusOf({ axis: 'result', verdict: row.verdict, current: play.checkers?.find((item) => item.sha256 === row.checker || item.label === row.checker)?.current ?? true })
+                    const status = statusOf({ axis: 'result', verdict: row.verdict, current: play.checkers?.find((item) => item.sha256 === row.checker || item.label === row.checker)?.current ?? true, held: group.held?.stages ?? null })
                     return (
                     <span
                       key={`${column.id}:${i}`}
                       className="verdict-chip"
                       data-status={dataStatus(status)}
+                      data-calibration={row.calibration ?? undefined}
                       style={{ ['--checker' as string]: checkerColor(checkerIndex(play.checkers, row.checker) ?? 9) }}
-                      title={[`${row.kind === 'gate' ? 'tag gate' : 'check'} under ${checkerLabel(play.checkers, row.checker)}: ${verdictWord(row.verdict)}`, row.line, utc(row.lastAt ?? row.firstAt)].filter(Boolean).join('\n')}
+                      title={[`${row.kind === 'gate' ? 'tag gate' : 'check'} under ${checkerLabel(play.checkers, row.checker)}: ${verdictWord(row.verdict)}`, row.calibration ? `check ${row.calibration}` : null, row.line, utc(row.lastAt ?? row.firstAt)].filter(Boolean).join('\n')}
                     >
                       {status.shape} {shortTag(column.tag) ?? 'workspace'}
                       {row.count && row.count > 1 ? ` ×${row.count}` : ''}
@@ -498,6 +502,8 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
                   }),
               )}
             </span>
+            {/* Every verdict of a run names the calibration its check registered at press: the stages, once per run. */}
+            {group.calibration && <CalibrationLabels calibration={group.calibration} field={`climb.groups.${group.runId}.calibration`} />}
           </li>
         )
       })}

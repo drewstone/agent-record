@@ -663,11 +663,7 @@ export const runProgressSchema = z
         gate: checkLineSchema.nullable().optional(),
         score: checkScoreSchema.extend({ at: z.string().nullable().optional(), tag: z.string().nullable().optional(), source: z.string().nullable().optional() }).nullable().optional(),
         /** Each check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`), oldest first. */
-        disputes: z
-          .array(
-            checkDisputeSchema,
-          )
-          .optional(),
+        disputes: z.array(checkDisputeSchema).optional(),
       })
       .catchall(z.unknown())
       .nullable()
@@ -1568,7 +1564,8 @@ export interface OverviewPlayWeek {
   /** The runs' API-equivalent dollars (each run receipt's cost.apiEquivalentUsd): every token at list price, whoever paid. */
   apiEquivalentUsd?: number | null
 }
-export interface OverviewAttention { tone: 'crit' | 'warn' | 'info'; text: string; detail?: string | null; href?: string; owner?: string; next?: string }
+/** A Needs you line; `held` names a held pass's stages, `dispute` and `referees` an undecided check dispute (tangle-tools overview). */
+export interface OverviewAttention { tone: 'crit' | 'warn' | 'info' | 'neutral'; text: string; detail?: string | null; href?: string; owner?: string; next?: string; runId?: string; held?: string[]; dispute?: string; referees?: { seat: string | null; family: string | null; verdict: string | null }[] }
 
 export interface OverviewDocument {
   schema: 'agent-workspace.overview.v1'

@@ -3531,6 +3531,7 @@
 .ar-ws .verdict-strip li { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .ar-ws .verdict-strip-run { font-size: var(--ar-text-s); }
 .ar-ws .verdict-strip-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ar-ws .verdict-strip .rr-now-calibration { grid-column: 2; margin: 0; }
 .ar-ws .verdict-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; border-radius: 4px; font: 12px/1.8 var(--ar-font-mono); background: var(--ws-raised); box-shadow: inset 2px 0 0 var(--checker); }
 
 /* ---------- The fleet explorer (/explore): one canvas of runs or agents, a lens legend, the selection, computed columns ---------- */

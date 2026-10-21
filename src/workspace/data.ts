@@ -121,7 +121,8 @@ export const when = (value: string | null | undefined, withDate = true) => {
  * One status grammar (design-system section 1, v2 tone rule). Five tones, each with one meaning: neutral; the accent for
  * data series and links (never a status); pass only for passed under the current check; attention only for running or
  * blocked; fail only for "a person must act now", which is an `attention[]` item the host marks crit or a live run's
- * blocker with severity red. Red has no default: a past crash, an operator or Lab stop, a research miss, a verdict under
+ * blocker with severity red, or a Needs you line for a pass held for stages with no known-good fixture (the person adds the
+ * fixture that settles it; the held verdict itself stays neutral). Red has no default: a past crash, an operator or Lab stop, a research miss, a verdict under
  * a retired check and an unknown are all neutral, and keep their meaning through their word and shape.
  */
 export type StatusTone = 'pass' | 'attention' | 'fail' | 'neutral'
@@ -145,8 +146,11 @@ export type StatusInput =
    * stages no known-good fixture passed, named by `held`: never Passed, never failing.
    */
   | { axis: 'result'; verdict: string | null | undefined; current?: boolean; checker?: string | null; waiting?: boolean; passed?: number | null; total?: number | null; held?: readonly string[] | null }
-  /** Something that may need a person: an overview `attention[]` tone, or a blocker's severity on a run that is or is not live. */
-  | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean }
+  /**
+   * Something that may need a person: an overview `attention[]` tone, or a blocker's severity on a run that is or is not
+   * live. `heldPass` is a Needs you line for a held pass: act now whatever tone the host served.
+   */
+  | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean; heldPass?: boolean }
   /** An agent row: its recorded status while its run is or is not live. */
   | { axis: 'agent'; status: string | null | undefined; live: boolean }
   /** A release tag's state. */
@@ -271,7 +275,7 @@ export function statusOf(input: StatusInput): Status {
     case 'result':
       return resultAxis(input)
     case 'alert':
-      if (input.tone === 'crit' || (input.live && input.severity === 'red')) return status('alert', 'act now', 'fail', ENDING_GLYPH.fail)
+      if (input.tone === 'crit' || input.heldPass || (input.live && input.severity === 'red')) return status('alert', 'act now', 'fail', ENDING_GLYPH.fail)
       if (input.live && input.severity) return status('alert', 'Blocked', 'attention', ENDING_GLYPH.attention)
       if (!input.live && input.severity) return status('alert', 'past', 'neutral', ENDING_GLYPH.ended)
       return status('alert', input.tone === 'info' ? 'cleared' : 'not urgent', 'neutral', ENDING_GLYPH.ended)

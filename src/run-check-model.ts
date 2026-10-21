@@ -21,7 +21,21 @@ const checkRowSchema = z
   })
   .catchall(z.unknown())
 /** A check stage's calibration (discovery-lab runner/calibration.mjs): a known-good fixture passed it, none did, it gave two answers, or no record says. */
-const calibrationState = z.enum(['calibrated', 'uncalibrated', 'nondeterministic', 'unknown'])
+export const calibrationState = z.enum(['calibrated', 'uncalibrated', 'nondeterministic', 'unknown'])
+/**
+ * The calibration a check registered at press, a state per stage and one for the check (tangle-tools
+ * play_checks.check_calibration). `unknown` says which record would state it. The run page and the play page's run groups
+ * serve the same shape.
+ */
+export const calibrationSchema = z
+  .object({
+    state: calibrationState,
+    stages: z.array(z.object({ name: z.string().nullable(), state: calibrationState }).catchall(z.unknown())),
+    source: z.string().nullable().optional(),
+    unknown: z.string().nullable().optional(),
+  })
+  .catchall(z.unknown())
+export type Calibration = z.infer<typeof calibrationSchema>
 export const runCheckSchema = z
   .object({
     latest: checkRowSchema.nullable(),
@@ -39,20 +53,8 @@ export const runCheckSchema = z
      * passed, but the pass is not the run's. Null while a pass stands or none was held.
      */
     held: checkRowSchema.extend({ stages: z.array(z.string()) }).nullable().optional(),
-    /**
-     * The calibration every verdict of the run names, as its check registered it at press (tangle-tools
-     * play_checks.check_calibration): a state per stage and one for the check. `unknown` says which record would state it.
-     */
-    calibration: z
-      .object({
-        state: calibrationState,
-        stages: z.array(z.object({ name: z.string().nullable(), state: calibrationState }).catchall(z.unknown())),
-        source: z.string().nullable().optional(),
-        unknown: z.string().nullable().optional(),
-      })
-      .catchall(z.unknown())
-      .nullable()
-      .optional(),
+    /** The calibration every verdict of the run names, as its check registered it at press. */
+    calibration: calibrationSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 export type RunCheck = z.infer<typeof runCheckSchema>
