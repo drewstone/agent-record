@@ -8,7 +8,7 @@ import type { RecordNode } from '../record.js'
 import type { RunCheck, RunDocument, RunProgress } from '../workspace-model.js'
 import type { NodeStats } from './RunTable.js'
 import { CalibrationLabels } from './Calibration.js'
-import { dataStatus, StatusPill, statusOf } from './data.js'
+import { dataStatus, type StatusInput, StatusPill, statusOf } from './data.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
 import { type Play, plainWords } from './answers.js'
@@ -320,6 +320,18 @@ function ProfileBehavior({ reading, print }: { reading: NonNullable<RunReceipt['
 
 const RUN_CONTROLS = new Set(['wrapup', 'stop'])
 
+/**
+ * The receipt's `outcome.status` in the one status grammar: the word stays the Lab's recorded one, the tone and shape come
+ * from statusOf. A recorded status alone never asks a person to act, so it is never red.
+ */
+const RECEIPT_STATUS: Record<RunReceipt['outcome']['status'], StatusInput> = {
+  running: { axis: 'run', state: 'running' },
+  passed: { axis: 'result', verdict: 'solved' },
+  'not-passed': { axis: 'result', verdict: 'not-solved' },
+  unmeasured: { axis: 'result', verdict: null },
+  cancelled: { axis: 'run', state: 'cancelled' },
+}
+
 /** Why turns ended, one status row per cause: hours as a bar, tries as a count, the word and shape from statusOf. */
 type TurnCause = NonNullable<NonNullable<RunReceipt['system']>['attempts']>['causes'][number]
 function TurnEndings({ causes, live, actNow }: { causes: TurnCause[]; live: boolean; actNow: string | null }) {
@@ -356,6 +368,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const workers = r.system?.workers ?? null
   const firstPassAt = r.system?.play?.firstPassAt ?? null
   const behavior = r.behaviorExpectations ?? r.system?.behaviorExpectations
+  const outcomeStatus = { ...statusOf(RECEIPT_STATUS[r.outcome.status]), word: r.outcome.status.replaceAll('-', ' ') }
   const fileBase = `${api}/runs/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}`
   const decide = async (id: string) => {
     const operationId = operation[id] ?? crypto.randomUUID()
@@ -382,10 +395,12 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   const figure = timeline(lanes, { measure: 'Recorded agent time', ...(r.timeline.end ? { now: Date.parse(r.timeline.end) } : {}), marks })
   const versionFigure = r.versions?.rows.length && r.versions.line.x ? timeSeries([{ id: 'exact', label: 'Exact checks passed', points: r.versions.rows.filter((row) => row.at).map((row) => ({ x: Date.parse(row.at!), y: row.exactPassed })) }], { x: { label: 'UTC', domain: r.versions.line.x }, y: { label: 'Exact checks passed', unit: 'checks', domain: r.versions.line.y }, formatX: (at) => new Date(at).toISOString().slice(11, 16), marks: r.versions.line.marks.map((mark) => ({ at: Date.parse(mark.t), label: mark.label, kind: mark.kind })) }) : null
   return <article className={`rr-page${print ? ' rr-print' : ''}`} data-overview data-receipt={r.runId}>
-    {/* The run page's fold is its head; a printed receipt names its run and tag, never the goal as a title. */}
-    {print && <header className={`rr-verdict rr-${r.outcome.status}`}>
-      <div className="rr-title-row"><h1 data-field="runId">Receipt {r.tag} · {r.runId}</h1><span className="rr-status" data-field="outcome.status">{r.outcome.status.replaceAll('-', ' ')}</span></div>
-    </header>}
+    {/* The run page's fold is its head; a printed receipt names its run and tag, never the goal as a title. Both views show
+        the recorded status and sentence, so a stop cause (RetainedWorkspaceCapturePendingError) never hides in a drawer. */}
+    <header className={`rr-verdict rr-${r.outcome.status}`}>
+      <div className="rr-title-row">{print && <h1 data-field="runId">Receipt {r.tag} · {r.runId}</h1>}<StatusPill status={outcomeStatus} className="rr-status"><span data-field="outcome.status">{outcomeStatus.word}</span></StatusPill></div>
+      {recorded(r.outcome.sentence) && <p data-field="outcome.sentence">{r.outcome.sentence}</p>}
+    </header>
     <div className="rr-head">
       <p className="rr-summary">{hasRelease && chosenChecked && <span>Chosen <Field path="chosen.tag" value={r.chosen.tag} /></span>}{recorded(equivalent) && <span title={r.cost.apiEquivalentUsd?.provenance ?? undefined}><Field path="cost.apiEquivalentUsd.usd" value={equivalent} format={money} /> API-equivalent</span>}{recorded(billed) && <span title={billing?.basis ?? undefined}><Field path="cost.billedUsd.total.usd" value={billed} format={money} /> billed{plan && <> ({plan})</>}</span>}{recorded(r.work.wallHours) && <span><Field path="work.wallHours" value={r.work.wallHours} format={hoursText} /> elapsed</span>}<a className="rr-download" href={`/run/${encodeURIComponent(r.runId)}/receipt/${encodeURIComponent(r.tag)}?download=1`} download>Download receipt</a></p>
       {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
