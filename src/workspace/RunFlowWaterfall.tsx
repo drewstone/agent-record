@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FlowWaterfall } from '@tangle-network/agent-app/web-react/flow-waterfall'
+import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunRecord } from '../record.js'
 import type { RunDocument } from '../workspace-model.js'
 import { readRecord, useDocument } from './data.js'
