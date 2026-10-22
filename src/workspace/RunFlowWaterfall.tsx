@@ -10,7 +10,7 @@ export function RecordFlowWaterfall({ record, live = false, defaultCollapsed }: 
   const trace = useMemo(() => recordFlowTrace(record, live), [record, live])
   return <div className="record-flow-waterfall" data-record-flow={record.runId}>
     <FlowWaterfall trace={trace} live={live} defaultCollapsed={defaultCollapsed ?? trace.spans.length > 100} />
-    <p className="faint">Captured events only. Model calls are estimated from assistant messages; generation times were not recorded. Handoffs mark the child’s recorded start. Missing or inherited tool timing is approximate. Cost uses API list prices; the receipt shows billed spend. Missing prices remain unknown.</p>
+    <p className="faint">Captured events only. Model markers are assistant response timestamps; the LLM request count and generation durations were not recorded. Handoffs mark the child’s recorded start. Missing or inherited tool timing is approximate. Cost uses API list prices; the receipt shows billed spend. Missing prices remain unknown.</p>
   </div>
 }
 

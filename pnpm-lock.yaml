@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@tangle-network/agent-app':
-        specifier: 0.60.283
-        version: 0.60.283(@tangle-network/agent-eval@0.218.1)(@tangle-network/agent-integrations@0.75.4(@types/node@24.19.1))(@tangle-network/agent-interface@5.7.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
+        specifier: 0.60.284
+        version: 0.60.284(@tangle-network/agent-eval@0.218.1)(@tangle-network/agent-integrations@0.75.4(@types/node@24.19.1))(@tangle-network/agent-interface@5.7.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
       '@tangle-network/charts':
         specifier: 0.12.0
         version: 0.12.0(react@19.3.0)
@@ -266,8 +266,8 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@tangle-network/agent-app@0.60.283':
-    resolution: {integrity: sha512-1LBdhB3jUVfDtWzPKLW4M2JXc/DrZH1OUxPft/As9q9MR/AUYya3co7/KysFpw9JSfmwEVAaVPKrKk0HVbtG7w==}
+  '@tangle-network/agent-app@0.60.284':
+    resolution: {integrity: sha512-vmxj8BZEPWaizFs0Pc5cR40MhQZYd/e5GtYdroPXf7Agqy+44wBvNvFgNrpdYKyrNL6H9kWRxq2E2UYH4m8JPw==}
     hasBin: true
     peerDependencies:
       '@better-auth/oauth-provider': '>=1.7.2'
@@ -1642,7 +1642,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@tangle-network/agent-app@0.60.283(@tangle-network/agent-eval@0.218.1)(@tangle-network/agent-integrations@0.75.4(@types/node@24.19.1))(@tangle-network/agent-interface@5.7.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)':
+  '@tangle-network/agent-app@0.60.284(@tangle-network/agent-eval@0.218.1)(@tangle-network/agent-integrations@0.75.4(@types/node@24.19.1))(@tangle-network/agent-interface@5.7.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)':
     dependencies:
       '@tangle-network/agent-eval': 0.218.1
       '@tangle-network/agent-integrations': 0.75.4(@types/node@24.19.1)
