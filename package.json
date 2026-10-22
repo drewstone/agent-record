@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.53.1",
+  "version": "0.54.0",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -83,6 +83,7 @@
     "react-dom": ">=18.3.0 <20"
   },
   "dependencies": {
+    "@tangle-network/agent-app": "0.60.284",
     "@tangle-network/charts": "0.12.0",
     "@tangle-network/harness-sessions": "0.1.0",
     "katex": "^0.19.0",

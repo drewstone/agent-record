@@ -1,5 +1,13 @@
 @import '@tangle-network/charts/react/live.css';
 @import '@tangle-network/charts/figure.css';
+@import '@tangle-network/agent-app/web-react/flow-waterfall.css';
+.record-flow-waterfall {
+  --text-primary: var(--ar-fg); --text-muted: var(--ar-fg-muted); --bg-card: var(--ar-bg);
+  --border-default: var(--ar-border); --md3-surface-container: var(--ar-bg-alt); --accent-text: var(--ar-c-action);
+  --chart-accent: var(--ar-c-action); --status-cold: var(--ar-c-info); --status-stopped: var(--ar-c-run);
+  --status-running: var(--ar-c-ok); --status-error: var(--ar-c-fail); --text-danger: var(--ar-c-fail);
+  --font-mono: var(--ar-font-mono);
+}
 /* All styles are scoped. Override --ar-* on the component or an ancestor. */
 /* One type scale, three sizes: meta (labels, chips, axes, table headers), body, and titles. */
 .agent-record {

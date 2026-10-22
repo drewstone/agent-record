@@ -2,11 +2,10 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 const sourceCss = await readFile('src/styles.css', 'utf8')
 let distributedCss = sourceCss
-for (const name of ['react/live.css', 'figure.css']) {
-  const specifier = `@tangle-network/charts/${name}`
+for (const specifier of ['@tangle-network/charts/react/live.css', '@tangle-network/charts/figure.css', '@tangle-network/agent-app/web-react/flow-waterfall.css']) {
   const css = await readFile(fileURLToPath(import.meta.resolve(specifier)), 'utf8')
   const directive = `@import '${specifier}';`
-  if (!distributedCss.includes(directive)) throw new Error(`Missing shared chart CSS import: ${specifier}`)
+  if (!distributedCss.includes(directive)) throw new Error(`Missing shared CSS import: ${specifier}`)
   distributedCss = distributedCss.replace(directive, css)
 }
 await writeFile('dist/styles.css', distributedCss)
