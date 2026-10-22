@@ -1,0 +1,3785 @@
+{
+  "schema": "agent-record.v1",
+  "runId": "test-canary-contract-20261020a",
+  "title": "Discovery contract canary (timing-only)",
+  "nodes": [
+    {
+      "kind": "agent",
+      "start": "2026-10-20T01:50:45.311Z",
+      "end": "2026-10-20T01:57:56.069Z",
+      "status": "no-winner",
+      "model": "glm-5.3-flash-free",
+      "harness": "opencode",
+      "id": "root",
+      "label": "root",
+      "parent": null
+    },
+    {
+      "kind": "agent",
+      "start": "2026-10-20T01:51:28.704Z",
+      "end": "2026-10-20T01:56:19.659Z",
+      "status": "done",
+      "model": "glm-5.3-flash-free",
+      "harness": "opencode",
+      "id": "echo",
+      "label": "echo",
+      "parent": "root"
+    }
+  ],
+  "events": [
+    {
+      "id": "event-1",
+      "node": "root",
+      "at": "2026-10-20T01:50:45.311Z",
+      "kind": "begin",
+      "category": "lifecycle",
+      "label": "begin",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-2",
+      "node": "root",
+      "at": "2026-10-20T01:50:45.311Z",
+      "kind": "spawned",
+      "category": "lifecycle",
+      "label": "spawned",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-3",
+      "node": "root",
+      "at": "2026-10-20T01:50:45.311Z",
+      "kind": "root-segment",
+      "category": "lifecycle",
+      "label": "root segment",
+      "source": null,
+      "detail": {
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-4",
+      "node": "root",
+      "at": "2026-10-20T01:50:47.622Z",
+      "kind": "execution-input",
+      "category": "lifecycle",
+      "label": "execution input",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-5",
+      "node": "root",
+      "at": "2026-10-20T01:50:48.091Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 intent",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-6",
+      "node": "root",
+      "at": "2026-10-20T01:51:04.472Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 environment",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-7",
+      "node": "root",
+      "at": "2026-10-20T01:51:06.488Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 dispatched",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-8",
+      "node": "root",
+      "at": "2026-10-20T01:51:08.907Z",
+      "kind": "message",
+      "category": "other",
+      "label": "user",
+      "source": null,
+      "detail": {
+        "role": "user",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-9",
+      "node": "root",
+      "at": "2026-10-20T01:51:15.567Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-10",
+      "node": "root",
+      "at": "2026-10-20T01:51:15.577Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-11",
+      "node": "root",
+      "at": "2026-10-20T01:51:16.465Z",
+      "kind": "message",
+      "category": "literature",
+      "label": "assistant \u00b7 read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicToolCalls": [
+          {
+            "id": "call-1",
+            "name": "read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-12",
+      "node": "root",
+      "at": "2026-10-20T01:51:16.524Z",
+      "kind": "tool-result",
+      "category": "literature",
+      "label": "tool result \u00b7 read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 59,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-1"
+      }
+    },
+    {
+      "id": "event-13",
+      "node": "root",
+      "at": "2026-10-20T01:51:16.566Z",
+      "kind": "message",
+      "category": "literature",
+      "label": "assistant \u00b7 read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 14069,
+          "output": 14,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 46
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-2",
+            "name": "read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-14",
+      "node": "root",
+      "at": "2026-10-20T01:51:16.620Z",
+      "kind": "tool-result",
+      "category": "literature",
+      "label": "tool result \u00b7 read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 54,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-2"
+      }
+    },
+    {
+      "id": "event-15",
+      "node": "root",
+      "at": "2026-10-20T01:51:16.628Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-16",
+      "node": "root",
+      "at": "2026-10-20T01:51:17.828Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-17",
+      "node": "root",
+      "at": "2026-10-20T01:51:17.831Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-18",
+      "node": "root",
+      "at": "2026-10-20T01:51:18.189Z",
+      "kind": "message",
+      "category": "literature",
+      "label": "assistant \u00b7 glob",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicToolCalls": [
+          {
+            "id": "call-3",
+            "name": "glob"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-19",
+      "node": "root",
+      "at": "2026-10-20T01:51:18.209Z",
+      "kind": "tool-result",
+      "category": "literature",
+      "label": "tool result \u00b7 glob",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 20,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-3"
+      }
+    },
+    {
+      "id": "event-20",
+      "node": "root",
+      "at": "2026-10-20T01:51:18.264Z",
+      "kind": "message",
+      "category": "literature",
+      "label": "assistant \u00b7 read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 5222,
+          "output": 16,
+          "cacheRead": 13440,
+          "cacheWrite": 0,
+          "reasoning": 50
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-4",
+            "name": "read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-21",
+      "node": "root",
+      "at": "2026-10-20T01:51:18.283Z",
+      "kind": "tool-result",
+      "category": "literature",
+      "label": "tool result \u00b7 read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 19,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-4"
+      }
+    },
+    {
+      "id": "event-22",
+      "node": "root",
+      "at": "2026-10-20T01:51:18.287Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-23",
+      "node": "root",
+      "at": "2026-10-20T01:51:19.270Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-24",
+      "node": "root",
+      "at": "2026-10-20T01:51:19.274Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-25",
+      "node": "root",
+      "at": "2026-10-20T01:51:20.651Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-26",
+      "node": "root",
+      "at": "2026-10-20T01:51:26.719Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_spawn_worker",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1407,
+          "output": 503,
+          "cacheRead": 17920,
+          "cacheWrite": 0,
+          "reasoning": 137
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-5",
+            "name": "agent-runtime-coordination_spawn_worker"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-27",
+      "node": "root",
+      "at": "2026-10-20T01:51:26.962Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_spawn_worker",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 243,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-5"
+      }
+    },
+    {
+      "id": "event-28",
+      "node": "root",
+      "at": "2026-10-20T01:51:26.964Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-29",
+      "node": "root",
+      "at": "2026-10-20T01:51:27.826Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-30",
+      "node": "root",
+      "at": "2026-10-20T01:51:27.829Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-31",
+      "node": "echo",
+      "at": "2026-10-20T01:51:28.704Z",
+      "kind": "spawned",
+      "category": "lifecycle",
+      "label": "spawned",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-32",
+      "node": "echo",
+      "at": "2026-10-20T01:51:28.704Z",
+      "kind": "execution-input",
+      "category": "lifecycle",
+      "label": "execution input",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-33",
+      "node": "echo",
+      "at": "2026-10-20T01:51:28.704Z",
+      "kind": "begin",
+      "category": "lifecycle",
+      "label": "begin",
+      "source": null,
+      "detail": {
+        "atBasis": "carried"
+      }
+    },
+    {
+      "id": "event-34",
+      "node": "echo",
+      "at": "2026-10-20T01:51:28.704Z",
+      "kind": "spawned",
+      "category": "lifecycle",
+      "label": "spawned",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-35",
+      "node": "root",
+      "at": "2026-10-20T01:51:29.614Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_steer_agent",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1417,
+          "output": 61,
+          "cacheRead": 18560,
+          "cacheWrite": 0,
+          "reasoning": 116
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-6",
+            "name": "agent-runtime-coordination_steer_agent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-36",
+      "node": "root",
+      "at": "2026-10-20T01:51:29.830Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "steer \u2192 s0 \u00b7 echo",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-37",
+      "node": "echo",
+      "at": "2026-10-20T01:51:29.830Z",
+      "kind": "message",
+      "category": "other",
+      "label": "Steering",
+      "source": null,
+      "detail": {
+        "role": "user",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-38",
+      "node": "root",
+      "at": "2026-10-20T01:51:34.855Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-39",
+      "node": "root",
+      "at": "2026-10-20T01:51:34.855Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-40",
+      "node": "root",
+      "at": "2026-10-20T01:51:35.161Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_steer_agent",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 5547,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-6"
+      }
+    },
+    {
+      "id": "event-41",
+      "node": "root",
+      "at": "2026-10-20T01:51:35.164Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-42",
+      "node": "echo",
+      "at": "2026-10-20T01:51:36.645Z",
+      "kind": "execution-input",
+      "category": "lifecycle",
+      "label": "execution input",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-43",
+      "node": "echo",
+      "at": "2026-10-20T01:51:37.145Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 intent",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-44",
+      "node": "echo",
+      "at": "2026-10-20T01:51:43.261Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 environment",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-45",
+      "node": "root",
+      "at": "2026-10-20T01:51:46.204Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-46",
+      "node": "root",
+      "at": "2026-10-20T01:51:46.206Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-47",
+      "node": "root",
+      "at": "2026-10-20T01:51:46.836Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-48",
+      "node": "echo",
+      "at": "2026-10-20T01:51:46.974Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 dispatched",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-49",
+      "node": "root",
+      "at": "2026-10-20T01:51:47.076Z",
+      "kind": "message",
+      "category": "waiting",
+      "label": "assistant \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 998,
+          "output": 38,
+          "cacheRead": 19200,
+          "cacheWrite": 0,
+          "reasoning": 68
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-7",
+            "name": "bash"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-50",
+      "node": "echo",
+      "at": "2026-10-20T01:51:48.992Z",
+      "kind": "message",
+      "category": "other",
+      "label": "user",
+      "source": null,
+      "detail": {
+        "role": "user",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-51",
+      "node": "echo",
+      "at": "2026-10-20T01:51:53.241Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-52",
+      "node": "echo",
+      "at": "2026-10-20T01:51:53.249Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-53",
+      "node": "echo",
+      "at": "2026-10-20T01:51:56.268Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 13607,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 140
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-8",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-54",
+      "node": "echo",
+      "at": "2026-10-20T01:52:03.755Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 7487,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-8"
+      }
+    },
+    {
+      "id": "event-55",
+      "node": "echo",
+      "at": "2026-10-20T01:52:03.765Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-56",
+      "node": "echo",
+      "at": "2026-10-20T01:52:04.622Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-57",
+      "node": "echo",
+      "at": "2026-10-20T01:52:04.622Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-58",
+      "node": "echo",
+      "at": "2026-10-20T01:52:16.698Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-59",
+      "node": "echo",
+      "at": "2026-10-20T01:52:16.703Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-60",
+      "node": "echo",
+      "at": "2026-10-20T01:52:16.958Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 241,
+          "output": 27,
+          "cacheRead": 13440,
+          "cacheWrite": 0,
+          "reasoning": 28
+        },
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-61",
+      "node": "echo",
+      "at": "2026-10-20T01:52:17.135Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-62",
+      "node": "root",
+      "at": "2026-10-20T01:52:17.136Z",
+      "kind": "tool-result",
+      "category": "waiting",
+      "label": "tool result \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 30060,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-7"
+      }
+    },
+    {
+      "id": "event-63",
+      "node": "root",
+      "at": "2026-10-20T01:52:17.141Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-64",
+      "node": "echo",
+      "at": "2026-10-20T01:52:17.592Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 27288,
+          "output": 195
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-65",
+      "node": "echo",
+      "at": "2026-10-20T01:52:18.187Z",
+      "kind": "materialized",
+      "category": "lifecycle",
+      "label": "materialized",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-66",
+      "node": "echo",
+      "at": "2026-10-20T01:52:18.187Z",
+      "kind": "materialized",
+      "category": "lifecycle",
+      "label": "materialized",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-67",
+      "node": "root",
+      "at": "2026-10-20T01:52:18.687Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-68",
+      "node": "root",
+      "at": "2026-10-20T01:52:18.697Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_steer_agent",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 279,
+          "output": 62,
+          "cacheRead": 19968,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-9",
+            "name": "agent-runtime-coordination_steer_agent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-69",
+      "node": "root",
+      "at": "2026-10-20T01:52:18.779Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "steer \u2192 s0 \u00b7 echo",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-70",
+      "node": "echo",
+      "at": "2026-10-20T01:52:18.922Z",
+      "kind": "execution-bound",
+      "category": "lifecycle",
+      "label": "execution bound",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-71",
+      "node": "echo",
+      "at": "2026-10-20T01:52:18.922Z",
+      "kind": "execution-bound",
+      "category": "lifecycle",
+      "label": "execution bound",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-72",
+      "node": "echo",
+      "at": "2026-10-20T01:52:20.226Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 0,
+          "output": 0
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-73",
+      "node": "root",
+      "at": "2026-10-20T01:52:20.875Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_steer_agent",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 2178,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-9"
+      }
+    },
+    {
+      "id": "event-74",
+      "node": "root",
+      "at": "2026-10-20T01:52:20.877Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-75",
+      "node": "root",
+      "at": "2026-10-20T01:52:21.722Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-76",
+      "node": "root",
+      "at": "2026-10-20T01:52:21.723Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-77",
+      "node": "root",
+      "at": "2026-10-20T01:52:22.073Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-78",
+      "node": "root",
+      "at": "2026-10-20T01:52:22.280Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 415,
+          "output": 39,
+          "cacheRead": 20096,
+          "cacheWrite": 0,
+          "reasoning": 39
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-10",
+            "name": "agent-runtime-coordination_knowledge_read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-79",
+      "node": "echo",
+      "at": "2026-10-20T01:52:22.707Z",
+      "kind": "execution-result",
+      "category": "lifecycle",
+      "label": "execution result",
+      "source": null,
+      "detail": {
+        "isError": false
+      }
+    },
+    {
+      "id": "event-80",
+      "node": "echo",
+      "at": "2026-10-20T01:52:22.988Z",
+      "kind": "workspace-capture-started",
+      "category": "lifecycle",
+      "label": "workspace capture started",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-81",
+      "node": "echo",
+      "at": "2026-10-20T01:52:22.993Z",
+      "kind": "driver-attempt",
+      "category": "lifecycle",
+      "label": "driver attempt",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-82",
+      "node": "root",
+      "at": "2026-10-20T01:52:23.110Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 830,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-10"
+      }
+    },
+    {
+      "id": "event-83",
+      "node": "root",
+      "at": "2026-10-20T01:52:23.114Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-84",
+      "node": "root",
+      "at": "2026-10-20T01:52:24.192Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-85",
+      "node": "root",
+      "at": "2026-10-20T01:52:24.202Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_resolve",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 353,
+          "output": 39,
+          "cacheRead": 20224,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-11",
+            "name": "agent-runtime-coordination_knowledge_resolve"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-86",
+      "node": "root",
+      "at": "2026-10-20T01:52:24.394Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_resolve",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 192,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-11"
+      }
+    },
+    {
+      "id": "event-87",
+      "node": "root",
+      "at": "2026-10-20T01:52:24.396Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-88",
+      "node": "root",
+      "at": "2026-10-20T01:52:25.489Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-89",
+      "node": "root",
+      "at": "2026-10-20T01:52:25.492Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-90",
+      "node": "root",
+      "at": "2026-10-20T01:52:26.066Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_search",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 460,
+          "output": 24,
+          "cacheRead": 20224,
+          "cacheWrite": 0,
+          "reasoning": 37
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-12",
+            "name": "agent-runtime-coordination_knowledge_search"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-91",
+      "node": "root",
+      "at": "2026-10-20T01:52:31.242Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_search",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 5176,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-12"
+      }
+    },
+    {
+      "id": "event-92",
+      "node": "root",
+      "at": "2026-10-20T01:52:31.249Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-93",
+      "node": "root",
+      "at": "2026-10-20T01:52:32.371Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-94",
+      "node": "root",
+      "at": "2026-10-20T01:52:32.371Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-95",
+      "node": "root",
+      "at": "2026-10-20T01:52:35.106Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-96",
+      "node": "root",
+      "at": "2026-10-20T01:52:35.114Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-97",
+      "node": "echo",
+      "at": "2026-10-20T01:52:35.973Z",
+      "kind": "workspace-capture",
+      "category": "lifecycle",
+      "label": "workspace capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-98",
+      "node": "echo",
+      "at": "2026-10-20T01:52:37.280Z",
+      "kind": "execution-evidence",
+      "category": "lifecycle",
+      "label": "execution evidence",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-99",
+      "node": "root",
+      "at": "2026-10-20T01:52:38.793Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-100",
+      "node": "echo",
+      "at": "2026-10-20T01:52:39.597Z",
+      "kind": "execution-input",
+      "category": "lifecycle",
+      "label": "execution input",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-101",
+      "node": "echo",
+      "at": "2026-10-20T01:52:39.945Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 intent",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-102",
+      "node": "root",
+      "at": "2026-10-20T01:52:40.153Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 21760,
+          "output": 118,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 208
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-13",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-103",
+      "node": "echo",
+      "at": "2026-10-20T01:52:42.470Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 environment",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-104",
+      "node": "root",
+      "at": "2026-10-20T01:52:43.952Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 3799,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-13"
+      }
+    },
+    {
+      "id": "event-105",
+      "node": "root",
+      "at": "2026-10-20T01:52:43.956Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-106",
+      "node": "echo",
+      "at": "2026-10-20T01:52:44.123Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 dispatched",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-107",
+      "node": "echo",
+      "at": "2026-10-20T01:52:45.519Z",
+      "kind": "message",
+      "category": "other",
+      "label": "user",
+      "source": null,
+      "detail": {
+        "role": "user",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-108",
+      "node": "root",
+      "at": "2026-10-20T01:52:47.106Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-109",
+      "node": "root",
+      "at": "2026-10-20T01:52:47.334Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_observe_agent",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1450,
+          "output": 17,
+          "cacheRead": 20672,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-14",
+            "name": "agent-runtime-coordination_observe_agent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-110",
+      "node": "root",
+      "at": "2026-10-20T01:52:47.523Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_observe_agent",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 189,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-14"
+      }
+    },
+    {
+      "id": "event-111",
+      "node": "root",
+      "at": "2026-10-20T01:52:47.525Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-112",
+      "node": "echo",
+      "at": "2026-10-20T01:52:49.105Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-113",
+      "node": "echo",
+      "at": "2026-10-20T01:52:49.112Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-114",
+      "node": "echo",
+      "at": "2026-10-20T01:52:49.515Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 499,
+          "output": 23,
+          "cacheRead": 13440,
+          "cacheWrite": 0,
+          "reasoning": 47
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-15",
+            "name": "agent-runtime-coordination_knowledge_read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-115",
+      "node": "root",
+      "at": "2026-10-20T01:52:49.729Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-116",
+      "node": "root",
+      "at": "2026-10-20T01:52:49.732Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-117",
+      "node": "echo",
+      "at": "2026-10-20T01:52:49.894Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 379,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-15"
+      }
+    },
+    {
+      "id": "event-118",
+      "node": "echo",
+      "at": "2026-10-20T01:52:49.904Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-119",
+      "node": "root",
+      "at": "2026-10-20T01:52:50.269Z",
+      "kind": "message",
+      "category": "waiting",
+      "label": "assistant \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 454,
+          "output": 13,
+          "cacheRead": 21760,
+          "cacheWrite": 0,
+          "reasoning": 27
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-16",
+            "name": "bash"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-120",
+      "node": "echo",
+      "at": "2026-10-20T01:52:50.489Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-121",
+      "node": "echo",
+      "at": "2026-10-20T01:52:50.494Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-122",
+      "node": "echo",
+      "at": "2026-10-20T01:52:51.469Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 418,
+          "output": 38,
+          "cacheRead": 13568,
+          "cacheWrite": 0,
+          "reasoning": 101
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-17",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-123",
+      "node": "echo",
+      "at": "2026-10-20T01:52:52.821Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": true,
+        "durationMs": 1352,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-17"
+      }
+    },
+    {
+      "id": "event-124",
+      "node": "echo",
+      "at": "2026-10-20T01:52:52.827Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-125",
+      "node": "echo",
+      "at": "2026-10-20T01:52:53.461Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-126",
+      "node": "echo",
+      "at": "2026-10-20T01:52:53.465Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-127",
+      "node": "echo",
+      "at": "2026-10-20T01:52:55.408Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-128",
+      "node": "echo",
+      "at": "2026-10-20T01:52:55.672Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 281,
+          "output": 43,
+          "cacheRead": 13824,
+          "cacheWrite": 0,
+          "reasoning": 160
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-18",
+            "name": "agent-runtime-coordination_knowledge_read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-129",
+      "node": "echo",
+      "at": "2026-10-20T01:52:55.957Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 285,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-18"
+      }
+    },
+    {
+      "id": "event-130",
+      "node": "echo",
+      "at": "2026-10-20T01:52:55.962Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-131",
+      "node": "echo",
+      "at": "2026-10-20T01:53:10.433Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-132",
+      "node": "echo",
+      "at": "2026-10-20T01:53:10.776Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 14551,
+          "output": 26,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-19",
+            "name": "agent-runtime-coordination_knowledge_read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-133",
+      "node": "echo",
+      "at": "2026-10-20T01:53:11.474Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 698,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-19"
+      }
+    },
+    {
+      "id": "event-134",
+      "node": "echo",
+      "at": "2026-10-20T01:53:11.479Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-135",
+      "node": "echo",
+      "at": "2026-10-20T01:53:12.652Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-136",
+      "node": "echo",
+      "at": "2026-10-20T01:53:12.652Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-137",
+      "node": "echo",
+      "at": "2026-10-20T01:53:13.394Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-138",
+      "node": "echo",
+      "at": "2026-10-20T01:53:13.397Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-139",
+      "node": "echo",
+      "at": "2026-10-20T01:53:16.420Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-140",
+      "node": "echo",
+      "at": "2026-10-20T01:53:18.134Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 456,
+          "output": 131,
+          "cacheRead": 14144,
+          "cacheWrite": 0,
+          "reasoning": 206
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-20",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-141",
+      "node": "echo",
+      "at": "2026-10-20T01:53:22.789Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 4655,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-20"
+      }
+    },
+    {
+      "id": "event-142",
+      "node": "echo",
+      "at": "2026-10-20T01:53:22.791Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-143",
+      "node": "echo",
+      "at": "2026-10-20T01:53:25.702Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-144",
+      "node": "echo",
+      "at": "2026-10-20T01:53:25.704Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-145",
+      "node": "echo",
+      "at": "2026-10-20T01:53:26.953Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_submit_result",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 829,
+          "output": 54,
+          "cacheRead": 14144,
+          "cacheWrite": 0,
+          "reasoning": 31
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-21",
+            "name": "agent-runtime-coordination_submit_result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-146",
+      "node": "echo",
+      "at": "2026-10-20T01:53:27.790Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_submit_result",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 837,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-21"
+      }
+    },
+    {
+      "id": "event-147",
+      "node": "echo",
+      "at": "2026-10-20T01:53:27.794Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-148",
+      "node": "echo",
+      "at": "2026-10-20T01:53:28.358Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 71181,
+          "output": 775
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-149",
+      "node": "echo",
+      "at": "2026-10-20T01:53:28.534Z",
+      "kind": "execution-bound",
+      "category": "lifecycle",
+      "label": "execution bound",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-150",
+      "node": "echo",
+      "at": "2026-10-20T01:53:28.534Z",
+      "kind": "execution-bound",
+      "category": "lifecycle",
+      "label": "execution bound",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-151",
+      "node": "echo",
+      "at": "2026-10-20T01:53:28.826Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 0,
+          "output": 0
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-152",
+      "node": "echo",
+      "at": "2026-10-20T01:53:29.754Z",
+      "kind": "execution-result",
+      "category": "lifecycle",
+      "label": "execution result",
+      "source": null,
+      "detail": {
+        "isError": true,
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-153",
+      "node": "echo",
+      "at": "2026-10-20T01:53:29.969Z",
+      "kind": "workspace-capture-started",
+      "category": "lifecycle",
+      "label": "workspace capture started",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-154",
+      "node": "echo",
+      "at": "2026-10-20T01:53:29.970Z",
+      "kind": "driver-attempt",
+      "category": "lifecycle",
+      "label": "driver attempt",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-155",
+      "node": "root",
+      "at": "2026-10-20T01:53:35.282Z",
+      "kind": "tool-result",
+      "category": "waiting",
+      "label": "tool result \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 45013,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-16"
+      }
+    },
+    {
+      "id": "event-156",
+      "node": "root",
+      "at": "2026-10-20T01:53:35.289Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-157",
+      "node": "root",
+      "at": "2026-10-20T01:53:38.183Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-158",
+      "node": "root",
+      "at": "2026-10-20T01:53:38.612Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_observe_agent",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 501,
+          "output": 36,
+          "cacheRead": 21760,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-22",
+            "name": "agent-runtime-coordination_observe_agent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-159",
+      "node": "echo",
+      "at": "2026-10-20T01:53:38.764Z",
+      "kind": "workspace-capture",
+      "category": "lifecycle",
+      "label": "workspace capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-160",
+      "node": "root",
+      "at": "2026-10-20T01:53:38.883Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_observe_agent",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 271,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-22"
+      }
+    },
+    {
+      "id": "event-161",
+      "node": "root",
+      "at": "2026-10-20T01:53:38.885Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-162",
+      "node": "root",
+      "at": "2026-10-20T01:53:40.481Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-163",
+      "node": "root",
+      "at": "2026-10-20T01:53:40.481Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-164",
+      "node": "root",
+      "at": "2026-10-20T01:53:41.116Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-165",
+      "node": "root",
+      "at": "2026-10-20T01:53:41.316Z",
+      "kind": "message",
+      "category": "waiting",
+      "label": "assistant \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 600,
+          "output": 13,
+          "cacheRead": 21760,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-23",
+            "name": "bash"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-166",
+      "node": "root",
+      "at": "2026-10-20T01:53:47.016Z",
+      "kind": "workspace-checkpoint-fork-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-167",
+      "node": "echo",
+      "at": "2026-10-20T01:53:47.377Z",
+      "kind": "environment-teardown",
+      "category": "lifecycle",
+      "label": "environment teardown",
+      "source": null,
+      "detail": {
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-168",
+      "node": "root",
+      "at": "2026-10-20T01:54:07.266Z",
+      "kind": "workspace-checkpoint-fork-ready",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork ready",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-169",
+      "node": "root",
+      "at": "2026-10-20T01:54:22.217Z",
+      "kind": "workspace-checkpoint-capture",
+      "category": "lifecycle",
+      "label": "workspace checkpoint capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-170",
+      "node": "root",
+      "at": "2026-10-20T01:54:24.752Z",
+      "kind": "workspace-checkpoint-fork-teardown",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork teardown",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-171",
+      "node": "root",
+      "at": "2026-10-20T01:54:27.369Z",
+      "kind": "workspace-checkpoint-cleanup",
+      "category": "lifecycle",
+      "label": "workspace checkpoint cleanup",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-172",
+      "node": "root",
+      "at": "2026-10-20T01:54:41.340Z",
+      "kind": "tool-result",
+      "category": "waiting",
+      "label": "tool result \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 60024,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-23"
+      }
+    },
+    {
+      "id": "event-173",
+      "node": "root",
+      "at": "2026-10-20T01:54:41.348Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-174",
+      "node": "root",
+      "at": "2026-10-20T01:54:45.368Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-175",
+      "node": "root",
+      "at": "2026-10-20T01:54:45.930Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_observe_agent",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 620,
+          "output": 39,
+          "cacheRead": 21760,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-24",
+            "name": "agent-runtime-coordination_observe_agent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-176",
+      "node": "root",
+      "at": "2026-10-20T01:54:46.226Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_observe_agent",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 296,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-24"
+      }
+    },
+    {
+      "id": "event-177",
+      "node": "root",
+      "at": "2026-10-20T01:54:46.239Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-178",
+      "node": "root",
+      "at": "2026-10-20T01:54:47.808Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-179",
+      "node": "root",
+      "at": "2026-10-20T01:54:47.808Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-180",
+      "node": "root",
+      "at": "2026-10-20T01:54:48.825Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-181",
+      "node": "root",
+      "at": "2026-10-20T01:54:48.827Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-182",
+      "node": "root",
+      "at": "2026-10-20T01:54:50.491Z",
+      "kind": "message",
+      "category": "literature",
+      "label": "assistant \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1879,
+          "output": 69,
+          "cacheRead": 21760,
+          "cacheWrite": 0,
+          "reasoning": 40
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-25",
+            "name": "bash"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-183",
+      "node": "root",
+      "at": "2026-10-20T01:54:50.504Z",
+      "kind": "tool-result",
+      "category": "literature",
+      "label": "tool result \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 13,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-25"
+      }
+    },
+    {
+      "id": "event-184",
+      "node": "root",
+      "at": "2026-10-20T01:54:50.508Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-185",
+      "node": "root",
+      "at": "2026-10-20T01:54:52.779Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-186",
+      "node": "root",
+      "at": "2026-10-20T01:54:53.039Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 907,
+          "output": 24,
+          "cacheRead": 22848,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-26",
+            "name": "agent-runtime-coordination_knowledge_read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-187",
+      "node": "root",
+      "at": "2026-10-20T01:54:53.308Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_read",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 269,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-26"
+      }
+    },
+    {
+      "id": "event-188",
+      "node": "root",
+      "at": "2026-10-20T01:54:53.311Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-189",
+      "node": "root",
+      "at": "2026-10-20T01:54:53.768Z",
+      "kind": "workspace-checkpoint-fork-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-190",
+      "node": "root",
+      "at": "2026-10-20T01:54:56.122Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-191",
+      "node": "root",
+      "at": "2026-10-20T01:54:56.129Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-192",
+      "node": "root",
+      "at": "2026-10-20T01:55:01.862Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-193",
+      "node": "root",
+      "at": "2026-10-20T01:55:12.101Z",
+      "kind": "workspace-checkpoint-fork-ready",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork ready",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-194",
+      "node": "root",
+      "at": "2026-10-20T01:55:19.016Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1069,
+          "output": 1169,
+          "cacheRead": 22848,
+          "cacheWrite": 0,
+          "reasoning": 334
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-27",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-195",
+      "node": "root",
+      "at": "2026-10-20T01:55:19.212Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": true,
+        "durationMs": 196,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-27"
+      }
+    },
+    {
+      "id": "event-196",
+      "node": "root",
+      "at": "2026-10-20T01:55:19.214Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-197",
+      "node": "root",
+      "at": "2026-10-20T01:55:20.071Z",
+      "kind": "workspace-checkpoint-capture",
+      "category": "lifecycle",
+      "label": "workspace checkpoint capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-198",
+      "node": "root",
+      "at": "2026-10-20T01:55:22.590Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-199",
+      "node": "root",
+      "at": "2026-10-20T01:55:22.592Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-200",
+      "node": "root",
+      "at": "2026-10-20T01:55:22.848Z",
+      "kind": "workspace-checkpoint-fork-teardown",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork teardown",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-201",
+      "node": "root",
+      "at": "2026-10-20T01:55:25.273Z",
+      "kind": "workspace-checkpoint-cleanup",
+      "category": "lifecycle",
+      "label": "workspace checkpoint cleanup",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-202",
+      "node": "root",
+      "at": "2026-10-20T01:55:26.409Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-203",
+      "node": "root",
+      "at": "2026-10-20T01:55:27.064Z",
+      "kind": "message",
+      "category": "compute",
+      "label": "assistant \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 2629,
+          "output": 48,
+          "cacheRead": 22848,
+          "cacheWrite": 0,
+          "reasoning": 225
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-28",
+            "name": "bash"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-204",
+      "node": "root",
+      "at": "2026-10-20T01:55:27.074Z",
+      "kind": "tool-result",
+      "category": "compute",
+      "label": "tool result \u00b7 bash",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 10,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-28"
+      }
+    },
+    {
+      "id": "event-205",
+      "node": "root",
+      "at": "2026-10-20T01:55:27.078Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-206",
+      "node": "root",
+      "at": "2026-10-20T01:55:29.183Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-207",
+      "node": "root",
+      "at": "2026-10-20T01:55:33.591Z",
+      "kind": "message",
+      "category": "writing",
+      "label": "assistant \u00b7 write",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 733,
+          "output": 366,
+          "cacheRead": 25024,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-29",
+            "name": "write"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-208",
+      "node": "root",
+      "at": "2026-10-20T01:55:33.599Z",
+      "kind": "tool-result",
+      "category": "writing",
+      "label": "tool result \u00b7 write",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 8,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-29"
+      }
+    },
+    {
+      "id": "event-209",
+      "node": "root",
+      "at": "2026-10-20T01:55:33.601Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-210",
+      "node": "root",
+      "at": "2026-10-20T01:55:36.062Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-211",
+      "node": "root",
+      "at": "2026-10-20T01:55:46.687Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1108,
+          "output": 887,
+          "cacheRead": 25024,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-30",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-212",
+      "node": "root",
+      "at": "2026-10-20T01:55:47.616Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": true,
+        "durationMs": 929,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-30"
+      }
+    },
+    {
+      "id": "event-213",
+      "node": "root",
+      "at": "2026-10-20T01:55:47.619Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-214",
+      "node": "root",
+      "at": "2026-10-20T01:55:48.727Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-215",
+      "node": "root",
+      "at": "2026-10-20T01:55:48.727Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-216",
+      "node": "root",
+      "at": "2026-10-20T01:55:50.906Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-217",
+      "node": "root",
+      "at": "2026-10-20T01:55:54.634Z",
+      "kind": "workspace-checkpoint-fork-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-218",
+      "node": "root",
+      "at": "2026-10-20T01:56:00.328Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 934,
+          "output": 820,
+          "cacheRead": 26112,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-31",
+            "name": "agent-runtime-coordination_knowledge_record"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-219",
+      "node": "root",
+      "at": "2026-10-20T01:56:02.525Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_record",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 2197,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-31"
+      }
+    },
+    {
+      "id": "event-220",
+      "node": "root",
+      "at": "2026-10-20T01:56:02.531Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-221",
+      "node": "root",
+      "at": "2026-10-20T01:56:07.049Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-222",
+      "node": "root",
+      "at": "2026-10-20T01:56:10.656Z",
+      "kind": "workspace-checkpoint-fork-ready",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork ready",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-223",
+      "node": "root",
+      "at": "2026-10-20T01:56:11.696Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_submit_result",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1791,
+          "output": 383,
+          "cacheRead": 26112,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-32",
+            "name": "agent-runtime-coordination_submit_result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-224",
+      "node": "root",
+      "at": "2026-10-20T01:56:11.891Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_submit_result",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 195,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-32"
+      }
+    },
+    {
+      "id": "event-225",
+      "node": "root",
+      "at": "2026-10-20T01:56:11.893Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-226",
+      "node": "root",
+      "at": "2026-10-20T01:56:15.824Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-227",
+      "node": "root",
+      "at": "2026-10-20T01:56:15.825Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-228",
+      "node": "root",
+      "at": "2026-10-20T01:56:16.905Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1207,
+          "output": 26,
+          "cacheRead": 27200,
+          "cacheWrite": 0,
+          "reasoning": 64
+        },
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-229",
+      "node": "root",
+      "at": "2026-10-20T01:56:17.474Z",
+      "kind": "workspace-checkpoint-capture",
+      "category": "lifecycle",
+      "label": "workspace checkpoint capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-230",
+      "node": "root",
+      "at": "2026-10-20T01:56:17.643Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-231",
+      "node": "root",
+      "at": "2026-10-20T01:56:18.582Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 539382,
+          "output": 6215
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-232",
+      "node": "root",
+      "at": "2026-10-20T01:56:18.718Z",
+      "kind": "materialized",
+      "category": "lifecycle",
+      "label": "materialized",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-233",
+      "node": "root",
+      "at": "2026-10-20T01:56:18.813Z",
+      "kind": "execution-bound",
+      "category": "lifecycle",
+      "label": "execution bound",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-234",
+      "node": "root",
+      "at": "2026-10-20T01:56:18.926Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 0,
+          "output": 0
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-235",
+      "node": "root",
+      "at": "2026-10-20T01:56:19.526Z",
+      "kind": "execution-result",
+      "category": "lifecycle",
+      "label": "execution result",
+      "source": null,
+      "detail": {
+        "isError": false
+      }
+    },
+    {
+      "id": "event-236",
+      "node": "root",
+      "at": "2026-10-20T01:56:19.657Z",
+      "kind": "workspace-capture-started",
+      "category": "lifecycle",
+      "label": "workspace capture started",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-237",
+      "node": "echo",
+      "at": "2026-10-20T01:56:19.659Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 98469,
+          "output": 970
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-238",
+      "node": "echo",
+      "at": "2026-10-20T01:56:19.659Z",
+      "kind": "settled",
+      "category": "lifecycle",
+      "label": "settled \u00b7 done",
+      "source": null,
+      "detail": {
+        "isError": false
+      }
+    },
+    {
+      "id": "event-239",
+      "node": "root",
+      "at": "2026-10-20T01:56:20.036Z",
+      "kind": "driver-attempt",
+      "category": "lifecycle",
+      "label": "driver attempt",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-240",
+      "node": "root",
+      "at": "2026-10-20T01:56:20.505Z",
+      "kind": "workspace-checkpoint-fork-teardown",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork teardown",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-241",
+      "node": "root",
+      "at": "2026-10-20T01:56:23.081Z",
+      "kind": "workspace-checkpoint-cleanup",
+      "category": "lifecycle",
+      "label": "workspace checkpoint cleanup",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-242",
+      "node": "root",
+      "at": "2026-10-20T01:56:29.392Z",
+      "kind": "workspace-capture",
+      "category": "lifecycle",
+      "label": "workspace capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-243",
+      "node": "root",
+      "at": "2026-10-20T01:56:29.933Z",
+      "kind": "execution-evidence",
+      "category": "lifecycle",
+      "label": "execution evidence",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-244",
+      "node": "root",
+      "at": "2026-10-20T01:56:32.163Z",
+      "kind": "execution-input",
+      "category": "lifecycle",
+      "label": "execution input",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-245",
+      "node": "root",
+      "at": "2026-10-20T01:56:32.400Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 intent",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-246",
+      "node": "root",
+      "at": "2026-10-20T01:56:33.671Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 environment",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-247",
+      "node": "root",
+      "at": "2026-10-20T01:56:34.876Z",
+      "kind": "execution-admitted",
+      "category": "lifecycle",
+      "label": "execution admitted \u00b7 dispatched",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-248",
+      "node": "root",
+      "at": "2026-10-20T01:56:36.944Z",
+      "kind": "message",
+      "category": "other",
+      "label": "user",
+      "source": null,
+      "detail": {
+        "role": "user",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-249",
+      "node": "root",
+      "at": "2026-10-20T01:56:43.957Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-250",
+      "node": "root",
+      "at": "2026-10-20T01:56:43.962Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-251",
+      "node": "root",
+      "at": "2026-10-20T01:56:56.992Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_resolve",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 2857,
+          "output": 28,
+          "cacheRead": 28288,
+          "cacheWrite": 0,
+          "reasoning": 755
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-33",
+            "name": "agent-runtime-coordination_knowledge_resolve"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-252",
+      "node": "root",
+      "at": "2026-10-20T01:56:57.204Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_resolve",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 212,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-33"
+      }
+    },
+    {
+      "id": "event-253",
+      "node": "root",
+      "at": "2026-10-20T01:56:57.212Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-254",
+      "node": "root",
+      "at": "2026-10-20T01:56:58.188Z",
+      "kind": "workspace-checkpoint-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-255",
+      "node": "root",
+      "at": "2026-10-20T01:56:58.188Z",
+      "kind": "workspace-checkpoint",
+      "category": "lifecycle",
+      "label": "workspace checkpoint",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-256",
+      "node": "root",
+      "at": "2026-10-20T01:57:01.002Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-257",
+      "node": "root",
+      "at": "2026-10-20T01:57:01.517Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_knowledge_search",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1511,
+          "output": 33,
+          "cacheRead": 30464,
+          "cacheWrite": 0,
+          "reasoning": 0
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-34",
+            "name": "agent-runtime-coordination_knowledge_search"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-258",
+      "node": "root",
+      "at": "2026-10-20T01:57:02.271Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_knowledge_search",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 754,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-34"
+      }
+    },
+    {
+      "id": "event-259",
+      "node": "root",
+      "at": "2026-10-20T01:57:02.274Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-260",
+      "node": "root",
+      "at": "2026-10-20T01:57:03.279Z",
+      "kind": "workspace-checkpoint-fork-requested",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork requested",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-261",
+      "node": "root",
+      "at": "2026-10-20T01:57:04.776Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-262",
+      "node": "root",
+      "at": "2026-10-20T01:57:04.779Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-263",
+      "node": "root",
+      "at": "2026-10-20T01:57:07.318Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-264",
+      "node": "root",
+      "at": "2026-10-20T01:57:14.232Z",
+      "kind": "message",
+      "category": "coordination",
+      "label": "assistant \u00b7 agent-runtime-coordination_submit_result",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "usage": {
+          "input": 1210,
+          "output": 515,
+          "cacheRead": 31552,
+          "cacheWrite": 0,
+          "reasoning": 133
+        },
+        "publicToolCalls": [
+          {
+            "id": "call-35",
+            "name": "agent-runtime-coordination_submit_result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "event-265",
+      "node": "root",
+      "at": "2026-10-20T01:57:14.425Z",
+      "kind": "tool-result",
+      "category": "coordination",
+      "label": "tool result \u00b7 agent-runtime-coordination_submit_result",
+      "source": null,
+      "detail": {
+        "role": "toolResult",
+        "isError": false,
+        "durationMs": 193,
+        "publicText": "[Content omitted]",
+        "toolCallId": "call-35"
+      }
+    },
+    {
+      "id": "event-266",
+      "node": "root",
+      "at": "2026-10-20T01:57:14.427Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-finish",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-267",
+      "node": "root",
+      "at": "2026-10-20T01:57:14.947Z",
+      "kind": "workspace-checkpoint-fork-ready",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork ready",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-268",
+      "node": "root",
+      "at": "2026-10-20T01:57:17.813Z",
+      "kind": "record",
+      "category": "other",
+      "label": "step-start",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-269",
+      "node": "root",
+      "at": "2026-10-20T01:57:17.815Z",
+      "kind": "message",
+      "category": "reasoning",
+      "label": "assistant",
+      "source": null,
+      "detail": {
+        "role": "assistant",
+        "reasoning": "[Reasoning omitted]"
+      }
+    },
+    {
+      "id": "event-270",
+      "node": "root",
+      "at": "2026-10-20T01:57:20.473Z",
+      "kind": "workspace-checkpoint-capture",
+      "category": "lifecycle",
+      "label": "workspace checkpoint capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-271",
+      "node": "root",
+      "at": "2026-10-20T01:57:23.993Z",
+      "kind": "workspace-checkpoint-fork-teardown",
+      "category": "lifecycle",
+      "label": "workspace checkpoint fork teardown",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-272",
+      "node": "root",
+      "at": "2026-10-20T01:57:26.708Z",
+      "kind": "workspace-checkpoint-cleanup",
+      "category": "lifecycle",
+      "label": "workspace checkpoint cleanup",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-273",
+      "node": "root",
+      "at": "2026-10-20T01:57:38.126Z",
+      "kind": "workspace-capture-started",
+      "category": "lifecycle",
+      "label": "workspace capture started",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-274",
+      "node": "root",
+      "at": "2026-10-20T01:57:38.131Z",
+      "kind": "execution-bound",
+      "category": "lifecycle",
+      "label": "execution bound",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-275",
+      "node": "root",
+      "at": "2026-10-20T01:57:38.202Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 95882,
+          "output": 1464
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-276",
+      "node": "root",
+      "at": "2026-10-20T01:57:38.244Z",
+      "kind": "metered",
+      "category": "lifecycle",
+      "label": "metered",
+      "source": null,
+      "detail": {
+        "usage": {
+          "input": 0,
+          "output": 0
+        },
+        "usageScope": "metered"
+      }
+    },
+    {
+      "id": "event-277",
+      "node": "root",
+      "at": "2026-10-20T01:57:38.308Z",
+      "kind": "driver-attempt",
+      "category": "lifecycle",
+      "label": "driver attempt \u00b7 terminal",
+      "source": null,
+      "detail": {
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-278",
+      "node": "root",
+      "at": "2026-10-20T01:57:52.847Z",
+      "kind": "workspace-capture",
+      "category": "lifecycle",
+      "label": "workspace capture",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-279",
+      "node": "root",
+      "at": "2026-10-20T01:57:53.435Z",
+      "kind": "execution-evidence",
+      "category": "lifecycle",
+      "label": "execution evidence",
+      "source": null,
+      "detail": {}
+    },
+    {
+      "id": "event-280",
+      "node": "root",
+      "at": "2026-10-20T01:57:55.980Z",
+      "kind": "environment-teardown",
+      "category": "lifecycle",
+      "label": "environment teardown",
+      "source": null,
+      "detail": {
+        "publicText": "[Content omitted]"
+      }
+    },
+    {
+      "id": "event-281",
+      "node": "root",
+      "at": "2026-10-20T01:57:56.069Z",
+      "kind": "teardown-unconfirmed",
+      "category": "lifecycle",
+      "label": "teardown unconfirmed \u00b7 done",
+      "source": null,
+      "detail": {
+        "publicText": "[Content omitted]"
+      }
+    }
+  ],
+  "terminal": {
+    "kind": "no-winner",
+    "reason": "cancelled"
+  },
+  "coverage": {
+    "completeOriginalCapture": false,
+    "publicContent": "Timing-only projection; all original prose, tool arguments/results and source paths omitted.",
+    "categoryMethod": "Recorded event categories",
+    "cost": "Unknown",
+    "gaps": []
+  }
+}

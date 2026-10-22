@@ -1,0 +1,17 @@
+{
+  "source": "Discovery workspace API retained agent-record.v1 for test-canary-contract-20261020a",
+  "capturedAt": "2026-10-22",
+  "rawRecordSha256": "a767813c12edae1fb5536e039da984ed89f6e26dd70bca6330db908906f1145f",
+  "projection": "Preserve event times, kinds, categories, usage and lifecycle usageScope. Alias nodes root/echo and stable tool IDs. Remove prose, arguments, results, source paths, sessions, sandboxes, credentials and original IDs.",
+  "population": {
+    "events": 281,
+    "agents": 2,
+    "toolCalls": 35
+  },
+  "expectedUnscopedUsage": {
+    "input": 98722,
+    "cacheRead": 649984,
+    "output": 5742,
+    "total": 754448
+  }
+}
