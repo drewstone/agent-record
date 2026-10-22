@@ -1,6 +1,6 @@
 @import '@tangle-network/charts/react/live.css';
 @import '@tangle-network/charts/figure.css';
-@import '@tangle-network/agent-app/web-react/flow-waterfall.css';
+@import '@tangle-network/charts/react/flow-waterfall.css';
 .record-flow-waterfall {
   --text-primary: var(--ar-fg); --text-muted: var(--ar-fg-muted); --bg-card: var(--ar-bg);
   --border-default: var(--ar-border); --md3-surface-container: var(--ar-bg-alt); --accent-text: var(--ar-c-action);

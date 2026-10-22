@@ -1,4 +1,4 @@
-import type { FlowSpan, FlowTrace } from '@tangle-network/agent-app/trace'
+import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import type { RunRecord } from '../record.js'
 import { indexRecord, ms, toolKey } from '../viewer/model.js'
 
