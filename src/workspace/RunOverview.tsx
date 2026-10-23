@@ -16,6 +16,7 @@ import { lineReason } from './play-standing.js'
 import { fixedIn, successorOf } from './run-answers.js'
 import { pagesVersion } from './version-graph.js'
 import { RunFlowWaterfall } from './RunFlowWaterfall.js'
+import { RunRetention } from './RunRetention.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
 const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
@@ -438,6 +439,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
         </section>}
       </aside>
     </div>
+    <RunRetention retention={r.system?.retention} />
     {(decisions.length > 0 || successor) && <section className="rr-decide" aria-labelledby="rr-decide"><h2 id="rr-decide">Decide</h2>{successor && <p data-continued-as={successor.runId}>Continued as <a href={`/run/${encodeURIComponent(successor.runId)}`}>{successor.run}</a></p>}<div className="rr-decisions">{decisions.map((decision) => <div key={decision.id}>
           {print ? <strong data-field={`decisions.${decision.index}.label`}>{decision.label}</strong> : <button type="button" className={decision.id === 'take' && !decision.blocked ? 'rr-primary' : ''} disabled={!decision.enabled || Boolean(decision.blocked) || pending !== null} onClick={() => { if (decision.id !== 'stop' || window.confirm(`Stop ${r.runId} now? ${decision.consequence}`)) void decide(decision.id) }}>{pending === decision.id ? 'Saving…' : decision.label}</button>}
           {decision.blocked ? <p data-blocked={decision.id}>{decision.blocked}</p> : <p data-field={`decisions.${decision.index}.consequence`}>{decision.consequence}</p>}

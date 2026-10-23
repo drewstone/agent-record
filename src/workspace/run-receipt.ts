@@ -25,7 +25,7 @@ const scorePointSchema = z.object({
   at: z.string(), tag: nullableText, commit: nullableText, solved: z.boolean(), progress: nullableNumber.optional(), gate: z.string().optional(), settle: z.boolean().optional(),
   /** The checker that scored it (discovery-lab runner/scorecard.mjs keys a score by tag and checker): its SHA-256, or {sha256}. */
   checker: z.union([z.string(), z.object({ sha256: nullableText }).catchall(z.unknown())]).nullable().optional(),
-  score: z.object({ stage: nullableText.optional(), reached: z.number(), of: z.number(), hidden: z.boolean().optional(), workloads: z.object({ passed: z.number(), total: z.number() }).optional() }).catchall(z.unknown()).optional(),
+  score: z.object({ stage: nullableText.optional(), reached: z.number(), of: z.number(), hidden: z.boolean().optional(), workloads: z.object({ passed: z.number(), total: z.number() }).optional() }).catchall(z.unknown()).nullable().optional(),
 }).catchall(z.unknown())
 const contractDeliverySchema = z.object({
   at: z.string(), line: z.string(), tag: nullableText, commit: nullableText, targets: z.array(z.string()), resolvedAt: nullableText, resolution: nullableText,
@@ -58,6 +58,21 @@ export const runReceiptSchema = z.object({
   }).catchall(z.unknown()),
   scores: z.object({ checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) }).catchall(z.unknown()).nullable(),
   system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional(),
+    /** The Lab owns disposition and exact-identity removal receipts; task success does not imply cleanup. */
+    retention: z.object({
+      disposition: z.string(), workspace: z.string(), nativeCapture: z.string(), cloudEvidence: z.string(),
+      removed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(),
+      snapshotAbsenceVerified: z.boolean().nullable(),
+      evidenceRetirement: z.object({
+        status: z.string(), requestedAt: z.string().optional(), completedAt: z.string().optional(),
+        cloudRemovedObjects: nullableNumber.optional(), cloudRemovedPayloadBytes: nullableNumber.optional(),
+        cloudRemainingObjects: nullableNumber.optional(), cloudRemainingBytes: nullableNumber.optional(),
+        localRemovedObjects: nullableNumber.optional(), localRemovedBytes: nullableNumber.optional(),
+        localRemainingObjects: nullableNumber.optional(), localRemainingBytes: nullableNumber.optional(),
+        billedSavings: nullableNumber.optional(), versionHistoryReclaimedBytes: nullableNumber.optional(),
+      }).catchall(z.unknown()).nullable().optional(),
+      resources: z.array(z.object({ id: z.string(), admittedAt: nullableText, removedAt: nullableText, removal: z.string() }).catchall(z.unknown())),
+    }).catchall(z.unknown()).nullable().optional(),
     /** The play check's dense score per version (discovery-lab runner/scorecard.mjs): 0 at the first stage to 1 for a pass. */
     play: z.object({ scores: z.array(scorePointSchema).optional(), firstPassAt: nullableText.optional() }).catchall(z.unknown()).nullable().optional(),
     /** Every driver try and why each ended (discovery-lab runner/scorecard.mjs attempts): the run's failure causes in hours. */
