@@ -78,10 +78,12 @@ export function Timeline({
   // Log-scale time: when one agent runs 100x longer than the rest, linear time
   // squishes every other agent into a sliver. A log axis gives short runs visible
   // space and compresses the long tail, with tick labels in real elapsed time.
+  const hasIntervals = index.events.some((event) => event.end !== undefined)
   const plotSpan = Math.max(1, Math.log10(span) + 1)
   const x = (at: number) => {
     const elapsed = Math.max(0, at - index.start)
     if (elapsed <= 0) return left
+    if (hasIntervals) return left + (elapsed / span) * (width - left - 20)
     return left + (Math.log10(elapsed + 1) / plotSpan) * (width - left - 20)
   }
   const lanes = useMemo(
@@ -96,6 +98,10 @@ export function Timeline({
     for (const event of events) {
       const lane = lanes.get(index.canonical(event.node))
       if (lane === undefined) continue
+      if (event.end) {
+        result.set(event.id, { lane, bin: 0, events: [event] })
+        continue
+      }
       const bin = Math.floor(
         (x(ms(event.at)) - left) / 6,
       )
@@ -129,7 +135,7 @@ export function Timeline({
       >
         {Array.from({ length: ticks + 1 }, (_, i) => {
           const fraction = i / ticks
-          const elapsedAtTick = Math.max(0, Math.pow(10, fraction * plotSpan) - 1)
+          const elapsedAtTick = hasIntervals ? fraction * span : Math.max(0, Math.pow(10, fraction * plotSpan) - 1)
           const xx = left + fraction * (width - left - 20)
           return (
             <g key={i}>
@@ -169,7 +175,10 @@ export function Timeline({
           )
           const event = group[selectedIndex < 0 ? 0 : selectedIndex]!
           const tooltipData = tooltipSections(event, index, cutoff)
-          const lines = tooltipData.sections
+          const lines = [...tooltipData.sections]
+          if (event.activity) lines.unshift({ kind: 'note', value: `${event.activity} · ${event.phase ?? 'activity'}${event.end ? ` · ${interval(ms(event.end) - ms(event.at))}` : ''}` })
+          if (event.detail.modelSplitEstimated) lines.push({ kind: 'note', value: 'Model split is estimated from step tokens, normalized to observed elapsed time.' })
+          if (typeof event.detail.editMethod === 'string') lines.push({ kind: 'note', value: `Edit: ${event.detail.editMethod} · ${String(event.detail.editTarget ?? 'unknown')}` })
           if (group.length > 1)
             lines.unshift({
               kind: 'note',
@@ -185,10 +194,10 @@ export function Timeline({
           }
           return (
             <rect
-              key={`${lane}:${bin}`}
-              x={left + bin * 6}
+              key={event.end ? event.id : `${lane}:${bin}`}
+              x={event.end ? x(ms(event.at)) : left + bin * 6}
               y={34 + lane * step}
-              width={4}
+              width={event.end ? Math.max(1, x(ms(event.end)) - x(ms(event.at))) : 4}
               height={12}
               rx={1}
               className={`event category-${categoryClass(event.category)} ${selectedIndex >= 0 ? 'selected' : ''}`}
@@ -285,10 +294,14 @@ export const categories = [
   'lifecycle',
   'other',
 ] as const
+const activityCategories: Record<string, string> = {
+  'edit files': 'writing', build: 'compute', 'gate/test': 'verification', 'git/PR write': 'coordination',
+  'prod/remote ops': 'infrastructure', 'workspace setup': 'setup', messaging: 'coordination',
+  'read messages': 'coordination', 'query status': 'lifecycle', 'analysis script': 'reasoning',
+  'read code/files': 'literature', 'memory search': 'literature', subagents: 'coordination',
+}
 export const categoryClass = (category: string) =>
-  categories.includes(category as (typeof categories)[number])
-    ? category
-    : 'other'
+  activityCategories[category] ?? (categories.includes(category as (typeof categories)[number]) ? category : 'other')
 export type Metric = 'cumulative' | 'response' | 'tool-time'
 export type Axis = 'time' | 'order'
 const channels = ['input', 'output', 'cacheRead', 'cacheWrite'] as const

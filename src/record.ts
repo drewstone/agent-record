@@ -132,6 +132,10 @@ export const recordSchema = z
           at: time,
           kind: z.string(),
           category: z.string().default('other'),
+          /** Importer-computed native activity; never inferred by the viewer. */
+          activity: z.string().optional(),
+          end: time.optional(),
+          phase: z.enum(['tool', 'model', 'idle']).optional(),
           label: z.string(),
           source: sourceSchema.nullable().optional(),
           detail: z
