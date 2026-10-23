@@ -19,7 +19,7 @@ async function* candidates(root, since) {
 }
 
 /** Claude native timestamps bound tool intervals; no Codex usage is inferred. */
-export async function readClaudeActivity(file, { since, now, coverage }) {
+export async function readClaudeActivity(file, { since, now, coverage, seat = 'default-home' }) {
   const calls = new Map(), segments = [], seen = new Set()
   let identity, cwd = '', agentId, mark, active = false, serial = 0
   const add = (start, end, phase, classification, id) => {
@@ -78,24 +78,24 @@ export async function readClaudeActivity(file, { since, now, coverage }) {
   if (!identity || !segments.length) return null
   segments.sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))
   return { id: `claude:${identity}${agentId ? ':' + agentId : ''}`, nativeSessionId: identity,
-    harness: 'claude', lane: basename(cwd) || 'unknown', cwd, seat: 'claude',
+    harness: 'claude', lane: basename(cwd) || 'unknown', cwd, seat,
     start: segments[0].at, end: segments.reduce((end, s) => s.end > end ? s.end : end, segments[0].end), segments }
 }
 
 export async function readClaudeSessions(home, { since, now, coverage, cached }) {
-  const roots = [join(home, '.claude', 'projects')]
+  const roots = [{ path: join(home, '.claude', 'projects'), seat: 'default-home' }]
   const accounts = join(home, '.config', 'agent-accounts', 'claude')
-  try { for (const seat of await readdir(accounts)) roots.push(join(accounts, seat, 'projects')) } catch {}
+  try { for (const seat of await readdir(accounts)) roots.push({ path: join(accounts, seat, 'projects'), seat }) } catch {}
   const unique = new Set(), sessions = new Map()
   for (const root of roots) {
     let path
-    try { path = await realpath(root) } catch { continue }
+    try { path = await realpath(root.path) } catch { continue }
     if (unique.has(path)) continue
     unique.add(path)
     for await (const file of candidates(path, since)) {
       coverage.claudeFiles = (coverage.claudeFiles ?? 0) + 1
-      const session = cached ? await cached(file, 'claude', options => readClaudeActivity(file, options), {since,now,coverage})
-        : await readClaudeActivity(file, { since, now, coverage })
+      const session = cached ? await cached(file, 'claude:' + root.seat, options => readClaudeActivity(file, options), {since,now,coverage,seat:root.seat})
+        : await readClaudeActivity(file, { since, now, coverage, seat: root.seat })
       if (!session) continue
       const prior = sessions.get(session.id)
       if (!prior || session.end > prior.end) sessions.set(session.id, session)

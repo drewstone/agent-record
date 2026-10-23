@@ -1,0 +1,9 @@
+{
+  "sourceSha256": "8215db39019a9db49026eb30cda1dc0316f112712d14fca9ca845abd8f7b9c62",
+  "selection": "First retained default-home Claude Read/Grep/Glob tool_use with its observed tool_result",
+  "transformations": [
+    "session identity and cwd anonymized",
+    "only tool name, path input, IDs and native timestamps retained",
+    "result body omitted"
+  ]
+}

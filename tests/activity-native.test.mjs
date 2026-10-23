@@ -49,3 +49,53 @@ test('native activity CLI replays a retained Codex call through discovery, dedup
     assert.deepEqual(JSON.parse(readFileSync(out, 'utf8')).sessions, activity.sessions)
   } finally { rmSync(home, { recursive: true, force: true }) }
 })
+
+test('a real native parse survives source retirement between the reader and cache validation', async () => {
+  const { sessionCache } = await import('../tools/activity/cache.mjs')
+  const { readActivitySession } = await import('../tools/activity/sessions.mjs')
+  const home = mkdtempSync(join(tmpdir(), 'agent-record-retired-'))
+  try {
+    const path = join(home, 'retained.jsonl')
+    copyFileSync(join(root, 'tests/fixtures/native-activity/codex.jsonl'), path)
+    const coverage = { unreadableFiles: 0, malformedLines: 0, unmatchedOutputs: 0, missingSessionIdentity: 0 }
+    const cached = await sessionCache(home)
+    const session = await cached(path, 'codex', async options => {
+      const parsed = await readActivitySession({ path, seat: 'default-home' }, options)
+      rmSync(path)
+      return parsed
+    }, { since: Date.parse('2026-10-22T19:26:00Z'), now: Date.now(), coverage })
+    assert.equal(session.id, 'retained-native-activity')
+    assert(session.segments.some(segment => segment.phase === 'tool'))
+    assert.equal(coverage.cacheValidationErrors, 1)
+    assert.equal(coverage.unreadableFiles, 0)
+  } finally { rmSync(home, { recursive: true, force: true }) }
+})
+
+test('Claude native discovery and warm cache preserve default and account seat context', async () => {
+  const { sessionCache } = await import('../tools/activity/cache.mjs')
+  const { readClaudeSessions } = await import('../tools/activity/claude.mjs')
+  const home = mkdtempSync(join(tmpdir(), 'agent-record-claude-seats-'))
+  try {
+    const defaults = join(home, '.claude', 'projects', 'retained')
+    const account = join(home, '.config', 'agent-accounts', 'claude', 'retained-seat', 'projects', 'retained')
+    mkdirSync(defaults, { recursive: true })
+    mkdirSync(account, { recursive: true })
+    // Replay the same recorded session first from one discovered root, then
+    // retire that root and discover it at its account location. No tool is run.
+    const path = join(defaults, 'session.jsonl')
+    copyFileSync(join(root, 'tests/fixtures/native-activity/claude.jsonl'), path)
+    const cached = await sessionCache(home)
+    const coverage = { unreadableFiles: 0, malformedLines: 0, unmatchedOutputs: 0, missingSessionIdentity: 0 }
+    const options = { since: Date.parse('2026-10-18T05:56:00Z'), now: Date.now(), coverage, cached }
+    assert.equal((await readClaudeSessions(home, options))[0].seat, 'default-home')
+    rmSync(path)
+    const accountPath = join(account, 'session.jsonl')
+    copyFileSync(join(root, 'tests/fixtures/native-activity/claude.jsonl'), accountPath)
+    const fresh = await readClaudeSessions(home, options)
+    const warm = await readClaudeSessions(home, options)
+    assert.equal(fresh[0].seat, 'retained-seat')
+    assert.equal(warm[0].seat, 'retained-seat')
+    assert.deepEqual(warm, fresh)
+    assert(coverage.cacheHits >= 1)
+  } finally { rmSync(home, { recursive: true, force: true }) }
+})

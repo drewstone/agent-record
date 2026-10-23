@@ -78,7 +78,7 @@ export function Timeline({
   // Log-scale time: when one agent runs 100x longer than the rest, linear time
   // squishes every other agent into a sliver. A log axis gives short runs visible
   // space and compresses the long tail, with tick labels in real elapsed time.
-  const hasIntervals = events.some((event) => event.end !== undefined)
+  const hasIntervals = index.events.some((event) => event.end !== undefined)
   const plotSpan = Math.max(1, Math.log10(span) + 1)
   const x = (at: number) => {
     const elapsed = Math.max(0, at - index.start)
