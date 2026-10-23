@@ -1,0 +1,12 @@
+{
+  "sourceSha256": "436d71b65c05944b986879331f829221de3d663b81cbc566a78404253e4a2d0a",
+  "selection": "First Oct22 account native ALL_TOOLS call under1000characters within60seconds of task start, with observed output; call, task boundary and usage retained",
+  "transformations": [
+    "cwd and home alias anonymized",
+    "tool output body omitted",
+    "native session ID replaced",
+    "only timestamp, tool identity/input/output, task turn ID and per-step usage retained"
+  ],
+  "callCount": 1,
+  "callId": "call_ca0d9834fa8f4bafbb9eafbae1ad500b"
+}

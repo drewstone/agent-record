@@ -107,7 +107,7 @@ export function indexRecord(record: RunRecord) {
   }
   const times = events.map((event) => ms(event.at))
   const start = times[0] ?? 0
-  const end = times.at(-1) ?? start
+  const end = events.reduce((latest, event) => Math.max(latest, event.end ? ms(event.end) : ms(event.at)), times.at(-1) ?? start)
   return {
     nodes,
     canonical,

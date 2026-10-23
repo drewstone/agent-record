@@ -90,6 +90,22 @@ const record = fromHarnessSessions([session], { recordId: 'review-1', title: 'Re
 
 Session projection event IDs use `shared-session.v1`, not publication `anchor.v1`. Keep the existing anchored converter for published research records until the shared readers expose equivalent source locations and publication verification passes. Review raw text and paths before serving the projection publicly.
 
+### Live native activity
+
+`node tools/ingest.mjs <home> --activity --since <ISO> --out activity.json` reads Codex account session roots and the default Codex/Claude homes. Resolved roots and recorded session identities are deduplicated. The importer writes `agent-record.activity.v1`: sessions grouped by native identity, with classified tool/model/idle intervals, mixed activities, edit method and target category, and capture coverage. Command text and tool output are used for static classification but omitted from this metadata export; lane names, cwd and seat still require review before public use.
+
+The model interval immediately before an action is charged to that action. Codex per-step `token_usage_record` values support an **estimated** split into overhead, reading uncached context, writing and reasoning. The fitted weights and their limitations are recorded once at `modelSplitMethod`; parts sum to the observed interval. Missing per-step usage, including Claude's unavailable reasoning breakdown, stays unknown. This is elapsed capture time, not a measurement of cognition.
+
+`--audit <JSON>` replays the same classifier against `{calls: [{id, name, input, expected, expectedAlternatives?}]}`. Output reports strict primary-label accuracy separately from accepted alternatives. Retain the frozen labels, classifier hash, selection rule and population beside any reported audit score; an inspected sample is development data on subsequent runs.
+
+```js
+import { activityToRecord } from './tools/activity/sessions.mjs'
+// Feed this projection to the existing RecordViewer / Timeline.
+const record = activityToRecord(activity)
+```
+
+The existing Timeline draws imported intervals on a linear elapsed-time axis with activity colors. Ordinary point-event records keep their existing axis and event clustering. Classification happens in the importer, never in the viewer.
+
 ### Normalized trace spans
 
 `fromTraceSpans` projects OpenInference/OTLP spans already emitted by `@tangle-network/traces` or the ChatGPT fleet into the same record model. `fromStoryboardSpans` projects the separate `@tangle-network/agent-eval` `Span[]` shape used by `@tangle-network/run-capsule`. Both retain recorded trace/run, span and parent-span IDs on events. Each trace or run is one session node; span containment is not treated as agent delegation. The caller can supply exact retained source locations and claim/verdict/publication references. Missing parents, conflicting session IDs and untimed spans become coverage gaps.
