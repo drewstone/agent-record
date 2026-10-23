@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readFile, stat, mkdir, writeFile, rename } from 'node:fs/promises'
+import { readFile, stat, mkdir, writeFile, rename, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /** File identity and parser content own invalidation; views never reparse unchanged logs. */
@@ -27,11 +27,20 @@ export async function sessionCache(home) {
     options.coverage.cacheMisses = (options.coverage.cacheMisses ?? 0) + 1
     for (const [key, count] of Object.entries(diagnostics)) options.coverage[key] = (options.coverage[key] ?? 0) + count
     // A file may grow while streaming. Never cache that moving snapshot under a later identity.
-    const after = await stat(path)
+    let after
+    try { after = await stat(path) } catch {
+      options.coverage.cacheValidationErrors = (options.coverage.cacheValidationErrors ?? 0) + 1
+      return session
+    }
     if (after.size === info.size && after.mtimeMs === info.mtimeMs) {
       const tmp = target + `.${process.pid}.tmp`
-      await writeFile(tmp, JSON.stringify({ identity, observedAt:options.now, windowStart:options.since, diagnostics, session }), { mode: 0o600 })
-      await rename(tmp, target)
+      try {
+        await writeFile(tmp, JSON.stringify({ identity, observedAt:options.now, windowStart:options.since, diagnostics, session }), { mode: 0o600 })
+        await rename(tmp, target)
+      } catch {
+        options.coverage.cacheWriteErrors = (options.coverage.cacheWriteErrors ?? 0) + 1
+        await unlink(tmp).catch(() => {})
+      }
     }
     return session
   }
