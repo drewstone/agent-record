@@ -13,7 +13,7 @@ export function RunRetention({ retention }: { retention: NonNullable<RunReceipt[
       <dt>Retention</dt><dd><span data-field="system.retention.disposition">{retention.disposition}</span>; <span data-field="system.retention.workspace">{retention.workspace}</span> workspace</dd>
       <dt>Native capture</dt><dd data-field="system.retention.nativeCapture">{retention.nativeCapture}</dd>
       <dt>Cloud evidence</dt><dd data-field="system.retention.cloudEvidence">{retention.cloudEvidence}</dd>
-      <dt>Snapshot absence</dt><dd data-field="system.retention.snapshotAbsenceVerified">{retention.snapshotAbsenceVerified === true ? 'verified' : retention.snapshotAbsenceVerified === false ? 'not absent' : 'unverified'}</dd>
+      <dt>Snapshot absence</dt><dd data-field="system.retention.snapshotAbsenceVerified">{retention.snapshotAbsenceVerified === true ? 'verified' : 'unverified'}</dd>
     </dl>
     {evidence && <dl className="rr-facts">
       <dt>Data disposal</dt><dd data-field="system.retention.evidenceRetirement.status">{evidence.status}</dd>
