@@ -63,6 +63,14 @@ export const runReceiptSchema = z.object({
       disposition: z.string(), workspace: z.string(), nativeCapture: z.string(), cloudEvidence: z.string(),
       removed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(),
       snapshotAbsenceVerified: z.boolean().nullable(),
+      evidenceRetirement: z.object({
+        status: z.string(), requestedAt: z.string().optional(), completedAt: z.string().optional(),
+        cloudRemovedObjects: nullableNumber.optional(), cloudRemovedPayloadBytes: nullableNumber.optional(),
+        cloudRemainingObjects: nullableNumber.optional(), cloudRemainingBytes: nullableNumber.optional(),
+        localRemovedObjects: nullableNumber.optional(), localRemovedBytes: nullableNumber.optional(),
+        localRemainingObjects: nullableNumber.optional(), localRemainingBytes: nullableNumber.optional(),
+        billedSavings: nullableNumber.optional(), versionHistoryReclaimedBytes: nullableNumber.optional(),
+      }).catchall(z.unknown()).nullable().optional(),
       resources: z.array(z.object({ id: z.string(), admittedAt: nullableText, removedAt: nullableText, removal: z.string() }).catchall(z.unknown())),
     }).catchall(z.unknown()).nullable().optional(),
     /** The play check's dense score per version (discovery-lab runner/scorecard.mjs): 0 at the first stage to 1 for a pass. */
