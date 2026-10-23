@@ -58,6 +58,13 @@ export const runReceiptSchema = z.object({
   }).catchall(z.unknown()),
   scores: z.object({ checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) }).catchall(z.unknown()).nullable(),
   system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional(),
+    /** The Lab owns disposition and exact-identity removal receipts; task success does not imply cleanup. */
+    retention: z.object({
+      disposition: z.string(), workspace: z.string(), nativeCapture: z.string(), cloudEvidence: z.string(),
+      removed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(),
+      snapshotAbsenceVerified: z.boolean().nullable(),
+      resources: z.array(z.object({ id: z.string(), admittedAt: nullableText, removedAt: nullableText, removal: z.string() }).catchall(z.unknown())),
+    }).catchall(z.unknown()).nullable().optional(),
     /** The play check's dense score per version (discovery-lab runner/scorecard.mjs): 0 at the first stage to 1 for a pass. */
     play: z.object({ scores: z.array(scorePointSchema).optional(), firstPassAt: nullableText.optional() }).catchall(z.unknown()).nullable().optional(),
     /** Every driver try and why each ended (discovery-lab runner/scorecard.mjs attempts): the run's failure causes in hours. */
