@@ -62,18 +62,27 @@ type Blocker = { action?: string | null; owner?: string | null; text?: string; s
  * Who acts on the blocker (the lead, 21:45Z): Drew's own decision is a control, a check dispute's two rulings as the
  * exact `disco steer --ruling` commands to run; anyone else's is "nothing for you", with since when they hold it.
  */
-function NextStep({ runId, blocker }: { runId: string; blocker: Blocker }) {
+/** Drew's ruling on a check dispute: the Discovery host is read-only, so each button copies the exact command that rules. */
+export function RulingButtons({ runId, dispute }: { runId: string; dispute: string }) {
   const [copied, setCopied] = useState<string | null>(null)
-  const since = blocker.since ? `${day(ms(blocker.since))} ${clock(ms(blocker.since))}Z` : null
+  const command = (verdict: 'upheld' | 'rejected') => `disco steer ${runId} "Drew's ruling" --ruling ${dispute} --verdict ${verdict}`
+  const copy = (verdict: 'upheld' | 'rejected') => void navigator.clipboard?.writeText(command(verdict)).then(() => setCopied(verdict))
+  return (
+    <span className="rj-decide">
+      <button type="button" onClick={() => copy('upheld')} title={command('upheld')}>{copied === 'upheld' ? 'Copied' : 'Uphold the agents'}</button>
+      <button type="button" onClick={() => copy('rejected')} title={command('rejected')}>{copied === 'rejected' ? 'Copied' : 'The check stands'}</button>
+    </span>
+  )
+}
+
+/** `Oct 23 13:47Z`. */
+export const sinceLabel = (iso: string | null | undefined) => (iso && !Number.isNaN(ms(iso)) ? `${day(ms(iso))} ${clock(ms(iso))}Z` : null)
+
+function NextStep({ runId, blocker }: { runId: string; blocker: Blocker }) {
+  const since = sinceLabel(blocker.since)
   if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
-    const command = (verdict: 'upheld' | 'rejected') => `disco steer ${runId} "Drew's ruling" --ruling ${blocker.dispute} --verdict ${verdict}`
-    const copy = (verdict: 'upheld' | 'rejected') => void navigator.clipboard?.writeText(command(verdict)).then(() => setCopied(verdict))
     return (
-      <p className="rj-next"><b>Your decision:</b> {blocker.action}
-        <span className="rj-decide">
-          <button type="button" onClick={() => copy('upheld')} title={command('upheld')}>{copied === 'upheld' ? 'Copied' : 'Uphold the agents'}</button>
-          <button type="button" onClick={() => copy('rejected')} title={command('rejected')}>{copied === 'rejected' ? 'Copied' : 'The check stands'}</button>
-        </span>
+      <p className="rj-next"><b>Your decision:</b> {blocker.action} <RulingButtons runId={runId} dispute={blocker.dispute} />
         <span className="rj-muted"> copies the command for the Lab host</span>
       </p>
     )

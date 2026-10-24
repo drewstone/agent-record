@@ -1,193 +1,177 @@
-import { useState } from 'react'
 import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
-import { attentionStatus, CLEAN_RUN_TARGET, hm } from './answers.js'
-import { StatusPill, useDocument } from './data.js'
-import { type ReliabilityDocument, settledOf } from './reliability-model.js'
-import { viewChip } from './view.js'
+import { hm } from './answers.js'
+import { useDocument } from './data.js'
+import { plainSummary, sinceLabel } from './RunJourney.js'
+import type { HostView, ViewTrend } from './view.js'
 
 /**
- * Today: the Discovery home. Its first screen answers, in order, what needs Drew (with the exact action), what is
- * running, and whether runs end clean; below it each play active this week in one line. Every status, sentence and
- * needs-you item is the host's view (views.py), the same words the play and run pages print.
+ * Today answers two questions (BRIEF.md amendment 2026-10-24 19:55Z; the lead's hybrid pick at 22:05Z).
+ * Q1, what needs me and what do I do: a 48 px line from the host's needs-you items, Drew's own first, each with its control.
+ * Q2, is research working: one row per play with a measured state (moving, stuck, regressed) from the host's trend, the
+ * plays no check measures as one finding, and the solved ones as one line. Clean-run health is Fleet's, not Today's.
  */
-type TodayDocument = OverviewDocument
+type Play = { play: string; title: string; view: HostView }
+type Movement = ViewTrend['movement']
 
-/** Wilson score interval at 95%: the honest range of a rate measured on n runs. */
-export function wilson(successes: number, n: number): [number, number] | null {
-  if (!n) return null
-  const z = 1.96
-  const p = successes / n
-  const centre = (p + (z * z) / (2 * n)) / (1 + (z * z) / n)
-  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / (1 + (z * z) / n)
-  return [Math.max(0, centre - half), Math.min(1, centre + half)]
+const ORDER: Record<Movement, number> = { regressed: 0, stuck: 1, moving: 2, solved: 3 }
+const WORD: Record<Movement, string> = { regressed: 'Regressed', stuck: 'Stuck', moving: 'Moving', solved: 'Solved' }
+const playHref = (play: string, tab?: string) => `/play/${encodeURIComponent(play)}${tab ? `?tab=${tab}` : ''}`
+
+const hoursSince = (iso: string | null | undefined, now: number) => (iso ? Math.max(0, (now - Date.parse(iso)) / 3_600_000) : null)
+const ago = (h: number | null) => (h === null ? '' : h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} days`)
+
+/** A recorded reason in plain words: its "who:" prefix, parentheses and later clauses dropped (the full text is its title). */
+const plainReason = (reason: string) => reason.replace(/^[^:]{0,80}:\s*/, '').replace(/\s*\([^)]*\)/g, '').split(/;\s*/)[0]!.replace(/^./, (c) => c.toUpperCase())
+
+/** Drew's items are decisions; every other open item is held by its owner and needs nothing from him. */
+function split(items: OverviewAttention[]) {
+  const open = items.filter((item) => item.needsYou || item.tone === 'crit')
+  return { mine: open.filter((item) => item.owner === 'Drew'), held: open.filter((item) => item.owner !== 'Drew') }
 }
-const pct = (value: number) => `${Math.round(value * 100)}%`
-/** `2026-10-18` as `Oct 18`, never cut. */
-const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 
-function NeedsYou({ items }: { items: OverviewAttention[] }) {
-  const needs = items.filter((item) => item.needsYou || item.tone === 'crit')
+/** One of Drew's decisions: the action, why, and the control that does it (the host is read-only, so a control copies its command). */
+function Decision({ item, now }: { item: OverviewAttention; now: number }) {
+  const why = item.kind === 'standdown'
+    ? `Research paused ${ago(hoursSince(item.since, now))}: ${plainReason(item.text.replace(/^Research is stood down:?\s*/, ''))}. Only you can lift it.`
+    : plainSummary(item.text, 24)
   return (
-    <section className="td-hero" aria-labelledby="td-needs">
-      <h2 id="td-needs" className="td-label">Needs you</h2>
-      <p className="td-big" data-count={needs.length}>{needs.length || '✓'}<span>{needs.length ? (needs.length === 1 ? 'decision' : 'decisions') : 'Nothing needs you'}</span></p>
-      {needs.length > 0 && (
-        <ul className="td-needs">
-          {needs.map((item) => {
-            const status = attentionStatus(item)
-            return (
-              <li key={item.text}>
-                <StatusPill status={status} />
-                <div>
-                  <p className="td-need-text">{item.text}</p>
-                  <p className="td-sub">{[item.owner ? `Owner: ${item.owner}` : null, item.next].filter(Boolean).join(' · ')}</p>
-                </div>
-                {item.href && <a className="td-go" href={item.href}>Open</a>}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </section>
+    <li className="tj-decision">
+      <p><b>{item.action ?? item.text}</b> <span className="tj-muted" title={item.text}>{why}</span></p>
+      <span className="rj-decide">
+        {(item.options ?? []).map((option) => <CopyButton key={option.verdict} label={option.label} command={option.command} title={option.consequence} />)}
+        {!item.options?.length && item.href && <a className="tj-go" href={item.href}>Open</a>}
+      </span>
+    </li>
   )
 }
 
-function Running({ doc }: { doc: TodayDocument }) {
-  const now = doc.now ?? []
-  const standdown = doc.state.standdown
-  return (
-    <section className="td-card" aria-labelledby="td-running">
-      <h2 id="td-running" className="td-label">Running now</h2>
-      <p className="td-big">{now.length}<span>{now.length === 1 ? 'run' : 'runs'} · {doc.state.queued} queued</span></p>
-      {now.length === 0 ? (
-        <p className="td-sub">{standdown ? `Research is stood down: ${standdown.reason ?? 'no reason recorded'}` : 'No run is live.'}</p>
-      ) : (
-        <ul className="td-runs">
-          {now.map((run) => (
-            <li key={run.runId}>
-              <a href={`/run/${encodeURIComponent(run.runId)}`}>
-                <b>{run.title}</b>
-                {run.view && <StatusPill status={viewChip(run.view.status)} />}
-              </a>
-              <p className="td-sub">{run.view?.progress?.sentence ?? run.view?.sentence ?? run.purpose}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
+function CopyButton({ label, command, title }: { label: string; command: string; title?: string }) {
+  return <button type="button" title={`${title ? `${title}\n` : ''}${command}`} onClick={(event) => {
+    const button = event.currentTarget
+    void navigator.clipboard?.writeText(command).then(() => { button.textContent = 'Copied' })
+  }}>{label}</button>
 }
 
-/** Clean runs per day: a dot at the day's rate with its 95% interval, hollow when fewer than 5 runs settled. */
-function CleanRuns({ reliability }: { reliability: ReliabilityDocument | undefined }) {
-  if (!reliability || reliability.schema !== 'discovery-lab.reliability.v1') return null
-  // Every date the producer's rolling window touches (7 x 24 h spans 8 dates), so the dots' n add up to the headline.
-  const days = reliability.daily
-  const week = reliability.runs
-  const ci = wilson(week.clean, week.settled)
-  const w = 420
-  const h = 112
-  const x = (i: number) => 28 + (i * (w - 56)) / Math.max(1, days.length - 1)
-  const y = (v: number) => 8 + (1 - v) * (h - 48)
+/** Items their owners hold, one line each: who, since when, doing what. */
+function Held({ items }: { items: OverviewAttention[] }) {
+  if (!items.length) return null
   return (
-    <section className="td-card" aria-labelledby="td-clean">
-      <h2 id="td-clean" className="td-label">Runs ending clean · 7 days</h2>
-      <p className="td-big">{week.settled ? pct(week.clean / week.settled) : '—'}<span>{week.clean} of {week.settled} settled{ci ? ` · 95% range ${pct(ci[0])}–${pct(ci[1])}` : ''}</span></p>
-      <svg className="td-dots" width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={days.map((d) => `${d.day}: ${d.clean} of ${settledOf(d)}`).join('; ')}>
-        <line className="td-target" x1={x(0) - 14} x2={x(days.length - 1) + 14} y1={y(CLEAN_RUN_TARGET)} y2={y(CLEAN_RUN_TARGET)} />
-        <text className="td-target-label" x={x(days.length - 1) + 16} y={y(CLEAN_RUN_TARGET) + 4}>{pct(CLEAN_RUN_TARGET)}</text>
-        {days.map((day, i) => {
-          const n = settledOf(day)
-          const band = wilson(day.clean, n)
-          if (!n || !band) return <g key={day.day}><text x={x(i)} y={h - 20} textAnchor="middle">{dayLabel(day.day)}</text><text x={x(i)} y={h - 4} textAnchor="middle" className="td-n">—</text></g>
-          const rate = day.clean / n
-          return (
-            <g key={day.day}>
-              <line x1={x(i)} x2={x(i)} y1={y(band[1])} y2={y(band[0])} />
-              <circle cx={x(i)} cy={y(rate)} r={4} data-hollow={n < 5 || undefined} />
-              <text x={x(i)} y={h - 20} textAnchor="middle">{dayLabel(day.day)}</text>
-              <text x={x(i)} y={h - 4} textAnchor="middle" className="td-n">{`n=${n}`}</text>
-            </g>
-          )
-        })}
-      </svg>
-      <p className="td-sub">{reliability.lostAgentHours !== null ? `${Math.round(reliability.lostAgentHours)} agent-hours lost to failures this week` : 'agent-hours lost unknown'}</p>
-    </section>
-  )
-}
-
-/** A source older than this is named stale: reliability.json is rewritten every few minutes, so an hour means its writer stopped. */
-const STALE_AFTER_MS = 60 * 60_000
-
-/**
- * The one chip for sources behind the page's single freshness dot: a source the page prints that is old or unreadable
- * collapses into "1 source stale", its name and age in the tip, instead of a panel or a second time stamp.
- */
-function StaleSources({ reliability, failed }: { reliability: ReliabilityDocument | undefined; failed: boolean }) {
-  const stale: string[] = []
-  if (failed) stale.push('run reliability: unreadable')
-  else if (reliability?.at && Date.now() - Date.parse(reliability.at) > STALE_AFTER_MS) stale.push(`run reliability: written ${hm(reliability.at)}`)
-  if (!stale.length) return null
-  return (
-    <span className="td-stale" title={stale.join('; ')} role="status">
-      {stale.length} {stale.length === 1 ? 'source' : 'sources'} stale
-    </span>
-  )
-}
-
-const PLAYS_SHOWN = 8
-/** Each play active this week: those that need Drew first, then solved, then the rest by newest activity. */
-function Plays({ plays }: { plays: NonNullable<OverviewDocument['plays']> }) {
-  const [all, setAll] = useState(false)
-  if (!plays.length) return null
-  const rank = (view: (typeof plays)[number]['view']) => (view.needsYou.length ? 0 : view.status.key === 'live' ? 1 : view.status.key === 'solved' ? 2 : 3)
-  const ordered = [...plays].sort((a, b) => rank(a.view) - rank(b.view))
-  const shown = all ? ordered : ordered.slice(0, PLAYS_SHOWN)
-  return (
-    <section className="td-plays" aria-labelledby="td-plays">
-      <h2 id="td-plays" className="td-label">Plays this week · {plays.length}</h2>
+    <details className="tj-held">
+      <summary>{items.length === 1 ? '1 thing is with its owner' : `${items.length} things are with their owners`}</summary>
       <ul>
-        {shown.map(({ play, title, view }) => (
-          <li key={play}>
-            <a href={`/play/${encodeURIComponent(play)}`}>
-              <StatusPill status={viewChip(view.status)} />
-              <b>{title}</b>
-              {view.progress ? (
-                <span className="td-steps" aria-label={view.progress.sentence}>
-                  {view.progress.steps.map((step, i) => <i key={i} data-step={step.state} />)}
-                  <em>{view.progress.passed}/{view.progress.total}</em>
-                </span>
-              ) : <span className="td-steps is-empty">no release scored</span>}
-              <span className="td-play-line">{view.needsYou.length ? `Needs you: ${view.needsYou[0]!.text}` : view.sentence.replace(/^[^.]*\.\s*/, '') || view.progress?.sentence}</span>
-            </a>
+        {items.map((item) => (
+          <li key={item.text}>
+            <b>{item.owner ?? 'Discovery operator'}</b>
+            <span className="tj-muted">{sinceLabel(item.since) ? ` since ${sinceLabel(item.since)}` : ''} · </span>
+            {item.href ? <a href={item.href}>{item.action ?? item.text}</a> : item.action ?? item.text}
           </li>
         ))}
       </ul>
-      {plays.length > PLAYS_SHOWN && <button type="button" className="td-more" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${plays.length} plays`}</button>}
-    </section>
+    </details>
+  )
+}
+
+/** Steps passed at the end of each day as a step line, the flat stretch since the best was reached shaded and labelled. */
+function Spark({ trend, now, w = 280, h = 56 }: { trend: ViewTrend; now: number; w?: number; h?: number }) {
+  const n = trend.passed.length
+  const x = (i: number) => 4 + (i * (w - 8)) / Math.max(1, n - 1)
+  const y = (v: number) => h - 6 - (v / Math.max(1, trend.total)) * (h - 22)
+  let path = ''
+  trend.passed.forEach((v, i) => {
+    if (v === null) return
+    path += path ? ` H${x(i)} V${y(v)}` : `M${x(i)} ${y(v)}`
+  })
+  const last = trend.passed.at(-1)
+  const flatDays = trend.movement === 'stuck' ? Math.min(n - 1, Math.floor((hoursSince(trend.since, now) ?? 0) / 24)) : 0
+  const from = x(n - 1 - flatDays)
+  return (
+    <svg className={`tj-spark tj-${trend.movement}`} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`steps passed at the end of each of the last ${n} days: ${trend.passed.map((v) => v ?? 'none').join(', ')} of ${trend.total}`}>
+      {flatDays > 0 && (
+        <g className="tj-plateau">
+          <rect x={from} y={12} width={x(n - 1) - from} height={h - 14} />
+          <text x={x(n - 1)} y={10} textAnchor="end">no step gained in {ago(hoursSince(trend.since, now))}</text>
+        </g>
+      )}
+      <line className="tj-spark-top" x1={4} x2={w - 4} y1={y(trend.total)} y2={y(trend.total)} />
+      {path && <path d={path} />}
+      {last !== null && last !== undefined && <circle cx={x(n - 1)} cy={y(last)} r={3} />}
+    </svg>
+  )
+}
+
+function moveLine(trend: ViewTrend, now: number) {
+  if (trend.movement === 'stuck') return `${ago(hoursSince(trend.since, now))} at ${trend.best}/${trend.total}`
+  if (trend.movement === 'regressed') return `${trend.newest.release} passes ${trend.newest.passed}/${trend.total}, best ${trend.best}/${trend.total}`
+  if (trend.movement === 'moving') return `reached ${trend.best}/${trend.total} ${ago(hoursSince(trend.since, now))} ago`
+  return `all ${trend.total} steps`
+}
+
+/** What holds the play, in plain words with who acts: the host's blocker action and owner. */
+function holdLine(view: HostView) {
+  const blocker = view.blocker
+  if (!blocker) return null
+  const action = blocker.action ?? plainSummary(blocker.text, 16)
+  return `${blocker.owner === 'Drew' ? 'You' : blocker.owner ?? 'Its owner'}: ${action.charAt(0).toLowerCase()}${action.slice(1)}.`
+}
+
+function TodayView({ doc }: { doc: OverviewDocument }) {
+  const now = Date.parse(doc.composedAt) || Date.now()
+  const { mine, held } = split(doc.attention ?? [])
+  const plays = (doc.plays ?? []) as Play[]
+  const measured = plays.filter((p): p is Play & { view: { trend: ViewTrend } } => Boolean(p.view.trend) && p.view.trend!.movement !== 'solved')
+    .sort((a, b) => ORDER[a.view.trend.movement] - ORDER[b.view.trend.movement])
+  const solved = plays.filter((p) => p.view.status.key === 'solved')
+  const blind = plays.filter((p) => !p.view.trend && p.view.status.key !== 'solved')
+  const active = measured.length + blind.length
+  const count = (m: Movement) => measured.filter((p) => p.view.trend.movement === m).length
+  return (
+    <div className="ws-page td tj" data-mode="today">
+      <header className="td-head">
+        <h1>Today</h1>
+        <AsOfStamp asOf={{ at: doc.composedAt, meaning: `when the host composed this page (${hm(doc.composedAt)})`, source: 'the Discovery overview' }} />
+      </header>
+      <section className="tj-q1" aria-label="What needs you">
+        <p className="tj-hero">{mine.length ? `${mine.length} ${mine.length === 1 ? 'decision needs' : 'decisions need'} you.` : 'Nothing needs you.'}</p>
+        <p className="tj-second">{count('moving')} moving, {count('stuck')} stuck, {count('regressed')} regressed{blind.length ? `, ${blind.length} not measured` : ''} this week.</p>
+        {mine.length > 0 && <ul className="tj-decisions">{mine.map((item) => <Decision key={item.text} item={item} now={now} />)}</ul>}
+        <Held items={held} />
+      </section>
+      <section className="tj-q2" aria-label="Is research working">
+        {measured.length > 0 && (
+          <ul className="tj-rows">
+            {measured.map(({ play, title, view }) => (
+              <li key={play}>
+                <a className="tj-row-title" href={playHref(play)}>{title}</a>
+                <span className="tj-ladder">
+                  <span className="tj-steps">{view.progress?.steps.map((step, i) => <i key={i} data-step={step.state} title={step.label} />)}</span>
+                  <span className="tj-num">{view.trend.best}/{view.trend.total}</span>
+                </span>
+                <Spark trend={view.trend} now={now} />
+                <span className="tj-state">
+                  <b className={`tj-word tj-${view.trend.movement}`}>{WORD[view.trend.movement]}</b> {moveLine(view.trend, now)}
+                  {holdLine(view) && <span className="tj-muted tj-hold">{holdLine(view)}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {blind.length > 0 && (
+          <p className="tj-finding">
+            <b>{blind.length} of {active} active plays have no check that counts steps, so we cannot tell if they move.</b>{' '}
+            <span className="tj-muted">Fix: </span>
+            {blind.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, 'setup')} title={`${p.title}: set up a check that counts steps`}>{p.title}</a></span>)}
+          </p>
+        )}
+        {solved.length > 0 && <p className="tj-rest">Solved this week: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}
+      </section>
+    </div>
   )
 }
 
 export function TodayPage({ api }: { api: string }) {
-  const doc = useDocument<TodayDocument>(`${api}/overview`, 60_000, true)
-  const reliability = useDocument<ReliabilityDocument>(`${api}/reliability`)
+  const doc = useDocument<OverviewDocument>(`${api}/overview`, 60_000, true)
   if (doc.error && !doc.data) return <p className="ws-status" role="alert">Today is unavailable: {doc.error}</p>
   if (!doc.data) return <p className="ws-status" role="status">Reading what needs you…</p>
-  const d = doc.data
-  return (
-    <div className="ws-page td" data-mode="today">
-      <header className="td-head">
-        <h1>Today</h1>
-        <AsOfStamp asOf={{ at: d.composedAt, meaning: `when the host composed this page (${hm(d.composedAt)})`, source: 'the Discovery overview' }} />
-        <StaleSources reliability={reliability.data} failed={Boolean(reliability.error && !reliability.data)} />
-      </header>
-      <NeedsYou items={d.attention ?? []} />
-      <div className="td-row">
-        <Running doc={d} />
-        <CleanRuns reliability={reliability.data} />
-      </div>
-      <Plays plays={d.plays ?? []} />
-    </div>
-  )
+  return <TodayView doc={doc.data} />
 }

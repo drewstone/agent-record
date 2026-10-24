@@ -27,7 +27,20 @@ export const viewProgressSchema = z.object({
   sentence: z.string(),
 })
 
-export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), owner: z.string().nullable().optional(), since: z.string().nullable().optional() })
+export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional() })
+
+/** Is the play moving (views.play_trend): its best steps passed at the end of each of the last 7 days, and the word for it. */
+export const viewTrendSchema = z.object({
+  days: z.array(z.string()),
+  passed: z.array(z.number().nullable()),
+  total: z.number(),
+  best: z.number(),
+  movement: z.enum(['moving', 'stuck', 'regressed', 'solved']),
+  since: z.string().nullable(),
+  newest: z.object({ release: z.string(), passed: z.number(), at: z.string().nullable() }),
+  series: z.array(z.object({ release: z.string(), runId: z.string().nullable().optional(), at: z.string(), passed: z.number() })).optional(),
+})
+export type ViewTrend = z.infer<typeof viewTrendSchema>
 
 export const viewNeedSchema = z.object({
   runId: z.string().nullable().optional(),
@@ -46,6 +59,7 @@ export const viewSchema = z
     blocker: viewBlockerSchema.nullable(),
     progress: viewProgressSchema.nullable(),
     needsYou: z.array(viewNeedSchema),
+    trend: viewTrendSchema.nullable().optional(),
   })
   .catchall(z.unknown())
 
