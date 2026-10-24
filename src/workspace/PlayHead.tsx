@@ -148,9 +148,6 @@ export function PlayHeader({ play, report, fallback, compact = false, now = Date
     <header className="ws-head play-head" data-play-head data-standing={standing?.status ?? 'none'}>
       <div className="ws-title-row">
         <h1>{play.title}</h1>
-        <a className="play-report-link" href={`/play/${encodeURIComponent(play.id)}/report`} data-play-report-link>
-          Report
-        </a>
         <AsOfStamp asOf={asOf} />
       </div>
       {answers ? <AnswerStrip answers={answers} label="Answers" extras={{ 'is-it-working': <CostLine play={play} /> }} /> : fallback}

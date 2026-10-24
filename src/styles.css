@@ -1699,7 +1699,7 @@
 .ar-ws .status-shape { font-style: normal; line-height: 1; }
 /* Every status mark keeps its shape and an outline when the system forces colours. */
 @media (forced-colors: active) {
-  .ar-ws .ov-chip, .ar-ws .state-pill, .ar-ws .vg-chip, .ar-ws [data-status] { forced-color-adjust: none; border: 1px solid CanvasText; }
+  .ar-ws .state-pill, .ar-ws .vg-chip, .ar-ws [data-status] { forced-color-adjust: none; border: 1px solid CanvasText; }
   /* A lane key is painted by its background, which forced colours would erase. */
   .ar-ws .vg-swatch { forced-color-adjust: none; }
 }
@@ -2559,7 +2559,6 @@
 .ar-ws .play-check-lines { margin: 0; padding: 10px 12px; max-height: 18em; overflow: auto; border-radius: 6px; background: var(--ws-raised, color-mix(in srgb, var(--ar-fg) 5%, transparent)); font: .82em/1.5 var(--ar-font-body); white-space: pre-wrap; overflow-wrap: anywhere; }
 .ar-ws .play-answer-links { display: flex; flex-wrap: wrap; gap: .4em 1.2em; }
 .ar-ws .run-progress-note { margin: 0; }
-.ar-ws .ov-gantt-label { font-size: 13px; }
 .ar-ws .run-tab { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--ar-fg-muted); font: 600 var(--ar-text-s)/1.2 var(--ar-font-body); white-space: nowrap; }
 .agent-record.ar-ws .run-tab.on, .agent-record.ar-ws .run-tab.on:hover { background: var(--ar-selected, var(--ar-bg-alt)); color: var(--ar-fg); box-shadow: inset 0 -2px 0 var(--ws-frame); }
 .ar-ws .run-tab-count { padding: 0 6px; border-radius: 6px; font: 600 13px/1.5 var(--ar-font-body); background: color-mix(in srgb, currentColor 14%, transparent); }
@@ -2749,7 +2748,6 @@
 /* Sized in em off one 16px root. The wall's pages zoom by screen height (wall-scale.js: about 1.5 on the 2560x1440
    wall), so the same layout reads from across the room there and at laptop size elsewhere; charts read the same em
    (useWidth), so plot height, margins and marks follow the type. */
-.ar-ws .ov-page { font-size: 15px; gap: 1.3em; --chart-live-fg: var(--ar-fg); --chart-live-muted: var(--ar-fg-muted); --chart-live-faint: var(--ar-fg-faint); --chart-live-raised: var(--ar-raised, var(--ar-bg-alt)); --chart-live-border: var(--ar-border-strong); --chart-live-hover: var(--ar-hover, var(--ar-bg-alt)); --chart-live-font-mono: var(--ar-font-body); --chart-live-surface: var(--ws-panel); --chart-live-danger: var(--ar-c-neutral); --chart-live-warning: var(--ar-c-neutral); }
 .ar-ws .research-frontiers { display: grid; gap: .6em; padding: .8em 0; }
 .ar-ws .plays-table .plays-standing { min-width: 0; max-width: 24rem; white-space: normal; font-size: var(--ar-text-s); line-height: 1.35; }
 .ar-ws .research-frontier-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22em), 1fr)); gap: .55em; }
@@ -2759,128 +2757,22 @@
 .ar-ws .research-frontier strong { text-transform: capitalize; }
 .ar-ws .research-frontier span { line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .research-frontier small { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
-.ar-ws .ov-page .kicker { font-size: 13px; gap: .55em; }
-.ar-ws .ov-page .kicker::before { width: .6em; height: .6em; }
-.ar-ws .ov-toolbar { display: flex; flex-wrap: wrap; gap: .5em; }
-.ar-ws .ov-toolbar .filter-chip { font-size: 13px; padding: .3em .9em; }
-.ar-ws .ov-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4em 1em; }
-.ar-ws .ov-card-sub { font-size: 13px; color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
-.ar-ws .ov-stale { margin-left: 8px; font-size: 12px; color: var(--ar-fg-muted); }
-.ar-ws .ov-quiet { margin: 0; color: var(--ar-fg-muted); }
 /* A status mark on the overview is its shape in its tone, with its word beside it where there is room. */
-.ar-ws .ov-light { display: inline-flex; flex: none; align-items: baseline; gap: .3em; padding: 0; border: 0; background: none; font: 600 .8em/1.2 var(--ar-font-mono); white-space: nowrap; }
-/* Now: the running runs beside what needs a person. */
-/* Each card is as tall as what it holds (B9): Running now with one run no longer stretches to the height of Needs you. */
-.ar-ws .ov-now { display: flex; flex-wrap: wrap; gap: 1em; align-items: flex-start; }
-.ar-ws .ov-now-runs { flex: 3 1 min(100%, 36em); }
-.ar-ws .ov-attention { flex: 2 1 min(100%, 24em); }
 @media (max-width: 700px) {
-  .ar-ws .ov-page > *, .ar-ws .ov-now, .ar-ws .ov-grid { min-width: 0; width: 100%; max-width: 100%; }
-  .ar-ws .ov-page .ov-card { max-width: 100%; }
-  .ar-ws .ov-now > .ov-card { flex: 1 1 100%; width: 100%; min-width: 0; }
-  .ar-ws .ov-attention-text { min-width: 0; overflow-wrap: anywhere; }
 }
-.ar-ws .ov-running { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
-.ar-ws .ov-running-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .3em .7em; align-items: baseline; padding: .7em .8em; border: 1px solid var(--ar-border); border-radius: 8px; color: inherit; text-decoration: none; }
-.ar-ws .ov-running-row:hover, .ar-ws .ov-running-row:focus-visible { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
-.ar-ws .ov-running-row > :not(.ov-light) { grid-column: 2; }
-.ar-ws .ov-running-title { font-size: 15px; font-weight: 650; color: var(--ar-fg); overflow-wrap: anywhere; }
-.ar-ws .ov-running-meta { display: flex; flex-wrap: wrap; gap: .2em 1.1em; font-size: 13px; color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
-.ar-ws .ov-running-purpose { font-size: 13px; line-height: 1.4; color: var(--ar-fg-faint); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.ar-ws .ov-lead { display: flex; gap: .5em; align-items: baseline; min-width: 0; }
-.ar-ws .ov-lead-kind { flex: none; padding: .2em .45em; border: 1px solid var(--ar-border-strong); border-radius: 4px; font: 600 .7em/1.2 var(--ar-font-body); letter-spacing: .06em; color: var(--ar-fg-muted); background: none; }
-.ar-ws .ov-lead-kind.kind-check { color: var(--ar-fg); }
-.ar-ws .ov-lead-title { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--ar-fg-muted); overflow-wrap: anywhere; }
-.ar-ws .ov-lead-title b { color: var(--ar-fg); font-weight: 600; }
-.ar-ws .ov-attention ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .15em; }
-.ar-ws .ov-attention li > a, .ar-ws .ov-attention li > div { display: flex; gap: .7em; align-items: baseline; padding: .45em .5em; border-radius: 6px; color: var(--ar-fg); text-decoration: none; }
-.ar-ws .ov-attention li > a:hover, .ar-ws .ov-attention li > a:focus-visible { background: var(--ar-hover, var(--ar-bg-alt)); text-decoration: none; }
-.ar-ws .ov-attention-text { display: grid; gap: .1em; }
-.ar-ws .ov-attention-text small { font-size: 13px; color: var(--ar-fg-faint); }
 @media (min-width: 1800px) {
-  .ar-ws .ov-page { gap: .65em; }
-  .ar-ws .ov-now { gap: .65em; }
-  .ar-ws .ov-now > .ov-card { padding: .65em .8em; gap: .35em; }
-  .ar-ws .ov-running-row { padding: .45em .6em; }
-  .ar-ws .ov-running-purpose { -webkit-line-clamp: 1; }
-  .ar-ws .ov-attention ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .4em; }
-  .ar-ws .ov-attention li > a, .ar-ws .ov-attention li > div { padding: .25em .35em; }
-  .ar-ws .ov-attention-text { display: block; min-width: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 1.2; }
-  .ar-ws .ov-attention-text small { display: block; margin-top: .12em; line-height: 1.2; }
-  .ar-ws .ov-attention-text small:first-of-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ar-ws .ov-week li:not(.ov-week-head):not(.ov-week-total) { line-height: 1.3; padding-block: .2em; }
 }
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
-.ar-ws .ov-week { gap: .6em; }
-.ar-ws .ov-week ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(9em, 1fr) minmax(6em, .7fr) minmax(0, 3.2fr) repeat(3, max-content); column-gap: 1.1em; }
-.ar-ws .ov-week li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; row-gap: .15em; padding: .38em .5em; border-top: 1px solid var(--ar-border); border-radius: 0; }
-.ar-ws .ov-week li:hover { background: var(--ar-hover, var(--ar-bg-alt)); }
-.ar-ws .ov-week li.is-running { background: color-mix(in srgb, var(--ws-accent) 8%, transparent); }
-.ar-ws .ov-week .ov-week-head { border-top: 0; padding-block: .2em .4em; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg-faint); }
-.ar-ws .ov-week .ov-week-head:hover, .ar-ws .ov-week .ov-week-total:hover { background: none; }
-.ar-ws .ov-week-head > :nth-child(n+4) { text-align: right; }
-.ar-ws .ov-week .ov-week-total { font-weight: 650; color: var(--ar-fg-muted); border-top: 1px solid var(--ar-border-strong); }
-.ar-ws .ov-week-play { display: flex; flex-wrap: wrap; gap: .3em .5em; align-items: center; min-width: 0; color: var(--ar-fg); font-weight: 600; overflow-wrap: anywhere; text-decoration: none; }
-.ar-ws .ov-week-play:hover { text-decoration: underline; }
 @media (min-width: 761px) {
-  .ar-ws .ov-week-play { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ar-ws .ov-week-play .ov-badge { margin-left: .5em; }
 }
-.ar-ws .ov-badge { padding: .2em .45em; border: 1px solid var(--ar-border-strong); border-radius: 4px; font: 600 .68em/1.2 var(--ar-font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ar-fg-muted); }
-.ar-ws .ov-week-runs { display: flex; flex-wrap: wrap; gap: .3em; align-items: center; }
-.ar-ws .ov-chip { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; padding: 0; border-radius: 4px; font: 700 .95em/1 var(--ar-font-body); text-decoration: none; }
-.ar-ws .ov-chip i { font-style: normal; }
-.ar-ws .ov-chip:hover, .ar-ws .ov-chip:focus-visible { outline: 2px solid var(--ar-fg); outline-offset: 1px; }
-.ar-ws .ov-week-more { font-size: 13px; color: var(--ar-fg-faint); }
-.ar-ws .ov-week-found { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35em; min-width: 0; align-items: baseline; }
-.ar-ws .ov-week-found .ov-lead { min-width: 0; }
-.ar-ws .ov-week-counts, .ar-ws .ov-week-none { font-size: 13px; color: var(--ar-fg-muted); }
-.ar-ws .ov-week-num { font: .92em var(--ar-font-body); font-variant-numeric: tabular-nums; text-align: right; color: var(--ar-fg); white-space: nowrap; }
-.ar-ws .ov-week-ago { color: var(--ar-fg-muted); }
-.ar-ws .ov-week-all { justify-self: start; }
-.ar-ws .ov-costs { display: grid; gap: .5em; margin: 0; }
-.ar-ws .ov-costs > div { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; padding-bottom: .4em; border-bottom: 1px solid var(--ar-border); }
-.ar-ws .ov-costs dt { color: var(--ar-fg-muted); }
-.ar-ws .ov-costs dd { margin: 0; font: 650 1.5em/1.1 var(--ar-font-body); font-variant-numeric: tabular-nums; color: var(--ar-fg); }
-.ar-ws .ov-costs dd .ov-unknown { font: 400 .55em/1.2 var(--ar-font-body); color: var(--ar-fg-muted); }
 @media (max-width: 760px) {
-  .ar-ws .ov-page, .ar-ws .ov-section { grid-template-columns: minmax(0, 1fr); }
-  .ar-ws .ov-card { overflow-wrap: anywhere; }
-  .ar-ws .ov-week ol { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: .8em; }
-  .ar-ws .ov-week .ov-week-head { display: none; }
-  .ar-ws .ov-week-play, .ar-ws .ov-week-runs, .ar-ws .ov-week-found { grid-column: 1 / -1; }
-  .ar-ws .ov-week-num { text-align: left; font-size: 13px; white-space: normal; }
-  .ar-ws .ov-week li:not(.ov-week-total) .ov-week-num::before { content: attr(data-label); display: block; font: .78em var(--ar-font-body); color: var(--ar-fg-faint); white-space: nowrap; }
 }
-.ar-ws .ov-section { display: grid; gap: .7em; }
 /* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
    four never leaves one card beside two empty slots. */
-.ar-ws .ov-grid { display: flex; flex-wrap: wrap; gap: 1em; }
-.ar-ws .ov-loss-total { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: .25em .9em; padding: .65em 1em; border-left: 3px solid var(--ar-c-neutral); border-radius: 6px; background: var(--ws-panel); }
-.ar-ws .ov-loss-total-label { color: var(--ar-fg-muted); font-size: 13px; }
-.ar-ws .ov-loss-total strong { color: var(--ar-c-neutral); font-size: 26px; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.ar-ws .ov-loss-total-scope { color: var(--ar-fg-faint); font-size: 13px; }
-.ar-ws .ov-run-trends { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26em), 1fr)); gap: 1em; min-width: 0; }
-.ar-ws .ov-card { flex: 1 1 min(100%, 30em); margin: 0; display: grid; gap: .7em; align-content: start; padding: 1em 1.2em; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; box-sizing: border-box; }
-.ar-ws .ov-card.wide { flex-basis: 100%; }
 /* Title, then the legend on its own line, so every card's plot starts at the same depth. */
-.ar-ws .ov-card figcaption { display: grid; gap: .35em; }
-.ar-ws .ov-card-title { font-size: 15px; font-weight: 650; color: var(--ar-fg); }
-.ar-ws .ov-note { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ar-fg-faint); }
-.ar-ws .ov-legend { display: flex; flex-wrap: wrap; gap: .3em .9em; font-size: 13px; color: var(--ar-fg-muted); }
-.ar-ws .ov-legend i { display: inline-block; width: .7em; height: .7em; border-radius: 3px; margin-right: .4em; vertical-align: -.05em; }
 /* Rows share one set of columns (subgrid), so every bar starts at the same x: the label column is as wide as the
    longest label up to what leaves the bars a third of the card. */
-.ar-ws .ov-hosts { display: grid; gap: .7em; }
-.ar-ws .ov-host { display: grid; grid-template-columns: minmax(10em, 1fr) minmax(13em, 2fr) minmax(8em, 1fr) minmax(8em, 1fr) auto; gap: .6em 1.1em; align-items: center; font-size: 13px; color: var(--ar-fg-muted); }
-.ar-ws .ov-host-name { color: var(--ar-fg); font-family: var(--ar-font-body); }
-.ar-ws .ov-host-price { font-family: var(--ar-font-body); color: var(--ar-fg); }
-.ar-ws .ov-seats { list-style: none; margin: 0; padding: 0; display: grid; gap: .6em; }
-.ar-ws .ov-seats li { display: grid; grid-template-columns: minmax(13em, 1.4fr) minmax(8em, 1fr) minmax(8em, 1fr) 8em; gap: .5em 1.1em; align-items: center; font-size: 13px; color: var(--ar-fg-muted); }
-.ar-ws .ov-seat-name { color: var(--ar-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ar-ws .ov-composed { font-size: 13px; }
 @media (max-width: 700px) {
-  .ar-ws .ov-host, .ar-ws .ov-seats li { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---- The profile canvas (/run Profiles, /play Profiles): a pan-and-zoom lineage of agent profiles beside an inspector. */
@@ -3524,8 +3416,6 @@
 
 /* ---------- Decision pages open with their answers (change 4; design-system sections 3 and 6) ---------- */
 .ar-ws .as-of { margin-left: auto; font-size: 12px; color: var(--ar-fg-muted); white-space: nowrap; cursor: help; }
-.ar-ws .ov-head { display: flex; align-items: baseline; gap: 12px; }
-.ar-ws .ov-head h1 { margin: 0; }
 .ar-ws .answer-strip { display: grid; gap: 12px; min-width: 0; }
 .ar-ws .answer-tiles { display: grid; gap: 12px; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); }
 .ar-ws .answer-tile { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 16px 13px; border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); }
