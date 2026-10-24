@@ -27,7 +27,7 @@ export { newerStarted, StatusPill, statusOf, type Status, type StatusAxis, type 
 export { PlayHeader } from './workspace/PlayHead.js'
 export { AnswerStrip, AsOfStamp } from './workspace/AnswerStrip.js'
 export { overviewAnswers, playAnswers, type Answer } from './workspace/answers.js'
-export { RunFold, RunStatusLine, RunWhy } from './workspace/RunFold.js'
+export { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 export { RUN_TABS, RunTabBar, sectionOf, tabOf } from './workspace/RunTabs.js'
 export { PlayClimb } from './workspace/PlayClimb.js'
 export { NeedsYou } from './workspace/Overview.js'

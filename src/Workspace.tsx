@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
-import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
+import { FindingsFeed } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { BeadString } from './workspace/BeadString.js'
 import { ExplorePage } from './workspace/Explore.js'
@@ -14,25 +14,25 @@ import { PlayLedger } from './workspace/PlayLedger.js'
 import { PlayTeams } from './workspace/PlayTeams.js'
 import { PlayFindings } from './workspace/PlayFindings.js'
 import { PlayReleases } from './workspace/PlayReleases.js'
-import { inlinedPlayHead, type PlayHead, shortTag, targetWords, verdictWord } from './workspace/play-standing.js'
+import { PlaysTable } from './workspace/PlaysTable.js'
+import { inlinedPlayHead, type PlayHead, targetWords } from './workspace/play-standing.js'
 import { OverviewPage } from './workspace/Overview.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import { ResearchReport } from './ResearchReport.js'
 import { playReportToResearchReport, type PlayReportDocument } from './play-report.js'
-import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace-model.js'
+import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
-import { withPrompts } from './viewer/prompts.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
-import { agentState, indexRecord, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
+import { agentState, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, endingStatus, go, money, newerStarted, readRecord, runStatus, StandingText, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -47,7 +47,9 @@ import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
-import { RunFold, RunStatusLine, RunWhy } from './workspace/RunFold.js'
+import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
+import { AgentConversation, useRecordPart } from './workspace/record-part.js'
+import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
@@ -55,13 +57,13 @@ import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
+import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
   /** `report` is the play report at `/play/<id>/report`; `id` is the play. */
-  mode: 'plays' | 'play' | 'report' | 'run' | 'receipt' | 'overview' | 'theatre' | 'explore'
+  mode: 'plays' | 'play' | 'report' | 'run' | 'receipt' | 'overview' | 'today' | 'theatre' | 'explore'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -70,7 +72,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'overview' ? <OverviewPage api={api} /> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : mode === 'report' ? <PlayReportPage api={api} id={id} theme={theme} /> : <RunPage api={api} id={id} />}
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'overview' ? <OverviewPage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : mode === 'report' ? <PlayReportPage api={api} id={id} theme={theme} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
@@ -158,8 +160,7 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
 // ---------------------------------------------------------------------------------------------------------
 // /plays: every play this host has a run of
 // ---------------------------------------------------------------------------------------------------------
-type PlaySort = 'latest' | 'spend' | 'runs' | 'name'
-
+const PLAYS_PAGE = 50
 function PlaysPage({ api }: { api: string }) {
   const [params, update] = useSearch()
   const plays = useDocument<PlaysDocument>(`${api}/plays`)
@@ -169,6 +170,8 @@ function PlaysPage({ api }: { api: string }) {
   const showHidden = params.get('show') === 'all'
   const [draft, setDraft] = useState(query)
   useEffect(() => setDraft(query), [query])
+  // The first PLAYS_PAGE rows draw; the rest wait for "Show all", so the page stays a few screens tall (brief: <= 3).
+  const [shownRows, setShownRows] = useState(PLAYS_PAGE)
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -191,6 +194,14 @@ function PlaysPage({ api }: { api: string }) {
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
   const home = (['plays', 'findings', 'runs'] as const).find((value) => value === params.get('view')) ?? 'plays'
+  const order = home !== 'plays' ? null : (
+    <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
+      <option value="latest">Latest run first</option>
+      <option value="spend">Most spend first</option>
+      <option value="runs">Most runs first</option>
+      <option value="name">By name</option>
+    </select>
+  )
   const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters">
     <input type="search" aria-label="Search research" placeholder="Search research" value={draft}
       onChange={(event) => { setDraft(event.target.value); update({ q: event.target.value || undefined }, true) }} />
@@ -198,6 +209,7 @@ function PlaysPage({ api }: { api: string }) {
       <option value="">All programs</option>
       {programs.map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
+    {order}
   </div>
   const frontiers = !plays.data?.frontiers?.length ? null : <details className="research-frontiers" aria-label="Frontier statements">
     <summary className="faint">Frontier statements ({plays.data.frontiers.length}, as of {plays.data.frontiers.map((item) => item.asOf).filter(Boolean).sort().at(-1) ?? 'an unrecorded date'})</summary>
@@ -220,7 +232,7 @@ function PlaysPage({ api }: { api: string }) {
   if (home === 'findings')
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
-        {homeTabs}{sharedFilters}
+        <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <FindingsFeed api={api} query={query} program={program} />
         {frontiers}
       </div>
@@ -234,7 +246,8 @@ function PlaysPage({ api }: { api: string }) {
     const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd))
     const unrecorded = shown.filter((run) => [run.subscriptionUsd, run.apiUsd, run.sandboxUsd].every((usd) => usd === null || usd === undefined)).length
     return <div className="ws-page ws-plays" data-plays-home="runs">
-      {homeTabs}{sharedFilters}
+      <div className="plays-bar">{homeTabs}{sharedFilters}</div>
+      <ReliabilityPanel api={api} />
       <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.{unrecorded ? ` No spend reading for ${unrecorded} of them (subscription, API and sandbox; no per-run meter).` : ''}</p>
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
@@ -252,107 +265,15 @@ function PlaysPage({ api }: { api: string }) {
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
-        {homeTabs}{sharedFilters}
-        <header className="ws-head">
-          <div className="ws-title-row">
-            <h1>Plays</h1>
-          </div>
-          <div className="message-filters plays-filters">
-            <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
-              <option value="latest">Latest run first</option>
-              <option value="spend">Most spend first</option>
-              <option value="runs">Most runs first</option>
-              <option value="name">By name</option>
-            </select>
-          </div>
-          <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
-        </header>
-        <ReliabilityPanel api={api} />
+        <div className="plays-bar">{homeTabs}{sharedFilters}</div>
+        <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
           <div className="table-scroll">
-            <table className="data-table runs-table plays-table" data-play-list>
-              <thead>
-                <tr>
-                  <th>Play</th>
-                  <th>Where it stands</th>
-                  <th>Best under the current check</th>
-                  <th>Last run</th>
-                  <th className="num">Runs</th>
-                  <th className="num" title="Every token at list price, whoever paid; how many started runs were priced">API-equivalent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((play) => {
-                  const open = () => go(`/play/${encodeURIComponent(play.id)}`)
-                  const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
-                  const standing = play.standing ?? null
-                  const best = (standing?.best ?? null) as { tag?: string | null; run?: string | null; checker?: string | null; reached?: number | null; of?: number | null; workloads?: { passed?: number | null; total?: number | null } | null; verdict?: string | null } | null
-                  const last = standing?.lastEnding ?? null
-                  const cost = standing?.cost ?? null
-                  const lastId = last?.runId ?? play.latestRun?.id ?? null
-                  return (
-                    <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
-                      <td>
-                        <a href={`/play/${encodeURIComponent(play.id)}`} onClick={(event) => event.preventDefault()}>{play.title}</a>
-                        {play.title !== play.id && <small className="faint mono"> {play.id}</small>}
-                        {play.program && <small className="faint"> · {play.program}</small>}
-                      </td>
-                      <td className="plays-standing">
-                        {standing?.sentence ? (
-                          <span className="clamp-2" title={standing.sentence}><StandingText text={standing.sentence} /></span>
-                        ) : (
-                          <StatusPill status={statusOf({ axis: 'run', state: play.state })} />
-                        )}
-                      </td>
-                      <td>
-                        {best?.tag || best?.run ? (
-                          <span className="mono" title={[best.checker ? `under ${best.checker}` : null, best.verdict ? verdictWord(best.verdict) : null].filter(Boolean).join(' · ') || undefined}>
-                            {shortTag(best.tag) ?? 'workspace'}
-                            {best.run ? <span className="faint"> ({best.run})</span> : null}
-                            {best.reached && best.of ? ` · stage ${best.reached}/${best.of}` : ''}
-                            {best.workloads?.total ? ` · ${best.workloads.passed ?? '?'}/${best.workloads.total}` : ''}
-                            {best.checker ? <span className="faint"> {best.checker}</span> : null}
-                          </span>
-                        ) : (
-                          <span className="faint">—</span>
-                        )}
-                      </td>
-                      <td>
-                        {lastId ? (
-                          <a
-                            className="mono"
-                            href={`/run/${encodeURIComponent(lastId)}`}
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              go(`/run/${encodeURIComponent(lastId)}`)
-                            }}
-                          >
-                            {last?.run ?? shortRun(play.id, lastId)}
-                          </a>
-                        ) : '—'}
-                        {last?.word ? <> <StatusPill status={endingStatus(last.word)} className="ending-word" /></> : null}
-                        <small className="faint"> {when(last?.at ?? play.latestRun?.startedAt)}</small>
-                      </td>
-                      <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
-                        {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
-                      </td>
-                      <td className="num" title={cost?.priced !== null && cost?.priced !== undefined ? `${cost.priced} of ${cost.started ?? '?'} started runs priced${cost.provenance ? ` (${cost.provenance})` : ''}` : undefined}>
-                        {cost?.apiEquivalentUsd !== null && cost?.apiEquivalentUsd !== undefined && cost.priced ? (
-                          <>
-                            {money(cost.apiEquivalentUsd)}
-                            {cost.priced !== cost.started ? <small className="faint"> {cost.priced}/{cost.started}</small> : null}
-                          </>
-                        ) : (
-                          <span className="faint" title="API-equivalent not priced">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} />
           </div>
+          {rows.length > shownRows && (
+            <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>
+          )}
           {!rows.length && <p className="chat-empty">No {hidden.plays && !showHidden ? 'shown ' : ''}play matches.</p>}
         </section>
       </div>
@@ -825,22 +746,6 @@ const AGENT_TABS = [
   ['usage', 'Usage'],
 ] as const
 
-/** A record part (agent-record.v1) read for drawing; `nodeStats` only on the `nodes` part. */
-function useRecordPart(url: string | null) {
-  const doc = useDocument<unknown>(url, undefined, true)
-  const parsed = useMemo(() => {
-    if (!doc.data) return { record: null, index: null, stats: {} as Record<string, NodeStats>, error: undefined as string | undefined }
-    try {
-      const record = withPrompts(readRecord(doc.data))
-      const stats = ((doc.data as { nodeStats?: Record<string, NodeStats> }).nodeStats ?? {}) as Record<string, NodeStats>
-      return { record, index: indexRecord(record), stats, error: undefined }
-    } catch (error) {
-      return { record: null, index: null, stats: {} as Record<string, NodeStats>, error: error instanceof Error ? error.message : 'Invalid record' }
-    }
-  }, [doc.data])
-  return { ...parsed, loading: doc.loading, fetchError: doc.error, pending: !!url && doc.data === undefined && !doc.error }
-}
-
 /** The run's profiles on the lineage canvas, read from its play's profile index (which carries every ancestor, in any play). */
 function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; runId: string; play: string; selected: string | null; onSelect: (short: string | null) => void }) {
   const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(play)}/profiles`)
@@ -922,9 +827,19 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <div className="fold">
-          <RunFold doc={doc} play={play.data} />
-        </div>
+        <Suspense fallback={<p className="ws-status" role="status">Opening the workspace…</p>}>
+          <LazyRunWorkspace
+            api={api}
+            doc={doc}
+            transcript={(node, select) =>
+              settledRecord && index ? (
+                <AgentConversation key={node} runUrl={runUrl} version={version} index={index} actor={index.nodes.has(index.canonical(node)) ? index.canonical(node) : root ?? node} />
+              ) : (
+                <LiveTranscript runUrl={runUrl} runId={doc.run.id} alive={Boolean(doc.execution?.alive)} selected={node} onSelect={select} />
+              )
+            }
+          />
+        </Suspense>
         {tabs}
         <RunWhy doc={doc} play={play.data} />
         <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />

@@ -1,3 +1,4 @@
+import type { HostView } from './workspace/view.js'
 // The Discovery overview document's types: served by tangle-tools at `overview`, read by Overview.tsx and answers.ts.
 type Bin = { lo: number; hi: number; n: number }
 /** The Discovery overview (`agent-workspace.overview.v1`, served at `overview`): runs, findings, tokens, money, the
@@ -12,7 +13,7 @@ export interface OverviewLead {
   /** A `progress` lead's newest verdict: solved, not-solved or unknown. */
   verdict?: string | null
 }
-export interface OverviewRun {
+export interface OverviewRun { /** The run's view (views.run_view), for Today. */ view?: HostView;
   runId: string; state: string; startedAt: string | null; activeAt: string | null; agents: number | null; depth: number | null
   results: number; claims: number; findingsPending?: boolean; lead: OverviewLead | null; lostHours: number; listUsd: number; paidUsd: number
   /** Subscription use priced at API list (not billed), model API billed through Router, sandbox compute billed. */
@@ -36,6 +37,8 @@ export interface OverviewDocument {
   week?: OverviewPlayWeek[]
   weekDays?: number
   attention?: OverviewAttention[]
+  /** Each play active this week as its view (views.play_view), newest first. */
+  plays?: { play: string; title: string; view: HostView }[]
   composedAt: string
   /** When the running runs were read (change 1); the rest of the overview is as of `composedAt`. */
   runningAt?: string | null

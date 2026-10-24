@@ -1,3 +1,4 @@
+@import '@tangle-network/sandbox-ui/styles';
 @import '@tangle-network/charts/react/live.css';
 @import '@tangle-network/charts/figure.css';
 @import '@tangle-network/charts/react/flow-waterfall.css';
@@ -1673,7 +1674,8 @@
 .ar-ws .ws-facts .live { color: var(--ar-c-run); }
 .ar-ws .state-pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px;
-  font: 600 var(--ar-text-s)/1.6 var(--ar-font-mono); white-space: nowrap;
+  /* Monospace is for identifiers, hashes and paths only (disco UI brief): a status word is UI text. */
+  font: 600 var(--ar-text-s)/1.6 var(--font-sans, system-ui, sans-serif); white-space: nowrap;
   color: var(--ar-c-neutral); border: 1px solid color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); background: none;
 }
 /* Status colour has one path: the `data-status="<axis>:<word>:<tone>"` that statusOf (src/workspace/data.ts) writes.
@@ -2751,7 +2753,7 @@
    (useWidth), so plot height, margins and marks follow the type. */
 .ar-ws .ov-page { font-size: 16px; gap: 1.3em; --chart-live-fg: var(--ar-fg); --chart-live-muted: var(--ar-fg-muted); --chart-live-faint: var(--ar-fg-faint); --chart-live-raised: var(--ar-raised, var(--ar-bg-alt)); --chart-live-border: var(--ar-border-strong); --chart-live-hover: var(--ar-hover, var(--ar-bg-alt)); --chart-live-font-mono: var(--ar-font-mono); --chart-live-surface: var(--ws-panel); --chart-live-danger: var(--ar-c-neutral); --chart-live-warning: var(--ar-c-neutral); }
 .ar-ws .research-frontiers { display: grid; gap: .6em; padding: .8em 0; }
-.ar-ws .plays-table .plays-standing { min-width: 26em; max-width: 44em; white-space: normal; font-size: var(--ar-text-s); line-height: 1.35; }
+.ar-ws .plays-table .plays-standing { min-width: 0; max-width: 24rem; white-space: normal; font-size: var(--ar-text-s); line-height: 1.35; }
 .ar-ws .research-frontier-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22em), 1fr)); gap: .55em; }
 .ar-ws .research-frontier { display: grid; gap: .25em; min-width: 0; padding: .65em .85em; border: 1px solid var(--ar-border); border-radius: 7px;
   color: var(--ar-fg); background: var(--ws-panel); text-decoration: none; }
@@ -3616,3 +3618,137 @@
   .ar-ws .run-tab-strip { display: none; }
   .ar-ws .run-tab-select { display: block; }
 }
+
+/* The run workspace (RunWorkspace.tsx), on sandbox-ui tokens: the header is two lines, and the four panes fill the rest
+   of the first screen, so agents, transcript and files are all visible without scrolling (disco UI brief, run page).
+   Type: 15 px body, 13 px secondary, 12 px minimum; monospace only for ids. */
+.ar-ws .rw { --rw-gap: 16px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-sans); }
+.ar-ws .rw-head { display: grid; gap: 6px; }
+.ar-ws .rw-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ar-ws .rw-title h1 { margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
+.ar-ws .rw-title .as-of { margin-left: auto; }
+.ar-ws .rw-sentence { margin: 0; max-width: 110ch; font-size: var(--font-size-base); line-height: 1.5; color: var(--text-secondary, var(--ar-fg)); }
+.ar-ws .rw-frame { height: max(520px, calc(100svh - 250px)); border: 1px solid var(--border-subtle, var(--ar-border)); border-radius: var(--radius-panel, 12px); overflow: hidden; background: var(--bg-root); }
+.ar-ws .rw-pane-title { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-ws .rw-empty { margin: 0; padding: 16px; font-size: 13px; color: var(--text-muted); }
+.ar-ws .rw-agents { margin: 0; padding: 8px; list-style: none; display: grid; gap: 4px; overflow: auto; }
+.ar-ws .rw-agents li { padding-left: calc(var(--depth, 0) * 12px); }
+.ar-ws .rw-agents button { display: grid; gap: 4px; width: 100%; padding: 10px 12px; text-align: left; border: 1px solid transparent; border-radius: var(--radius-md, 8px); background: transparent; color: var(--text-primary); cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out; }
+.ar-ws .rw-agents button:hover { background: var(--bg-hover); }
+.ar-ws .rw-agents button[aria-pressed="true"] { border-color: var(--border-accent); background: var(--accent-surface-soft); }
+.ar-ws .rw-agent-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.ar-ws .rw-agent-head .state-pill { font-size: 12px; }
+.ar-ws .rw-agent-meta { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .rw-agent-turn { font-size: 13px; line-height: 1.4; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ar-ws .rw-releases { margin: 0; padding: 8px 12px; list-style: none; display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; }
+.ar-ws .rw-releases li { flex: none; scroll-snap-align: start; }
+.ar-ws .rw-releases button { display: grid; gap: 6px; min-width: 96px; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md, 8px); background: var(--bg-card); color: var(--text-primary); cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+.ar-ws .rw-releases button:hover { border-color: var(--border-hover); }
+.ar-ws .rw-releases button[aria-pressed="true"] { border-color: var(--border-accent); background: var(--accent-surface-soft); }
+.ar-ws .rw-release-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ar-ws .rw-best { font-style: normal; font-size: 12px; font-weight: 500; color: hsl(var(--success)); }
+.ar-ws .rw-release-steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; width: 100%; min-width: 72px; height: 6px; }
+.ar-ws .rw-release-steps i { display: block; min-width: 8px; height: 6px; }
+.ar-ws .rw-release-steps.is-unchecked { height: auto; font-size: 12px; color: var(--text-muted); }
+.ar-ws .rw-release-steps i { border-radius: 2px; border: 1px solid var(--border-default); }
+.ar-ws .rw-release-steps i[data-step="pass"] { background: hsl(var(--success)); border-color: transparent; }
+.ar-ws .rw-release-steps i[data-step="fail"] { background: hsl(var(--error)); border-color: transparent; }
+.ar-ws .rw-release-steps i[data-step="undecided"] { background: repeating-linear-gradient(135deg, hsl(var(--warning)) 0 2px, transparent 2px 4px); border-color: hsl(var(--warning)); }
+.ar-ws .rw-release-count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .rw-file-modes { display: inline-flex; gap: 4px; }
+.ar-ws .rw-file-modes button { padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text-secondary); cursor: pointer; }
+.ar-ws .rw-file-modes button[aria-pressed="true"] { background: var(--accent-surface-soft); color: var(--text-primary); border-color: var(--border-accent); }
+@media (max-width: 1023px) { .ar-ws .rw-frame { height: auto; min-height: 70svh; } }
+@media (prefers-reduced-motion: reduce) { .ar-ws .rw * { transition: none !important; } }
+.ar-ws .rw-transcript { height: 100%; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.ar-ws .rw-frame > * { height: 100%; }
+.ar-ws .rw-phone { display: grid; gap: 16px; }
+.ar-ws .rw-phone > section { display: grid; gap: 8px; }
+.ar-ws .rw-phone h2 { margin: 0; }
+.ar-ws .rw-phone .rw-agents { padding: 0; }
+.ar-ws .rw-phone .rw-releases { padding: 0 0 4px; }
+.rw-sheet.agent-record.ar-ws { height: 92svh; background: var(--bg-elevated, var(--bg-root)); color: var(--text-primary); border-top: 1px solid var(--border-subtle); border-radius: 16px 16px 0 0; padding: 16px; display: flex; flex-direction: column; gap: 8px; padding-bottom: env(safe-area-inset-bottom); }
+.rw-sheet-body { flex: 1; min-height: 0; overflow: auto; }
+
+/* Today (Today.tsx): the Discovery home, calm and readable from across the room. Four type sizes only: 48 px hero
+   figures, 20 px headings, 15 px body, 13 px secondary; 24-32 px between sections; one as-of in the header. */
+.ar-ws .td { display: grid; gap: 28px; max-width: 1320px; margin: 0 auto; padding: 8px 0 48px; font-family: var(--font-sans); font-size: 15px; }
+.ar-ws .td-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.ar-ws .td-head h1 { white-space: nowrap; }
+.ar-ws .td-head h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.ar-ws .td-head .as-of { margin-left: auto; font-size: 13px; }
+.ar-ws .td-head .td-stale { font-size: 13px; padding: 2px 10px; border-radius: 999px; color: hsl(var(--warning)); background: hsl(var(--warning) / 0.12); cursor: help; }
+.ar-ws .td-label { margin: 0 0 4px; font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+.ar-ws .td-big { display: flex; align-items: baseline; gap: 12px; margin: 0; font-size: 48px; line-height: 1.05; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--text-primary); }
+.ar-ws .td-big span { font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--text-secondary); }
+.ar-ws .td-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.ar-ws .td-hero, .ar-ws .td-card, .ar-ws .td-plays { padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-panel, 16px); background: var(--bg-card); }
+.ar-ws .td-hero .td-big[data-count="0"] { color: hsl(var(--success)); }
+.ar-ws .td-needs { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.ar-ws .td-needs li { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; padding: 12px 0 0; border-top: 1px solid var(--border-subtle); }
+.ar-ws .td-need-text { margin: 0; font-size: 15px; line-height: 1.45; color: var(--text-primary); }
+.ar-ws .td-go { align-self: center; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: var(--radius-pill, 999px); background: var(--accent-surface-soft); color: var(--text-primary); text-decoration: none; transition: background-color 150ms ease-out; }
+.ar-ws .td-go:hover { background: var(--accent-surface-strong); }
+.ar-ws .td-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.ar-ws .td-runs { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.ar-ws .td-runs a { display: flex; align-items: center; gap: 10px; color: var(--text-primary); text-decoration: none; font-size: 15px; }
+.ar-ws .td-dots { display: block; max-width: 100%; height: auto; margin-top: 12px; overflow: visible; }
+.ar-ws .td-dots .td-n { fill: var(--text-dim, var(--text-muted)); }
+.ar-ws .td-dots line { stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; }
+.ar-ws .td-dots circle { fill: hsl(var(--success)); stroke: hsl(var(--success)); stroke-width: 2; }
+.ar-ws .td-dots circle[data-hollow] { fill: var(--bg-card); }
+.ar-ws .td-dots text { font-family: var(--font-sans); font-size: 12px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .td-plays ul { display: grid; margin: 12px 0 0; padding: 0; list-style: none; }
+.ar-ws .td-plays li + li { border-top: 1px solid var(--border-subtle); }
+.ar-ws .td-plays a { display: grid; grid-template-columns: 9rem minmax(10rem, 16rem) 8rem 1fr; align-items: center; gap: 16px; padding: 12px 4px; color: var(--text-primary); text-decoration: none; border-radius: var(--radius-md, 8px); transition: background-color 150ms ease-out; }
+.ar-ws .td-plays a:hover { background: var(--bg-hover); }
+.ar-ws .td-plays b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .td-steps { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(6px, 1fr); align-items: center; gap: 2px; font-size: 13px; }
+.ar-ws .td-steps i { display: block; height: 6px; border-radius: 2px; border: 1px solid var(--border-default); }
+.ar-ws .td-steps i[data-step="pass"] { background: hsl(var(--success)); border-color: transparent; }
+.ar-ws .td-steps i[data-step="fail"] { background: hsl(var(--error)); border-color: transparent; }
+.ar-ws .td-steps i[data-step="undecided"] { background: repeating-linear-gradient(135deg, hsl(var(--warning)) 0 2px, transparent 2px 4px); border-color: hsl(var(--warning)); }
+.ar-ws .td-steps em { margin-left: 6px; font-style: normal; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .td-steps.is-empty { display: block; color: var(--text-muted); }
+.ar-ws .td-play-line { font-size: 13px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) {
+  .ar-ws .td { gap: 20px; }
+  .ar-ws .td-row { grid-template-columns: 1fr; }
+  .ar-ws .td-hero, .ar-ws .td-card, .ar-ws .td-plays { padding: 16px; }
+  .ar-ws .td-needs li { grid-template-columns: 1fr; }
+  .ar-ws .td-plays a { grid-template-columns: auto 1fr; gap: 6px 12px; }
+  .ar-ws .td-plays .td-steps, .ar-ws .td-plays .td-play-line { grid-column: 1 / -1; white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) { .ar-ws .td * { transition: none !important; } }
+.ar-ws .td-more { margin-top: 12px; padding: 6px 14px; font: 600 13px var(--font-sans); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text-secondary); cursor: pointer; }
+/* Plays: one toolbar (views, search, program, order) above the table; the table's first row sits in the first screen. */
+.ar-ws .plays-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }
+.ar-ws .plays-bar .run-tabs { position: static; display: flex; flex-wrap: nowrap; min-height: 0; padding: 2px; gap: 2px; box-shadow: none; }
+.ar-ws .plays-bar .run-tab { padding: 4px 12px; font-size: 14px; }
+.ar-ws .plays-bar .plays-filters { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.ar-ws .plays-bar input[type="search"] { flex: 1; min-width: 160px; }
+.ar-ws .ws-plays .hidden-summary { margin: 0 0 12px; font-size: 13px; }
+.ar-ws .plays-table td { padding-top: 8px; padding-bottom: 8px; }
+.ar-ws .plays-more { display: block; margin: 12px auto 0; padding: 6px 16px; border: 1px solid var(--ar-border); border-radius: 8px; background: none; color: var(--ar-fg); font: inherit; font-size: 14px; cursor: pointer; transition: background-color 150ms; }
+.ar-ws .plays-more:hover { background: var(--ws-panel); }
+.ar-ws .plays-table td { white-space: nowrap; }
+.ar-ws .plays-table .plays-last .ending-word { padding: 0; border: 0; background: none; }
+.ar-ws .plays-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.ar-ws .plays-status [data-holding] { flex-basis: 100%; font-size: 13px; }
+.ar-ws .plays-status .clamp-1 { min-width: 0; color: var(--ar-fg-muted); }
+.ar-ws .plays-best .td-steps { margin-left: 8px; }
+.ar-ws .plays-best > span { display: inline-flex; align-items: center; gap: 6px; }
+.ar-ws .plays-best .td-steps { margin-left: 2px; }
+/* Phone: each play is a block (name; status; best release and last run), no sideways table. */
+@media (max-width: 640px) {
+  .ar-ws .plays-table thead, .ar-ws .plays-table td.num { display: none; }
+  .ar-ws .plays-table, .ar-ws .plays-table tbody { display: block; }
+  .ar-ws .plays-table tr { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
+  .ar-ws .plays-table td { display: block; padding: 0; border: 0; white-space: normal; }
+  .ar-ws .plays-table .plays-standing { max-width: none; }
+}
+.ar-ws .plays-status [data-holding="needs"] { color: hsl(var(--warning)); }
+.ar-ws .plays-table .plays-standing { min-width: 0; max-width: 18rem; }
+.ar-ws .plays-table .plays-name small, .ar-ws .plays-table .plays-best .faint { font-size: 13px; }
+/* Mono is for ids only (brief): counts, money and controls are Inter with tabular figures. */
+.ar-ws .plays-table td.num, .ar-ws .plays-table td.num *, .ar-ws .plays-table th.num, .ar-ws .plays-bar select, .ar-ws .plays-bar input { font-family: var(--ar-font, Inter, sans-serif); font-variant-numeric: tabular-nums; }

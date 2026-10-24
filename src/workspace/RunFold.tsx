@@ -1,13 +1,11 @@
-import { Spark } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { compact } from '../viewer/model.js'
-import { type Play, plainWords, stamp } from './answers.js'
-import { AsOfStamp } from './AnswerStrip.js'
+import { type Play, plainWords } from './answers.js'
 import { dataStatus, StatusPill, statusOf } from './data.js'
 import { BlockerChip } from './PlayHead.js'
 import { shortRun, shortTag } from './play-standing.js'
-import { inheritedGate, isLive, runOutputSlot } from './run-answers.js'
-import { viewAsOf, viewChip, type ViewProgress } from './view.js'
+import { inheritedGate, isLive } from './run-answers.js'
+import { viewChip } from './view.js'
 
 const FIX_PREVIEW = 180
 const clock = (at: string | null | undefined) => (at ? `${new Date(at).toISOString().slice(11, 16)} UTC` : null)
@@ -15,75 +13,6 @@ const clock = (at: string | null | undefined) => (at ? `${new Date(at).toISOStri
 const humane = (text: string) => text.replace(/\b\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)(?::\d\d(?:\.\d+)?)?Z\b/g, '$1-$2 $3Z')
 
 /** The check's steps as one segment each: filled for a pass, red for a fail, striped for undecided, hollow for not run. */
-const STEP_WORDS = { pass: 'passes', fail: 'fails', undecided: 'never decided', unrun: 'not run' } as const
-
-function StepBar({ progress }: { progress: ViewProgress }) {
-  return (
-    <ol className="run-steps" aria-label={progress.sentence}>
-      {progress.steps.map((step, index) => (
-        <li key={index} data-step={step.state} title={`${step.label}: ${STEP_WORDS[step.state]}${step.line ? ` (${step.line})` : ''}`}>
-          <span>{step.label}</span>
-        </li>
-      ))}
-    </ol>
-  )
-}
-
-/**
- * The run page's first screen: the h1, the host's status chip and the page's one as-of, the host's status sentence,
- * then three slots: the best release step by step, what blocks the run, and what it produced. Every word but the output
- * comes from the host's view (views.run_view), so this page and the play page say the same thing about this run.
- */
-export function RunFold({ doc, now = Date.now() }: { doc: RunDocument; play?: Play | null; now?: number }) {
-  const run = doc.run
-  const view = doc.view
-  const output = runOutputSlot(doc, now)
-  return (
-    <header className="run-fold" data-run-fold>
-      <nav className="crumbs" aria-label="Breadcrumb">
-        <a href={`/play/${encodeURIComponent(run.play)}`}>{run.play}</a>
-      </nav>
-      <div className="run-head">
-        <h1>Run {shortRun(run.play, run.id)}</h1>
-        {view && <StatusPill status={viewChip(view.status)} />}
-        {view && <AsOfStamp asOf={viewAsOf(view)} />}
-      </div>
-      {view && <p className="run-state" data-field="view.sentence">{view.sentence}</p>}
-      <div className="run-slots">
-        <div className="run-slot" data-slot="best">
-          <span className="run-slot-label">Best version</span>
-          {view?.progress ? (
-            <>
-              <b>{view.progress.release ?? 'workspace'}: {view.progress.passed} of {view.progress.total} steps</b>
-              <StepBar progress={view.progress} />
-              <span className="run-slot-sub">{view.progress.sentence}</span>
-            </>
-          ) : (
-            <b>No version scored yet</b>
-          )}
-        </div>
-        <div className="run-slot" data-slot="blocker">
-          <span className="run-slot-label">Blocker</span>
-          {view?.blocker ? (
-            <>
-              <b data-field="view.blocker">{view.blocker.text}</b>
-              <span className="run-slot-sub">{[view.blocker.owner ? `Owner: ${view.blocker.owner}` : null, view.blocker.since ? `since ${stamp(view.blocker.since, now)}` : null].filter(Boolean).join(' · ')}</span>
-            </>
-          ) : (
-            <b>Nothing holds it</b>
-          )}
-        </div>
-        <div className="run-slot" data-slot="output">
-          <span className="run-slot-label">Output</span>
-          <b>{output.headline}</b>
-          {output.points && output.points.length >= 3 && <span className="run-slot-spark"><Spark points={output.points} /></span>}
-          <span className="run-slot-sub">{output.sub}</span>
-        </div>
-      </div>
-    </header>
-  )
-}
-
 /** On a run's tab pages, the status block is one sticky line: the run, the host's chip, and its sentence. */
 export function RunStatusLine({ doc }: { doc: RunDocument; play?: Play | null; now?: number }) {
   return (

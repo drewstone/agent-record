@@ -1,5 +1,5 @@
 import type { RunDocument } from '../workspace-model.js'
-import { cumulative, ms, type Play, runOutput, stamp } from './answers.js'
+import { ms, type Play } from './answers.js'
 import { shortRun, shortTag } from './play-standing.js'
 import type { ContractDelivery, RunReceipt } from './run-receipt.js'
 
@@ -35,33 +35,6 @@ export function successorOf(play: Play | null | undefined, runId: string): { run
   // The newest child is where the work went on; a live one wins.
   const next = children.sort((a, b) => (started(b) || 0) - (started(a) || 0))[0]
   return next ? { runId: next, run: shortRun(play.id, next) } : null
-}
-
-export interface OutputSlot {
-  headline: string
-  sub: string
-  points: [number, number][] | null
-}
-
-/** The fourth slot: what the run produced. `progress.output` when served, else the files its agents wrote over time. */
-export function runOutputSlot(doc: RunDocument, now: number): OutputSlot {
-  const output = runOutput(doc)
-  if (output?.codeCommits != null) {
-    const own = (output.releaseTags ?? []).filter((tag) => !tag.inherited)
-    return {
-      headline: `${output.codeCommits} code commits`,
-      sub: [output.newestCodeCommitAt ? `newest ${stamp(output.newestCodeCommitAt, now)}` : null, own.length ? `${own.length} release tags, ${own.filter((tag) => tag.published).length} published` : 'no release yet'].filter(Boolean).join(' · '),
-      points: output.codeCommitsBy30Min?.length ? cumulative(output.codeCommitsBy30Min) : null,
-    }
-  }
-  const samples = doc.progress?.samples ?? []
-  const last = samples.at(-1)
-  if (!last) return { headline: 'No output recorded', sub: 'the run wrote no progress samples', points: null }
-  return {
-    headline: `${doc.progress?.files ?? last.files} files written`,
-    sub: `as of ${stamp(last.at, now)}`,
-    points: samples.length > 1 ? samples.map((sample): [number, number] => [ms(sample.at), sample.files]) : null,
-  }
 }
 
 /** The start point's commit: the gate the run inherited from its fork, which is not the run's own result. */
