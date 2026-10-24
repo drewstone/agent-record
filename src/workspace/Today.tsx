@@ -114,6 +114,25 @@ function CleanRuns({ reliability }: { reliability: ReliabilityDocument | undefin
   )
 }
 
+/** A source older than this is named stale: reliability.json is rewritten every few minutes, so an hour means its writer stopped. */
+const STALE_AFTER_MS = 60 * 60_000
+
+/**
+ * The one chip for sources behind the page's single freshness dot: a source the page prints that is old or unreadable
+ * collapses into "1 source stale", its name and age in the tip, instead of a panel or a second time stamp.
+ */
+function StaleSources({ reliability, failed }: { reliability: ReliabilityDocument | undefined; failed: boolean }) {
+  const stale: string[] = []
+  if (failed) stale.push('run reliability: unreadable')
+  else if (reliability?.at && Date.now() - Date.parse(reliability.at) > STALE_AFTER_MS) stale.push(`run reliability: written ${hm(reliability.at)}`)
+  if (!stale.length) return null
+  return (
+    <span className="td-stale" title={stale.join('; ')} role="status">
+      {stale.length} {stale.length === 1 ? 'source' : 'sources'} stale
+    </span>
+  )
+}
+
 const PLAYS_SHOWN = 8
 /** Each play active this week: those that need Drew first, then solved, then the rest by newest activity. */
 function Plays({ plays }: { plays: NonNullable<OverviewDocument['plays']> }) {
@@ -158,6 +177,7 @@ export function TodayPage({ api }: { api: string }) {
       <header className="td-head">
         <h1>Today</h1>
         <AsOfStamp asOf={{ at: d.composedAt, meaning: `when the host composed this page (${hm(d.composedAt)})`, source: 'the Discovery overview' }} />
+        <StaleSources reliability={reliability.data} failed={Boolean(reliability.error && !reliability.data)} />
       </header>
       <NeedsYou items={d.attention ?? []} />
       <div className="td-row">
