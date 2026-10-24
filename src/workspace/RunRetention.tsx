@@ -2,7 +2,7 @@ import type { RunReceipt } from './run-receipt.js'
 import { utcClock } from './run-receipt.js'
 import { byteSize } from './final-output.js'
 
-/** Format the owner's facts; a confirmed sandbox removal says nothing about its snapshot repository. */
+/** Keep requested policy separate from observed removal and storage facts. */
 export function RunRetention({ retention }: { retention: NonNullable<RunReceipt['system']>['retention'] }) {
   if (!retention) return null
   const evidence = retention.evidenceRetirement
@@ -10,9 +10,11 @@ export function RunRetention({ retention }: { retention: NonNullable<RunReceipt[
     <h2 id="rr-retention">Resource cleanup</h2>
     <p><span data-field="system.retention.removed">{retention.removed}</span> sandbox removals confirmed; <span data-field="system.retention.pending">{retention.pending}</span> pending.</p>
     <dl className="rr-facts">
-      <dt>Retention</dt><dd><span data-field="system.retention.disposition">{retention.disposition}</span>; <span data-field="system.retention.workspace">{retention.workspace}</span> workspace</dd>
-      <dt>Native capture</dt><dd data-field="system.retention.nativeCapture">{retention.nativeCapture}</dd>
-      <dt>Cloud evidence</dt><dd data-field="system.retention.cloudEvidence">{retention.cloudEvidence}</dd>
+      <dt>Requested retention</dt><dd><span data-field="system.retention.disposition">{retention.disposition}</span>; <span data-field="system.retention.workspace">{retention.workspace}</span> workspace</dd>
+      <dt>Requested native capture</dt><dd data-field={retention.requestedNativeCapture === undefined ? 'system.retention.nativeCapture' : 'system.retention.requestedNativeCapture'}>{retention.requestedNativeCapture ?? retention.nativeCapture}</dd>
+      <dt>Observed native capture</dt><dd>unverified</dd>
+      <dt>Requested cloud evidence</dt><dd data-field={retention.requestedCloudEvidence === undefined ? 'system.retention.cloudEvidence' : 'system.retention.requestedCloudEvidence'}>{retention.requestedCloudEvidence ?? retention.cloudEvidence}</dd>
+      <dt>Observed cloud evidence</dt><dd>unverified</dd>
       <dt>Snapshot absence</dt><dd data-field="system.retention.snapshotAbsenceVerified">{retention.snapshotAbsenceVerified === true ? 'verified' : 'unverified'}</dd>
     </dl>
     {evidence && <dl className="rr-facts">

@@ -58,9 +58,11 @@ export const runReceiptSchema = z.object({
   }).catchall(z.unknown()),
   scores: z.object({ checks: z.array(z.object({ id: z.string(), label: z.string().optional(), result: z.string() }).catchall(z.unknown())) }).catchall(z.unknown()).nullable(),
   system: z.object({ behaviorExpectations: behaviorExpectationsSchema.nullable().optional(), errors: z.object({ top: z.array(z.object({ count: z.number(), tool: z.string(), message: z.string() })) }).nullable().optional(),
-    /** The Lab owns disposition and exact-identity removal receipts; task success does not imply cleanup. */
+    /** The Lab owns requested disposition/capture policy and exact-identity removal receipts.
+     * Policy strings do not prove native capture or cloud evidence state; task success does not imply cleanup. */
     retention: z.object({
       disposition: z.string(), workspace: z.string(), nativeCapture: z.string(), cloudEvidence: z.string(),
+      requestedNativeCapture: z.string().optional(), requestedCloudEvidence: z.string().optional(),
       removed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(),
       snapshotAbsenceVerified: z.boolean().nullable(),
       evidenceRetirement: z.object({
