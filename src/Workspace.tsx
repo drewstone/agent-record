@@ -243,7 +243,7 @@ function PlaysPage({ api }: { api: string }) {
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
     // An unknown is one line (design-system section 2): a missing reading prints a dash, and the line counts them.
-    const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd))
+    const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd)), clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
     const unrecorded = shown.filter((run) => [run.subscriptionUsd, run.apiUsd, run.sandboxUsd].every((usd) => usd === null || usd === undefined)).length
     return <div className="ws-page ws-plays" data-plays-home="runs">
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
@@ -252,14 +252,14 @@ function PlaysPage({ api }: { api: string }) {
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
           <th className="num">Subscription at API prices</th><th className="num">Billed API</th><th className="num">Billed sandbox</th></tr></thead>
-        <tbody>{shown.map((run) => <tr key={run.id}>
-          <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono"> {run.id}</small></td>
+        <tbody>{shown.slice(0, shownRows).map((run) => <tr key={run.id}>
+          <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono" title={run.id}> {/\d{6}(\d\d[a-z])$/.exec(run.id)?.[1] ?? run.id}</small></td>
           <td><StatusPill status={runStatus(run, newerStarted(run, all))} /></td>
-          <td>{when(run.startedAt)}</td><td>{when(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
+          <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
           <td className="num">{cash(run.subscriptionUsd)}</td><td className="num">{cash(run.apiUsd)}</td><td className="num">{cash(run.sandboxUsd)}</td>
         </tr>)}</tbody>
       </table></div>
-      {!shown.length && <p className="chat-empty">No runs match.</p>}
+      {!shown.length && <p className="chat-empty">No runs match.</p>}{shown.length > shownRows && <button type="button" className="plays-more" onClick={() => setShownRows(shown.length)}>Show all {shown.length} runs</button>}
     </div>
   }
   return (
