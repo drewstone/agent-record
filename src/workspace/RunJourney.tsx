@@ -56,7 +56,7 @@ function useJourney(api: string, doc: RunDocument) {
 }
 type Model = NonNullable<ReturnType<typeof useJourney>['model']>
 
-type Blocker = { action?: string | null; owner?: string | null; text?: string; since?: string | null; kind?: string; dispute?: string | null }
+type Blocker = { why?: string | null; action?: string | null; owner?: string | null; text?: string; since?: string | null; kind?: string; dispute?: string | null }
 
 /**
  * Who acts on the blocker (the lead, 21:45Z): Drew's own decision is a control, a check dispute's two rulings as the
@@ -78,8 +78,10 @@ export function RulingButtons({ runId, dispute }: { runId: string; dispute: stri
 /** `Oct 23 13:47Z`. */
 export const sinceLabel = (iso: string | null | undefined) => (iso && !Number.isNaN(ms(iso)) ? `${day(ms(iso))} ${clock(ms(iso))}Z` : null)
 
-function NextStep({ runId, blocker }: { runId: string; blocker: Blocker }) {
+function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker; paused: boolean }) {
   const since = sinceLabel(blocker.since)
+  // While research is paused only Drew lifts it: point at Today's decision, never "nothing for you" beside it.
+  const pause = paused && <p className="rj-next"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>
   if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
     return (
       <p className="rj-next"><b>Your decision:</b> {blocker.action} <RulingButtons runId={runId} dispute={blocker.dispute} />
@@ -87,7 +89,13 @@ function NextStep({ runId, blocker }: { runId: string; blocker: Blocker }) {
       </p>
     )
   }
-  return <p className="rj-next"><b>Nothing for you.</b> <span className="rj-muted">{blocker.owner ?? 'Its owner'} is on it{since ? ` since ${since}` : ''}: {blocker.action?.charAt(0).toLowerCase()}{blocker.action?.slice(1)}.</span></p>
+  const why = blocker.why ? `${blocker.why}; ` : ''
+  return (
+    <>
+      {pause}
+      <p className="rj-next">{!paused && <b>Nothing for you. </b>}<span className="rj-muted">{why}{blocker.owner ?? 'Its owner'} is on it{since ? ` since ${since}` : ''}: {blocker.action?.charAt(0).toLowerCase()}{blocker.action?.slice(1)}.</span></p>
+    </>
+  )
 }
 
 /** Q3 on the run: the best release's steps as the hero, how long it has been stuck, and the action that clears it. */
@@ -106,7 +114,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
       <p className="rj-stuck">
         {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
       </p>
-      {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} />}
+      {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}${stuck !== null && m.plateau === m.releases[0] ? `, no step gained in ${stuck.toFixed(0)} h` : ''}`
