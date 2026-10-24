@@ -14,7 +14,8 @@ import { PlayLedger } from './workspace/PlayLedger.js'
 import { PlayTeams } from './workspace/PlayTeams.js'
 import { PlayFindings } from './workspace/PlayFindings.js'
 import { PlayReleases } from './workspace/PlayReleases.js'
-import { inlinedPlayHead, type PlayHead, shortTag, targetWords, verdictWord } from './workspace/play-standing.js'
+import { PlaysTable } from './workspace/PlaysTable.js'
+import { inlinedPlayHead, type PlayHead, targetWords } from './workspace/play-standing.js'
 import { OverviewPage } from './workspace/Overview.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
@@ -31,7 +32,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, endingStatus, go, money, newerStarted, runStatus, StandingText, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -159,6 +160,7 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
 // ---------------------------------------------------------------------------------------------------------
 // /plays: every play this host has a run of
 // ---------------------------------------------------------------------------------------------------------
+const PLAYS_PAGE = 50
 function PlaysPage({ api }: { api: string }) {
   const [params, update] = useSearch()
   const plays = useDocument<PlaysDocument>(`${api}/plays`)
@@ -168,6 +170,8 @@ function PlaysPage({ api }: { api: string }) {
   const showHidden = params.get('show') === 'all'
   const [draft, setDraft] = useState(query)
   useEffect(() => setDraft(query), [query])
+  // The first PLAYS_PAGE rows draw; the rest wait for "Show all", so the page stays a few screens tall (brief: <= 3).
+  const [shownRows, setShownRows] = useState(PLAYS_PAGE)
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -190,6 +194,14 @@ function PlaysPage({ api }: { api: string }) {
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
   const home = (['plays', 'findings', 'runs'] as const).find((value) => value === params.get('view')) ?? 'plays'
+  const order = home !== 'plays' ? null : (
+    <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
+      <option value="latest">Latest run first</option>
+      <option value="spend">Most spend first</option>
+      <option value="runs">Most runs first</option>
+      <option value="name">By name</option>
+    </select>
+  )
   const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters">
     <input type="search" aria-label="Search research" placeholder="Search research" value={draft}
       onChange={(event) => { setDraft(event.target.value); update({ q: event.target.value || undefined }, true) }} />
@@ -197,6 +209,7 @@ function PlaysPage({ api }: { api: string }) {
       <option value="">All programs</option>
       {programs.map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
+    {order}
   </div>
   const frontiers = !plays.data?.frontiers?.length ? null : <details className="research-frontiers" aria-label="Frontier statements">
     <summary className="faint">Frontier statements ({plays.data.frontiers.length}, as of {plays.data.frontiers.map((item) => item.asOf).filter(Boolean).sort().at(-1) ?? 'an unrecorded date'})</summary>
@@ -219,7 +232,7 @@ function PlaysPage({ api }: { api: string }) {
   if (home === 'findings')
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
-        {homeTabs}{sharedFilters}
+        <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <FindingsFeed api={api} query={query} program={program} />
         {frontiers}
       </div>
@@ -233,7 +246,8 @@ function PlaysPage({ api }: { api: string }) {
     const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd))
     const unrecorded = shown.filter((run) => [run.subscriptionUsd, run.apiUsd, run.sandboxUsd].every((usd) => usd === null || usd === undefined)).length
     return <div className="ws-page ws-plays" data-plays-home="runs">
-      {homeTabs}{sharedFilters}
+      <div className="plays-bar">{homeTabs}{sharedFilters}</div>
+      <ReliabilityPanel api={api} />
       <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.{unrecorded ? ` No spend reading for ${unrecorded} of them (subscription, API and sandbox; no per-run meter).` : ''}</p>
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
@@ -251,107 +265,15 @@ function PlaysPage({ api }: { api: string }) {
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
-        {homeTabs}{sharedFilters}
-        <header className="ws-head">
-          <div className="ws-title-row">
-            <h1>Plays</h1>
-          </div>
-          <div className="message-filters plays-filters">
-            <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
-              <option value="latest">Latest run first</option>
-              <option value="spend">Most spend first</option>
-              <option value="runs">Most runs first</option>
-              <option value="name">By name</option>
-            </select>
-          </div>
-          <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
-        </header>
-        <ReliabilityPanel api={api} />
+        <div className="plays-bar">{homeTabs}{sharedFilters}</div>
+        <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
           <div className="table-scroll">
-            <table className="data-table runs-table plays-table" data-play-list>
-              <thead>
-                <tr>
-                  <th>Play</th>
-                  <th>Where it stands</th>
-                  <th>Best under the current check</th>
-                  <th>Last run</th>
-                  <th className="num">Runs</th>
-                  <th className="num" title="Every token at list price, whoever paid; how many started runs were priced">API-equivalent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((play) => {
-                  const open = () => go(`/play/${encodeURIComponent(play.id)}`)
-                  const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
-                  const standing = play.standing ?? null
-                  const best = (standing?.best ?? null) as { tag?: string | null; run?: string | null; checker?: string | null; reached?: number | null; of?: number | null; workloads?: { passed?: number | null; total?: number | null } | null; verdict?: string | null } | null
-                  const last = standing?.lastEnding ?? null
-                  const cost = standing?.cost ?? null
-                  const lastId = last?.runId ?? play.latestRun?.id ?? null
-                  return (
-                    <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
-                      <td>
-                        <a href={`/play/${encodeURIComponent(play.id)}`} onClick={(event) => event.preventDefault()}>{play.title}</a>
-                        {play.title !== play.id && <small className="faint mono"> {play.id}</small>}
-                        {play.program && <small className="faint"> · {play.program}</small>}
-                      </td>
-                      <td className="plays-standing">
-                        {standing?.sentence ? (
-                          <span className="clamp-2" title={standing.sentence}><StandingText text={standing.sentence} /></span>
-                        ) : (
-                          <StatusPill status={statusOf({ axis: 'run', state: play.state })} />
-                        )}
-                      </td>
-                      <td>
-                        {best?.tag || best?.run ? (
-                          <span className="mono" title={[best.checker ? `under ${best.checker}` : null, best.verdict ? verdictWord(best.verdict) : null].filter(Boolean).join(' · ') || undefined}>
-                            {shortTag(best.tag) ?? 'workspace'}
-                            {best.run ? <span className="faint"> ({best.run})</span> : null}
-                            {best.reached && best.of ? ` · stage ${best.reached}/${best.of}` : ''}
-                            {best.workloads?.total ? ` · ${best.workloads.passed ?? '?'}/${best.workloads.total}` : ''}
-                            {best.checker ? <span className="faint"> {best.checker}</span> : null}
-                          </span>
-                        ) : (
-                          <span className="faint">—</span>
-                        )}
-                      </td>
-                      <td>
-                        {lastId ? (
-                          <a
-                            className="mono"
-                            href={`/run/${encodeURIComponent(lastId)}`}
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              go(`/run/${encodeURIComponent(lastId)}`)
-                            }}
-                          >
-                            {last?.run ?? shortRun(play.id, lastId)}
-                          </a>
-                        ) : '—'}
-                        {last?.word ? <> <StatusPill status={endingStatus(last.word)} className="ending-word" /></> : null}
-                        <small className="faint"> {when(last?.at ?? play.latestRun?.startedAt)}</small>
-                      </td>
-                      <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
-                        {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
-                      </td>
-                      <td className="num" title={cost?.priced !== null && cost?.priced !== undefined ? `${cost.priced} of ${cost.started ?? '?'} started runs priced${cost.provenance ? ` (${cost.provenance})` : ''}` : undefined}>
-                        {cost?.apiEquivalentUsd !== null && cost?.apiEquivalentUsd !== undefined && cost.priced ? (
-                          <>
-                            {money(cost.apiEquivalentUsd)}
-                            {cost.priced !== cost.started ? <small className="faint"> {cost.priced}/{cost.started}</small> : null}
-                          </>
-                        ) : (
-                          <span className="faint" title="API-equivalent not priced">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} />
           </div>
+          {rows.length > shownRows && (
+            <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>
+          )}
           {!rows.length && <p className="chat-empty">No {hidden.plays && !showHidden ? 'shown ' : ''}play matches.</p>}
         </section>
       </div>

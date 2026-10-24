@@ -49,6 +49,11 @@ export const viewSchema = z
   })
   .catchall(z.unknown())
 
+/** A play's view as the Plays list carries it (tangle-tools play_standing_brief): status, sentence, best release, and each read run's status. */
+export const viewBriefSchema = z
+  .object({ status: viewStatusSchema, sentence: z.string(), progress: viewProgressSchema.nullable(), runs: z.record(z.string(), viewStatusSchema).nullable().optional(), blocker: viewBlockerSchema.nullable().optional(), needsYou: z.array(viewNeedSchema).optional(), asOf: z.string().optional() })
+  .catchall(z.unknown())
+
 export type HostView = z.infer<typeof viewSchema>
 export type ViewStatus = z.infer<typeof viewStatusSchema>
 

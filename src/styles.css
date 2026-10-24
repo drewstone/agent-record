@@ -2753,7 +2753,7 @@
    (useWidth), so plot height, margins and marks follow the type. */
 .ar-ws .ov-page { font-size: 16px; gap: 1.3em; --chart-live-fg: var(--ar-fg); --chart-live-muted: var(--ar-fg-muted); --chart-live-faint: var(--ar-fg-faint); --chart-live-raised: var(--ar-raised, var(--ar-bg-alt)); --chart-live-border: var(--ar-border-strong); --chart-live-hover: var(--ar-hover, var(--ar-bg-alt)); --chart-live-font-mono: var(--ar-font-mono); --chart-live-surface: var(--ws-panel); --chart-live-danger: var(--ar-c-neutral); --chart-live-warning: var(--ar-c-neutral); }
 .ar-ws .research-frontiers { display: grid; gap: .6em; padding: .8em 0; }
-.ar-ws .plays-table .plays-standing { min-width: 26em; max-width: 44em; white-space: normal; font-size: var(--ar-text-s); line-height: 1.35; }
+.ar-ws .plays-table .plays-standing { min-width: 0; max-width: 24rem; white-space: normal; font-size: var(--ar-text-s); line-height: 1.35; }
 .ar-ws .research-frontier-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22em), 1fr)); gap: .55em; }
 .ar-ws .research-frontier { display: grid; gap: .25em; min-width: 0; padding: .65em .85em; border: 1px solid var(--ar-border); border-radius: 7px;
   color: var(--ar-fg); background: var(--ws-panel); text-decoration: none; }
@@ -3721,3 +3721,34 @@
 }
 @media (prefers-reduced-motion: reduce) { .ar-ws .td * { transition: none !important; } }
 .ar-ws .td-more { margin-top: 12px; padding: 6px 14px; font: 600 13px var(--font-sans); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text-secondary); cursor: pointer; }
+/* Plays: one toolbar (views, search, program, order) above the table; the table's first row sits in the first screen. */
+.ar-ws .plays-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }
+.ar-ws .plays-bar .run-tabs { position: static; display: flex; flex-wrap: nowrap; min-height: 0; padding: 2px; gap: 2px; box-shadow: none; }
+.ar-ws .plays-bar .run-tab { padding: 4px 12px; font-size: 14px; }
+.ar-ws .plays-bar .plays-filters { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.ar-ws .plays-bar input[type="search"] { flex: 1; min-width: 160px; }
+.ar-ws .ws-plays .hidden-summary { margin: 0 0 12px; font-size: 13px; }
+.ar-ws .plays-table td { padding-top: 8px; padding-bottom: 8px; }
+.ar-ws .plays-more { display: block; margin: 12px auto 0; padding: 6px 16px; border: 1px solid var(--ar-border); border-radius: 8px; background: none; color: var(--ar-fg); font: inherit; font-size: 14px; cursor: pointer; transition: background-color 150ms; }
+.ar-ws .plays-more:hover { background: var(--ws-panel); }
+.ar-ws .plays-table td { white-space: nowrap; }
+.ar-ws .plays-table .plays-last .ending-word { padding: 0; border: 0; background: none; }
+.ar-ws .plays-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.ar-ws .plays-status [data-holding] { flex-basis: 100%; font-size: 13px; }
+.ar-ws .plays-status .clamp-1 { min-width: 0; color: var(--ar-fg-muted); }
+.ar-ws .plays-best .td-steps { margin-left: 8px; }
+.ar-ws .plays-best > span { display: inline-flex; align-items: center; gap: 6px; }
+.ar-ws .plays-best .td-steps { margin-left: 2px; }
+/* Phone: each play is a block (name; status; best release and last run), no sideways table. */
+@media (max-width: 640px) {
+  .ar-ws .plays-table thead, .ar-ws .plays-table td.num { display: none; }
+  .ar-ws .plays-table, .ar-ws .plays-table tbody { display: block; }
+  .ar-ws .plays-table tr { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
+  .ar-ws .plays-table td { display: block; padding: 0; border: 0; white-space: normal; }
+  .ar-ws .plays-table .plays-standing { max-width: none; }
+}
+.ar-ws .plays-status [data-holding="needs"] { color: hsl(var(--warning)); }
+.ar-ws .plays-table .plays-standing { min-width: 0; max-width: 18rem; }
+.ar-ws .plays-table .plays-name small, .ar-ws .plays-table .plays-best .faint { font-size: 13px; }
+/* Mono is for ids only (brief): counts, money and controls are Inter with tabular figures. */
+.ar-ws .plays-table td.num, .ar-ws .plays-table td.num *, .ar-ws .plays-table th.num, .ar-ws .plays-bar select, .ar-ws .plays-bar input { font-family: var(--ar-font, Inter, sans-serif); font-variant-numeric: tabular-nums; }
