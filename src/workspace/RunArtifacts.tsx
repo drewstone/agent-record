@@ -58,7 +58,7 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
     ?? doc.finalOutput?.files.map((item) => files.find((retained) => retained.path === item.path))
       .find((item) => item?.path.startsWith(`${declared.replace(/\/$/, '')}/`)) : undefined
   const preferred = [deliverable?.path, answer, doc.finalOutput?.rootOutput?.path]
-  const path = selected ?? preferred.find((candidate) => files.some((item) => item.path === candidate)) ?? paths[0] ?? null
+  const path = selected ?? preferred.find((candidate) => files.some((item) => item.path === candidate)) ?? files[0]?.path ?? paths[0] ?? null
   const file = files.find((item) => item.path === path)
   const baseline = before.data?.items.find((item) => item.path === path)
   const unknownVersion = Boolean(nav.version && !versions.some((item) => item.commit === nav.version))

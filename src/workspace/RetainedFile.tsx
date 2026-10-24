@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { FileArtifactPane } from '@tangle-network/ui/files'
+import { FilePreview, resolveFilePreviewKind } from '@tangle-network/ui/files'
 import { DiffView } from '@tangle-network/sandbox-ui/workbench'
 import { byteSize } from './final-output.js'
 import { retainedPageAbsent, runFileHref, type RunFile, type RunFilesDocument, type RunFileVersion } from './run-files.js'
@@ -7,7 +7,6 @@ import type { ArtifactNavigation } from './RunArtifacts.js'
 import { FILE_PREVIEW_BYTES as TEXT_LIMIT, useFileText } from './use-file-text.js'
 import { SharedFileUi } from './SharedFileUi.js'
 
-const binary = /\.(png|jpe?g|gif|webp|avif|ico|pdf|mp[34]|webm|ogg|wav|mov|xlsx?|zip|gz|tar)$/i
 const fileIdentity = (file: RunFileVersion) => file.sha256 ?? file.objectId ?? file.href
 
 export function RetainedFile({ file, files, baseline, baselineInventory, comparisonSelected, beforeLabel, theme, runId, fileVersion, navigation, missingAfter = false, absenceVerified = false }: { file: RunFile; files: RunFile[]; baseline?: RunFile; baselineInventory: RunFilesDocument | null; comparisonSelected: boolean; beforeLabel?: string; theme?: 'light' | 'dark'; runId: string; fileVersion: string | null; navigation: ArtifactNavigation; missingAfter?: boolean; absenceVerified?: boolean }) {
@@ -21,32 +20,28 @@ export function RetainedFile({ file, files, baseline, baselineInventory, compari
 function RetainedFileContent({ file, files, chosen, baseline, baselineInventory, comparisonSelected, beforeLabel, theme, runId, fileVersion, navigation, view, setView, missingAfter, absenceVerified }: { file: RunFile; files: RunFile[]; chosen: RunFileVersion; baseline?: RunFile; baselineInventory: RunFilesDocument | null; comparisonSelected: boolean; beforeLabel?: string; theme?: 'light' | 'dark'; runId: string; fileVersion: string | null; navigation: ArtifactNavigation; view: ArtifactNavigation['view']; setView: ArtifactNavigation['onView']; missingAfter: boolean; absenceVerified: boolean }) {
   const downloadLink = useRef<HTMLAnchorElement>(null)
   const href = runFileHref(chosen)
-  const isBinary = binary.test(chosen.path)
+  const kind = resolveFilePreviewKind(chosen.path)
+  const isBinary = ['image', 'pdf', 'video', 'audio', 'spreadsheet', 'binary'].includes(kind)
   const tooLarge = chosen.bytes !== null && chosen.bytes > TEXT_LIMIT
   const content = useFileText(!isBinary && !tooLarge ? href : null)
   const prior = useFileText(view === 'diff' && baseline && !missingAfter && !isBinary && !tooLarge ? runFileHref(baseline) : null)
   const knownAbsent = !missingAfter && retainedPageAbsent(baselineInventory, chosen)
   const canCompare = Boolean(comparisonSelected && (missingAfter ? absenceVerified : baseline || knownAbsent) && !isBinary && !tooLarge)
   const filename = chosen.path.split('/').at(-1)!
-  const fileLink = (path: string, identity?: string) => {
-    const query = new URLSearchParams({ file: path })
-    if (fileVersion) query.set('fileVersion', fileVersion)
-    if (navigation.compare) query.set('compareVersion', navigation.compare)
+  const fileLink = (path: string, identity?: string, context = { version: fileVersion, compare: navigation.compare, view }) => {
+    const query = new URLSearchParams({ file: path, fileView: context.view })
+    if (context.version) query.set('fileVersion', context.version)
+    if (context.compare) query.set('compareVersion', context.compare)
     if (identity) query.set('fileIdentity', identity)
-    query.set('fileView', view)
-    const variant = new URLSearchParams(window.location.search).get('variant')
-    if (variant) query.set('variant', variant)
+    const pageContext = new URLSearchParams(window.location.search)
+    for (const key of ['variant', 'theme']) {
+      const value = pageContext.get(key)
+      if (value) query.set(key, value)
+    }
     return `/run/${encodeURIComponent(runId)}?${query}`
   }
   const contentFiles = missingAfter ? baselineInventory?.items ?? [] : files
   const contentVersion = missingAfter ? baselineInventory?.version ?? navigation.compare : fileVersion
-  const contentLink = (path: string) => {
-    const query = new URLSearchParams({ file: path, fileView: 'preview' })
-    if (contentVersion) query.set('fileVersion', contentVersion)
-    const variant = new URLSearchParams(window.location.search).get('variant')
-    if (variant) query.set('variant', variant)
-    return `/run/${encodeURIComponent(runId)}?${query}`
-  }
   const transform = (target: string, key: string) => {
     // Shared Markdown may link only to files this host already listed. No remote image or arbitrary-origin fetch.
     if (/^https?:\/\//i.test(target)) return key === 'href' ? target : ''
@@ -58,7 +53,7 @@ function RetainedFileContent({ file, files, chosen, baseline, baselineInventory,
       else folder.push(part)
     }
     const related = contentFiles.find((item) => item.path === folder.join('/'))
-    return related ? (key === 'src' ? runFileHref(related) ?? '' : contentLink(related.path)) : ''
+    return related ? (key === 'src' ? runFileHref(related) ?? '' : fileLink(related.path, undefined, { version: contentVersion, compare: null, view: 'preview' })) : ''
   }
   const body = (mode: 'light' | 'dark') => {
     if (!href) return <p role="alert">This host cannot serve this file.</p>
@@ -68,7 +63,7 @@ function RetainedFileContent({ file, files, chosen, baseline, baselineInventory,
     if (view === 'diff' && !canCompare) return <p>Select a recorded version with a comparable retained file to inspect its diff.</p>
     if (view === 'diff' && canCompare && missingAfter) return <DiffView filename={filename} baseline={content.text ?? ''} current="" themeType={mode} defaultWrap />
     if (view === 'diff' && canCompare) return !knownAbsent && prior.text === undefined ? <p role="status">Loading the comparison…</p> : <DiffView filename={filename} baseline={knownAbsent ? '' : prior.text ?? ''} current={content.text ?? ''} themeType={mode} defaultWrap />
-    return <FileArtifactPane filename={view === 'source' ? `${filename}.txt` : filename} content={content.text} blobUrl={isBinary ? href : undefined} size={chosen.bytes ?? undefined} urlTransform={transform} onDownload={() => downloadLink.current?.click()} hideTitleBlock />
+    return <FilePreview className="run-retained-preview" filename={view === 'source' && kind === 'markdown' ? `${filename}.txt` : filename} content={content.text} blobUrl={isBinary ? href : undefined} size={chosen.bytes ?? undefined} urlTransform={transform} onDownload={() => downloadLink.current?.click()} hideHeader />
   }
   return <article className="run-file" data-file={file.path}>
     <header className="run-file-header"><div><h3>{filename}</h3><p className="run-file-path">{file.path}</p></div>{href && <a className="ui-button" ref={downloadLink} href={href} download={filename}>Download</a>}</header>
