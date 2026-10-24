@@ -49,7 +49,7 @@ test('a failing run shows its first failing line with its stage, and a page with
     firstFailingLine: 'NOT SOLVED: manifest.json build must be a cargo argv list (argv[0] == cargo)' }
   const words = text(page(failing))
   assert.match(words, /Now○ No pass yet · checked 01:51 UTC on rc1/)
-  assert.match(words, /First failing line \(contract stage\)NOT SOLVED: manifest\.json build must be a cargo argv list/)
+  assert.match(words, /Why it did not pass \(contract stage\)NOT SOLVED: manifest\.json build must be a cargo argv list/)
   const bare = text(page(undefined))
   assert.doesNotMatch(bare, /Now✓ Passed|Now○ No pass yet/)
   assert.match(bare, /Contract lines sent/)
