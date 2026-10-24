@@ -51,6 +51,7 @@ import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
+import { AsOfStamp } from './workspace/AnswerStrip.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
@@ -202,14 +203,13 @@ function PlaysPage({ api }: { api: string }) {
       <option value="name">By name</option>
     </select>
   )
-  const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters">
-    <input type="search" aria-label="Search research" placeholder="Search research" value={draft}
+  const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters"><input type="search" aria-label="Search research" placeholder="Search research" value={draft}
       onChange={(event) => { setDraft(event.target.value); update({ q: event.target.value || undefined }, true) }} />
-    <select aria-label="Program" value={program} onChange={(event) => update({ program: event.target.value || undefined })}>
-      <option value="">All programs</option>
+    <select aria-label="Program" value={program} onChange={(event) => update({ program: event.target.value || undefined })}><option value="">All programs</option>
       {programs.map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
     {order}
+    {plays.data?.builtAt && <AsOfStamp asOf={{ at: plays.data.builtAt, meaning: 'when the host built this list of plays', source: 'the Discovery plays index' }} />}
   </div>
   const frontiers = !plays.data?.frontiers?.length ? null : <details className="research-frontiers" aria-label="Frontier statements">
     <summary className="faint">Frontier statements ({plays.data.frontiers.length}, as of {plays.data.frontiers.map((item) => item.asOf).filter(Boolean).sort().at(-1) ?? 'an unrecorded date'})</summary>

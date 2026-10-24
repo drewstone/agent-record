@@ -3726,6 +3726,7 @@
 .ar-ws .td-more { margin-top: 12px; padding: 6px 14px; font: 600 13px var(--font-sans); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text-secondary); cursor: pointer; }
 /* Plays: one toolbar (views, search, program, order) above the table; the table's first row sits in the first screen. */
 .ar-ws .plays-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }
+.ar-ws .plays-filters .as-of { align-self: center; white-space: nowrap; }
 .ar-ws .plays-bar .run-tabs { position: static; display: flex; flex-wrap: nowrap; min-height: 0; padding: 2px; gap: 2px; box-shadow: none; }
 .ar-ws .plays-bar .run-tab { padding: 4px 12px; font-size: 14px; }
 .ar-ws .plays-bar .plays-filters { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
