@@ -8,6 +8,10 @@ import type { CallState, ConversationRow } from './conversation-rows.js'
 import type { EventFlag } from './Conversation.js'
 import { messageIdentity } from './message-identity.js'
 
+/** A run-lifecycle event (start, stop, restart), drawn as a thin marker row. */
+export const isLifecycle = (event: RecordEvent) =>
+  event.category === 'lifecycle' || event.detail.lifecycle !== undefined
+
 /** A withheld-thinking bar is full at this many output tokens; larger turns stay full. */
 const THINKING_FULL_TOKENS = 80_000
 const tokenLabel = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { VirtualList } from './VirtualList.js'
-import { ConversationRowView } from './ConversationRowView.js'
+import { ConversationRowView, isLifecycle } from './ConversationRowView.js'
 import type { RecordEvent } from '../record.js'
 import {
   callsOf,
@@ -38,9 +38,6 @@ interface ConversationProps {
   /** The agent can still act: a call without a result is pending, not uncaptured. */
   live?: boolean
 }
-
-const isLifecycle = (event: RecordEvent) =>
-  event.category === 'lifecycle' || event.detail.lifecycle !== undefined
 
 export function Conversation({
   index,
@@ -272,7 +269,7 @@ export function Conversation({
               : 120,
     [],
   )
-  const render = (row: ConversationRow) => <ConversationRowView row={row} context={ index, cutoff, selected, opened, anchor, opener, setOpen, sourceButton, flagMarks, paired, thinkingSpan, flags, live } />
+  const render = (row: ConversationRow) => <ConversationRowView row={row} context={{ index, cutoff, selected, opened, anchor, opener, setOpen, sourceButton, flagMarks, paired, thinkingSpan, flags, live }} />
   return (
     <>
       {(tools.length > 0 || thoughts.length > 0) && (
