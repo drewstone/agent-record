@@ -84,8 +84,11 @@
     "react-dom": ">=18.3.0 <20"
   },
   "dependencies": {
+    "@tangle-network/brand": "1.26.2",
     "@tangle-network/charts": "0.15.0",
     "@tangle-network/harness-sessions": "0.1.0",
+    "@tangle-network/sandbox-ui": "0.136.1",
+    "@tangle-network/ui": "11.40.2",
     "katex": "^0.19.0",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",

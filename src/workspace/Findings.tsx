@@ -1,3 +1,4 @@
+import { useFileText } from './use-file-text.js'
 import { useEffect, useMemo, useState } from 'react'
 import type { FindingItem, Findings, RunDocument } from '../workspace-model.js'
 import { MessageText } from '../viewer/StructuredContent.js'
@@ -36,31 +37,10 @@ function verdictGlyph(verdict: string | null) {
   return '○'
 }
 
-/** One page's full text, fetched when its reader opens it. */
-function usePage(href: string | null) {
-  const [state, setState] = useState<{ text?: string; error?: string }>({})
-  useEffect(() => {
-    setState({})
-    if (!href) return
-    const controller = new AbortController()
-    fetch(href, { credentials: 'same-origin', signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return response.text()
-      })
-      .then((text) => setState({ text }))
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) setState({ error: error instanceof Error ? error.message : 'Request failed' })
-      })
-    return () => controller.abort()
-  }, [href])
-  return state
-}
-
 const artifactRoute = /^\/api\/discovery\/runs\/[^/?#]+\/artifact\/[a-f0-9]{64}\/[A-Za-z0-9_-]+$/
 
 export function PageReader({ href, artifacts = [] }: { href: string; artifacts?: FindingItem['artifacts'] }) {
-  const page = usePage(href)
+  const page = useFileText(href)
   if (page.error) return <p className="ws-status" role="alert">This page is unavailable: {page.error}</p>
   if (page.text === undefined) return <p className="ws-status" role="status">Loading the page…</p>
   return (
