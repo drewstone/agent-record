@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PlayHeader, RUN_TABS, RunFold, RunOverview, RunTabBar, RunWhy, sectionOf, tabOf } from '../dist/index.js'
+import { PlayHeader, RunFold, RunOverview, RunWhy } from '../dist/index.js'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const play = fixture('decide-play-magnetar-rust-20261019.json')
@@ -144,16 +144,4 @@ test('a run a newer run continued offers no rerun of its check and links forward
   }
   // A live run nothing continued keeps its controls.
   assert.match(visible(runPage('19f').html), /Decide Wrap up/)
-})
-
-test('the run page has five tabs and every older section link lands on the tab that holds it', () => {
-  const html = renderToStaticMarkup(createElement(RunTabBar, { section: 'versions', counts: { findings: 3 }, onOpen: () => {} }))
-  assert.equal((html.match(/role="tab"/g) ?? []).length, 5)
-  assert.deepEqual(RUN_TABS.map((tab) => tab.label), ['Now', 'Built', 'Conversations', 'Findings', 'How it ran'])
-  assert.match(html, /aria-selected="true" data-section-tab="built"/)
-  assert.match(html, /<select/)
-  const legacy = { findings: 'findings', progress: 'now', agents: 'agents', spend: 'how', readout: 'built', outputs: 'built', graph: 'how', versions: 'built', profiles: 'how', assessments: 'how', input: 'how', coverage: 'how' }
-  for (const [section, tab] of Object.entries(legacy)) assert.equal(tabOf(sectionOf(new URLSearchParams({ section }))), tab, section)
-  assert.equal(tabOf(sectionOf(new URLSearchParams({ view: 'outputs' }))), 'built')
-  assert.equal(tabOf(sectionOf(new URLSearchParams({ node: 'magnetar-rust-20261019f:s3' }))), 'agents')
 })

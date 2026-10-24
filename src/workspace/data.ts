@@ -15,14 +15,14 @@ const STALE_RETRIES = 6
  */
 export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false) {
   // `stale`: the server sent its last composed copy while it recomposes (X-Workspace-Stale); a page says how old it is.
-  const [state, setState] = useState<{ data?: T; error?: string; status?: number; loading: boolean; stale?: boolean }>({ loading: !!url })
+  const [state, setState] = useState<{ url: string | null; data?: T; error?: string; status?: number; loading: boolean; stale?: boolean }>({ url, loading: !!url })
   const etag = useRef<string | null>(null)
   const shown = useRef<string | null | undefined>(undefined)
   useEffect(() => {
     if (shown.current !== url) {
       shown.current = url
       etag.current = null
-      setState((current) => (keepPrevious && url && current.data !== undefined ? { ...current, loading: true, error: undefined } : { loading: !!url }))
+      setState((current) => (keepPrevious && url && current.data !== undefined ? { ...current, url, loading: true, error: undefined } : { url, loading: !!url }))
     }
     if (!url) return
     let alive = true
@@ -56,7 +56,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         }
         etag.current = response.headers.get('ETag')
         const data = (await response.json()) as T
-        if (alive) setState({ data, loading: false, status: response.status, stale })
+        if (alive) setState({ url, data, loading: false, status: response.status, stale })
       } catch (error) {
         if (alive && !controller.signal.aborted)
           setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
@@ -76,7 +76,8 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
       window.clearTimeout(timer)
     }
   }, [url, poll]) // eslint-disable-line react-hooks/exhaustive-deps
-  return state
+  const pending: typeof state = { url, loading: !!url }
+  return keepPrevious || state.url === url ? state : pending
 }
 
 /**

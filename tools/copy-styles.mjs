@@ -8,6 +8,7 @@ for (const specifier of ['@tangle-network/charts/react/live.css', '@tangle-netwo
   if (!distributedCss.includes(directive)) throw new Error(`Missing shared CSS import: ${specifier}`)
   distributedCss = distributedCss.replace(directive, css)
 }
+distributedCss = distributedCss.replace("@import './workspace/run-work.css';", await readFile('src/workspace/run-work.css', 'utf8'))
 await writeFile('dist/styles.css', distributedCss)
 // Bundlers may discard the entry directive. Keep the distributed React entry explicit for RSC hosts.
 const entry = await readFile('dist/index.js', 'utf8')

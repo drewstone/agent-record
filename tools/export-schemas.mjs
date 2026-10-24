@@ -5,6 +5,7 @@ import { recordSchema } from '../dist/record.js'
 import { bundleSchema, snapshotSchema } from '../dist/publication.js'
 import { playsDocumentSchema, playDocumentSchema, profileGraphDocumentSchema, runDocumentSchema, versionGraphDocumentSchema } from '../dist/workspace.js'
 import { assessmentsDocumentSchema, assessmentRowSchema, dimensionsDocumentSchema } from '../dist/assessment.js'
+import { runFilesDocumentSchema } from '../dist/index.js'
 
 const schemas = {
   'agent-record.v1': recordSchema,
@@ -13,6 +14,7 @@ const schemas = {
   'agent-workspace.plays.v1': playsDocumentSchema,
   'agent-workspace.play.v1': playDocumentSchema,
   'agent-workspace.run.v1': runDocumentSchema,
+  'agent-workspace.run-files.v1': runFilesDocumentSchema,
   'discovery-lab.profile-graph': profileGraphDocumentSchema,
   'agent-workspace.version-graph': versionGraphDocumentSchema,
   'agent-trace-assessments.v1': assessmentsDocumentSchema,
