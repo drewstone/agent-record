@@ -1,7 +1,8 @@
+import { viewAsOf, viewChip } from './view.js'
 import type { OverviewAttention, OverviewDocument, PlayDocument, RunDocument } from '../workspace-model.js'
 import type { PlayReportDocument } from '../play-report.js'
 import { newerStarted, type Status, statusOf } from './data.js'
-import { hostWords, lineReason, metricValue, type PlayBest, type PlayBlocker, type PlayHead, RELEASE_STATE, shortRun, shortTag } from './play-standing.js'
+import { ENDING_GLYPH, hostWords, lineReason, metricValue, type PlayBest, type PlayBlocker, type PlayHead, RELEASE_STATE, shortRun, shortTag } from './play-standing.js'
 
 /**
  * The one place a decision page's answers are read from served fields (design-system sections 3 and 6). Change 1's fields
@@ -164,12 +165,16 @@ function didItWork(play: Play, now: number): Answer {
       href: best.runId ? `/run/${encodeURIComponent(best.runId)}` : undefined,
     })
   if (runs !== null) rows.push({ term: 'Runs', text: `${passed ?? 0} of ${runs} runs passed the current check.` })
+  // The headline and figure are the host's view (views.play_view), the run page's words for the same release.
+  const view = play.view
+  const progress = view?.progress ?? null
+  if (progress) rows.unshift({ term: 'Steps', text: progress.sentence, href: progress.runId ? `/run/${encodeURIComponent(progress.runId)}` : undefined })
   return {
     slot: 'did-it-work',
     label: 'Solved?',
-    headline: passed ? 'Solved' : best ? 'Not yet' : 'No check result yet',
-    figure: workloadFigure(best),
-    subline: best?.tag ? `${shortTag(best.tag)}${run ? ` of ${run}` : ''}, ${checked}` : 'no release checked yet',
+    headline: view ? view.status.label : passed ? 'Solved' : best ? 'Not yet' : 'No check result yet',
+    figure: progress ? { kind: 'num', value: String(progress.passed), unit: `/${progress.total} steps`, tip: progress.sentence } : workloadFigure(best),
+    subline: progress ? `${progress.release ?? 'workspace'}${progress.runId ? ` of ${shortRun(play.id, progress.runId)}` : ''}` : best?.tag ? `${shortTag(best.tag)}${run ? ` of ${run}` : ''}, ${checked}` : 'no release checked yet',
     rows,
   }
 }
@@ -178,6 +183,7 @@ function didItWork(play: Play, now: number): Answer {
 function endingStatus(play: Play, now: number): Status | null {
   const ending = play.standing?.lastEnding ?? null
   if (!ending) return null
+  if (ending.status) return viewChip(ending.status)
   // A crash needs a person for its first 24 h only while no newer run started; a play that does not list the run cannot tell.
   const listed = play.runs.find((run) => run.id === ending.runId)
   const newer = listed ? newerStarted({ id: ending.runId, play: listed.play, startedAt: ending.startedAt ?? listed.startedAt }, play.runs) : undefined
@@ -245,7 +251,7 @@ function whatWasBuilt(play: Play, report: PlayReportDocument | null | undefined,
   const href = `/play/${encodeURIComponent(play.id)}/report#built`
   const crates = Array.isArray(built?.crates?.value) ? (built!.crates!.value as string[]) : []
   if (!built || !crates.length)
-    return { slot: 'what-was-built', label: 'Built', headline: 'Not reported yet', figure: { kind: 'num', value: '0', unit: 'crates', tip: 'the play report names no release inventory' }, subline: 'the play report has no inventory', rows: [{ term: 'Play report', text: 'What was built', href }] }
+    return { slot: 'what-was-built', label: 'Built', headline: 'Not reported yet', figure: { kind: 'num', value: '—', unit: 'crates', tip: 'unknown: the play report names no release inventory' }, subline: 'the play report has no inventory', rows: [{ term: 'Play report', text: 'What was built', href }] }
   const commands = (built.commands?.value ?? {}) as Record<string, unknown>
   const guests = num(built.guests?.value)
   const parts = [commands.prover ? 'prover' : null, commands.verifier ? 'verifier' : null, guests ? `${guests} guest programs` : null].filter(Boolean) as string[]
@@ -286,6 +292,8 @@ export function itemAge(raisedAt: string | null | undefined, seenSince: string |
 export interface NeedsItem {
   text: string
   status: Status
+  /** Counts toward "needs you now" whatever its tone: an item of a play's view. */
+  counted?: boolean
   age: string
   owner?: string | null
   next?: string | null
@@ -293,8 +301,9 @@ export interface NeedsItem {
 }
 
 /** Needs you: act now is `tone == 'crit'` (or a live red blocker) only; every other item carries its state word and age. */
-function needsAnswer(items: NeedsItem[], quiet: string): Answer {
-  const act = items.filter((item) => item.status.tone === 'fail')
+function needsAnswer(items: NeedsItem[], quiet: string, served = false): Answer {
+  // A served list is every item that needs a person; a composed one counts only the red ones.
+  const act = served ? items : items.filter((item) => item.status.tone === 'fail' || item.counted)
   const first = act[0]
   return {
     slot: 'needs-me',
@@ -307,6 +316,13 @@ function needsAnswer(items: NeedsItem[], quiet: string): Answer {
 }
 
 function playNeeds(play: Play, now: number): Answer {
+  // The host's list (views.play_view), the one the overview shows for this play.
+  if (play.view)
+    return needsAnswer(
+      play.view.needsYou.map((item) => ({ text: item.text, status: statusOf({ axis: 'alert', tone: 'warn', live: false }), age: item.since ? `${age(ms(item.since), now)} old` : 'age not recorded', owner: item.owner ?? null, href: item.href ?? undefined })),
+      'nothing recorded needs a person',
+      true,
+    )
   const items: NeedsItem[] = []
   const live = play.live ?? null
   if (live?.blocker) {
@@ -328,6 +344,7 @@ export function playAnswers(play: Play, report: PlayReportDocument | null | unde
 
 /** The play page's one as-of: the newest time its answers record. */
 export function playAsOf(play: Play): AsOf | null {
+  if (play.view) return viewAsOf(play.view)
   const answer = standingAnswer(play)
   const at = newest(answer.solved?.asOf, answer.producing?.asOf, answer.measurement?.asOf, play.standing?.bestCurrent?.at, play.standing?.lastEnding?.at, play.live?.startedAt, ...play.runs.map((run) => run.startedAt))
   return at ? { at, meaning: 'the newest time this play’s answers record', source: answer.producing?.source ?? answer.solved?.source ?? 'the play document' } : null
@@ -414,9 +431,16 @@ export function overviewAnswers(doc: OverviewDocument, reliability: { rate?: num
 }
 
 const ALERT_STATE: Record<string, string> = { crit: 'act now', warn: 'not urgent', info: 'cleared', neutral: 'past' }
+/** An overview item's pill: a play view's item reads "needs you" (it is counted), any other its tone's word. */
+export function attentionStatus(item: OverviewAttention): Status {
+  const base = statusOf({ axis: 'alert', tone: item.tone, live: true })
+  if (item.needsYou && base.tone !== 'fail') return { ...base, word: 'needs you', tone: 'attention', shape: ENDING_GLYPH.attention }
+  return base.tone === 'fail' ? base : { ...base, word: ALERT_STATE[item.tone] ?? base.word }
+}
 function attentionItem(item: OverviewAttention, seen: string, now: number): NeedsItem {
-  const base = statusOf({ axis: 'alert', tone: item.tone, live: true, heldPass: Boolean(item.held?.length) })
-  const status = base.tone === 'fail' ? base : { ...base, word: ALERT_STATE[item.tone] ?? base.word }
+  const status = attentionStatus(item)
   const raisedAt = (item as { raisedAt?: string | null }).raisedAt ?? null
-  return { text: item.text, status, age: itemAge(raisedAt, (item as { seenSince?: string | null }).seenSince ?? seen, now), owner: item.owner ?? null, next: item.next ?? null, href: item.href }
+  // A play view's item (views.play_view) needs a person whatever its tone: the play page counts the same list.
+  const counted = item.needsYou === true
+  return { text: item.text, status, counted, age: itemAge(raisedAt, (item as { seenSince?: string | null }).seenSince ?? seen, now), owner: item.owner ?? null, next: item.next ?? null, href: item.href }
 }

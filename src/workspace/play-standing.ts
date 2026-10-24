@@ -1,3 +1,4 @@
+import { viewSchema, viewStatusSchema } from './view.js'
 import { z } from 'zod'
 import { calibrationSchema, calibrationState } from '../run-check-model.js'
 
@@ -165,6 +166,8 @@ export const playStandingSchema = z
         reason: s.optional(),
         startedAt: s.optional(),
         wallHours: n.optional(),
+        /** The run's status as its run page shows it (views.row_status). */
+        status: viewStatusSchema.optional(),
         // What blocked the last run when it ended, and its prediction's kill checkpoints with what was measured by each.
         blocker: playBlockerSchema.nullable().optional(),
         killCheckpoints: killCheckpointsSchema.optional(),
@@ -325,7 +328,7 @@ export const playLedgerRowSchema = z
     runId: z.string(),
     label: s.optional(),
     lineage: lineage.optional(),
-    ending: z.object({ word: z.string(), glyph: s.optional(), reason: s.optional() }).catchall(z.unknown()).nullable().optional(),
+    ending: z.object({ word: z.string(), glyph: s.optional(), reason: s.optional(), status: viewStatusSchema.optional() }).catchall(z.unknown()).nullable().optional(),
     startedAt: s.optional(),
     settledAt: s.optional(),
     wallHours: n.optional(),
@@ -410,6 +413,8 @@ export const playPageFields = {
   barSeries: playBarSeriesSchema.nullable().optional(),
   ledger: playLedgerSchema.nullable().optional(),
   releases: z.array(playReleaseSchema).nullable().optional(),
+  /** The host's one view of the play (views.play_view): status, sentence, blocker, progress, needs-you, as-of. */
+  view: viewSchema.optional(),
 }
 
 export type PlayBlocker = z.infer<typeof playBlockerSchema>

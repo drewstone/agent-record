@@ -28,7 +28,7 @@ export interface OverviewPlayWeek {
   apiEquivalentUsd?: number | null
 }
 /** A Needs you line; `held` names a held pass's stages, `dispute` and `referees` an undecided check dispute (tangle-tools overview). */
-export interface OverviewAttention { tone: 'crit' | 'warn' | 'info' | 'neutral'; text: string; detail?: string | null; href?: string; owner?: string; next?: string; runId?: string; held?: string[]; dispute?: string; referees?: { seat: string | null; family: string | null; verdict: string | null }[] }
+export interface OverviewAttention { tone: 'crit' | 'warn' | 'info' | 'neutral'; text: string; detail?: string | null; href?: string; owner?: string; next?: string; runId?: string; held?: string[]; dispute?: string; /** An item of a play's view (views.play_view): it needs a person whatever its tone. */ needsYou?: boolean; play?: string; referees?: { seat: string | null; family: string | null; verdict: string | null }[] }
 
 export interface OverviewDocument {
   schema: 'agent-workspace.overview.v1'

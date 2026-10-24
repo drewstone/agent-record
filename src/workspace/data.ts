@@ -148,9 +148,9 @@ export type StatusInput =
   | { axis: 'result'; verdict: string | null | undefined; current?: boolean; checker?: string | null; waiting?: boolean; passed?: number | null; total?: number | null; held?: readonly string[] | null }
   /**
    * Something that may need a person: an overview `attention[]` tone, or a blocker's severity on a run that is or is not
-   * live. `heldPass` is a Needs you line for a held pass: act now whatever tone the host served.
+   * live. The tone is the host's: a page never raises it.
    */
-  | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean; heldPass?: boolean }
+  | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean }
   /** An agent row: its recorded status while its run is or is not live. */
   | { axis: 'agent'; status: string | null | undefined; live: boolean }
   /** A release tag's state. */
@@ -275,7 +275,7 @@ export function statusOf(input: StatusInput): Status {
     case 'result':
       return resultAxis(input)
     case 'alert':
-      if (input.tone === 'crit' || input.heldPass || (input.live && input.severity === 'red')) return status('alert', 'act now', 'fail', ENDING_GLYPH.fail)
+      if (input.tone === 'crit' || (input.live && input.severity === 'red')) return status('alert', 'act now', 'fail', ENDING_GLYPH.fail)
       if (input.live && input.severity) return status('alert', 'Blocked', 'attention', ENDING_GLYPH.attention)
       if (!input.live && input.severity) return status('alert', 'past', 'neutral', ENDING_GLYPH.ended)
       return status('alert', input.tone === 'info' ? 'cleared' : 'not urgent', 'neutral', ENDING_GLYPH.ended)

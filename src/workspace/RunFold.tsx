@@ -1,40 +1,42 @@
 import { Spark } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { compact } from '../viewer/model.js'
-import { type Play, plainWords } from './answers.js'
+import { type Play, plainWords, stamp } from './answers.js'
 import { AsOfStamp } from './AnswerStrip.js'
 import { dataStatus, StatusPill, statusOf } from './data.js'
 import { BlockerChip } from './PlayHead.js'
 import { shortRun, shortTag } from './play-standing.js'
-import { clockWords, inheritedGate, isLive, runAsOf, runBest, runBlocker, runChip, runClock, runOutputSlot, runState, successorOf } from './run-answers.js'
+import { inheritedGate, isLive, runOutputSlot } from './run-answers.js'
+import { viewAsOf, viewChip, type ViewProgress } from './view.js'
 
 const FIX_PREVIEW = 180
 const clock = (at: string | null | undefined) => (at ? `${new Date(at).toISOString().slice(11, 16)} UTC` : null)
 /** A Lab sentence with its ISO timestamps as `10-19 02:42Z`, the way the rest of the page writes times. */
 const humane = (text: string) => text.replace(/\b\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)(?::\d\d(?:\.\d+)?)?Z\b/g, '$1-$2 $3Z')
 
-/** Workloads passed against the bar: the fill is passed ÷ total, the end is the bar, a thin tick the play's previous best. */
-function WorkloadMeter({ value, of, previous }: { value: number; of: number; previous: number | null }) {
-  const at = (n: number) => `${Math.max(0, Math.min(100, (n / of) * 100)).toFixed(1)}%`
+/** The check's steps as one segment each: filled for a pass, red for a fail, striped for undecided, hollow for not run. */
+const STEP_WORDS = { pass: 'passes', fail: 'fails', undecided: 'never decided', unrun: 'not run' } as const
+
+function StepBar({ progress }: { progress: ViewProgress }) {
   return (
-    <span className="run-meter" role="img" aria-label={`${value} of ${of} workloads${previous !== null ? `; previous best ${previous}` : ''}`}>
-      <i style={{ width: at(value) }} />
-      {previous !== null && <b className="run-meter-prev" style={{ left: at(previous) }} title={`previous best ${previous} of ${of}`} />}
-      <b className="run-meter-bar" title={`the bar: all ${of}`} />
-    </span>
+    <ol className="run-steps" aria-label={progress.sentence}>
+      {progress.steps.map((step, index) => (
+        <li key={index} data-step={step.state} title={`${step.label}: ${STEP_WORDS[step.state]}${step.line ? ` (${step.line})` : ''}`}>
+          <span>{step.label}</span>
+        </li>
+      ))}
+    </ol>
   )
 }
 
 /**
- * The run page's first screen (v2): the h1 and the page's one status chip and as-of, then exactly four slots: what the
- * run is doing (or how it ended), its best release, what blocks it (with the one clock), and what it produced.
+ * The run page's first screen: the h1, the host's status chip and the page's one as-of, the host's status sentence,
+ * then three slots: the best release step by step, what blocks the run, and what it produced. Every word but the output
+ * comes from the host's view (views.run_view), so this page and the play page say the same thing about this run.
  */
-export function RunFold({ doc, play, now = Date.now() }: { doc: RunDocument; play?: Play | null; now?: number }) {
+export function RunFold({ doc, now = Date.now() }: { doc: RunDocument; play?: Play | null; now?: number }) {
   const run = doc.run
-  const successor = successorOf(play, run.id)
-  const chip = runChip(doc, successor ? true : undefined, now)
-  const best = runBest(doc, play, now)
-  const blocker = runBlocker(doc, successor, now)
+  const view = doc.view
   const output = runOutputSlot(doc, now)
   return (
     <header className="run-fold" data-run-fold>
@@ -43,28 +45,38 @@ export function RunFold({ doc, play, now = Date.now() }: { doc: RunDocument; pla
       </nav>
       <div className="run-head">
         <h1>Run {shortRun(run.play, run.id)}</h1>
-        <StatusPill status={chip} />
-        <AsOfStamp asOf={runAsOf(doc)} />
+        {view && <StatusPill status={viewChip(view.status)} />}
+        {view && <AsOfStamp asOf={viewAsOf(view)} />}
       </div>
+      {view && <p className="run-state" data-field="view.sentence">{view.sentence}</p>}
       <div className="run-slots">
-        <div className="run-slot is-state" data-slot="state">
-          <p className="run-state">{runState(doc, chip, now)}</p>
-        </div>
         <div className="run-slot" data-slot="best">
-          <span className="run-slot-label">Best release</span>
-          <b>{best.headline}</b>
-          {best.meter && <WorkloadMeter {...best.meter} />}
-          <span className="run-slot-sub">{best.sub}</span>
+          <span className="run-slot-label">Best version</span>
+          {view?.progress ? (
+            <>
+              <b>{view.progress.release ?? 'workspace'}: {view.progress.passed} of {view.progress.total} steps</b>
+              <StepBar progress={view.progress} />
+              <span className="run-slot-sub">{view.progress.sentence}</span>
+            </>
+          ) : (
+            <b>No version scored yet</b>
+          )}
         </div>
         <div className="run-slot" data-slot="blocker">
           <span className="run-slot-label">Blocker</span>
-          {blocker.status ? <StatusPill status={blocker.status}>{blocker.headline}</StatusPill> : <b>{blocker.headline}</b>}
-          <span className="run-slot-sub">{blocker.sub}</span>
+          {view?.blocker ? (
+            <>
+              <b data-field="view.blocker">{view.blocker.text}</b>
+              <span className="run-slot-sub">{[view.blocker.owner ? `Owner: ${view.blocker.owner}` : null, view.blocker.since ? `since ${stamp(view.blocker.since, now)}` : null].filter(Boolean).join(' · ')}</span>
+            </>
+          ) : (
+            <b>Nothing holds it</b>
+          )}
         </div>
         <div className="run-slot" data-slot="output">
           <span className="run-slot-label">Output</span>
           <b>{output.headline}</b>
-          {output.points && <span className="run-slot-spark"><Spark points={output.points} /></span>}
+          {output.points && output.points.length >= 3 && <span className="run-slot-spark"><Spark points={output.points} /></span>}
           <span className="run-slot-sub">{output.sub}</span>
         </div>
       </div>
@@ -72,17 +84,13 @@ export function RunFold({ doc, play, now = Date.now() }: { doc: RunDocument; pla
   )
 }
 
-/** On a run's tab pages, the status block is one sticky line: the run, its chip, and its one clock or its ending. */
-export function RunStatusLine({ doc, play, now = Date.now() }: { doc: RunDocument; play?: Play | null; now?: number }) {
-  const successor = successorOf(play, doc.run.id)
-  const chip = runChip(doc, successor ? true : undefined, now)
-  const at = runClock(doc)
-  const ended = doc.run.ending?.at ?? doc.run.settledAt ?? null
+/** On a run's tab pages, the status block is one sticky line: the run, the host's chip, and its sentence. */
+export function RunStatusLine({ doc }: { doc: RunDocument; play?: Play | null; now?: number }) {
   return (
     <p className="run-status-line" role="status" data-run-status>
       <a href={`/run/${encodeURIComponent(doc.run.id)}`}>Run {shortRun(doc.run.play, doc.run.id)}</a>
-      <StatusPill status={chip} />
-      <span className="faint">{isLive(doc) ? (at ? clockWords(at, now) : 'no output recorded') : ended ? `ended ${ended.slice(5, 10)} ${ended.slice(11, 16)}Z` : ''}</span>
+      {doc.view && <StatusPill status={viewChip(doc.view.status)} />}
+      {doc.view && <span className="faint">{doc.view.progress?.sentence ?? doc.view.sentence}</span>}
     </p>
   )
 }

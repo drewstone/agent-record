@@ -4,9 +4,9 @@ import { dataStatus, StatusPill, statusOf, useDocument } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { byEnding, bytes, ChartCard, compact, DayBars, Histogram, HBars, Lines, Meter, pct, SERIES, Spark, usd } from './OverviewCharts.js'
 import { hostWords, shortRun } from './play-standing.js'
-import { hm, newest, overviewAnswers } from './answers.js'
+import { attentionStatus, hm, newest, overviewAnswers } from './answers.js'
 import { AnswerStrip, AsOfStamp } from './AnswerStrip.js'
-import type { ReliabilityDocument } from './reliability-model.js'
+import { type ReliabilityDocument, settledOf } from './reliability-model.js'
 
 // Five ranked causes plus "other", none in a status hue: the series slots, then indigo, and "other" in faint ink.
 const LOSS_COLOR = [...SERIES.slice(0, 4), SERIES[4] ?? '#3a4bc4', 'var(--ar-fg-faint)']
@@ -167,7 +167,7 @@ export function NeedsYou({ attention }: { attention: OverviewAttention[] }) {
       {attention.length ? (
         <ul>
           {attention.map((item) => {
-            const status = statusOf({ axis: 'alert', tone: item.tone, live: true, heldPass: Boolean(item.held?.length) })
+            const status = attentionStatus(item)
             const body = (
               <>
                 {/* A red item names its owner in its own text; every other one is neutral. */}
@@ -196,7 +196,7 @@ function lastFullDay(doc: ReliabilityDocument | null | undefined) {
   if (!doc || doc.schema !== 'discovery-lab.reliability.v1') return null
   const today = doc.at.slice(0, 10)
   const day = [...doc.daily].reverse().find((item) => item.day < today && item.runs > 0 && item.rate !== null)
-  return day ? { rate: day.rate, clean: day.clean, settled: day.runs, day: day.day } : { rate: doc.rate, clean: doc.runs.clean, settled: doc.runs.settled, day: null }
+  return day ? { rate: day.rate, clean: day.clean, settled: settledOf(day), day: day.day } : { rate: doc.rate, clean: doc.runs.clean, settled: doc.runs.settled, day: null }
 }
 
 export function OverviewPage({ api }: { api: string }) {
