@@ -3342,9 +3342,10 @@
 .ar-ws .section-head h3 { margin: 0; }
 .ar-ws .section-head p { margin: 0; font-size: 13px; line-height: 1.4; max-width: 110ch; }
 .ar-ws .checker-legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 8px; padding: 0; list-style: none; font-size: 13px; }
-.ar-ws .checker-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.ar-ws .checker-legend > span, .ar-ws .checker-earlier { display: inline-flex; align-items: center; gap: 6px; }
 .ar-ws .checker-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--checker); }
-.ar-ws .checker-legend li[data-current='yes'] b { color: var(--ws-title); }
+.ar-ws .checker-legend [data-current='yes'] b { color: var(--ws-title); }
+.ar-ws .checker-earlier { color: var(--ar-fg-muted); cursor: pointer; }
 :is(.ar-ws, .research-report) .outcome-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ar-fg-muted); }
 :is(.ar-ws, .research-report) .outcome-legend li { display: inline-flex; align-items: center; gap: 5px; }
 :is(.ar-ws, .research-report) .outcome-legend i { width: 10px; height: 10px; border-radius: 2px; }

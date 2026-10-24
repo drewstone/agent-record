@@ -1,5 +1,5 @@
 import { type ChartBand, type ChartMark, type MultiplePanel, smallMultiples, type TimePoint, type TimeSeriesRow, timeSeries, type XCategory, type YTarget } from '@tangle-network/charts'
-import { checkerColor } from '@tangle-network/charts'
+import { CHECKER_HUES, checkerColor } from '@tangle-network/charts'
 import { FigureView } from '@tangle-network/charts/react'
 import { type KeyboardEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
@@ -19,7 +19,6 @@ import {
   metricValue,
   type PlayBarMetric,
   type PlayHead,
-  rulingWords,
   shortRun,
   shortTag,
   tagsWords,
@@ -262,96 +261,81 @@ function timeExtent(climb: Climb): [number, number] | null {
 }
 
 /**
- * The climb on wall-clock time (wave 2): the same marks at the times they were recorded, so hours spent failing one
- * release read as a span, a ruling sits at its minute, and each run is a band over the hours it ran. A row recorded
- * n times is drawn at its first and last time and joined; the count badge sits on the last.
+ * The climb on wall-clock time, read in five seconds: the current check is the one saturated line, each earlier check a
+ * muted dashed one for context, and every check change a labelled event. Only the first, best, level-change and last
+ * releases of the current check carry a label, and an earlier check only its best, so labels never pile up. A row
+ * recorded n times sits at its last time with its count.
  */
-function climbTimeFigure(play: Play, climb: Climb, width: number, window: [number, number]) {
-  const axis = releaseAxis(play, climb)
-  const labelOf = new Map(axis.bands.map((band) => [axis.runOf[band.from], band.label]))
-  const rows = new Map<string, TimeSeriesRow & { order: number; runId: string }>()
-  const row = (checker: string | null | undefined, runId: string) => {
-    const key = `${checker ?? 'none'}:${runId}`
-    let found = rows.get(key)
-    if (!found) {
-      found = { id: key, label: `${checkerLabel(play.checkers, checker)} · ${shortRun(play.id, runId)}`, points: [], colorIndex: checkerIndex(play.checkers, checker), order: rows.size, runId }
-      rows.set(key, found)
-    }
-    return found
-  }
-  const runOfColumn = new Map(climb.columns.map((column) => [column.id, column]))
-  const groupEnd = new Map(climb.groups.map((group) => [group.runId, group.to]))
+const GAP_MS = 6 * 3_600_000
+function climbTimeFigure(play: Play, climb: Climb, width: number, window: [number, number], earlier: boolean) {
   const [lo, hi] = window
+  const current = play.checkers?.find((checker) => checker.current)?.label ?? null
+  const columns = new Map(climb.columns.map((column) => [column.id, column]))
+  const byChecker = new Map<string, TimePoint[]>()
   for (const item of timedRows(climb)) {
-    const column = item.columnId ? runOfColumn.get(item.columnId) : undefined
-    const runId = column?.runId ?? item.runId ?? ''
-    const first = ms(item.firstAt)!
-    const last = ms(item.lastAt) ?? first
-    if (last < lo || first > hi) continue
-    const y = item.progress !== null ? Math.max(0, Math.min(1, item.progress)) : null
-    const workloads = item.workloads?.total ? `${item.workloads.passed ?? '?'}/${item.workloads.total}` : null
-    const tag = shortTag(column?.tag ?? null)
-    const base: TimePoint = {
-      x: first,
-      y,
+    const x = ms(item.lastAt) ?? ms(item.firstAt)!
+    if (x < lo || x > hi || item.progress === null) continue
+    const isCurrent = item.checker === current
+    if (!isCurrent && !earlier) continue
+    const tag = shortTag((item.columnId ? columns.get(item.columnId)?.tag : null) ?? null)
+    const workloads = item.workloads?.total ? `${item.workloads.passed ?? '?'}/${item.workloads.total} workloads` : null
+    const points = byChecker.get(item.checker ?? '') ?? []
+    points.push({
+      x,
+      y: Math.max(0, Math.min(1, item.progress)),
       ...(item.verdict === 'superseded' ? {} : { verdict: markVerdict(item.verdict) }),
       marker: item.kind === 'gate' ? 'diamond' : 'circle',
       ...(item.verdict === 'solved' ? { glyph: 'check' as const } : {}),
-      annotation: [`${tag ?? 'untagged'} · ${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}`, workloads ? `${workloads} workloads` : null, item.count && item.count > 1 ? `${item.count}× from ${utc(item.firstAt)} to ${utc(item.lastAt)}` : utc(item.firstAt), lineReason(item.line), item.calibration ? `check ${item.calibration}` : null].filter(Boolean).join(' · '),
-    }
-    const series = row(item.checker, runId)
-    if (item.count && item.count > 1 && last > first) {
-      series.points.push({ ...base, x: Math.max(first, lo) })
-      series.points.push({ ...base, x: Math.min(last, hi), count: item.count, ...(tag && y !== null ? { label: tag } : {}) })
-    } else series.points.push({ ...base, ...(item.count && item.count > 1 ? { count: item.count } : {}), ...(tag && y !== null ? { label: tag } : {}) })
+      ...(item.count && item.count > 1 ? { count: item.count } : {}),
+      annotation: [`${checkerLabel(play.checkers, item.checker)} · ${tag ?? 'untagged'} · ${item.kind === 'gate' ? 'tag gate' : 'check'}: ${verdictWord(item.verdict)}`, workloads, utc(item.lastAt ?? item.firstAt), lineReason(item.line)].filter(Boolean).join(' · '),
+      ...(tag ? { label: tag } : {}),
+    })
+    byChecker.set(item.checker ?? '', points)
   }
-  // Rows recorded in the same millisecond (a check and a gate on one tag) are spread by a millisecond each, so a
-  // series' times stay strictly increasing; at any drawn scale they sit on the same minute.
-  // A release checked again after its run ended (a settle check, a re-check hours later) is not joined across other
-  // runs' hours: the line breaks five minutes after the run's end and the later check stands alone.
-  const increasing = (points: TimePoint[], runId: string) => {
-    const sorted = points.sort((a, b) => a.x - b.x)
-    const end = ms(groupEnd.get(runId))
-    const out: TimePoint[] = []
-    for (const point of sorted) {
+  // Labels: the current check's first, best, each new level and last; an earlier check's best alone.
+  const labelled = (points: TimePoint[], all: boolean) => {
+    const best = points.reduce((top, point) => ((point.y ?? 0) > (top.y ?? 0) ? point : top), points[0]!)
+    let level = -1
+    return points.map((point, i) => {
+      const rises = (point.y ?? 0) > level
+      level = Math.max(level, point.y ?? 0)
+      const keep = point === best || (all && (i === 0 || i === points.length - 1 || rises))
+      if (keep) return point
+      const { label: _, ...rest } = point
+      return rest
+    })
+  }
+  // Points sharing a millisecond are spread by one each, so a series' times stay strictly increasing; a line breaks
+  // across six hours without a check, so a gap between runs never reads as a climb.
+  const increasing = (points: TimePoint[]) =>
+    points.sort((a, b) => a.x - b.x).reduce<TimePoint[]>((out, point) => {
       const previous = out.at(-1)
-      if (previous && end !== undefined && previous.x <= end + 300_000 && point.x > end + 300_000 && end + 300_000 > previous.x) out.push({ x: end + 300_000, y: null })
-      const at = out.at(-1)
-      out.push(at && point.x <= at.x ? { ...point, x: at.x + 1 } : point)
-    }
-    return out.filter((point) => point.x <= hi)
-  }
-  const series = [...rows.values()]
-    .filter((item) => item.points.length)
-    .map(({ runId, ...item }) => ({ ...item, points: increasing(item.points, runId) }))
-    .filter((item) => item.points.length)
-    .sort((a, b) => (a.colorIndex ?? 9) - (b.colorIndex ?? 9) || a.order - b.order)
-  const bands: ChartBand[] = climb.groups.flatMap((group) => {
-    const from = ms(group.from)
-    const to = ms(group.to) ?? hi
-    if (from === undefined || to < lo || from > hi) return []
-    return [{ from: Math.max(from, lo), to: Math.min(to, hi), label: labelOf.get(group.runId) ?? (shortRun(play.id, group.runId) || group.label), kind: 'group' as const }]
+      if (!previous) return [point]
+      if (point.x - previous.x > GAP_MS) return [...out, { x: previous.x + 1, y: null }, point]
+      return [...out, point.x <= previous.x ? { ...point, x: previous.x + 1 } : point]
+    }, [])
+  const series: TimeSeriesRow[] = [...byChecker.entries()]
+    .map(([checker, points]) => {
+      const isCurrent = checker === current
+      return { id: checker || 'none', label: `${checkerLabel(play.checkers, checker)}${isCurrent ? ' (current)' : ''}`, points: labelled(increasing(points), isCurrent), colorIndex: isCurrent ? 0 : CHECKER_HUES }
+    })
+    .sort((a, b) => b.colorIndex - a.colorIndex)
+  // Each check change at the time it took effect; the first check is the start, not a change.
+  const marks: ChartMark[] = (play.checkers ?? []).slice(1).flatMap((checker) => {
+    const at = ms(checker.firstAt)
+    return at !== undefined && at >= lo && at <= hi ? [{ at, label: `check ${checker.label}`, kind: 'ruling' as const }] : []
   })
-  const marks: ChartMark[] = (climb.rulings ?? []).flatMap((ruling) => {
-    const at = ms(ruling.at)
-    if (at === undefined || at < lo || at > hi) return []
-    const label = ruling.verdict === 'rejected' ? 'check stands' : `${ruling.checkerTo ? checkerLabel(play.checkers, ruling.checkerTo) : 'new check'}`
-    return [{ at, label, kind: 'ruling' as const, ...(ruling.by ? { source: ruling.by } : {}) }]
-  })
-  const lines = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: item.label.toUpperCase() } : item))
-  const ticks = lines.length && lines.every((item) => item.at === 1) ? [{ at: 0, label: 'NOT SOLVED' }, ...lines] : lines
+  const lines = (climb.y?.gridlines ?? []).filter((item) => item.at >= 0 && item.at <= 1).map((item) => (item.at === 1 ? { ...item, label: 'solved' } : item))
+  const ticks = lines.length && lines.every((item) => item.at === 1) ? [{ at: 0, label: 'not solved' }, ...lines] : lines
   const span = hi - lo
   return timeSeries(series, {
     id: `climb-time-${play.id}`,
     x: { label: 'Time (UTC)', domain: [lo, hi] },
-    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}), strip: 'score not recorded' },
-    formatX: (x) => {
-      const iso = new Date(x).toISOString()
-      return span < 36 * 3_600_000 ? `${iso.slice(11, 16)}Z` : `${iso.slice(5, 10)} ${iso.slice(11, 13)}h`
-    },
+    y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}) },
+    // Ticks fall at recorded times, so a multi-day axis names the hour too: two ticks on one day never read alike.
+    formatX: (x) => (span < 36 * 3_600_000 ? `${new Date(x).toISOString().slice(11, 16)}Z` : `${new Date(x).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} ${new Date(x).toISOString().slice(11, 13)}h`),
     formatY: stageAt(climb),
-    markers: { circle: 'check', diamond: 'gate' },
-    bands,
+    markers: { circle: 'check', diamond: 'tag gate' },
     marks,
     legend: false,
     width,
@@ -569,22 +553,26 @@ function ChecksSaid({ play, climb }: { play: Play; climb: Climb }) {
  */
 const inGrammar = <T,>(figure: T): T => JSON.parse(JSON.stringify(figure).replace(/(?<![-\w])undecided\b/g, VERDICT_WORDS.undecided!)) as T
 
-const initialMode = (): 'release' | 'time' => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('climb') === 'time' ? 'time' : 'release')
+const initialMode = (): 'release' | 'time' => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('climb') === 'release' ? 'release' : 'time')
 
 export function PlayClimb({ play }: { play: Play }) {
   const climb = play.climb ?? null
   // Partial progress on any row makes a climb; a check that only passes or fails is a verdict strip.
   const graded = !!climb && climb.marks.some((mark) => mark.progress !== null && mark.progress > 0.001 && mark.progress < 0.999)
   const [mode, setMode] = useState<'release' | 'time'>(initialMode)
-  const [range, setRange] = useState<[number, number] | null>(null)
   const extent = useMemo(() => (climb ? timeExtent(climb) : null), [climb])
+  // A phone opens on the current check alone, from its first check: every check and release at 358 px would collide.
+  const narrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  const since = ms(play.checkers?.find((checker) => checker.current)?.firstAt)
+  const [range, setRange] = useState<[number, number] | null>(() => (narrow && extent && since !== undefined && since > extent[0] ? [since - 3_600_000, extent[1]] : null))
+  const [earlier, setEarlier] = useState(!narrow)
   const timed = mode === 'time' && !!extent
   // Drawn at the section's measured width, so the climb's labels and marks keep their set size on a wide page.
-  const figure = useCallback((width: number) => inGrammar(timed ? climbTimeFigure(play, climb!, width, range ?? extent!) : climbFigure(play, climb!, width)), [play, climb, timed, range, extent])
+  const figure = useCallback((width: number) => inGrammar(timed ? climbTimeFigure(play, climb!, width, range ?? extent!, earlier) : climbFigure(play, climb!, width)), [play, climb, timed, range, extent, earlier])
   const choose = (next: 'release' | 'time') => {
     setMode(next)
     const url = new URL(window.location.href)
-    if (next === 'time') url.searchParams.set('climb', 'time')
+    if (next === 'release') url.searchParams.set('climb', 'release')
     else url.searchParams.delete('climb')
     window.history.replaceState(null, '', url)
   }
@@ -598,7 +586,7 @@ export function PlayClimb({ play }: { play: Play }) {
         <p className="faint">
           {graded
             ? timed
-              ? 'Check progress at the time each check ran, each run a band over the hours it ran; a release checked many times is a line from its first check to its last. Filled marks pass, rings fail; ◆ is a tag gate.'
+              ? 'Progress under the current check over time; earlier checks are dashed grey, and each check change is marked. Filled marks pass, rings fail; ◆ is a tag gate.'
               : 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are unverified; ◆ is a tag gate.'
             : 'This check passes or fails without partial progress: each run’s checked releases with their verdicts.'}
         </p>
@@ -610,19 +598,20 @@ export function PlayClimb({ play }: { play: Play }) {
         )}
       </header>
       {play.checkers && play.checkers.length > 0 && (
-        <ul className="checker-legend" aria-label="Checkers">
-          {play.checkers.map((checker) => (
-            <li key={checker.sha256} title={checkerTitle(checker)} style={{ ['--checker' as string]: checkerColor(checkerIndex(play.checkers, checker.sha256) ?? 9) }} data-current={checker.current ? 'yes' : 'no'}>
+        <p className="checker-legend" aria-label="Checkers">
+          {play.checkers.filter((checker) => checker.current).map((checker) => (
+            <span key={checker.sha256} title={checkerTitle(checker)} style={{ ['--checker' as string]: checkerColor(0) }} data-current="yes">
               <i aria-hidden="true" />
-              <b>{checker.label}</b>
-              <span className="faint">
-                {checker.ruling ? ` ${rulingWords(checker.ruling)}` : ' as pressed'}
-                {` · ${checker.rows ?? counted.get(checker.label) ?? counted.get(checker.sha256) ?? 0} rows`}
-                {checker.current ? ' · current' : ''}
-              </span>
-            </li>
+              <b>{checker.label}</b> current check · {checker.rows ?? counted.get(checker.label) ?? 0} rows
+            </span>
           ))}
-        </ul>
+          {timed && play.checkers.length > 1 && (
+            <label className="checker-earlier">
+              <input type="checkbox" checked={earlier} onChange={(event) => setEarlier(event.target.checked)} />
+              {` earlier checks ${play.checkers.filter((checker) => !checker.current).map((checker) => checker.label).join(', ')}`}
+            </label>
+          )}
+        </p>
       )}
       {graded && timed && <ClimbBrush play={play} climb={climb} extent={extent!} window={range} onWindow={setRange} />}
       {graded ? <FigureView figure={figure} /> : <VerdictStrip play={play} climb={climb} />}
