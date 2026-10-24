@@ -62,6 +62,7 @@ export const runReceiptSchema = z.object({
      * Policy strings do not prove native capture or cloud evidence state; task success does not imply cleanup. */
     retention: z.object({
       disposition: z.string(), workspace: z.string(), nativeCapture: z.string(), cloudEvidence: z.string(),
+      requestedNativeCapture: z.string().optional(), requestedCloudEvidence: z.string().optional(),
       removed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(),
       snapshotAbsenceVerified: z.boolean().nullable(),
       evidenceRetirement: z.object({
