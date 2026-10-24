@@ -35,7 +35,6 @@ import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './wor
 import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
-import { OutputsView } from './workspace/Outputs.js'
 import { ReliabilityPanel } from './workspace/Reliability.js'
 import { Searches } from './workspace/SearchView.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
@@ -51,7 +50,7 @@ import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { readSource } from './workspace/source-reader.js'
 import { useSearch } from './workspace/navigation.js'
-import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
+import { LazyOutputsView, LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
@@ -843,7 +842,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       )}
       {section === 'outputs' && (
         <section className="run-panel" aria-label="Outputs" data-drawer="outputs">
-          <OutputsView doc={doc} grading={grading} selected={params.get('file')} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} />
+          <Suspense fallback={null}><LazyOutputsView doc={doc} grading={grading} selected={params.get('file')} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} /></Suspense>
         </section>
       )}
       {section === 'input' && (
