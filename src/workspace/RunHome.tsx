@@ -26,7 +26,10 @@ export function RunHome({ api, doc, selected, onSelect, onOpen, navigation, vari
   const receipt = doc.receipt
   const retention = receipt?.system?.retention
   const check = doc.run.check?.latest ?? doc.run.check?.best
-  const verdict = runCheckView(doc.run.check ?? null, doc.progress?.outcome ?? (receipt ? outcomeOfCheck(receipt) : null))
+  const outcome = doc.progress?.outcome ?? (receipt ? outcomeOfCheck(receipt) : null)
+  const verdict = runCheckView(doc.run.check ?? null, outcome)
+  const checkedAt = outcome?.checkedAt ?? check?.at
+  const checkedVersion = outcome?.tag ?? (outcome?.checkedAt === check?.at ? check?.tag ?? check?.commit?.slice(0, 8) : null)
   const live = isLive(doc)
   const chip = runChip(doc)
   const disposable = retention?.disposition === 'disposable'
@@ -36,16 +39,17 @@ export function RunHome({ api, doc, selected, onSelect, onOpen, navigation, vari
       <div className="run-purpose-context"><span>{doc.run.play} · Run {shortRun(doc.run.play, doc.run.id)}</span><span>{live ? 'Running' : 'Execution ended'}</span><AsOfStamp asOf={runAsOf(doc)} /></div>
       <h1>{goalSentence(goal, 140) ?? doc.run.play.replaceAll('-', ' ')}</h1>
       <div className="run-purpose-state">
-        <span>{verdict.result ? verdict.verdict : live ? 'Work is in progress' : `Recorded execution: ${chip.word.toLowerCase()}`}</span>
+        <span>{verdict.result && <>Recorded run outcome: </>}{verdict.result ? verdict.verdict : live ? 'Work is in progress' : `Recorded execution: ${chip.word.toLowerCase()}`}</span>
         {cleanupUnverified && <a href="#rr-retention" onClick={onInspect}>Resource cleanup unverified</a>}
-        {check?.at && <time dateTime={check.at}>Checked {check.at.slice(5, 10)} at {check.at.slice(11, 16)} UTC</time>}
+        {checkedAt && <time dateTime={checkedAt}>{checkedVersion ? `Checked ${checkedVersion}` : 'Checked version unrecorded'} · {checkedAt.slice(5, 10)} at {checkedAt.slice(11, 16)} UTC</time>}
       </div>
+      {navigation.version && <p className="run-context-note">Viewing retained files at {navigation.version.slice(0, 8)}. The recorded run outcome above names its own evaluated version.</p>}
     </header>
     <div className="run-work-layout">
       <RunArtifacts api={api} doc={doc} selected={selected} onSelect={onSelect} navigation={navigation} layout={variant} />
       <aside className="run-work-context" aria-label="Purpose and verification">
         <section><h2>What was asked</h2><p>{goal ?? 'The original request is unavailable.'}</p><button type="button" className="link-button" onClick={() => onOpen('input')}>Open the full brief</button></section>
-        <section><h2>What establishes success</h2>
+        <section><h2>Check evidence</h2>
           <p>{check?.line ?? 'No deciding check output was recorded.'}</p>
           {verdict.result && <p className="run-context-note">The check result applies to the version and criteria it evaluated. Requirements outside that check still need evidence.</p>}
           {doc.run.check?.calibration?.state === 'unknown' && <p className="run-context-note">Check calibration has not been recorded.</p>}

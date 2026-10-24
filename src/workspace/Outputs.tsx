@@ -23,7 +23,7 @@ export function OutputsView({ api, doc, grading, selected, onSelect, onClose, na
   const output = doc.finalOutput ?? null
   const groups = useMemo(() => groupOutputs(output), [output])
   const file = output?.files.find((item) => item.path === selected)
-  const currentFeedback = !navigation?.version && !navigation?.identity
+  const currentFeedback = !navigation?.version && !navigation?.identity && !navigation?.compare
   return <div className="outputs-view" data-outputs>
     <div className="drawer-head"><h2>Files and artifacts</h2><button type="button" className="ui-button" onClick={onClose}>Back to the run</button></div>
     {output?.fallback && <Fallback output={output} />}
