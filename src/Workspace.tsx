@@ -16,11 +16,9 @@ import { PlayFindings } from './workspace/PlayFindings.js'
 import { PlayReleases } from './workspace/PlayReleases.js'
 import { PlaysTable } from './workspace/PlaysTable.js'
 import { inlinedPlayHead, type PlayHead, targetWords } from './workspace/play-standing.js'
-import { OverviewPage } from './workspace/Overview.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
-import { ResearchReport } from './ResearchReport.js'
-import { playReportToResearchReport, type PlayReportDocument } from './play-report.js'
+import type { PlayReportDocument } from './play-report.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
@@ -63,8 +61,7 @@ import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscripti
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
-  /** `report` is the play report at `/play/<id>/report`; `id` is the play. */
-  mode: 'plays' | 'play' | 'report' | 'run' | 'receipt' | 'overview' | 'today' | 'theatre' | 'explore'
+  mode: 'plays' | 'play' | 'run' | 'receipt' | 'today' | 'theatre' | 'explore'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -73,7 +70,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'overview' ? <OverviewPage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : mode === 'report' ? <PlayReportPage api={api} id={id} theme={theme} /> : <RunPage api={api} id={id} />}
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
@@ -486,28 +483,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
           </div>
         </div>
       )}
-    </Status>
-  )
-}
-
-/**
- * The play report: the served `agent-workspace.play-report.v1` document read through `ResearchReport`, with the play
- * page's bar panels as its how-good figure. The bar panels need the play document; the report reads without it.
- */
-function PlayReportPage({ api, id, theme }: { api: string; id: string; theme: 'light' | 'dark' | 'auto' }) {
-  const doc = useDocument<PlayReportDocument>(`${api}/plays/${encodeURIComponent(id)}/report`)
-  const play = useDocument<Play>(`${api}/plays/${encodeURIComponent(id)}`)
-  const report = useMemo(() => {
-    if (!doc.data) return { data: null, error: null }
-    try {
-      return { data: playReportToResearchReport(doc.data), error: null }
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error.message : String(error) }
-    }
-  }, [doc.data])
-  return (
-    <Status loading={doc.loading} error={doc.error ? `This play report is unavailable: ${doc.error}` : report.error ? `This play report does not read: ${report.error}` : undefined}>
-      {report.data && <ResearchReport report={report.data} theme={theme} figures={play.data ? { 'how-good': <PlayAgainstBar play={play.data} /> } : undefined} />}
     </Status>
   )
 }

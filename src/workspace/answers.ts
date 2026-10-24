@@ -251,7 +251,6 @@ function isItWorking(play: Play, now: number): Answer {
 /** The report's inventory, or `play_head.built` when served: what the best release is made of. */
 function whatWasBuilt(play: Play, report: PlayReportDocument | null | undefined, now: number): Answer {
   const built = ((play as { play_head?: { built?: Built | null } | null }).play_head?.built ?? report?.built ?? null) as Built | null
-  const href = `/play/${encodeURIComponent(play.id)}/report#built`
   const crates = Array.isArray(built?.crates?.value) ? (built!.crates!.value as string[]) : []
   if (!built || !crates.length) {
     // No inventory: point at what exists, the best release's code one click away, never "not reported" beside a run
@@ -262,9 +261,9 @@ function whatWasBuilt(play: Play, report: PlayReportDocument | null | undefined,
         slot: 'what-was-built', label: 'Built', headline: 'Best release code',
         figure: { kind: 'num', value: best.release, unit: '', tip: 'the best release; the play report lists no build inventory' },
         subline: `run ${shortRun(play.id, best.runId)} · open its files`,
-        rows: [{ term: 'Best release code', text: `${best.release} in run ${shortRun(play.id, best.runId)}`, href: `/run/${encodeURIComponent(best.runId)}` }, { term: 'Play report', text: 'What was built', href }],
+        rows: [{ term: 'Best release code', text: `${best.release} in run ${shortRun(play.id, best.runId)}`, href: `/run/${encodeURIComponent(best.runId)}` }],
       }
-    return { slot: 'what-was-built', label: 'Built', headline: 'No release yet', figure: { kind: 'num', value: '—', unit: '', tip: 'no release has been scored' }, subline: 'no release has been scored', rows: [{ term: 'Play report', text: 'What was built', href }] }
+    return { slot: 'what-was-built', label: 'Built', headline: 'No release yet', figure: { kind: 'num', value: '—', unit: '', tip: 'no release has been scored' }, subline: 'no release has been scored', rows: [] }
   }
   const commands = (built.commands?.value ?? {}) as Record<string, unknown>
   const guests = num(built.guests?.value)
@@ -279,7 +278,6 @@ function whatWasBuilt(play: Play, report: PlayReportDocument | null | undefined,
   if (guests) rows.push({ term: 'Guest programs', text: String(guests) })
   if (built.docs?.length) rows.push({ term: 'Design docs', text: String(built.docs.length) })
   if (release?.builtAt) rows.push({ term: 'Read at', text: stamp(release.builtAt, now) })
-  rows.push({ term: 'Play report', text: 'What was built', href })
   return {
     slot: 'what-was-built',
     label: 'Built',
