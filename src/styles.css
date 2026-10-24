@@ -3609,7 +3609,9 @@
   .ar-ws .answer-tile-head { grid-area: head; align-self: center; }
   .ar-ws .answer-tile-figure { grid-area: fig; min-height: 0; justify-self: end; }
   .ar-ws .answer-tile-figure [data-num] b { font-size: 24px; }
-  .ar-ws .answer-tile-figure small { display: none; }
+  /* The unit stays with its value: a bare "5" beside "Not solved" read as five of nothing (AUDIT 5). */
+  .ar-ws .answer-tile-figure [data-num] { white-space: nowrap; }
+  .ar-ws .answer-tile-figure small { font-size: 12px; }
   .ar-ws .answer-tile-sub { grid-area: sub; }
   .ar-ws .run-slots { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .run-state { font-size: 15.5px; }
