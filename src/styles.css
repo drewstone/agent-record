@@ -3517,52 +3517,12 @@
    of the first screen, so agents, transcript and files are all visible without scrolling (disco UI brief, run page).
    Type: 15 px body, 13 px secondary, 12 px minimum; monospace only for ids. */
 .ar-ws .rw { --rw-gap: 16px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-sans); }
-.ar-ws .rw-head { display: grid; gap: 6px; }
-.ar-ws .rw-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.ar-ws .rw-title h1 { margin: 0; font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; }
-.ar-ws .rw-title .as-of { margin-left: auto; }
-.ar-ws .rw-sentence { margin: 0; max-width: 110ch; font-size: var(--font-size-base); line-height: 1.5; color: var(--text-secondary, var(--ar-fg)); }
-.ar-ws .rw-frame { height: max(520px, calc(100svh - 250px)); border: 1px solid var(--border-subtle, var(--ar-border)); border-radius: var(--radius-panel, 12px); overflow: hidden; background: var(--bg-root); }
-.ar-ws .rw-pane-title { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .rw-empty { margin: 0; padding: 16px; font-size: 13px; color: var(--text-muted); }
-.ar-ws .rw-agents { margin: 0; padding: 8px; list-style: none; display: grid; gap: 4px; overflow: auto; }
-.ar-ws .rw-agents li { padding-left: calc(var(--depth, 0) * 12px); }
-.ar-ws .rw-agents button { display: grid; gap: 4px; width: 100%; padding: 10px 12px; text-align: left; border: 1px solid transparent; border-radius: var(--radius-md, 8px); background: transparent; color: var(--text-primary); cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out; }
-.ar-ws .rw-agents button:hover { background: var(--bg-hover); }
-.ar-ws .rw-agents button[aria-pressed="true"] { border-color: var(--border-accent); background: var(--accent-surface-soft); }
-.ar-ws .rw-agent-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 15px; }
-.ar-ws .rw-agent-head .state-pill { font-size: 12px; }
-.ar-ws .rw-agent-meta { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ar-ws .rw-agent-turn { font-size: 13px; line-height: 1.4; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.ar-ws .rw-releases { margin: 0; padding: 8px 12px; list-style: none; display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; }
-.ar-ws .rw-releases li { flex: none; scroll-snap-align: start; }
-.ar-ws .rw-releases button { display: grid; gap: 6px; min-width: 96px; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md, 8px); background: var(--bg-card); color: var(--text-primary); cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
-.ar-ws .rw-releases button:hover { border-color: var(--border-hover); }
-.ar-ws .rw-releases button[aria-pressed="true"] { border-color: var(--border-accent); background: var(--accent-surface-soft); }
-.ar-ws .rw-release-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.ar-ws .rw-best { font-style: normal; font-size: 12px; font-weight: 500; color: hsl(var(--success)); }
-.ar-ws .rw-release-steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; width: 100%; min-width: 72px; height: 6px; }
-.ar-ws .rw-release-steps i { display: block; min-width: 8px; height: 6px; }
-.ar-ws .rw-release-steps.is-unchecked { height: auto; font-size: 12px; color: var(--text-muted); }
-.ar-ws .rw-release-steps i { border-radius: 2px; border: 1px solid var(--border-default); }
-.ar-ws .rw-release-steps i[data-step="pass"] { background: hsl(var(--success)); border-color: transparent; }
-.ar-ws .rw-release-steps i[data-step="fail"] { background: hsl(var(--error)); border-color: transparent; }
-.ar-ws .rw-release-steps i[data-step="undecided"] { background: repeating-linear-gradient(135deg, hsl(var(--warning)) 0 2px, transparent 2px 4px); border-color: hsl(var(--warning)); }
-.ar-ws .rw-release-count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .ar-ws .rw-file-modes { display: inline-flex; gap: 4px; }
 .ar-ws .rw-file-modes button { padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text-secondary); cursor: pointer; }
 .ar-ws .rw-file-modes button[aria-pressed="true"] { background: var(--accent-surface-soft); color: var(--text-primary); border-color: var(--border-accent); }
 @media (max-width: 1023px) { .ar-ws .rw-frame { height: auto; min-height: 70svh; } }
 @media (prefers-reduced-motion: reduce) { .ar-ws .rw * { transition: none !important; } }
-.ar-ws .rw-transcript { height: 100%; min-height: 0; overflow: auto; overscroll-behavior: contain; }
-.ar-ws .rw-frame > * { height: 100%; }
-.ar-ws .rw-phone { display: grid; gap: 16px; }
-.ar-ws .rw-phone > section { display: grid; gap: 8px; }
-.ar-ws .rw-phone h2 { margin: 0; }
-.ar-ws .rw-phone .rw-agents { padding: 0; }
-.ar-ws .rw-phone .rw-releases { padding: 0 0 4px; }
-.rw-sheet.agent-record.ar-ws { height: 92svh; background: var(--bg-elevated, var(--bg-root)); color: var(--text-primary); border-top: 1px solid var(--border-subtle); border-radius: 16px 16px 0 0; padding: 16px; display: flex; flex-direction: column; gap: 8px; padding-bottom: env(safe-area-inset-bottom); }
-.rw-sheet-body { flex: 1; min-height: 0; overflow: auto; }
 
 /* Today (Today.tsx): the Discovery home, calm and readable from across the room. Four type sizes only: 48 px hero
    figures, 20 px headings, 15 px body, 13 px secondary; 24-32 px between sections; one as-of in the header. */
@@ -3648,3 +3608,84 @@
 .ar-ws .plays-table .plays-name small, .ar-ws .plays-table .plays-best .faint { font-size: 13px; }
 /* Mono is for ids only (brief): counts, money and controls are Inter with tabular figures. */
 .ar-ws .plays-table td.num, .ar-ws .plays-table td.num *, .ar-ws .plays-table th.num, .ar-ws .plays-bar select, .ar-ws .plays-bar input { font-family: var(--ar-font, Inter, sans-serif); font-variant-numeric: tabular-nums; }
+.ar-ws .rv { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; width: 100%; max-width: 1440px; margin: 0 auto; padding: 8px 0 40px; }
+/* A candidate is the whole run page: the old tabs below it are left out while one is shown. */
+.ar-ws .ws-run:has(> .rv) > :not(.rv) { display: none; }
+.ar-ws .rv h2 { margin: 0 0 10px; font: 600 13px/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
+/* A: swimlanes */
+/* B: ladder first */
+/* ---- The run page (RunJourney): one focal point (the ladder), no cards inside cards, colour only for state
+   (green shipped or passed, amber near or stuck, red crashed or failed), grey for everything else. */
+.ar-ws .rj { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; width: 100%; max-width: 1440px; margin: 0 auto; padding: 8px 0 48px; }
+.ar-ws .rj > * { min-width: 0; }
+.ar-ws .rj-head { display: grid; gap: 6px; }
+.ar-ws .rj-crumb { font-size: 13px; color: var(--ar-fg-muted); text-decoration: none; }
+.ar-ws .rj-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ar-ws .rj-title h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
+.ar-ws .rj-title .as-of { margin-left: auto; }
+.ar-ws .rj-sentence { margin: 0; font-size: 15px; }
+.ar-ws .rj-muted { color: var(--ar-fg-muted); }
+.ar-ws .rj-label, .ar-ws .rj h3 { margin: 0 0 10px; font: 600 13px/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
+.ar-ws .rj-hero { display: grid; gap: 10px; }
+.ar-ws .rj-ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ar-ws .rj-step { display: grid; gap: 6px; padding: 18px 14px; border-radius: 10px; font-size: 15px; background: color-mix(in srgb, var(--ar-fg-faint) 14%, transparent); }
+.ar-ws .rj-step-n { font-size: 26px; font-weight: 650; }
+.ar-ws .rj-step-pass { background: color-mix(in srgb, var(--ar-c-ok, #22c55e) 22%, transparent); }
+.ar-ws .rj-step-undecided, .ar-ws .rj-step-unrun { background: color-mix(in srgb, var(--ar-c-warn, #f5a524) 26%, transparent); outline: 2px solid var(--ar-c-warn, #f5a524); }
+.ar-ws .rj-step-fail { background: color-mix(in srgb, var(--ar-c-fail, #ef4444) 26%, transparent); outline: 2px solid var(--ar-c-fail, #ef4444); }
+.ar-ws .rj-stuck, .ar-ws .rj-next, .ar-ws .rj-releases { margin: 0; font-size: 15px; }
+.ar-ws .rj-releases { color: var(--ar-fg-muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.ar-ws .rj-mini.rj-pass { color: var(--ar-c-ok, #22c55e); }
+.ar-ws .rj-mini.rj-fail { color: var(--ar-c-fail, #ef4444); }
+.ar-ws .rj-lanes { display: block; overflow: visible; }
+.ar-ws .rj-lanes text { font: 12px var(--ar-font-body); fill: var(--ar-fg-muted); }
+.ar-ws .rj-lanes .rj-lane-label { font-size: 13px; fill: var(--ar-fg); }
+.ar-ws .rj-plateau rect { fill: color-mix(in srgb, var(--ar-c-warn, #f5a524) 16%, transparent); }
+.ar-ws .rj-plateau text { fill: var(--ar-c-warn, #f5a524); }
+.ar-ws .rj-rel line { stroke: var(--ar-border); stroke-width: 1; }
+.ar-ws .rj-rel path { fill: var(--ar-fg-faint); }
+.ar-ws .rj-rel.rj-near path { fill: var(--ar-c-warn, #f5a524); }
+.ar-ws .rj-rel.rj-pass path { fill: var(--ar-c-ok, #22c55e); }
+.ar-ws .rj-rel.rj-fail path { fill: var(--ar-c-fail, #ef4444); }
+.ar-ws .rj-rel.rj-best text { fill: var(--ar-fg); font-weight: 600; }
+.ar-ws .rj-produced { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 2; }
+.ar-ws .rj-lane { cursor: pointer; outline: none; }
+.ar-ws .rj-lane .rj-bar { fill: color-mix(in srgb, var(--ar-fg-faint) 40%, transparent); transition: fill 150ms ease-out; }
+/* The whole row is the lane's target, not only its bar. */
+.ar-ws .rj-lane rect.rj-hit { fill: transparent; pointer-events: all; }
+.ar-ws .rj-lane:hover rect.rj-hit, .ar-ws .rj-lane.rj-on rect.rj-hit { fill: color-mix(in srgb, var(--ar-fg-faint) 10%, transparent); stroke: none; }
+.ar-ws .rj-lane.rj-lead .rj-bar { fill: color-mix(in srgb, var(--ar-fg-muted) 45%, transparent); }
+.ar-ws .rj-lane.rj-shipped .rj-bar { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 55%, transparent); }
+.ar-ws .rj-lane.rj-crash .rj-bar { fill: color-mix(in srgb, var(--ar-c-fail, #ef4444) 75%, transparent); }
+.ar-ws .rj-lane circle { fill: var(--ar-c-ok, #22c55e); stroke: var(--ar-bg); stroke-width: 2; }
+.ar-ws .rj-lane:hover .rj-lane-label, .ar-ws .rj-lane.rj-on .rj-lane-label, .ar-ws .rj-lane:focus-visible .rj-lane-label { font-weight: 600; text-decoration: underline; }
+.ar-ws .rj-lane.rj-on .rj-bar { stroke: var(--ar-fg); stroke-width: 1.5; }
+.ar-ws .rj-drill { display: grid; gap: 18px; padding-top: 24px; border-top: 1px solid var(--ar-border); animation: rj-in 220ms ease-out; }
+.ar-ws .rj-drill h2 { margin: 0; font-size: 26px; font-weight: 650; }
+.ar-ws .rj-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0; font-size: 15px; }
+.ar-ws .rj-summary dt { color: var(--ar-fg-muted); }
+.ar-ws .rj-summary dd { margin: 0; overflow-wrap: anywhere; }
+.ar-ws .rj-changes ul { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; }
+.ar-ws .rj-changes button { padding: 0; border: 0; background: none; color: var(--ar-c-action); cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.ar-ws .rj-changes button[aria-pressed='true'] { font-weight: 600; }
+.ar-ws .rj-changes details summary { cursor: pointer; font-size: 13px; color: var(--ar-fg-muted); margin-bottom: 6px; }
+/* The diff renderer fills its parent's height, as it did in the old file pane. */
+.ar-ws .rj-diff { height: 60vh; min-height: 360px; overflow: auto; border-radius: 8px; }
+.ar-ws .rj-transcript > summary { cursor: pointer; font-size: 15px; font-weight: 600; }
+/* The transcript opens on the work: the harness's caller-declared resources prompt is boilerplate. */
+.ar-ws .rj-transcript .assignment-message:first-of-type { display: none; }
+.ar-ws .rj-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; }
+.ar-ws .rj-link { padding: 0; border: 0; background: none; color: var(--ar-c-action); cursor: pointer; font: inherit; }
+.ar-ws .rj-tree { height: 70vh; min-height: 420px; }
+/* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,
+   conversations, outputs): its "Now" tab, "Why it stopped" and the Now section repeat the ladder and sentence above. */
+.ar-ws .ws-run:has(> .rj) > .run-why, .ar-ws .ws-run:has(> .rj) > .rr-page { display: none; }
+.ar-ws .ws-run:has(> .rj) > .run-tabs [data-section-tab='now'] { display: none; }
+.ar-ws .ws-run:has(> .rj) > .run-tabs:not([data-run-tabs='now']) ~ .rr-page { display: block; }
+@keyframes rj-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) {
+  .ar-ws .rj-ladder { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ar-ws .rj-step { padding: 12px 10px; }
+  .ar-ws .rj-summary { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .ar-ws .rj-lane .rj-bar { transition: none; } .ar-ws .rj-drill { animation: none; } }
