@@ -29,7 +29,7 @@ export function RunOverview({ api, doc, play = null, open, print = false }: { ap
   // A run without a Lab receipt still has its check facts on the run document: its verdict, a held pass, its disputes and
   // its calibration draw from them.
   if (!r?.outcome || !r.work) return <section className="rr-page"><h2>Run receipt</h2><p className="rr-muted">No receipt recorded yet.</p>
-    <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} settled={settled} check={doc.run?.check ?? null} />{!print && <RunFlowWaterfall api={api} doc={doc} />}</section>
+    <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} settled={settled} check={doc.run?.check ?? null} view={doc.view ?? null} />{!print && <RunFlowWaterfall api={api} doc={doc} />}</section>
   // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
   const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
   return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} successor={successor}
@@ -187,7 +187,7 @@ function stageFigure(r: RunReceipt, scores: ScorePoint[], contract: ContractDeli
   })
 }
 
-function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt | null; outcome: Outcome | null; settled: boolean; check: RunCheck | null }) {
+function RunNow({ receipt: r, outcome, settled, check, view = null }: { receipt: RunReceipt | null; outcome: Outcome | null; settled: boolean; check: RunCheck | null; view?: RunDocument['view'] | null }) {
   const scores = (r?.system?.play?.scores ?? []).filter((point) => typeof point.progress === 'number' || point.solved)
   const contract = r?.contract ?? []
   const disputes = outcome?.disputes ?? []
@@ -195,7 +195,9 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
   const figure = r === null || scores.length === 0 ? null : (width: number) => stageFigure(r, scores, contract, width)
   // With no verdict, what the checks did say: 19b's 17 checks found no pushed release tag, which is not "pending".
   const checks = check?.counts?.checks ?? null
-  const untagged = outcome?.solved === null || outcome?.solved === undefined ? (checks && check?.latest && !check.latest.tag ? check.latest : null) : null
+  // "None on a release" only when no release was scored: 21c's newest check ran on its workspace after 11 scored releases,
+  // and the line read "86 checks, none on a release" above those releases (re-audit 2026-10-24).
+  const untagged = outcome?.solved === null || outcome?.solved === undefined ? (checks && check?.latest && !check.latest.tag && !view?.progress ? check.latest : null) : null
   // The verdict is read against the check version it ran under: a miss under a retired check says so, neutral.
   const digest = check?.latest?.checker ?? null
   const named = digest ? (check?.checkerNames?.find((item) => digest.startsWith(item.sha256) || item.sha256.startsWith(digest)) ?? null) : null
@@ -210,7 +212,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
       ? statusOf({ axis: 'result', verdict: outcome.solved ? 'solved' : 'not-solved', current: named?.current ?? true, checker: named?.current === false ? 'an earlier check' : null })
       : null
   // The host's label leads (it composes the sentence); a held pass and a verdict under a retired check read as statusOf words them.
-  const verdict = result && (held || named?.current === false) ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet'))
+  const verdict = result && (held || named?.current === false) ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : view?.status.label ?? 'No check verdict yet'))
   const audit = outcome?.goalAudit ?? null
   const passes = r && earlierPasses(r, outcome, check)
   const versions = check?.checkerNames ?? []
@@ -235,7 +237,13 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
       {outcome.checkWait.publishedAt && <span> · published {clock(outcome.checkWait.publishedAt)}</span>}
       {outcome.checkWait.reason && <span> · {outcome.checkWait.reason}{outcome.checkWait.since && ` (since ${clock(outcome.checkWait.since)})`}</span>}
     </p>}
-    {outcome?.firstFailingLine && <><p className="rr-muted">First failing line{outcome.stage ? ` (${outcome.stage} stage)` : ''}</p><pre className="rr-output" data-field="progress.outcome.firstFailingLine">{outcome.firstFailingLine}</pre></>}
+    {/* The latest check's own verdict line says why it did not pass; the Lab's firstFailingLine can be the output's first
+        line ("build: ok in 24 s", run 21c, re-audit 2026-10-24) and is shown only when it is a failure. */}
+    {(() => {
+      const verdictLine = outcome?.latestCheck?.line && /^NOT SOLVED/i.test(outcome.latestCheck.line) ? outcome.latestCheck.line : null
+      const failing = verdictLine ?? (outcome?.firstFailingLine && !/:\s*ok\b/i.test(outcome.firstFailingLine) ? outcome.firstFailingLine : null)
+      return failing && <><p className="rr-muted">Why it did not pass{outcome?.stage ? ` (${outcome.stage} stage)` : ''}</p><pre className="rr-output" data-field={verdictLine ? 'progress.outcome.latestCheck.line' : 'progress.outcome.firstFailingLine'}>{failing}</pre></>
+    })()}
     {disputes.length > 0 && <><h3>Check disputes</h3><ol className="rr-contract" data-field="progress.outcome.disputes">{disputes.map((d, i) =>
       <li key={d.id ?? i} data-field={`progress.outcome.disputes.${i}`}>
         <code className="rr-contract-line">{d.line ?? '?'}</code>
