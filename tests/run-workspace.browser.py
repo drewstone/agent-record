@@ -14,7 +14,7 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from urllib.error import HTTPError
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from playwright.sync_api import sync_playwright
@@ -104,12 +104,16 @@ def history_journey(page, base, run_id, manifest, result, evidence):
     assert all(response.ok for response in documents), 'historical inventory request failed'
     old, new = [response.json() for response in documents]
     old_paths = {item['path'] for item in old['items']}
-    added = next((item for item in new['items'] if item['path'] not in old_paths), None)
+    added = next((item for item in new['items'] if item['path'] not in old_paths and item.get('bytes') != 0), None)
     if not added or old['state'] != 'available' or not old['complete']:
         result['history'].append({'runId': run_id, 'state': 'unavailable', 'reason': 'No complete comparable added-page pair'})
         return
     document = page.request.get(f'{base}/api/discovery/runs/{run_id}').json()
     current_files = (document.get('finalOutput') or {}).get('files') or []
+    content_response = page.request.get(base + added['href'])
+    assert content_response.ok
+    expected_lines = content_response.text().splitlines()
+    content_hash = hashlib.sha256(content_response.body()).hexdigest()
     for version, comparison, direction in ((newest, oldest, 'added'), (oldest, newest, 'removed')):
         query = urlencode({'variant': 'review', 'theme': 'light', 'file': added['path'], 'fileVersion': version,
                            'compareVersion': comparison, 'fileView': 'diff'})
@@ -118,18 +122,33 @@ def history_journey(page, base, run_id, manifest, result, evidence):
         page.get_by_text('Read plain-text diff', exact=True).click()
         patch = page.get_by_role('region', name=f"Plain-text diff for {added['path'].split('/')[-1]}").inner_text()
         assert patch.strip(), 'the shared diff has no accessible text patch'
+        prefix = '+' if direction == 'added' else '-'
+        delta, in_hunk = [], False
+        for line in patch.splitlines():
+            if line.startswith('@@'):
+                in_hunk = True
+            elif in_hunk and line.startswith(prefix):
+                delta.append(line[1:])
+        assert '\n'.join(delta).rstrip('\n') == '\n'.join(expected_lines).rstrip('\n'), f'{direction} patch differs from the real retained file'
+        (evidence / f'{run_id}-{direction}.diff').write_text(patch)
+        selection = parse_qs(urlsplit(page.url).query)
+        provenance = page.locator('.run-file-proof code').text_content()
+        page.reload(wait_until='domcontentloaded')
+        page.get_by_test_id('diff-view').wait_for(state='visible', timeout=30000)
+        assert parse_qs(urlsplit(page.url).query) == selection
+        assert page.locator('.run-file-proof code').text_content() == provenance
         if direction == 'removed':
             assert page.get_by_text(re.compile('Removed from the selected version')).is_visible()
         assert not page.locator('[data-grade]').count()
         page.screenshot(path=str(evidence / f'{run_id}-{direction}-diff.png'))
         result['history'].append({'runId': run_id, 'file': added['path'], 'selected': version,
-                                  'comparison': comparison, 'direction': direction, 'state': 'proved'})
+                                  'comparison': comparison, 'direction': direction, 'contentSha256': content_hash, 'selectionReload': 'proved', 'state': 'proved'})
     if current_files:
         query = urlencode({'section': 'outputs', 'file': current_files[0]['path'], 'fileVersion': oldest, 'compareVersion': newest})
         page.goto(f'{base}/run/{run_id}?{query}', wait_until='domcontentloaded')
         page.get_by_text('File feedback applies to the current primary artifact.', exact=False).wait_for(state='visible', timeout=30000)
         assert not page.locator('[data-grade]').count(), 'historical view exposes a current grade control'
-        result['historicalFeedback'].append({'runId': run_id, 'state': 'current grade controls absent'})
+        result['historicalFeedback'].append({'runId': run_id, 'state': 'current grade controls absent in anonymous historical view'})
 
 
 def run_journeys(args, base, browser, result):
@@ -154,17 +173,32 @@ def run_journeys(args, base, browser, result):
                         assert page.locator('.ar-ws').get_attribute('data-theme') == theme
                         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'overflow: {variant}/{width}/{theme}'
                         assert not errors, errors
+                        if width == 1440 and variant == 'workspace':
+                            source = page.locator('.run-file-modes').get_by_role('button', name='Source', exact=True)
+                            if source.count():
+                                source.click()
+                                page.locator('.run-retained-preview pre').wait_for(state='visible', timeout=30000)
+                                assert source.get_attribute('aria-pressed') == 'true'
+                                result['sourceViews'].append({'runId': run_id, 'theme': theme, 'file': page.locator('.run-file').get_attribute('data-file')})
+                                page.locator('.run-file-modes').get_by_role('button', name='Preview', exact=True).click()
                         page.screenshot(path=str(args.evidence / f'{run_id}-{variant}-{width}-{theme}.png'))
                         result['views'].append({'runId': run_id, 'variant': variant, 'width': width, 'theme': theme})
                     if width == 1440:
-                        # The same retained content survives a direct file link and reload.
+                        # The selected file identity, view and version context survive the direct link and reload.
                         page.locator('.run-file-proof > a').click()
                         page.locator('.run-file-content .run-retained-preview').wait_for(state='visible', timeout=30000)
                         selected = page.locator('.run-file').get_attribute('data-file')
+                        selection = parse_qs(urlsplit(page.url).query)
+                        assert selection.get('fileIdentity'), 'the file link omitted its recorded identity'
+                        fingerprint = page.locator('.run-file-proof code')
+                        provenance = fingerprint.text_content() if fingerprint.count() else None
                         page.reload(wait_until='domcontentloaded')
                         page.locator('.run-file-content .run-retained-preview').wait_for(state='visible', timeout=30000)
                         assert page.locator('.run-file').get_attribute('data-file') == selected
                         assert page.locator('.ar-ws').get_attribute('data-theme') == theme
+                        assert parse_qs(urlsplit(page.url).query) == selection
+                        fingerprint = page.locator('.run-file-proof code')
+                        assert (fingerprint.text_content() if fingerprint.count() else None) == provenance
                         result['reloads'].append({'runId': run_id, 'file': selected, 'theme': theme})
                         if theme == 'light':
                             history_journey(page, base, run_id, manifest, result, args.evidence)
@@ -181,7 +215,7 @@ def main():
     stylesheet_hash = hashlib.sha256((root / 'dist/styles.css').read_bytes()).hexdigest()
     assert renderer_hash == args.renderer_sha256 and stylesheet_hash == args.stylesheet_sha256, 'built assets do not match the qualified build receipt'
     traffic = []
-    result = {'schema': 'agent-record.run-workspace-proof.v1', 'views': [], 'reloads': [], 'history': [], 'historicalFeedback': [],
+    result = {'schema': 'agent-record.run-workspace-proof.v1', 'views': [], 'sourceViews': [], 'reloads': [], 'history': [], 'historicalFeedback': [],
               'rendererSha256': renderer_hash, 'stylesheetSha256': stylesheet_hash,
               'source': 'real same-origin Discovery HTML and APIs with only this built renderer replaced',
               'craftVerdict': 'UNCHECKED', 'targetUserVerdict': 'UNCHECKED'}

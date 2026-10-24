@@ -21,6 +21,7 @@ function RetainedFileContent({ file, files, chosen, baseline, baselineInventory,
   const downloadLink = useRef<HTMLAnchorElement>(null)
   const href = runFileHref(chosen)
   const kind = resolveFilePreviewKind(chosen.path)
+  const hasRichPreview = kind === 'markdown' || kind === 'csv'
   const isBinary = ['image', 'pdf', 'video', 'audio', 'spreadsheet', 'binary'].includes(kind)
   const tooLarge = chosen.bytes !== null && chosen.bytes > TEXT_LIMIT
   const content = useFileText(!isBinary && !tooLarge ? href : null)
@@ -63,13 +64,13 @@ function RetainedFileContent({ file, files, chosen, baseline, baselineInventory,
     if (view === 'diff' && !canCompare) return <p>Select a recorded version with a comparable retained file to inspect its diff.</p>
     if (view === 'diff' && canCompare && missingAfter) return <DiffView filename={filename} baseline={content.text ?? ''} current="" themeType={mode} defaultWrap />
     if (view === 'diff' && canCompare) return !knownAbsent && prior.text === undefined ? <p role="status">Loading the comparison…</p> : <DiffView filename={filename} baseline={knownAbsent ? '' : prior.text ?? ''} current={content.text ?? ''} themeType={mode} defaultWrap />
-    return <FilePreview className="run-retained-preview" filename={view === 'source' && kind === 'markdown' ? `${filename}.txt` : filename} content={content.text} blobUrl={isBinary ? href : undefined} size={chosen.bytes ?? undefined} urlTransform={transform} onDownload={() => downloadLink.current?.click()} hideHeader />
+    return <FilePreview className="run-retained-preview" filename={view === 'source' && hasRichPreview ? `${filename}.txt` : filename} content={content.text} blobUrl={isBinary ? href : undefined} size={chosen.bytes ?? undefined} urlTransform={transform} onDownload={() => downloadLink.current?.click()} hideHeader />
   }
   return <article className="run-file" data-file={file.path}>
     <header className="run-file-header"><div><h3>{filename}</h3><p className="run-file-path">{file.path}</p></div>{href && <a className="ui-button" ref={downloadLink} href={href} download={filename}>Download</a>}</header>
     <div className="run-file-toolbar"><div className="run-file-modes" role="group" aria-label="File view">
-      <button type="button" aria-pressed={view === 'preview'} onClick={() => setView('preview')}>{missingAfter ? 'Baseline preview' : 'Preview'}</button>
-      {!isBinary && <button type="button" aria-pressed={view === 'source'} onClick={() => setView('source')}>{missingAfter ? 'Baseline source' : 'Source'}</button>}
+      <button type="button" aria-pressed={view === 'preview' || (view === 'source' && !hasRichPreview)} onClick={() => setView('preview')}>{missingAfter ? 'Baseline preview' : 'Preview'}</button>
+      {hasRichPreview && <button type="button" aria-pressed={view === 'source'} onClick={() => setView('source')}>{missingAfter ? 'Baseline source' : 'Source'}</button>}
       {!isBinary && <button type="button" disabled={!canCompare} aria-pressed={view === 'diff'} onClick={() => setView('diff')}>Diff{beforeLabel ? ` against ${beforeLabel}` : ''}</button>}
     </div><span className="faint">{chosen.source} · {byteSize(chosen.bytes)}</span></div>
     {missingAfter && <p className="run-file-notice">{absenceVerified ? 'Removed from the selected version’s complete retained page tree. This preview is the comparison version’s file.' : 'Only the comparison inventory lists this file. Its absence from the selected inventory is unverified.'}</p>}
