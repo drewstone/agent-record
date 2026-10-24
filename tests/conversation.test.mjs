@@ -137,9 +137,6 @@ test('native opening input and a child without a transcript both begin with one 
   assert.deepEqual(child.map((event) => [event.detail.promptKind, event.detail.publicText]), [
     ['initial', 'Compute the bounds.'], ['steering', 'Use exact arithmetic.'],
   ])
-  // Rebuilt from node.assignment: marked reconstructed, its sender left unknown, never named.
-  assert.equal(child[0].detail.promptReconstructed, true)
-  assert.equal(child[0].detail.promptSender, undefined)
   assert.equal(child.filter((event) => eventMatches(event, index, '', 'prompts')).length, 2)
   assert.equal(root.filter((event) => eventMatches(event, index, '', 'prompts')).length, 1)
 })

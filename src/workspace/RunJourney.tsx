@@ -1,4 +1,3 @@
-import { DiffView } from '@tangle-network/sandbox-ui/workbench'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
@@ -7,6 +6,7 @@ import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
 import { plainSummary, sinceLabel } from './plain-words.js'
+import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 
 /**
@@ -185,19 +185,20 @@ function Full({ short, raw }: { short: string; raw: string }) {
 const who = (node: Node) => [node.role ?? node.label, node.harness, node.model].filter(Boolean).join(' · ')
 
 /**
- * Who asked this agent: the agent that spawned it (the workspace's spawn edge), or, for the run's root, the play press.
- * Without a spawn edge the sender is stated as not captured, never named (a reconstructed assignment has no sender).
+ * The agent's place in the run: the agent that spawned it (the workspace's spawn edge), or, for the root, the play press
+ * that submitted the run (run-input.json). A spawn is a relationship, not proof of who sent a message: each message's own
+ * sender shows on it in the conversation (promptSenderNodeId or coordination.fromNode, else "Sender not captured").
  */
-function askedBy(m: Model, node: Node) {
+function spawnedBy(m: Model, node: Node) {
   const edge = m.data.edges.find((e) => e.kind === 'spawn' && e.to === node.id)
   const parent = edge ? m.nodes.find((n) => n.id === edge.from) : null
   if (parent) return `${parent.role ?? parent.label} (${parent.label})`
-  return node.id === m.root ? 'the play press that started this run (prompt below)' : 'sender not captured'
+  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not recorded'
 }
 
 /**
- * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input names the prompt sent to the root and
- * the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
+ * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input is submission provenance: the
+ * prompt the root was given and the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
  */
 function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const input = doc.input
@@ -206,8 +207,8 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const source = input.source?.path?.split('/').pop()
   return (
     <dl className="rj-trigger">
-      <dt>Asked</dt>
-      <dd>The play press for {doc.run.play} asked the {root ? who(root) : 'root agent'}: {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">its message was not recorded</span>}</dd>
+      <dt>Submitted</dt>
+      <dd>The play press for {doc.run.play} submitted this run to the {root ? who(root) : 'root agent'}, with the prompt {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">(not recorded)</span>}</dd>
       <dt>Goal</dt>
       <dd>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}
         {source && <span className="rj-muted" title={input.source?.sha256 ?? undefined}> · from {source}</span>}</dd>
@@ -226,23 +227,13 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
   useEffect(() => setFile(null), [node.id])
   const release = file ? changes.get(file)! : null
   const prev = release ? m.releases[m.releases.indexOf(release) - 1]?.release ?? null : null
-  // Both sides of the picked file, as the file pane reads them; a side the release lacks is empty (an added or deleted file).
-  const [texts, setTexts] = useState<{ path: string; base: string; head: string } | { path: string; error: string } | null>(null)
-  useEffect(() => {
-    setTexts(null)
-    if (!file || !release) return
-    const controller = new AbortController()
-    const read = (ref: string | null) => (ref ? fetch(`${runUrl}/blob?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(file)}`, { signal: controller.signal }).then((r) => (r.ok ? r.text() : r.status === 404 ? '' : Promise.reject(new Error(`HTTP ${r.status}`)))) : Promise.resolve(''))
-    Promise.all([read(prev), read(release.release)]).then(([base, head]) => setTexts({ path: file, base, head }), (error: Error) => controller.signal.aborted || setTexts({ path: file, error: error.message }))
-    return () => controller.abort()
-  }, [runUrl, file, release, prev])
   const role = node.id === m.root ? 'lead' : node.role ?? node.label
   return (
     <section className="rj-drill" aria-label={`${role}: what it did`}>
       <h2>{role}</h2>
       <dl className="rj-summary">
         <dt>Who</dt><dd>{who(node)}</dd>
-        <dt>Asked by</dt><dd>{askedBy(m, node)}</dd>
+        <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
         <dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd>
@@ -252,7 +243,7 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
           <h3>What changed</h3>
           <ul>{code.map((p) => <li key={p}><button type="button" aria-pressed={file === p} onClick={() => setFile(file === p ? null : p)} className="mono">{p}</button><span className="rj-muted"> {changes.get(p)!.release}</span></li>)}</ul>
           {artefacts.length > 0 && <details><summary>{artefacts.length} logs and outputs</summary><ul>{artefacts.map((p) => <li key={p}><button type="button" onClick={() => setFile(p)} className="mono">{p}</button></li>)}</ul></details>}
-          {file && (texts?.path === file && 'base' in texts ? <div className="rj-diff"><DiffView filename={file} baseline={texts.base} current={texts.head} defaultWrap /></div> : <p className="rj-muted">{texts?.path === file && 'error' in texts ? `This file does not read: ${texts.error}` : `Reading ${file}…`}</p>)}
+          {file && release && <RefDiff key={`${release.release}:${file}`} runUrl={runUrl} base={prev} head={release.release} path={file} />}
         </div>
       )}
       <details className="rj-transcript">
@@ -273,7 +264,8 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
   // The work: one files pane for the best release's code or the retained artifacts (the answer opens first).
   const work = m && (
     <section className="rj-work" aria-label="The work">
-      <RunFilesPane api={api} doc={doc} codeAvailable={Boolean(m.best && m.data.code.available)}
+      <RunFilesPane api={api} doc={doc}
+        codeUnavailable={!m.data.code.available ? (m.data.code.reason ?? 'not available on this host') : !m.best ? 'no release was checked, so there is no release code to show' : null}
         code={m.best && <CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} />} />
     </section>
   )
