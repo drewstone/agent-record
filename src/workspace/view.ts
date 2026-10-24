@@ -27,7 +27,7 @@ export const viewProgressSchema = z.object({
   sentence: z.string(),
 })
 
-export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional() })
+export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional(), why: z.string().nullable().optional() })
 
 /** Is the play moving (views.play_trend): its best steps passed at the end of each of the last 7 days, and the word for it. */
 export const viewTrendSchema = z.object({
