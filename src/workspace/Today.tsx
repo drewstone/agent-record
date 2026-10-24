@@ -4,6 +4,7 @@ import { AsOfStamp } from './AnswerStrip.js'
 import { attentionStatus, CLEAN_RUN_TARGET, hm } from './answers.js'
 import { StatusPill, useDocument } from './data.js'
 import { type ReliabilityDocument, settledOf } from './reliability-model.js'
+import { TodayA, TodayB } from './TodayJourney.js'
 import { viewChip } from './view.js'
 
 /**
@@ -175,6 +176,10 @@ export function TodayPage({ api }: { api: string }) {
   if (doc.error && !doc.data) return <p className="ws-status" role="alert">Today is unavailable: {doc.error}</p>
   if (!doc.data) return <p className="ws-status" role="status">Reading what needs you…</p>
   const d = doc.data
+  // The journey candidates for the lead's pick (BRIEF.md amendment 2026-10-24); one of them replaces this page.
+  const layout = new URLSearchParams(window.location.search).get('layout')
+  if (layout === 'a') return <TodayA doc={d} />
+  if (layout === 'b') return <TodayB doc={d} />
   return (
     <div className="ws-page td" data-mode="today">
       <header className="td-head">
