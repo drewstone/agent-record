@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
-import { attentionStatus, hm } from './answers.js'
+import { attentionStatus, CLEAN_RUN_TARGET, hm } from './answers.js'
 import { StatusPill, useDocument } from './data.js'
 import { type ReliabilityDocument, settledOf } from './reliability-model.js'
 import { viewChip } from './view.js'
@@ -82,7 +82,8 @@ function Running({ doc }: { doc: TodayDocument }) {
 /** Clean runs per day: a dot at the day's rate with its 95% interval, hollow when fewer than 5 runs settled. */
 function CleanRuns({ reliability }: { reliability: ReliabilityDocument | undefined }) {
   if (!reliability || reliability.schema !== 'discovery-lab.reliability.v1') return null
-  const days = reliability.daily.slice(-7)
+  // Every date the producer's rolling window touches (7 x 24 h spans 8 dates), so the dots' n add up to the headline.
+  const days = reliability.daily
   const week = reliability.runs
   const ci = wilson(week.clean, week.settled)
   const w = 420
@@ -94,6 +95,8 @@ function CleanRuns({ reliability }: { reliability: ReliabilityDocument | undefin
       <h2 id="td-clean" className="td-label">Runs ending clean · 7 days</h2>
       <p className="td-big">{week.settled ? pct(week.clean / week.settled) : '—'}<span>{week.clean} of {week.settled} settled{ci ? ` · 95% range ${pct(ci[0])}–${pct(ci[1])}` : ''}</span></p>
       <svg className="td-dots" width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={days.map((d) => `${d.day}: ${d.clean} of ${settledOf(d)}`).join('; ')}>
+        <line className="td-target" x1={x(0) - 14} x2={x(days.length - 1) + 14} y1={y(CLEAN_RUN_TARGET)} y2={y(CLEAN_RUN_TARGET)} />
+        <text className="td-target-label" x={x(days.length - 1) + 16} y={y(CLEAN_RUN_TARGET) + 4}>{pct(CLEAN_RUN_TARGET)}</text>
         {days.map((day, i) => {
           const n = settledOf(day)
           const band = wilson(day.clean, n)

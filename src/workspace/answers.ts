@@ -11,6 +11,9 @@ import { ENDING_GLYPH, hostWords, lineReason, metricValue, type PlayBest, type P
  * these out, so the word and figure limits below hold on every page.
  */
 
+/** The share of settled runs that should end clean (no infrastructure, platform or quota failure): Today's target line and the overview's verdict. */
+export const CLEAN_RUN_TARGET = 0.8
+
 export type Play = PlayDocument & PlayHead
 export type Slot = 'did-it-work' | 'is-it-working' | 'what-was-built' | 'needs-me' | 'is-discovery-reliable'
 
@@ -414,8 +417,8 @@ export function overviewAnswers(doc: OverviewDocument, reliability: { rate?: num
     {
       slot: 'is-discovery-reliable',
       label: 'Clean runs',
-      headline: rate === null ? 'Not measured yet' : rate >= 0.8 ? 'At target' : 'Below target',
-      figure: { kind: 'num', value: rate === null ? '?' : String(Math.round(rate * 100)), unit: '%', tip: rate === null ? 'reliability not served' : `${reliability?.clean ?? '?'} of ${reliability?.settled ?? '?'} settled runs clean; target 80%` },
+      headline: rate === null ? 'Not measured yet' : rate >= CLEAN_RUN_TARGET ? 'At target' : 'Below target',
+      figure: { kind: 'num', value: rate === null ? '?' : String(Math.round(rate * 100)), unit: '%', tip: rate === null ? 'reliability not served' : `${reliability?.clean ?? '?'} of ${reliability?.settled ?? '?'} settled runs clean; target ${Math.round(CLEAN_RUN_TARGET * 100)}%` },
       subline: rate === null ? 'reliability is not served' : `${reliability?.clean ?? '?'} of ${reliability?.settled ?? '?'} settled runs clean`,
       rows: [{ term: 'Run reliability', text: 'Settled runs that no infrastructure, platform or quota failure ended.', href: '/plays' }],
     },
