@@ -3397,7 +3397,9 @@
 .ar-ws .finding-meta { font-size: 13px; white-space: nowrap; }
 .ar-ws .finding-meta .chip { margin-left: 0; margin-right: 6px; }
 .ar-ws .finding-commits { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
-.ar-ws .commit-chip { padding: 0 6px; border-radius: 4px; font: 12px/1.7 var(--ar-font-mono); background: var(--ws-raised); color: var(--ar-fg-muted); }
+.ar-ws .commit-chip { padding: 0 6px; border-radius: 4px; font: 12px/1.7 var(--ar-font-body); background: var(--ws-raised); color: var(--ar-fg-muted); }
+/* The chip's release tag is the id; its verdict, score and checker read in the body face. */
+.ar-ws .commit-chip b { font-family: var(--ar-font-mono); font-weight: 600; }
 .ar-ws .release-grid { overflow-x: auto; font-size: var(--ar-text-s); }
 .ar-ws .release-row { display: grid; grid-template-columns: var(--release-columns); gap: 8px; align-items: center; min-width: 980px; padding: 3px 4px; border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 60%, transparent); }
 .ar-ws .release-header { color: var(--ar-fg-muted); font-size: 13px; border-bottom: 1px solid var(--ar-border); }
