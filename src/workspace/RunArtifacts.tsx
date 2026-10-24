@@ -79,6 +79,7 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
     </div>
     {error && <p className="run-file-notice" role="alert">Files are unavailable: {error}</p>}
     {inventory?.reason && <p className="run-file-notice" role="status">{inventory.reason}</p>}
+    {currentView.data?.history.complete === false && <p className="run-file-notice">The retained version list is incomplete.{typeof currentView.data.history.omittedVersions === 'number' ? ` ${currentView.data.history.omittedVersions} additional versions are omitted.` : ' The number of omitted versions is unknown.'}</p>}
     {currentView.data?.history.state === 'unavailable' && <p className="run-file-notice">Version history is unavailable: {currentView.data.history.reason ?? 'No reason was recorded.'}</p>}
     {nav.compare && (before.error || comparison.error) && <p className="run-file-notice" role="alert">The comparison is unavailable: {before.error ?? comparison.error}</p>}
     <div className="run-artifacts">

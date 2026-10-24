@@ -32,7 +32,7 @@ export function OutputsView({ api, doc, grading, selected, onSelect, onClose, na
     {file && currentFeedback && grading && <GradeControl api={grading.api} runId={grading.runId} target={{ kind: 'file', id: file.path }} label="Your grade of this file" current={latestNumericGrade(output?.grades?.latest, { kind: 'file', id: file.path })} onSaved={grading.onSaved} />}
     {file && !currentFeedback && <p className="output-note">File feedback applies to the current primary artifact. Return to its current version to view or submit a grade.</p>}
     {output?.readout?.charts?.length ? <section className="output-group"><h3>Charts</h3><ChartGallery charts={output.readout.charts} /></section> : null}
-    {groups.length > 0 && <details className="output-requirements"><summary>Deliverable requirements and grades</summary>{groups.map((group) => <GroupView key={group.key || 'rest'} group={group} root={output?.declared?.path ?? null} onSelect={onSelect} grading={grading} grades={output?.grades?.latest} />)}</details>}
+    {groups.length > 0 && <details className="output-requirements"><summary>{currentFeedback ? 'Deliverable requirements and grades' : 'Current deliverable requirements'}</summary>{groups.map((group) => <GroupView key={group.key || 'rest'} group={group} root={output?.declared?.path ?? null} onSelect={onSelect} grading={currentFeedback ? grading : undefined} grades={currentFeedback ? output?.grades?.latest : undefined} />)}</details>}
   </div>
 }
 
