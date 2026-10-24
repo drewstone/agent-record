@@ -4,8 +4,8 @@ import { PlayFindings } from './PlayFindings.js'
 import { PlayLedger } from './PlayLedger.js'
 import { type Play, playAsOf } from './answers.js'
 import { StatusPill } from './data.js'
-import { plainSummary, sinceLabel } from './RunJourney.js'
-import { usePhone } from './RunWorkspace.js'
+import { plainSummary, sinceLabel } from './plain-words.js'
+import { usePhone } from './use-phone.js'
 import { type HostView, viewChip, type ViewTrend } from './view.js'
 
 /**

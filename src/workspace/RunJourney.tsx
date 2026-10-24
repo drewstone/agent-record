@@ -6,6 +6,7 @@ import { StatusPill, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
+import { plainSummary, sinceLabel } from './plain-words.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
@@ -23,13 +24,6 @@ const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'sho
 const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
-/** Agent text as a reader's line: markdown stripped, its first sentence, at most `words` words (the raw text sits behind "full"). */
-export function plainSummary(text: string | null | undefined, words = 20) {
-  const plain = (text ?? '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/(\*\*|__|`)(.+?)\1/g, '$2').replace(/^[#>\s]+/, '').replace(/\s+/g, ' ').trim()
-  const first = plain.split(/(?<=[.!?])\s/)[0] ?? plain
-  const cut = first.split(' ')
-  return cut.length > words ? `${cut.slice(0, words).join(' ')}…` : first
-}
 /** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
 const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
 
@@ -75,8 +69,6 @@ export function RulingButtons({ runId, dispute }: { runId: string; dispute: stri
   )
 }
 
-/** `Oct 23 13:47Z`. */
-export const sinceLabel = (iso: string | null | undefined) => (iso && !Number.isNaN(ms(iso)) ? `${day(ms(iso))} ${clock(ms(iso))}Z` : null)
 
 function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker; paused: boolean }) {
   const since = sinceLabel(blocker.since)

@@ -1,11 +1,12 @@
 import { FilePreview } from '@tangle-network/sandbox-ui/files'
 import { DiffView } from '@tangle-network/sandbox-ui/workbench'
 import { WorkspaceFilesPane } from '@tangle-network/sandbox-ui/workspace'
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { RunDocument } from '../workspace-model.js'
 import { useDocument } from './data.js'
 import { RunJourney } from './RunJourney.js'
+import { usePhone } from './use-phone.js'
 
 /**
  * The run's workspace document (agent-workspace.run-workspace.v1, tangle-tools run_workspace.py): its agents with their
@@ -89,20 +90,6 @@ export function CodePane({ runUrl, refName, previous, label }: { runUrl: string;
       expansionKey={refName}
       surface="plain"
     />
-  )
-}
-
-const PHONE = '(max-width: 1023px)'
-/** Whether the page is phone-width: the workspace stacks there, and an agent opens as a full-screen sheet. */
-export function usePhone() {
-  return useSyncExternalStore(
-    (change) => {
-      const query = window.matchMedia(PHONE)
-      query.addEventListener('change', change)
-      return () => query.removeEventListener('change', change)
-    },
-    () => window.matchMedia(PHONE).matches,
-    () => false,
   )
 }
 

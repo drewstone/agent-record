@@ -2,7 +2,7 @@ import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
 import { hm } from './answers.js'
 import { useDocument } from './data.js'
-import { plainSummary, sinceLabel } from './RunJourney.js'
+import { plainSummary, sinceLabel } from './plain-words.js'
 import type { HostView, ViewTrend } from './view.js'
 
 /**
