@@ -253,8 +253,19 @@ function whatWasBuilt(play: Play, report: PlayReportDocument | null | undefined,
   const built = ((play as { play_head?: { built?: Built | null } | null }).play_head?.built ?? report?.built ?? null) as Built | null
   const href = `/play/${encodeURIComponent(play.id)}/report#built`
   const crates = Array.isArray(built?.crates?.value) ? (built!.crates!.value as string[]) : []
-  if (!built || !crates.length)
-    return { slot: 'what-was-built', label: 'Built', headline: 'Not reported yet', figure: { kind: 'num', value: '—', unit: 'crates', tip: 'unknown: the play report names no release inventory' }, subline: 'the play report has no inventory', rows: [{ term: 'Play report', text: 'What was built', href }] }
+  if (!built || !crates.length) {
+    // No inventory: point at what exists, the best release's code one click away, never "not reported" beside a run
+    // that built it (re-audit 2026-10-24: 21c showed 2,236 files while this card read "Not reported yet · — crates").
+    const best = play.view?.progress ?? null
+    if (best?.runId && best.release)
+      return {
+        slot: 'what-was-built', label: 'Built', headline: 'Best release code',
+        figure: { kind: 'num', value: best.release, unit: '', tip: 'the best release; the play report lists no build inventory' },
+        subline: `run ${shortRun(play.id, best.runId)} · open its files`,
+        rows: [{ term: 'Best release code', text: `${best.release} in run ${shortRun(play.id, best.runId)}`, href: `/run/${encodeURIComponent(best.runId)}` }, { term: 'Play report', text: 'What was built', href }],
+      }
+    return { slot: 'what-was-built', label: 'Built', headline: 'No release yet', figure: { kind: 'num', value: '—', unit: '', tip: 'no release has been scored' }, subline: 'no release has been scored', rows: [{ term: 'Play report', text: 'What was built', href }] }
+  }
   const commands = (built.commands?.value ?? {}) as Record<string, unknown>
   const guests = num(built.guests?.value)
   const parts = [commands.prover ? 'prover' : null, commands.verifier ? 'verifier' : null, guests ? `${guests} guest programs` : null].filter(Boolean) as string[]
