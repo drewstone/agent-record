@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.61.5",
+  "version": "0.63.0",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -119,5 +119,10 @@
   "bin": {
     "agent-record-report": "tools/render-report.mjs",
     "agent-record-ingest": "tools/ingest.mjs"
+  },
+  "pnpm": {
+    "overrides": {
+      "@pierre/diffs": "1.5.2"
+    }
   }
 }
