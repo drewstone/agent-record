@@ -6,6 +6,8 @@ import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FindingsFeed } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
+import { PlayBarTable } from './workspace/PlayBarTable.js'
+import { journeyLayout, PlayJourneyHead, PlayJourneyStanding } from './workspace/PlayJourney.js'
 import { BeadString } from './workspace/BeadString.js'
 import { ExplorePage } from './workspace/Explore.js'
 import { PlayHeader } from './workspace/PlayHead.js'
@@ -15,7 +17,7 @@ import { PlayTeams } from './workspace/PlayTeams.js'
 import { PlayFindings } from './workspace/PlayFindings.js'
 import { PlayReleases } from './workspace/PlayReleases.js'
 import { PlaysTable } from './workspace/PlaysTable.js'
-import { inlinedPlayHead, type PlayHead, targetWords } from './workspace/play-standing.js'
+import { inlinedPlayHead, type PlayHead } from './workspace/play-standing.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayReportDocument } from './play-report.js'
@@ -358,6 +360,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     for (const row of assessments) map.set(row.runId, [...(map.get(row.runId) ?? []), row])
     return map
   }, [assessments])
+  const journey = journeyLayout(params.get('layout'), tab)
   const releaseCount = doc?.standing?.releases?.published ?? doc?.releases?.length ?? null
   const withheld = doc?.standing?.releases?.withheld ?? null
   const findingCount = doc?.findings?.length ?? 0
@@ -368,7 +371,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     <Status loading={play.loading} error={play.error && `This play is unavailable: ${play.error}`}>
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
-          <PlayHeader play={doc} report={report.data} compact={tab !== 'standing'} fallback={<PlayStanding play={doc} />} />
+          {journey ? <PlayJourneyHead layout={journey} play={doc} /> : <PlayHeader play={doc} report={report.data} compact={tab !== 'standing'} fallback={<PlayStanding play={doc} />} />}
           <Tabs
             label="Play"
             value={tab}
@@ -382,7 +385,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             ] as const}
           />
           <div className="ws-content" role="tabpanel">
-            {tab === 'standing' && (
+            {tab === 'standing' && journey && <PlayJourneyStanding play={doc} onOpen={open} onMore={() => update({ tab: 'findings' })} />}
+            {tab === 'standing' && !journey && (
               <div className="play-standing-tab" data-section="standing">
                 {!doc.standing && <PlayAnswer play={doc} />}
                 <PlayClimb play={doc} />
@@ -484,54 +488,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
         </div>
       )}
     </Status>
-  )
-}
-
-/** The play's bar as declared (`bar.json`): each metric's target, stretch and direction, the source and both conditions. */
-function PlayBarTable({ play }: { play: Play }) {
-  const bar = play.bar ?? null
-  if (!bar) return null
-  return (
-    <section className="ws-section play-bar-table" data-section="bar">
-      <h3>Bar</h3>
-      <p className="faint">
-        {bar.source}
-        {bar.path && <> · <code>{bar.path}</code></>}
-      </p>
-      <div className="table-scroll">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Metric</th>
-            <th>Target</th>
-            <th>Stretch</th>
-            <th>Better</th>
-            <th>Scale</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bar.metrics.map((metric) => (
-            <tr key={metric.id}>
-              <td>
-                {metric.label}
-                {metric.precondition && <span className="chip">precondition</span>}
-              </td>
-              <td>{targetWords(metric) ?? '—'}</td>
-              <td>{metric.stretch ? `${metric.stretch.min ?? ''}${metric.stretch.max ? `–${metric.stretch.max}` : ''} ${metric.stretch.label ?? ''}`.trim() : '—'}</td>
-              <td>{metric.direction === 'up' ? 'higher' : metric.direction === 'down' ? 'lower' : '—'}</td>
-              <td>{metric.scale ?? 'linear'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
-      {(bar.condition || bar.checkCondition) && (
-        <p className="faint">
-          {bar.condition && <>The bar: {bar.condition}. </>}
-          {bar.checkCondition && <>The check measures: {bar.checkCondition}.</>}
-        </p>
-      )}
-    </section>
   )
 }
 
