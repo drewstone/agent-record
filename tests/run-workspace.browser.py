@@ -12,21 +12,21 @@ import json
 from pathlib import Path
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import Event, Thread
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import Request, urlopen
-
-from playwright.sync_api import sync_playwright
-
 
 def arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--origin', required=True)
     parser.add_argument('--run', action='append', required=True)
     parser.add_argument('--evidence', type=Path, required=True)
+    parser.add_argument('--asset-root', type=Path, help='compiled renderer artifact directory; defaults to this checkout’s dist')
     parser.add_argument('--renderer-sha256', required=True)
     parser.add_argument('--stylesheet-sha256', required=True)
+    parser.add_argument('--serve-seconds', type=int, default=0,
+                        help='finite manual preview; uses no browser runtime or automated tests')
     args = parser.parse_args()
     origin = urlsplit(args.origin)
     if origin.scheme != 'https' or not origin.netloc or origin.username or origin.password or origin.path not in ('', '/') or origin.query or origin.fragment:
@@ -34,15 +34,17 @@ def arguments():
     if not args.run or any(not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', run) for run in args.run):
         parser.error('--run requires existing run identities')
     if any(not re.fullmatch(r'[a-f0-9]{64}', value) for value in (args.renderer_sha256, args.stylesheet_sha256)):
-        parser.error('renderer and stylesheet hashes must come from the exact native build receipt')
+        parser.error('renderer and stylesheet hashes must come from the exact build receipt')
+    if not 0 <= args.serve_seconds <= 3600:
+        parser.error('--serve-seconds must be a bounded preview lifetime')
     args.origin = args.origin.rstrip('/')
     return args
 
 
-def preview_server(origin, root, traffic):
+def preview_server(origin, asset_root, traffic):
     assets = {
-        '/assets/agent-record/workspace-viewer.js': (root / 'dist/workspace-viewer.js', 'text/javascript'),
-        '/assets/agent-record/styles.css': (root / 'dist/styles.css', 'text/css'),
+        '/assets/agent-record/workspace-viewer.js': (asset_root / 'workspace-viewer.js', 'text/javascript'),
+        '/assets/agent-record/styles.css': (asset_root / 'styles.css', 'text/css'),
     }
 
     class Preview(BaseHTTPRequestHandler):
@@ -56,6 +58,9 @@ def preview_server(origin, root, traffic):
         do_POST = do_PUT = do_PATCH = do_DELETE = reject_write
 
         def do_GET(self):
+            allowed_origin = f'http://127.0.0.1:{self.server.server_port}'
+            if self.headers.get('Origin') not in (None, allowed_origin) or self.headers.get('Sec-Fetch-Site') == 'cross-site':
+                return self.send_error(403)
             target = urlsplit(self.path)
             if target.scheme or target.netloc or not self.path.startswith('/'):
                 return self.send_error(400)
@@ -210,17 +215,28 @@ def run_journeys(args, base, browser, result):
 def main():
     args = arguments()
     root = Path(__file__).resolve().parents[1]
+    asset_root = args.asset_root or root / 'dist'
     args.evidence.mkdir(parents=True, exist_ok=True)
-    renderer_hash = hashlib.sha256((root / 'dist/workspace-viewer.js').read_bytes()).hexdigest()
-    stylesheet_hash = hashlib.sha256((root / 'dist/styles.css').read_bytes()).hexdigest()
+    renderer_hash = hashlib.sha256((asset_root / 'workspace-viewer.js').read_bytes()).hexdigest()
+    stylesheet_hash = hashlib.sha256((asset_root / 'styles.css').read_bytes()).hexdigest()
     assert renderer_hash == args.renderer_sha256 and stylesheet_hash == args.stylesheet_sha256, 'built assets do not match the qualified build receipt'
     traffic = []
     result = {'schema': 'agent-record.run-workspace-proof.v1', 'views': [], 'sourceViews': [], 'reloads': [], 'history': [], 'historicalFeedback': [],
               'rendererSha256': renderer_hash, 'stylesheetSha256': stylesheet_hash,
               'source': 'real same-origin Discovery HTML and APIs with only this built renderer replaced',
               'craftVerdict': 'UNCHECKED', 'targetUserVerdict': 'UNCHECKED'}
-    server = preview_server(args.origin, root, traffic)
+    server = preview_server(args.origin, asset_root, traffic)
+    if args.serve_seconds:
+        try:
+            print(json.dumps({'previewUrl': f'http://127.0.0.1:{server.server_port}/run/{args.run[0]}?variant=workspace',
+                              'rendererSha256': renderer_hash, 'stylesheetSha256': stylesheet_hash}), flush=True)
+            Event().wait(args.serve_seconds)
+        finally:
+            server.shutdown()
+            server.server_close()
+        return
     try:
+        from playwright.sync_api import sync_playwright
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             try:

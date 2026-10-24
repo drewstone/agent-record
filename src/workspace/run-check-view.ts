@@ -21,5 +21,5 @@ export function runCheckView(check: RunCheck | null, outcome: NonNullable<RunPro
       : null
   // The host's label leads (it composes the sentence); a held pass and a verdict under a retired check read as statusOf words them.
   const verdict = result && (held || named?.current === false) ? result.word : (outcome?.solvedLabel ?? result?.word ?? (untagged ? `${checks} ${checks === 1 ? 'check' : 'checks'}, none on a release` : 'No check verdict yet'))
-  return { result, verdict, untagged, held }
+  return { result, verdict, untagged, held, named }
 }

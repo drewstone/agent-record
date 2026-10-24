@@ -62,6 +62,18 @@ export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   )
 }
 
+/** Gaps grouped by cause (X13): one line per cause with the runs it covers, instead of one line per run and gap. */
+function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
+  const causes = new Map<string, { code: string; runs: string[]; detail: string; count: number }>()
+  for (const gap of gaps) {
+    const cause = causes.get(gap.code) ?? { code: gap.code, runs: [], detail: gap.detail, count: 0 }
+    cause.count += 1
+    if (gap.runId && !cause.runs.includes(gap.runId)) cause.runs.push(gap.runId)
+    causes.set(gap.code, cause)
+  }
+  return [...causes.values()]
+}
+
 function Status({ loading, error, children }: { loading: boolean; error?: string; children?: ReactNode }) {
   if (error) return <p className="ws-status" role="alert">{error}</p>
   if (loading) return <p className="ws-status" role="status">Loading…</p>
@@ -740,10 +752,6 @@ function CaptureBar({ capture }: { capture: { complete: number; lossy: number; a
     </span>
   )
 }
-
-/** A waste dimension by its id and name: E3 polling. */
-const wasteLabel = (dimension: string, catalogue: ReturnType<typeof dimensionMap>) =>
-  `${dimension} ${catalogue.get(dimension)?.key.replaceAll('_', ' ') ?? ''}`.trim()
 
 /** The receipt is the run overview in print mode, supplied by the same Lab document. */
 function ReceiptPage({ api, id }: { api: string; id: string }) {

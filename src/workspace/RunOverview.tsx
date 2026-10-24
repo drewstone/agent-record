@@ -194,7 +194,7 @@ function RunNow({ receipt: r, outcome, settled, check }: { receipt: RunReceipt |
   const disputes = outcome?.disputes ?? []
   if (!outcome && scores.length === 0 && contract.length === 0 && !check?.calibration) return null
   const figure = r === null || scores.length === 0 ? null : (width: number) => stageFigure(r, scores, contract, width)
-  const { result, verdict, untagged } = runCheckView(check, outcome)
+  const { result, verdict, untagged, named } = runCheckView(check, outcome)
   const audit = outcome?.goalAudit ?? null
   const passes = r && earlierPasses(r, outcome, check)
   const versions = check?.checkerNames ?? []

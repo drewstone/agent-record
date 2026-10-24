@@ -27,6 +27,7 @@ import { dataStatus, money, readRecord, statusOf, useDocument } from './data.js'
 import { FinalOutputPanel } from './FinalOutput.js';
 import { InputView } from './InputView.js';
 import { OutputsView } from './Outputs.js';
+import type { ArtifactNavigation } from './RunArtifacts.js'
 
 import { AgentTable } from './RunTable.js';
 
@@ -45,17 +46,9 @@ import { ProvenanceCanvas } from './ProvenanceCanvas.js';
 import { agentSpendRows, BreakdownTable, byModel, NodeSpendPanel, SeatWeeksPanel, SpendBars, spendGapLabel } from './Spend.js';
 import { useSearch, WorkspaceTabs as Tabs } from './navigation.js';
 
-/** Gaps grouped by cause (X13): one line per cause with the runs it covers, instead of one line per run and gap. */
-function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
-  const causes = new Map<string, { code: string; runs: string[]; detail: string; count: number }>()
-  for (const gap of gaps) {
-    const cause = causes.get(gap.code) ?? { code: gap.code, runs: [], detail: gap.detail, count: 0 }
-    cause.count += 1
-    if (gap.runId && !cause.runs.includes(gap.runId)) cause.runs.push(gap.runId)
-    causes.set(gap.code, cause)
-  }
-  return [...causes.values()]
-}
+/** A waste dimension by its id and name: E3 polling. */
+const wasteLabel = (dimension: string, catalogue: ReturnType<typeof dimensionMap>) =>
+  `${dimension} ${catalogue.get(dimension)?.key.replaceAll('_', ' ') ?? ''}`.trim()
 
 const SPEEDS = [1, 4, 16, 64, 256, 1024, 4096]
 /** The selected agent's own views; the run's spend, assessments, input and coverage are sections of the run page. */
@@ -161,9 +154,9 @@ export function RunPage({ api, id }: { api: string; id: string }) {
   const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
   const variant = runDesignVariant(params.get('variant'))
   const artifactView = params.get('fileView')
-  const artifactNavigation = {
+  const artifactNavigation: ArtifactNavigation = {
     version: params.get('fileVersion'), compare: params.get('compareVersion'), identity: params.get('fileIdentity'),
-    view: artifactView === 'diff' || artifactView === 'source' ? artifactView : 'preview' as const,
+    view: artifactView === 'diff' || artifactView === 'source' ? artifactView : 'preview',
     onVersion: (version: string | null) => update({ fileVersion: version, fileIdentity: undefined }),
     onCompare: (version: string | null) => update({ compareVersion: version }),
     onIdentity: (identity: string | null) => update({ fileIdentity: identity }),
@@ -176,8 +169,8 @@ export function RunPage({ api, id }: { api: string; id: string }) {
     return <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
       {variant ? <>
         <RunDesignPreview value={variant} onChange={(value) => update({ variant: value })} />
-        <RunHome api={api} doc={doc} selected={params.get('file')} onSelect={selectFile} onOpen={open} navigation={artifactNavigation} variant={variant} onInspect={() => { if (evidence.current) evidence.current.open = true }} />
         {tabs}
+        <RunHome api={api} doc={doc} selected={params.get('file')} onSelect={selectFile} onOpen={open} navigation={artifactNavigation} variant={variant} onInspect={() => { if (evidence.current) evidence.current.open = true }} />
         <details className="run-evidence" id="run-verification" ref={evidence}><summary>Check evidence, cleanup and execution history</summary>{receipt}</details>
       </> : <><RunStatusLine doc={doc} play={play.data} />{tabs}{receipt}</>}
     </div>
