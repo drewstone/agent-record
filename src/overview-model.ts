@@ -29,7 +29,7 @@ export interface OverviewPlayWeek {
   apiEquivalentUsd?: number | null
 }
 /** A Needs you line; `held` names a held pass's stages, `dispute` and `referees` an undecided check dispute (tangle-tools overview). */
-export interface OverviewAttention { tone: 'crit' | 'warn' | 'info' | 'neutral'; text: string; detail?: string | null; href?: string; owner?: string; next?: string; runId?: string; held?: string[]; dispute?: string; /** What to do, the blocker's kind and since when (views.blocker_action), on a run's needs-you item. */ action?: string | null; kind?: string | null; since?: string | null; /** An item of a play's view (views.play_view): it needs a person whatever its tone. */ needsYou?: boolean; play?: string; referees?: { seat: string | null; family: string | null; verdict: string | null }[] }
+export interface OverviewAttention { tone: 'crit' | 'warn' | 'info' | 'neutral'; text: string; detail?: string | null; href?: string; owner?: string; next?: string; runId?: string; held?: string[]; dispute?: string; /** What to do, the blocker's kind and since when (views.blocker_action), on a run's needs-you item. */ action?: string | null; kind?: string | null; since?: string | null; /** Drew's choices, each with the command it runs and what follows (views.need_choice). */ options?: { label: string; verdict: string; command: string; consequence: string }[]; consequence?: string | null; /** An item of a play's view (views.play_view): it needs a person whatever its tone. */ needsYou?: boolean; play?: string; referees?: { seat: string | null; family: string | null; verdict: string | null }[] }
 
 export interface OverviewDocument {
   schema: 'agent-workspace.overview.v1'

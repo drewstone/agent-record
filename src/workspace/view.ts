@@ -38,6 +38,7 @@ export const viewTrendSchema = z.object({
   movement: z.enum(['moving', 'stuck', 'regressed', 'solved']),
   since: z.string().nullable(),
   newest: z.object({ release: z.string(), passed: z.number(), at: z.string().nullable() }),
+  series: z.array(z.object({ release: z.string(), runId: z.string().nullable().optional(), at: z.string(), passed: z.number() })).optional(),
 })
 export type ViewTrend = z.infer<typeof viewTrendSchema>
 
