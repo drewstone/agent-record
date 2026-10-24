@@ -49,6 +49,7 @@ import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
+import { readSource } from './workspace/source-reader.js'
 import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
@@ -1060,14 +1061,7 @@ function RunBody({
     if (source) setDetail({ event })
     select({ node: index.canonical(event.node), event: event.id, ...(ms(event.at) > cutoff ? { t: undefined } : {}) })
   }
-  const loadSource = useCallback(
-    async (sha: string) => {
-      const response = await fetch(`${api}/runs/${encodeURIComponent(runId)}/source/${sha}`, { credentials: 'same-origin' })
-      if (!response.ok) throw new Error(response.status === 409 ? 'The source no longer matches its recorded hash.' : `Source unavailable (HTTP ${response.status})`)
-      return response.text()
-    },
-    [api, runId],
-  )
+  const loadSource = useMemo(() => readSource(`${api}/runs/${encodeURIComponent(runId)}`), [api, runId])
   const showTooltip: ShowTooltip = (target, title, lines) => {
     const box = target.currentTarget.getBoundingClientRect()
     const x = Math.max(8, Math.min(box.left + box.width / 2, window.innerWidth - 361))

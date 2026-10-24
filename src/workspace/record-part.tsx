@@ -1,9 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import type { RecordEvent } from '../record.js'
 import { Conversation } from '../viewer/Conversation.js'
 import { indexRecord, type RecordIndex } from '../viewer/model.js'
 import { withPrompts } from '../viewer/prompts.js'
 import { readRecord, useDocument } from './data.js'
+import { EventDetail } from './EventDetail.js'
 import type { NodeStats } from './RunTable.js'
+import { readSource } from './source-reader.js'
 
 /** A record part (agent-record.v1) read for drawing; `nodeStats` only on the `nodes` part. */
 export function useRecordPart(url: string | null) {
@@ -25,6 +28,20 @@ export function useRecordPart(url: string | null) {
 export function AgentConversation({ runUrl, version, index, actor }: { runUrl: string; version: string; index: RecordIndex; actor: string }) {
   const agent = useRecordPart(`${runUrl}/record?node=${encodeURIComponent(actor)}${version}`)
   if (!agent.index) return <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>{agent.fetchError || agent.error ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}` : `Loading ${index.nodes.get(actor)?.label ?? 'the agent'}'s conversation…`}</p>
-  return <Conversation index={agent.index} actor={actor} cutoff={agent.index.end} query="" category="all" inspect={() => undefined} lifecycle={false} />
+  return <ConversationWithDetail runUrl={runUrl} index={agent.index} actor={actor} />
+}
+
+/** The conversation with working Details: a row's source, or a clipped body in full, opens in the shared EventDetail. */
+function ConversationWithDetail({ runUrl, index, actor }: { runUrl: string; index: RecordIndex; actor: string }) {
+  const [detail, setDetail] = useState<{ event: RecordEvent; sha?: string } | null>(null)
+  const load = useMemo(() => readSource(runUrl), [runUrl])
+  return (
+    <>
+      <Conversation index={index} actor={actor} cutoff={index.end} query="" category="all" lifecycle={false}
+        inspect={(event, source) => { if (source) setDetail({ event }) }}
+        openSource={(sha, event) => setDetail({ event, sha })} />
+      {detail && <EventDetail key={`${detail.event.id}:${detail.sha ?? ''}`} event={detail.event} full={detail.sha} index={index} onClose={() => setDetail(null)} load={load} />}
+    </>
+  )
 }
 

@@ -176,6 +176,20 @@ function Full({ short, raw }: { short: string; raw: string }) {
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
+/** The agent as recorded: role, harness and model; a value the record lacks is left out, never guessed. */
+const who = (node: Node) => [node.role ?? node.label, node.harness, node.model].filter(Boolean).join(' · ')
+
+/**
+ * Who asked this agent: the agent that spawned it (the workspace's spawn edge), or, for the run's root, the play press.
+ * Without a spawn edge the sender is stated as not captured, never named (a reconstructed assignment has no sender).
+ */
+function askedBy(m: Model, node: Node) {
+  const edge = m.data.edges.find((e) => e.kind === 'spawn' && e.to === node.id)
+  const parent = edge ? m.nodes.find((n) => n.id === edge.from) : null
+  if (parent) return `${parent.role ?? parent.label} (${parent.label})`
+  return node.id === m.root ? 'the play press that started this run (prompt below)' : 'sender not captured'
+}
+
 function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void }) {
   const landed = m.releases.filter((r) => r.files?.[node.id]?.length)
   const changes = new Map<string, Release>()
@@ -202,6 +216,8 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
     <section className="rj-drill" aria-label={`${role}: what it did`}>
       <h2>{role}</h2>
       <dl className="rj-summary">
+        <dt>Who</dt><dd>{who(node)}</dd>
+        <dt>Asked by</dt><dd>{askedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
         <dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd>
