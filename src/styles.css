@@ -3708,6 +3708,8 @@
 .ar-ws .td-dots .td-n { fill: var(--text-dim, var(--text-muted)); }
 .ar-ws .td-dots line { stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; }
 .ar-ws .td-dots circle { fill: hsl(var(--success)); stroke: hsl(var(--success)); stroke-width: 2; }
+.ar-ws .td-dots line.td-target { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: .6; }
+.ar-ws .td-dots .td-target-label { fill: var(--text-muted); font-size: 12px; }
 .ar-ws .td-dots circle[data-hollow] { fill: var(--bg-card); }
 .ar-ws .td-dots text { font-family: var(--font-sans); font-size: 12px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
 .ar-ws .td-plays ul { display: grid; margin: 12px 0 0; padding: 0; list-style: none; }
