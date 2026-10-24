@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import { shortRun } from './play-standing.js'
 import { viewAsOf, viewChip } from './view.js'
 import { AsOfStamp } from './AnswerStrip.js'
+import { RunVariant } from './RunVariants.js'
 
 /**
  * The run as a workspace (agent-workspace.run-workspace.v1, tangle-tools run_workspace.py): its agents on the left, the
@@ -177,7 +178,15 @@ function usePhone() {
   )
 }
 
-export function RunWorkspace({ api, doc, transcript }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode }) {
+type RunWorkspaceProps = { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode }
+
+/** `?layout=a|b` draws a journey-spec candidate (RunVariants) in place of the workspace, before any hook runs. */
+export function RunWorkspace(props: RunWorkspaceProps) {
+  const layout = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('layout') : null
+  return layout === 'a' || layout === 'b' ? <RunVariant api={props.api} doc={props.doc} layout={layout} /> : <Workspace3Pane {...props} />
+}
+
+function Workspace3Pane({ api, doc, transcript }: RunWorkspaceProps) {
   const runUrl = `${api}/runs/${encodeURIComponent(doc.run.id)}`
   const workspace = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, doc.execution?.alive ? 15_000 : undefined, true)
   const [agent, setAgent] = useState<string>(doc.run.id)

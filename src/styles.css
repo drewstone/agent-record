@@ -3758,3 +3758,71 @@
 .ar-ws .plays-table .plays-name small, .ar-ws .plays-table .plays-best .faint { font-size: 13px; }
 /* Mono is for ids only (brief): counts, money and controls are Inter with tabular figures. */
 .ar-ws .plays-table td.num, .ar-ws .plays-table td.num *, .ar-ws .plays-table th.num, .ar-ws .plays-bar select, .ar-ws .plays-bar input { font-family: var(--ar-font, Inter, sans-serif); font-variant-numeric: tabular-nums; }
+/* ---- Journey-spec candidates for the run page (RunVariants, ?layout=a|b): one focal point, no cards inside cards,
+   colour only for state (green produced, amber near, red broken), grey for everything else. */
+.ar-ws .rv { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; width: 100%; max-width: 1440px; margin: 0 auto; padding: 8px 0 40px; }
+.ar-ws .rv-a, .ar-ws .rv-b, .ar-ws .rv-cols > * { min-width: 0; }
+.ar-ws .rv-b { display: grid; gap: 28px; }
+/* A candidate is the whole run page: the old tabs below it are left out while one is shown. */
+.ar-ws .ws-run:has(> .rv) > :not(.rv) { display: none; }
+.ar-ws .rv-head { display: grid; gap: 6px; }
+.ar-ws .rv-crumb { font-size: 13px; color: var(--ar-fg-muted); text-decoration: none; }
+.ar-ws .rv-title { display: flex; align-items: center; gap: 12px; }
+.ar-ws .rv-title h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
+.ar-ws .rv-sentence { margin: 0; max-width: 72ch; font-size: 15px; line-height: 1.5; }
+.ar-ws .rv-muted { color: var(--ar-fg-muted); }
+.ar-ws .rv h2 { margin: 0 0 10px; font: 600 13px/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
+/* A: swimlanes */
+.ar-ws .rv-lanes { display: block; overflow: visible; }
+.ar-ws .rv-lanes text { font: 12px var(--ar-font-body); fill: var(--ar-fg-muted); }
+.ar-ws .rv-lanes .rv-lane-label { font-size: 13px; fill: var(--ar-fg); }
+.ar-ws .rv-rel line { stroke: var(--ar-border); stroke-width: 1; }
+.ar-ws .rv-rel path { fill: var(--ar-fg-faint); }
+.ar-ws .rv-rel.rv-near path { fill: var(--ar-c-warn, #f5a524); }
+.ar-ws .rv-rel.rv-pass path { fill: var(--ar-c-ok, #22c55e); }
+.ar-ws .rv-rel.rv-fail path { fill: var(--ar-c-fail, #ef4444); }
+.ar-ws .rv-rel.rv-best line { stroke: var(--ar-c-warn, #f5a524); stroke-dasharray: 3 3; }
+.ar-ws .rv-rel.rv-best text { fill: var(--ar-fg); font-weight: 600; }
+.ar-ws .rv-lane { cursor: pointer; }
+.ar-ws .rv-lane rect { fill: color-mix(in srgb, var(--ar-fg-faint) 45%, transparent); transition: fill 150ms ease-out; }
+.ar-ws .rv-lane.rv-work rect { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 55%, transparent); }
+.ar-ws .rv-lane.rv-crash rect { fill: var(--ar-c-fail, #ef4444); }
+.ar-ws .rv-lane circle { fill: var(--ar-c-ok, #22c55e); stroke: var(--ar-bg); stroke-width: 2; }
+.ar-ws .rv-lane.rv-on rect, .ar-ws .rv-lane:hover rect { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 80%, transparent); }
+.ar-ws .rv-produced { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 2; }
+.ar-ws .rv-detail { display: grid; gap: 4px; min-height: 96px; font-size: 15px; }
+.ar-ws .rv-detail p { margin: 0; }
+.ar-ws .rv-detail-head { font-weight: 600; }
+/* B: ladder first */
+.ar-ws .rv-ladder { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.ar-ws .rv-step { display: grid; gap: 6px; padding: 18px 14px; border-radius: 10px; background: color-mix(in srgb, var(--ar-fg-faint) 14%, transparent); }
+.ar-ws .rv-step-pass { background: color-mix(in srgb, var(--ar-c-ok, #22c55e) 22%, transparent); }
+.ar-ws .rv-step-undecided, .ar-ws .rv-step-unrun { background: color-mix(in srgb, var(--ar-c-warn, #f5a524) 26%, transparent); outline: 2px solid var(--ar-c-warn, #f5a524); }
+.ar-ws .rv-step-fail { background: color-mix(in srgb, var(--ar-c-fail, #ef4444) 26%, transparent); }
+.ar-ws .rv-step-n { font-size: 26px; font-weight: 650; }
+.ar-ws .rv-step-label { font-size: 15px; }
+.ar-ws .rv-ladder-note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 15px; }
+.ar-ws .rv-releases { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.ar-ws .rv-mini { display: grid; gap: 4px; min-width: 84px; font-size: 13px; }
+.ar-ws .rv-mini.rv-best b { color: var(--ar-c-warn, #f5a524); }
+.ar-ws .rv-mini-bar { display: flex; gap: 2px; }
+.ar-ws .rv-mini-bar i { flex: 1; height: 6px; border-radius: 2px; background: color-mix(in srgb, var(--ar-fg-faint) 40%, transparent); }
+.ar-ws .rv-mini-bar i[data-step='pass'] { background: var(--ar-c-ok, #22c55e); }
+.ar-ws .rv-mini-bar i[data-step='fail'] { background: var(--ar-c-fail, #ef4444); }
+.ar-ws .rv-mini-bar i[data-step='undecided'] { background: var(--ar-c-warn, #f5a524); }
+.ar-ws .rv-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+.ar-ws .rv-who { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.ar-ws .rv-who li { display: grid; grid-template-columns: 140px 1fr 32px; align-items: center; gap: 10px; font-size: 13px; }
+.ar-ws .rv-who i { height: 8px; border-radius: 4px; background: var(--ar-c-ok, #22c55e); }
+.ar-ws .rv-who b { text-align: right; }
+.ar-ws .rv-files { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; }
+.ar-ws .rv-files li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; }
+.ar-ws .rv-files .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .rv-add { color: var(--ar-c-ok, #22c55e); font-weight: 500; }
+.ar-ws .rv-del { color: var(--ar-c-fail, #ef4444); font-weight: 500; }
+@media (max-width: 640px) {
+  .ar-ws .rv-ladder { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ar-ws .rv-step { padding: 12px 10px; }
+  .ar-ws .rv-who li { grid-template-columns: 110px 1fr 28px; }
+}
+@media (prefers-reduced-motion: reduce) { .ar-ws .rv-lane rect { transition: none; } }
