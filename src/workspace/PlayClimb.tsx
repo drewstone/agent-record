@@ -332,7 +332,8 @@ function climbTimeFigure(play: Play, climb: Climb, width: number, window: [numbe
     id: `climb-time-${play.id}`,
     x: { label: 'Time (UTC)', domain: [lo, hi] },
     y: { label: climb.y?.label ?? 'Check progress', unit: '', domain: [-0.05, 1.06], ...(ticks.length ? { ticks } : {}) },
-    formatX: (x) => (span < 36 * 3_600_000 ? `${new Date(x).toISOString().slice(11, 16)}Z` : new Date(x).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })),
+    // Ticks fall at recorded times, so a multi-day axis names the hour too: two ticks on one day never read alike.
+    formatX: (x) => (span < 36 * 3_600_000 ? `${new Date(x).toISOString().slice(11, 16)}Z` : `${new Date(x).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} ${new Date(x).toISOString().slice(11, 13)}h`),
     formatY: stageAt(climb),
     markers: { circle: 'check', diamond: 'tag gate' },
     marks,
