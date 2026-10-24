@@ -29,6 +29,8 @@ interface Props {
 
 /** The work is inspectable in place. Shared owners render the tree, artifacts and diffs. */
 export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, layout = 'workspace' }: Props) {
+  const [pane, setPane] = useState<'file' | 'tree'>('file')
+  const [treeOpen, setTreeOpen] = useState(false)
   const [localVersion, setLocalVersion] = useState<string | null>(null)
   const [localCompare, setLocalCompare] = useState<string | null>(null)
   const [localIdentity, setLocalIdentity] = useState<string | null>(null)
@@ -67,7 +69,7 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
   const tree = (
     <aside className="run-file-tree" aria-label="Captured files">
       <header><h2>Files</h2><span className="faint">Retained with this run</span></header>
-      {paths.length ? <SharedFileUi theme={theme} style={{ flex: 1 }}><RichFileTree paths={paths} selectedPath={path ?? undefined} onSelect={(next) => { if (paths.includes(next)) onSelect(next) }} initialExpansion="open" height="100%" /></SharedFileUi>
+      {paths.length ? <SharedFileUi theme={theme} style={{ flex: 1 }}><RichFileTree paths={paths} selectedPath={path ?? undefined} onSelect={(next) => { if (paths.includes(next)) { onSelect(next); setPane('file'); setTreeOpen(false) } }} initialExpansion="open" height="100%" /></SharedFileUi>
         : <p className="run-file-empty">{!inventory && !error ? 'Loading retained files…' : inventory?.state === 'available' ? 'No file was retained in this version’s artifact scope.' : 'The retained-file inventory is unavailable. This is not an empty workspace.'}</p>}
       <p className="run-file-scope">{inventory?.scopeDetails ?? 'The retained-file scope has not been received.'}{inventory && <> Inventory composed at {inventory.generatedAt.slice(11, 16)} UTC.</>}{inventory?.source.runDocumentStale && <> Its source document is stale.</>}</p>
     </aside>
@@ -82,8 +84,9 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
     {currentView.data?.history.complete === false && <p className="run-file-notice">The retained version list is incomplete.{typeof currentView.data.history.omittedVersions === 'number' ? ` ${currentView.data.history.omittedVersions} additional versions are omitted.` : ' The number of omitted versions is unknown.'}</p>}
     {currentView.data?.history.state === 'unavailable' && <p className="run-file-notice">Version history is unavailable: {currentView.data.history.reason ?? 'No reason was recorded.'}</p>}
     {nav.compare && (before.error || comparison.error) && <p className="run-file-notice" role="alert">The comparison is unavailable: {before.error ?? comparison.error}</p>}
-    <div className="run-artifacts">
-    {layout === 'document' ? <details className="run-file-drawer"><summary>Browse retained files</summary>{tree}</details> : tree}
+    <div className="run-mobile-file-nav" role="group" aria-label="File workspace"><button type="button" className="ui-button" aria-pressed={pane === 'file'} onClick={() => { setPane('file'); setTreeOpen(false) }}>Read file</button><button type="button" className="ui-button" aria-pressed={pane === 'tree'} onClick={() => { setPane('tree'); setTreeOpen(true) }}>Browse files</button></div>
+    <div className="run-artifacts" data-pane={pane}>
+    {layout === 'document' ? <details className="run-file-drawer" open={treeOpen} onToggle={(event) => { setTreeOpen(event.currentTarget.open); setPane(event.currentTarget.open ? 'tree' : 'file') }}><summary>Browse retained files</summary>{tree}</details> : tree}
     <div className="run-artifact-reader">
       {file || baseline ? <RetainedFile key={`${doc.run.id}:${nav.version}:${path}`} file={(file ?? baseline)!} files={files} missingAfter={!file} absenceVerified={!file && !!baseline && retainedPageAbsent(inventory, baseline)} baseline={baseline} baselineInventory={before.data} comparisonSelected={nav.compare !== null} beforeLabel={beforeLabel} theme={theme} runId={doc.run.id} fileVersion={nav.version} navigation={nav} />
         : <div className="run-file-empty" role={selected ? 'alert' : undefined}><h3>{!inventory && !error ? 'Loading the retained work…' : selected ? 'This file is not in the retained inventory' : 'No artifact to preview'}</h3>{(inventory || error) && <p>{selected ?? 'No file content is available from this inventory.'}</p>}</div>}

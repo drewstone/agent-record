@@ -28,7 +28,7 @@ export function RunHome({ api, doc, selected, onSelect, onOpen, navigation, vari
   const check = doc.run.check?.latest ?? doc.run.check?.best
   const outcome = doc.progress?.outcome ?? (receipt ? outcomeOfCheck(receipt) : null)
   const verdict = runCheckView(doc.run.check ?? null, outcome)
-  const checkedAt = outcome?.checkedAt ?? check?.at
+  const checkedAt = outcome ? outcome.checkedAt : check?.at
   const checkedVersion = outcome?.tag ?? (outcome?.checkedAt === check?.at ? check?.tag ?? check?.commit?.slice(0, 8) : null)
   const live = isLive(doc)
   const chip = runChip(doc)
@@ -43,7 +43,7 @@ export function RunHome({ api, doc, selected, onSelect, onOpen, navigation, vari
         {cleanupUnverified && <a href="#rr-retention" onClick={onInspect}>Resource cleanup unverified</a>}
         {checkedAt && <time dateTime={checkedAt}>{checkedVersion ? `Checked ${checkedVersion}` : 'Checked version unrecorded'} · {checkedAt.slice(5, 10)} at {checkedAt.slice(11, 16)} UTC</time>}
       </div>
-      {navigation.version && <p className="run-context-note">Viewing retained files at {navigation.version.slice(0, 8)}. The recorded run outcome above names its own evaluated version.</p>}
+      {navigation.version && <p className="run-context-note">Viewing retained files at {navigation.version.slice(0, 8)}. The run outcome above retains its recorded check evidence.</p>}
     </header>
     <div className="run-work-layout">
       <RunArtifacts api={api} doc={doc} selected={selected} onSelect={onSelect} navigation={navigation} layout={variant} />

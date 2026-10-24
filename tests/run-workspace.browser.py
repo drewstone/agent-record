@@ -159,7 +159,8 @@ def history_journey(page, base, run_id, manifest, result, evidence):
 def run_journeys(args, base, browser, result):
     for theme in ('light', 'dark'):
         for width, height in ((1440, 1000), (390, 844)):
-            context = browser.new_context(viewport={'width': width, 'height': height}, color_scheme=theme,
+            context = browser.new_context(viewport={'width': width, 'height': height}, color_scheme=theme, is_mobile=width == 390, has_touch=width == 390,
+                                          record_video_size={'width': width, 'height': height},
                                           record_video_dir=str(args.evidence / 'videos'))
             try:
                 page = context.new_page()
@@ -178,6 +179,17 @@ def run_journeys(args, base, browser, result):
                         assert page.locator('.ar-ws').get_attribute('data-theme') == theme
                         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'overflow: {variant}/{width}/{theme}'
                         assert not errors, errors
+                        if width == 390:
+                            controls = page.get_by_role('group', name='File workspace', exact=True)
+                            assert controls.is_visible() and page.locator('.run-artifact-reader').is_visible()
+                            assert not page.locator('.run-file-tree').is_visible(), 'phone starts with tree instead of artifact'
+                            controls.get_by_role('button', name='Browse files', exact=True).click()
+                            page.locator('.run-file-tree').wait_for(state='visible')
+                            assert not page.locator('.run-artifact-reader').is_visible()
+                            controls.get_by_role('button', name='Read file', exact=True).click()
+                            page.locator('.run-artifact-reader').wait_for(state='visible')
+                            assert not page.locator('.run-file-tree').is_visible()
+                            result['mobileBrowsing'].append({'runId': run_id, 'variant': variant, 'theme': theme, 'state': 'file/tree/file navigation proved'})
                         if width == 1440 and variant == 'workspace':
                             source = page.locator('.run-file-modes').get_by_role('button', name='Source', exact=True)
                             if source.count():
@@ -221,7 +233,7 @@ def main():
     stylesheet_hash = hashlib.sha256((asset_root / 'styles.css').read_bytes()).hexdigest()
     assert renderer_hash == args.renderer_sha256 and stylesheet_hash == args.stylesheet_sha256, 'built assets do not match the qualified build receipt'
     traffic = []
-    result = {'schema': 'agent-record.run-workspace-proof.v1', 'views': [], 'sourceViews': [], 'reloads': [], 'history': [], 'historicalFeedback': [],
+    result = {'schema': 'agent-record.run-workspace-proof.v1', 'views': [], 'sourceViews': [], 'reloads': [], 'history': [], 'historicalFeedback': [], 'mobileBrowsing': [],
               'rendererSha256': renderer_hash, 'stylesheetSha256': stylesheet_hash,
               'source': 'real same-origin Discovery HTML and APIs with only this built renderer replaced',
               'craftVerdict': 'UNCHECKED', 'targetUserVerdict': 'UNCHECKED'}

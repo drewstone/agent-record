@@ -100,3 +100,18 @@
   .ar-ws .run-design-preview small { display: none; }
   .ar-ws [data-composition=document] .run-work-context { display: flex; }
 }
+
+.ar-ws .run-mobile-file-nav { display: none; }
+.ar-ws .run-file-content[data-file-view=diff] > [data-shared-file-ui] { height: min(65svh, 700px); min-height: 320px; }
+@media (max-width: 600px) {
+  .ar-ws .run-mobile-file-nav { display: flex; gap: 8px; margin: 0 0 12px; }
+  .ar-ws .run-mobile-file-nav button { flex: 1; min-height: 44px; }
+  .ar-ws .run-mobile-file-nav button[aria-pressed=true] { color: var(--ar-c-action); border-color: currentColor; }
+  .ar-ws .run-file-selection select, .ar-ws .run-file-modes button { min-height: 44px; }
+  .ar-ws .run-file-versions select { min-height: 44px; max-width: 100%; font-size: 16px; }
+  .ar-ws .run-artifacts[data-pane=file] .run-file-tree,
+  .ar-ws .run-artifacts[data-pane=file] .run-file-drawer,
+  .ar-ws .run-artifacts[data-pane=tree] .run-artifact-reader { display: none; }
+  .ar-ws .run-artifacts[data-pane=tree] .run-file-tree > [data-shared-file-ui] { height: 55svh; max-height: none; }
+  .ar-ws .run-file-drawer > summary { display: none; }
+}

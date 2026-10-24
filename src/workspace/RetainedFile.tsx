@@ -77,7 +77,7 @@ function RetainedFileContent({ file, files, chosen, baseline, baselineInventory,
     {comparisonSelected && !canCompare && <p className="run-file-notice">{isBinary ? 'This binary file has no text diff.' : tooLarge ? 'This file exceeds the inline comparison limit.' : 'This file’s baseline is unavailable or not in a complete comparable inventory.'}</p>}
     {knownAbsent && <p className="run-file-notice">This page is absent from the comparison version’s complete retained page tree. The diff compares it with an empty file.</p>}
     {(file.alternates?.length ?? 0) > 0 && <label className="run-file-versions">Retained version <select value={fileIdentity(chosen)} onChange={(event) => navigation.onIdentity(event.target.value)}>{[file, ...(file.alternates ?? [])].map((item) => <option key={item.href} value={fileIdentity(item)}>{item.source} · {item.sha256?.slice(0, 12) ?? 'hash unavailable'}</option>)}</select><span>Different retained versions share this path.</span></label>}
-    <div className="run-file-content"><SharedFileUi theme={theme}>{body}</SharedFileUi></div>
+    <div className="run-file-content" data-file-view={view}><SharedFileUi theme={theme}>{body}</SharedFileUi></div>
     <footer className="run-file-proof"><a href={fileLink(file.path, fileIdentity(chosen))}>{fileVersion ? 'Link to this version' : 'Link to this file'}</a><details><summary>File provenance</summary>{chosen.sha256 || chosen.objectId ? <><span>{chosen.sha256 ? 'Recorded SHA-256' : 'Recorded Git blob identity'}</span><code>{chosen.sha256 ?? chosen.objectId}</code></> : <span>Content hash is not recorded.</span>}</details></footer>
   </article>
 }
