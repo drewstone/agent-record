@@ -16,7 +16,7 @@ function themeOf(element: HTMLElement): 'light' | 'dark' | 'auto' {
 
 const element = document.getElementById('agent-workspace')
 if (element) {
-  const mode = element.dataset.mode === 'receipt' ? 'receipt' : element.dataset.mode === 'explore' ? 'explore' : element.dataset.mode === 'overview' ? 'overview' : element.dataset.mode === 'today' ? 'today' : element.dataset.mode === 'theatre' ? 'theatre' : element.dataset.mode === 'plays' ? 'plays' : element.dataset.mode === 'play' ? 'play' : element.dataset.mode === 'report' ? 'report' : 'run'
+  const mode = element.dataset.mode === 'receipt' ? 'receipt' : element.dataset.mode === 'explore' ? 'explore' : element.dataset.mode === 'overview' ? 'today' : element.dataset.mode === 'today' ? 'today' : element.dataset.mode === 'theatre' ? 'theatre' : element.dataset.mode === 'plays' ? 'plays' : element.dataset.mode === 'play' ? 'play' : element.dataset.mode === 'report' ? 'play' : 'run'
   createRoot(element).render(
     <StrictMode>
       <Workspace api={element.dataset.api ?? '/api/discovery'} mode={mode} id={element.dataset.id ?? ''} theme={themeOf(element)} />

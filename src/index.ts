@@ -30,7 +30,6 @@ export { overviewAnswers, playAnswers, type Answer } from './workspace/answers.j
 export { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 export { RUN_TABS, RunTabBar, sectionOf, tabOf } from './workspace/RunTabs.js'
 export { PlayClimb } from './workspace/PlayClimb.js'
-export { NeedsYou } from './workspace/Overview.js'
 export { AgentTable } from './workspace/RunTable.js'
 export { agentSpendRows, SpendBars } from './workspace/Spend.js'
 export { CollapsibleValue, ValueControls, ValueScope, VALUE_PREVIEW, followCommand, valueChars, valuePreview } from './workspace/CollapsibleValue.js'
