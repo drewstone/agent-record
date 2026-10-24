@@ -20,7 +20,7 @@ test('the run page opens with the outcome, the score curve and each contract lin
   assert.ok(now > 0 && now < html.indexOf('rr-columns'), 'the Now section comes before the evidence columns')
   const words = text(html)
   assert.match(words, /Now✓ Passed · checked 01:56 UTC on rc3/)
-  // The page has one clock, in the fold's blocker slot (RunFold); the Now section no longer repeats it.
+  // The Now section does not repeat the page's clock.
   assert.doesNotMatch(words, /last agent stream/)
   // The curve is the Lab's points: rc1 at 0, rc2 at 0.5, rc3 at 0.667 when its public stages passed, then 1. The paragraph
   // that repeated them in words is gone (X9); the chart's data table carries the values.

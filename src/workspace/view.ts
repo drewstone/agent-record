@@ -51,7 +51,6 @@ export const viewSchema = z
 
 export type HostView = z.infer<typeof viewSchema>
 export type ViewStatus = z.infer<typeof viewStatusSchema>
-export type ViewProgress = z.infer<typeof viewProgressSchema>
 
 /** A served status as the page's chip: the host's word, tone and icon. */
 export const viewChip = (status: ViewStatus, axis: StatusAxis = 'run'): Status => ({ axis, word: status.label, tone: status.tone, shape: status.icon })

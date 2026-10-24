@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
-import { FeedCards, FindingsFeed } from './workspace/FindingsFeed.js'
+import { FindingsFeed } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { BeadString } from './workspace/BeadString.js'
 import { ExplorePage } from './workspace/Explore.js'
@@ -20,19 +20,18 @@ import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
 import { ResearchReport } from './ResearchReport.js'
 import { playReportToResearchReport, type PlayReportDocument } from './play-report.js'
-import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument, RunSummary } from './workspace-model.js'
+import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
-import { withPrompts } from './viewer/prompts.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
-import { agentState, indexRecord, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
+import { agentState, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, endingStatus, go, money, newerStarted, readRecord, runStatus, StandingText, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, endingStatus, go, money, newerStarted, runStatus, StandingText, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -47,7 +46,10 @@ import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
-import { RunFold, RunStatusLine, RunWhy } from './workspace/RunFold.js'
+import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
+import { AgentConversation, useRecordPart } from './workspace/record-part.js'
+// The run workspace pulls in sandbox-ui's file, code and diff views: a chunk of its own, loaded when a run page opens.
+const RunWorkspace = lazy(() => import('./workspace/RunWorkspace.js').then((module) => ({ default: module.RunWorkspace })))
 import { newestAgent } from './workspace/run-answers.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
@@ -55,7 +57,7 @@ import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
 import type { Selection } from './workspace/VersionCanvas.js'
-import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, SpendSummary, spendGapLabel } from './workspace/Spend.js'
+import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -158,8 +160,6 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
 // ---------------------------------------------------------------------------------------------------------
 // /plays: every play this host has a run of
 // ---------------------------------------------------------------------------------------------------------
-type PlaySort = 'latest' | 'spend' | 'runs' | 'name'
-
 function PlaysPage({ api }: { api: string }) {
   const [params, update] = useSearch()
   const plays = useDocument<PlaysDocument>(`${api}/plays`)
@@ -825,22 +825,6 @@ const AGENT_TABS = [
   ['usage', 'Usage'],
 ] as const
 
-/** A record part (agent-record.v1) read for drawing; `nodeStats` only on the `nodes` part. */
-function useRecordPart(url: string | null) {
-  const doc = useDocument<unknown>(url, undefined, true)
-  const parsed = useMemo(() => {
-    if (!doc.data) return { record: null, index: null, stats: {} as Record<string, NodeStats>, error: undefined as string | undefined }
-    try {
-      const record = withPrompts(readRecord(doc.data))
-      const stats = ((doc.data as { nodeStats?: Record<string, NodeStats> }).nodeStats ?? {}) as Record<string, NodeStats>
-      return { record, index: indexRecord(record), stats, error: undefined }
-    } catch (error) {
-      return { record: null, index: null, stats: {} as Record<string, NodeStats>, error: error instanceof Error ? error.message : 'Invalid record' }
-    }
-  }, [doc.data])
-  return { ...parsed, loading: doc.loading, fetchError: doc.error, pending: !!url && doc.data === undefined && !doc.error }
-}
-
 /** The run's profiles on the lineage canvas, read from its play's profile index (which carries every ancestor, in any play). */
 function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; runId: string; play: string; selected: string | null; onSelect: (short: string | null) => void }) {
   const profiles = useDocument<ProfileGraphDocument>(`${api}/plays/${encodeURIComponent(play)}/profiles`)
@@ -922,9 +906,19 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <div className="fold">
-          <RunFold doc={doc} play={play.data} />
-        </div>
+        <Suspense fallback={<p className="ws-status" role="status">Opening the workspace…</p>}>
+          <RunWorkspace
+            api={api}
+            doc={doc}
+            transcript={(node, select) =>
+              settledRecord && index ? (
+                <AgentConversation key={node} runUrl={runUrl} version={version} index={index} actor={index.nodes.has(index.canonical(node)) ? index.canonical(node) : root ?? node} />
+              ) : (
+                <LiveTranscript runUrl={runUrl} runId={doc.run.id} alive={Boolean(doc.execution?.alive)} selected={node} onSelect={select} />
+              )
+            }
+          />
+        </Suspense>
         {tabs}
         <RunWhy doc={doc} play={play.data} />
         <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />

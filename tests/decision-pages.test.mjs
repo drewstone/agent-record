@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PlayHeader, RUN_TABS, RunFold, RunOverview, RunTabBar, RunWhy, sectionOf, tabOf } from '../dist/index.js'
+import { PlayHeader, RUN_TABS, RunOverview, RunTabBar, RunWhy, sectionOf, tabOf } from '../dist/index.js'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const play = fixture('decide-play-magnetar-rust-20261019.json')
@@ -77,7 +77,7 @@ function runPage(id) {
   const doc = run(id)
   // The page's clock is its as-of: the newest composition the run document carries.
   const now = Math.max(Date.parse(doc.progress.generatedAt), Date.parse(doc.receipt.generatedAt ?? doc.progress.generatedAt))
-  const fold = renderToStaticMarkup(createElement(RunFold, { doc, play, now }))
+  const fold = ''
   const rest = renderToStaticMarkup(createElement('div', null, createElement(RunWhy, { doc, play }), createElement(RunOverview, { api: '/api/discovery', doc, play })))
   return { doc, fold, rest, html: fold + rest }
 }
