@@ -1,9 +1,9 @@
 import { useDocument, when } from './data.js'
-import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument, settledOf } from './reliability-model.js'
+import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument } from './reliability-model.js'
 
 /**
- * The fleet's run reliability over the last seven days, on the plays page: the share of settled runs no infrastructure,
- * harness or quota failure touched, each day's share, and the top causes still happening, each with its owner.
+ * The run failure causes still happening, on the plays page's Runs tab, each with its owner; the clean-run share and its
+ * daily chart live on Today.
  */
 export function ReliabilityPanel({ api }: { api: string }) {
   const doc = useDocument<ReliabilityDocument>(`${api}/reliability`)
@@ -18,31 +18,10 @@ export function ReliabilityPanel({ api }: { api: string }) {
   const live = liveCauses(data)
   const runs = data.runs
   return (
-    <section className="reliability" aria-label="Run reliability, last 7 days" data-reliability={data.rate ?? 'unknown'}>
-      <div className="reliability-figure">
-        <span className="answer-label">Run reliability · last {data.window.days} days</span>
-        {/* The clean-run share is a measure, not a status: neutral ink. Change 6 redraws the chart. */}
-        <span className="reliability-rate">{percent(data.rate)}</span>
-        <span className="faint">
-          of {runs.settled} settled runs ran clean · {runs.clean} clean, {runs.hit} hit by a failure, {runs.failed} failed
-        </span>
-        <span className="faint">{data.lostAgentHours !== null ? `${Math.round(data.lostAgentHours)} agent-hours lost` : 'agent-hours lost unknown'}</span>
-      </div>
-      <div className="reliability-chart">
-      <div className="reliability-days" role="img" aria-label={data.daily.map((day) => `${day.day}: ${percent(day.rate)} of ${settledOf(day)} settled runs`).join('; ')}>
-        {data.daily.map((day) => (
-          <div key={day.day} className="reliability-day" title={`${day.day}: ${day.clean} clean, ${day.hit} hit, ${day.failed} failed of ${settledOf(day)} settled (${day.cancelled ?? 0} cancelled)`}>
-            <span className="reliability-bar">
-              {day.rate !== null && settledOf(day) > 0 && <i style={{ height: `${Math.max(3, day.rate * 100)}%` }} />}
-            </span>
-            <span>{settledOf(day) ? percent(day.rate) : '—'}</span>
-            <span className="faint">n={settledOf(day)}</span>
-            <span className="faint">{`${Number(day.day.slice(5, 7))}/${Number(day.day.slice(8, 10))}`}</span>
-          </div>
-        ))}
-      </div>
-        <span className="faint reliability-days-key">Each day: the share of its settled runs that ran clean, its run count, and the date (UTC).</span>
-      </div>
+    <section className="reliability" aria-label="Failure causes still happening" data-reliability={data.rate ?? 'unknown'}>
+      {/* The clean-run share and its daily chart are Today's (one chart of one measure); this panel keeps what only it says:
+          the causes still happening and who owns each (re-audit 2026-10-24: the two charts disagreed on Oct 17). */}
+      <p className="faint">{percent(data.rate)} of {runs.settled} settled runs ran clean in the last {data.window.days} days; <a href="/today">the daily chart is on Today</a>.</p>
       <div className="reliability-causes">
         <span className="answer-label">Top causes still happening (seen in the last {LIVE_HOURS} h)</span>
         {live.length ? (
@@ -51,7 +30,7 @@ export function ReliabilityPanel({ api }: { api: string }) {
               <li key={cause.id} data-cause={cause.id}>
                 <b>{cause.title}</b>
                 <span className="faint">
-                  {cause.runsLost} runs lost{cause.runsHit ? `, ${cause.runsHit} hit` : ''}
+                  {cause.runsLost} {cause.runsLost === 1 ? 'run' : 'runs'} lost{cause.runsHit ? `, ${cause.runsHit} hit` : ''}
                   {cause.lostAgentHours !== null ? ` · ${Math.round(cause.lostAgentHours)} agent-hours` : ''} · {cause.layer ?? 'unclassified'} ·{' '}
                   {cause.owner ?? 'no owner named'} · last seen {when(cause.lastSeen)}
                 </span>
@@ -63,7 +42,7 @@ export function ReliabilityPanel({ api }: { api: string }) {
         )}
       </div>
       <p className="faint reliability-definition">
-        Clean: a settled run with no infra, harness or quota failure on any agent. Operator cancellations and running runs are outside the count. As of {when(data.at)}.
+        Clean: a settled run with no infra, harness or quota failure on any agent. Operator cancellations and running runs are outside the count.
       </p>
     </section>
   )
