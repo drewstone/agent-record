@@ -3635,7 +3635,6 @@
 /* The diff renderer fills its parent's height, as it did in the old file pane. */
 .ar-ws .rj-diff { height: 60vh; min-height: 360px; overflow: auto; border-radius: 8px; }
 .ar-ws .rj-transcript > summary { cursor: pointer; font-size: 15px; font-weight: 600; }
-/* The transcript opens on the work: the harness's caller-declared resources prompt is boilerplate. */
 .ar-ws .rj-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; }
 .ar-ws .rj-work > .run-files-pane { height: 70vh; min-height: 420px; }
 /* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,

@@ -10,10 +10,15 @@ import { useFileText } from './use-file-text.js'
  */
 export type RefFile = { state: 'idle' | 'loading' } | { state: 'error'; error: string } | { state: 'absent'; commit: string } | { state: 'ready'; text: string; commit: string }
 
-type Tree = { commit: string; paths: string[]; cut: boolean }
+export type RefTree = { commit: string; paths: string[]; cut: boolean }
 
-export function useRefFile(runUrl: string, ref: string | null, path: string | null): RefFile {
-  const tree = useDocument<Tree>(ref && path ? `${runUrl}/tree?ref=${encodeURIComponent(ref)}` : null)
+/**
+ * `pinned` is the tree the caller already shows: the file is read at that tree's commit, never at a second read of a
+ * ref that may have moved in between, so the bytes always belong to the visible listing.
+ */
+export function useRefFile(runUrl: string, ref: string | null, path: string | null, pinned?: RefTree | null): RefFile {
+  const fetched = useDocument<RefTree>(!pinned && ref && path ? `${runUrl}/tree?ref=${encodeURIComponent(ref)}` : null)
+  const tree = pinned ? { data: pinned, error: undefined } : fetched
   const listed = Boolean(tree.data && path && tree.data.paths.includes(path))
   const href = tree.data && listed && ref && path ? `${runUrl}/blob?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}&expectedCommit=${tree.data.commit}` : null
   const file = useFileText(href, tree.data?.commit)
@@ -26,9 +31,9 @@ export function useRefFile(runUrl: string, ref: string | null, path: string | nu
 }
 
 /** A file's change between two refs; `base` null means there is no earlier release, so every line is new. */
-export function RefDiff({ runUrl, base, head, path }: { runUrl: string; base: string | null; head: string; path: string }) {
+export function RefDiff({ runUrl, base, head, path, headTree }: { runUrl: string; base: string | null; head: string; path: string; headTree?: RefTree | null }) {
   const before = useRefFile(runUrl, base, path)
-  const after = useRefFile(runUrl, head, path)
+  const after = useRefFile(runUrl, head, path, headTree)
   const failed = [before, after].find((side): side is { state: 'error'; error: string } => side.state === 'error')
   if (failed) return <p className="rj-muted" role="alert">{failed.error}</p>
   if (after.state === 'loading' || before.state === 'loading' || after.state === 'idle') return <p className="rj-muted" role="status">Reading {path}…</p>

@@ -49,7 +49,7 @@ import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { readSource } from './workspace/source-reader.js'
-import { useSearch } from './workspace/navigation.js'
+import { artifactNavigation, useSearch } from './workspace/navigation.js'
 import { LazyOutputsView, LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
@@ -842,7 +842,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       )}
       {section === 'outputs' && (
         <section className="run-panel" aria-label="Outputs" data-drawer="outputs">
-          <Suspense fallback={null}><LazyOutputsView doc={doc} grading={grading} selected={params.get('file')} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} /></Suspense>
+          <Suspense fallback={null}><LazyOutputsView doc={doc} grading={grading} selected={params.get('file')} navigation={artifactNavigation(params, update)} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} /></Suspense>
         </section>
       )}
       {section === 'input' && (

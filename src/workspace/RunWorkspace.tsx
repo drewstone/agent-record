@@ -1,10 +1,10 @@
 import { FilePreview } from '@tangle-network/sandbox-ui/files'
 import { WorkspaceFilesPane } from '@tangle-network/sandbox-ui/workspace'
-import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { RunDocument } from '../workspace-model.js'
 import { useDocument } from './data.js'
-import { RefDiff, useRefFile } from './ref-file.js'
+import { useSearch } from './navigation.js'
+import { RefDiff, type RefTree, useRefFile } from './ref-file.js'
 import { RunJourney } from './RunJourney.js'
 import { usePhone } from './use-phone.js'
 
@@ -52,37 +52,40 @@ export interface RunWorkspaceDocument {
 }
 
 /** The code at a ref (an agent's branch or a release), its tree and one file, with a diff against the previous release. */
+/**
+ * The code at a ref (a release or branch): its tree once, pinned, and every file read and diff at that tree's commit.
+ * The selected file and view live in the URL (codeFile, codeView), like the artifacts pane's, so a link or reload keeps them.
+ */
 export function CodePane({ runUrl, refName, previous, label }: { runUrl: string; refName: string; previous: string | null; label: string }) {
-  const tree = useDocument<{ commit: string; paths: string[]; cut: boolean }>(`${runUrl}/tree?ref=${encodeURIComponent(refName)}`)
-  const [path, setPath] = useState<string | null>(null)
-  const [mode, setMode] = useState<'file' | 'diff'>('file')
-  // Read through the verified reader: a failed or unverified read is an error, never an empty file (root 10478 review).
-  const file = useRefFile(runUrl, refName, path)
+  const tree = useDocument<RefTree>(`${runUrl}/tree?ref=${encodeURIComponent(refName)}`)
+  const [params, update] = useSearch()
+  const path = params.get('codeFile')
+  const mode = params.get('codeView') === 'diff' && previous ? 'diff' : 'file'
+  const file = useRefFile(runUrl, refName, path, tree.data)
   if (tree.error) return <p className="rw-empty">{tree.status === 404 ? 'No code on this host for this run.' : tree.error}</p>
   if (!tree.data) return <p className="rw-empty">Reading {label}…</p>
   const actions = previous ? (
     <span className="rw-file-modes" role="group" aria-label="Show">
-      <button type="button" aria-pressed={mode === 'file'} onClick={() => setMode('file')}>File</button>
-      <button type="button" aria-pressed={mode === 'diff'} onClick={() => setMode('diff')}>Changes since {previous}</button>
+      <button type="button" aria-pressed={mode === 'file'} onClick={() => update({ codeView: null })}>File</button>
+      <button type="button" aria-pressed={mode === 'diff'} onClick={() => update({ codeView: 'diff' })}>Changes since {previous}</button>
     </span>
   ) : undefined
   const content = !path ? null
-    : mode === 'diff' && previous ? <RefDiff key={`${previous}:${path}`} runUrl={runUrl} base={previous} head={refName} path={path} />
+    : mode === 'diff' ? <RefDiff key={`${previous}:${path}`} runUrl={runUrl} base={previous} head={refName} path={path} headTree={tree.data} />
     : file.state === 'error' ? <p className="rw-empty" role="alert">{file.error}</p>
     : file.state === 'absent' ? <p className="rw-empty">This file is not in {label}.</p>
     : file.state === 'ready' ? <FilePreview filename={path.split('/').pop() ?? path} content={file.text} hideHeader />
     : <p className="rw-empty" role="status">Reading {path}…</p>
-  const preview = path ? { path, actions, content } : undefined
   return (
     <WorkspaceFilesPane
       paths={tree.data.paths}
       selectedPath={path ?? undefined}
-      onSelect={(next) => setPath(next)}
-      onBack={() => setPath(null)}
-      preview={preview}
+      onSelect={(next) => update({ codeFile: next })}
+      onBack={() => update({ codeFile: null, codeView: null })}
+      preview={path ? { path, actions, content } : undefined}
       search
-      label={`${label} · ${tree.data.paths.length.toLocaleString()} files${tree.data.cut ? ' (first shown)' : ''}`}
-      expansionKey={refName}
+      label={`${label} at ${tree.data.commit.slice(0, 12)} · ${tree.data.paths.length.toLocaleString()} files${tree.data.cut ? ' (first shown)' : ''}`}
+      expansionKey={`${refName}:${tree.data.commit}`}
       surface="plain"
     />
   )
