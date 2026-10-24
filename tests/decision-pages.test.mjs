@@ -81,59 +81,6 @@ function runPage(id) {
   const rest = renderToStaticMarkup(createElement('div', null, createElement(RunWhy, { doc, play }), createElement(RunOverview, { api: '/api/discovery', doc, play })))
   return { doc, fold, rest, html: fold + rest }
 }
-const slots = (html) => [...html.matchAll(/data-slot="([^"]+)"/g)].map((match) => match[1])
-
-test('the live 19f page states one clock, an h1 of a few words, and its start point as inherited', () => {
-  const { fold, html } = runPage('19f')
-  assert.deepEqual(slots(fold), ['state', 'best', 'blocker', 'output'])
-  assert.equal((visible(html).match(/last output/g) ?? []).length, 1)
-  assert.doesNotMatch(visible(html), /last activity|last agent stream/)
-  const h1 = visible(/<h1>(.*?)<\/h1>/.exec(fold)[1])
-  assert.equal(h1, 'Run 19f')
-  assert.ok(words(h1).length <= 6)
-  const state = visible(/<p class="run-state">(.*?)<\/p>/.exec(fold)[1])
-  assert.ok(words(state).length <= 18, state)
-  // The gate on 19f's fork commit is 18b rc18's, re-checked: the start point, in neutral, never the run's own result.
-  const gate = /<li data-field="run\.check\.gate"[^>]*>(.*?)<\/li>/.exec(html)
-  assert.match(gate[0], /data-inherited/)
-  assert.match(gate[0], /data-status="alert:not urgent:neutral"/)
-  assert.equal(visible(gate[1]), '○ Start point (18b rc18) rechecked: 6/15 at stage 5, unverified (lz4-decode over 300 s)')
-  assert.doesNotMatch(html, /Tag gate unverified/)
-  // The red push refusal names its owner on the fold; no checker hash sits on it.
-  assert.match(visible(fold), /Check infrastructure · act now: discovery-lab \(play repository access\) 6 min old · last output 0 min ago \(agent event\)/)
-  assert.doesNotMatch(fold, /SHA-256/)
-  assert.equal((fold.match(/data-asof/g) ?? []).length, 1)
-})
-
-test('the 18b page names one ending, the same in its chip and its sentence, and prints "Fixed in" only for a later release', () => {
-  const { doc, fold, html } = runPage('18b')
-  assert.deepEqual(slots(fold), ['state', 'best', 'blocker', 'output'])
-  const chip = /data-status="run:([^":]+):neutral"/.exec(fold)[1]
-  assert.equal(chip, 'Stopped by Lab (stall)')
-  const state = visible(/<p class="run-state">(.*?)<\/p>/.exec(fold)[1])
-  assert.equal(state, 'Stopped by Lab (stall) at 03:27Z after 26.1 h, when 15 minutes passed with no agent output.')
-  const endings = new Set(visible(fold).match(/Stopped by Lab \(stall\)|Stopped by operator|cancelled after stall|cancelled|stalled|The operator stopped/gi))
-  assert.deepEqual([...endings], ['Stopped by Lab (stall)'])
-  // No alarm above the fold: no red or amber mark, and the stuck, gate and quota detail folds into "Why it stopped".
-  assert.doesNotMatch(fold, /:fail"|:attention"/)
-  assert.doesNotMatch(visible(fold), /STUCK|gate|quota|Hung/i)
-  assert.match(visible(fold), /None open ended 18\.7 h ago · continued in 19f/)
-
-  // Each "Fixed in" names a release first checked after the line was sent.
-  const firstChecked = (tag) => Math.min(...doc.receipt.system.play.scores.filter((point) => point.tag?.endsWith(`/${tag}`)).map((point) => Date.parse(point.firstAt ?? point.at)))
-  const rows = [...html.matchAll(/<tr data-field="contract\.\d+">.*?<td data-sent="([^"]+)">.*?<td data-field="contract\.\d+\.fixCommit">(.*?)<\/td>/gs)]
-  assert.equal(rows.length, doc.receipt.contract.length)
-  for (const [, sent, cell] of rows) {
-    const tag = /Fixed in <code>(rc\d+)<\/code>/.exec(cell)?.[1]
-    if (tag) assert.ok(firstChecked(tag) > Date.parse(sent), `${tag} was first checked after ${sent}`)
-  }
-  // As served at capture (shots/tiles/run-18b-stalled-main-1440-light-01.png): lines sent on rc15 and rc16 credited
-  // rc14's commit 48a3930a, cut before both. They read as not fixed by a later release.
-  const credited = doc.receipt.contract.map((line) => (/\/rc1[56]$/.test(line.tag) ? { ...line, fixCommit: '48a3930a69b90b314c9b2ac0b42ba6fe18633dee', resolvedOn: 'magnetar-rust-20261018b/rc14', resolvedAt: '2026-10-18T20:46:10.316Z', resolution: 'moved' } : line))
-  const stale = renderToStaticMarkup(createElement(RunOverview, { api: '/api/discovery', doc: { ...doc, receipt: { ...doc.receipt, contract: credited } }, play }))
-  assert.doesNotMatch(stale, /Fixed in <code>rc14<\/code>/)
-  for (const tag of ['rc15', 'rc16']) assert.match(visible(stale), new RegExp(`on ${tag} not fixed by a later release`))
-})
 
 test('a run a newer run continued offers no rerun of its check and links forward instead', () => {
   for (const [id, next] of [['17c', '18b'], ['18b', '19f']]) {

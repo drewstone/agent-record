@@ -1,5 +1,5 @@
 import { useDocument, when } from './data.js'
-import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument } from './reliability-model.js'
+import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument, settledOf } from './reliability-model.js'
 
 /**
  * The fleet's run reliability over the last seven days, on the plays page: the share of settled runs no infrastructure,
@@ -29,14 +29,14 @@ export function ReliabilityPanel({ api }: { api: string }) {
         <span className="faint">{data.lostAgentHours !== null ? `${Math.round(data.lostAgentHours)} agent-hours lost` : 'agent-hours lost unknown'}</span>
       </div>
       <div className="reliability-chart">
-      <div className="reliability-days" role="img" aria-label={data.daily.map((day) => `${day.day}: ${percent(day.rate)} of ${day.runs} runs`).join('; ')}>
+      <div className="reliability-days" role="img" aria-label={data.daily.map((day) => `${day.day}: ${percent(day.rate)} of ${settledOf(day)} settled runs`).join('; ')}>
         {data.daily.map((day) => (
-          <div key={day.day} className="reliability-day" title={`${day.day}: ${day.clean} clean, ${day.hit} hit, ${day.failed} failed of ${day.runs}`}>
+          <div key={day.day} className="reliability-day" title={`${day.day}: ${day.clean} clean, ${day.hit} hit, ${day.failed} failed of ${settledOf(day)} settled (${day.cancelled ?? 0} cancelled)`}>
             <span className="reliability-bar">
-              {day.rate !== null && day.runs > 0 && <i style={{ height: `${Math.max(3, day.rate * 100)}%` }} />}
+              {day.rate !== null && settledOf(day) > 0 && <i style={{ height: `${Math.max(3, day.rate * 100)}%` }} />}
             </span>
-            <span>{day.runs ? percent(day.rate) : '—'}</span>
-            <span className="faint">{day.runs}</span>
+            <span>{settledOf(day) ? percent(day.rate) : '—'}</span>
+            <span className="faint">n={settledOf(day)}</span>
             <span className="faint">{`${Number(day.day.slice(5, 7))}/${Number(day.day.slice(8, 10))}`}</span>
           </div>
         ))}

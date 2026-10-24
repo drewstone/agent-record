@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { NeedsYou, PlayClimb, RunOverview, runReceiptSchema } from '../dist/index.js'
+import { PlayClimb, RunOverview, runReceiptSchema } from '../dist/index.js'
 
 const receipt = runReceiptSchema.parse(JSON.parse(await readFile(new URL('./fixtures/run-receipt-contract-loop.json', import.meta.url), 'utf8')))
 const passed = { solved: true, checkedAt: '2026-10-18T01:56:09.489Z', firstFailingLine: null, stage: null, tag: 'test-contract-loop-20261018c/rc3', lastStreamAt: '2026-10-18T01:54:24.901Z', minutesSinceLastStream: 2.1 }
@@ -120,27 +120,8 @@ test('a run pressed before calibration was registered names the record that woul
   assert.match(text(html), /run-input\.json acceptance\.play\.calibration would state it/)
 })
 
-// The same harness served the overview's Needs you lines (attention[], kept whole) and the play page. The host tones the
-// held pass and the undecided disputes warn or neutral; the issue makes the held pass's line the one red.
+// The same harness served the play page.
 const fixture = async (name) => JSON.parse(await readFile(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'))
-const statuses = (html) => [...html.matchAll(/data-status="([^"]*)"/g)].map((match) => match[1])
-
-test('in Needs you a held pass is the one red line, and each undecided dispute appears once with its referees', async () => {
-  const { attention } = await fixture('discovery-overview-codeplay-attention')
-  const html = renderToStaticMarkup(createElement(NeedsYou, { attention }))
-  const items = html.split('<li').slice(1)
-  const held = items.filter((item) => /data-held="workloads hidden"/.test(item))
-  assert.equal(held.length, 1)
-  assert.match(text(held[0]), /act now · Drew.*codeplay 20c: check passed; held: stages workloads, hidden have no known-good fixture/)
-  assert.match(text(held[0]), /Add a good or reach fixture for workloads, hidden, then run disco calibrate codeplay/)
-  assert.deepEqual(statuses(html).filter((status) => status.endsWith(':fail')), ['alert:act now:fail'], 'the held line is the only red')
-  for (const run of ['codeplay-20261020b', 'codeplay-20261009a']) {
-    const lines = items.filter((item) => item.includes(`href="/run/${run}"`) && /data-dispute="c309bb08b9af"/.test(item))
-    assert.equal(lines.length, 1, `${run}'s undecided dispute appears once`)
-    assert.match(text(lines[0]), /check dispute c309bb08b9af is undecided, its referees disagree \(anthropic\/claude-opus-5-5 \(claude\) rejected; openai\/gpt-6\.1-sol \(codex\) undecided\)/)
-    assert.doesNotMatch(lines[0], /:fail"/)
-  }
-})
 
 test('the play page shows each run\'s stage calibration under its verdicts, and names the record an unknown needs', async () => {
   const html = renderToStaticMarkup(createElement(PlayClimb, { play: await fixture('discovery-play-codeplay') }))

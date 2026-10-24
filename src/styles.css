@@ -3549,8 +3549,9 @@
 /* Off the Standing tab the play's header is one 56 px sticky line, so a tab's first section starts near the top. */
 .ar-ws .play-head.is-compact { position: sticky; top: 0; z-index: 5; display: flex; flex-direction: row; align-items: center; gap: 12px; height: 56px; padding-top: 0; padding-bottom: 0; }
 .ar-ws .play-head.is-compact h1 { margin: 0; font-size: var(--ar-text-l, 18px); }
-/* The run's first screen: head, four slots, and the tabs below it. */
-.ar-ws .fold { display: flex; flex-direction: column; min-height: calc(100svh - 52px); }
+/* The run's first screen: head, four slots, and the tabs directly below it. A viewport-tall fold left ~470 px of blank
+   space above the tabs on a settled run (disco UI audit 2026-10-24), so the fold is only as tall as its content. */
+.ar-ws .fold { display: flex; flex-direction: column; }
 .ar-ws .run-fold { display: grid; gap: 12px; padding: 4px 0 16px; }
 .ar-ws .run-fold .crumbs { font-size: 13px; }
 .ar-ws .run-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
@@ -3562,6 +3563,16 @@
 .ar-ws .run-slot-label { font-size: 12px; font-weight: 600; color: var(--ar-fg-muted); }
 .ar-ws .run-slot-sub { font-size: 12.5px; color: var(--ar-fg-muted); }
 .ar-ws .run-slot-spark svg { width: 160px; height: 32px; }
+/* The best version's check, one segment per step: filled pass, red fail, hollow not run. Colour always rides with a
+   label, so a step reads without colour. */
+.ar-ws .run-steps { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 8px 0 4px; padding: 0; list-style: none; }
+.ar-ws .run-steps li { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 11px; color: var(--ar-fg-muted); }
+.ar-ws .run-steps li::before { content: ""; display: block; height: 8px; border-radius: 2px; border: 1px solid var(--ar-border); }
+.ar-ws .run-steps li[data-step="pass"]::before { background: var(--ar-c-ok); border-color: transparent; }
+.ar-ws .run-steps li[data-step="fail"]::before { background: var(--ar-c-fail); border-color: transparent; }
+.ar-ws .run-steps li[data-step="undecided"]::before { background: repeating-linear-gradient(135deg, var(--ar-c-run) 0 3px, transparent 3px 6px); border-color: var(--ar-c-run); }
+.ar-ws .run-steps li[data-step="unrun"]::before { background: transparent; border-style: dashed; }
+.ar-ws .run-steps li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ar-ws .run-meter { position: relative; display: block; height: 8px; margin: 6px 0 2px; border: 1px solid var(--ar-border); border-radius: 4px; background: var(--ws-raised); }
 .ar-ws .run-meter i { position: absolute; left: 0; top: -1px; bottom: -1px; border-radius: 4px; background: var(--ar-fg); }
 .ar-ws .run-meter .run-meter-prev { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ar-fg-muted); }

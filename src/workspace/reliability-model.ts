@@ -21,6 +21,9 @@ export interface ReliabilityDay {
   clean: number
   hit: number
   failed: number
+  cancelled?: number
+  open?: number
+  unread?: number
   rate: number | null
 }
 
@@ -38,6 +41,9 @@ export interface ReliabilityDocument {
 }
 
 /** A cause is live when the record saw it within this many hours of the document's own time. */
+/** A day's settled runs, the denominator of its rate (the Lab's definition): cancelled, open and unread runs are outside it. */
+export const settledOf = (day: ReliabilityDay) => day.runs - (day.cancelled ?? 0) - (day.open ?? 0) - (day.unread ?? 0)
+
 export const LIVE_HOURS = 48
 
 /**

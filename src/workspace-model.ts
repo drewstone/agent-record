@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
 import { checkDisputeSchema, runCheckSchema } from './run-check-model.js'
 import { playBlockerSchema, playFindingFields, playPageFields } from './workspace/play-standing.js'
+import { viewSchema } from './workspace/view.js'
+import { runExecutionSchema } from './workspace/run-execution.js'
 
 /**
  * Documents served by a run workspace API (`/api/discovery/*` on the Tangle wall).
@@ -946,19 +948,9 @@ export const runDocumentSchema = z
     findings: findingsSchema.nullable().optional(),
     progress: runProgressSchema.nullable().optional(),
     /** Operator evidence composed by the host from the live run directory. */
-    execution: z.object({
-      alive: z.boolean(),
-      lastActivityAt: z.string().nullable(),
-      failedAttempts: z.number(),
-      settleKind: z.string().nullable(),
-      endingError: z.object({ name: z.string(), message: z.string() }).nullable(),
-      lastAttempt: z.object({ error: z.string().nullable(), classification: z.string().nullable(), madeProgress: z.boolean().nullable().optional(), retryInMs: z.number().nullable().optional(), at: z.string().nullable().optional() }).nullable(),
-      diagnoses: z.array(z.object({ id: z.string(), title: z.string().optional(), fix: z.string() })),
-      diagnosisError: z.string().nullable().optional(),
-      /** `reason` is null where resuming does not apply (a host-placed run has no source sandbox). */
-      resume: z.object({ status: z.enum(['preserved', 'unavailable', 'unknown']), command: z.string().nullable(), reason: z.string().nullable() }),
-      runnerTail: z.string().nullable().optional(),
-    }).optional(),
+    execution: runExecutionSchema.optional(),
+    /** The host's one view of the run (views.run_view): status, sentence, blocker, progress, needs-you, as-of. */
+    view: viewSchema.optional(),
   })
   .catchall(z.unknown())
 
