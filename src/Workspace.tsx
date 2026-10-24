@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
@@ -48,8 +48,7 @@ import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
-// The run workspace pulls in sandbox-ui's file, code and diff views: a chunk of its own, loaded when a run page opens.
-const RunWorkspace = lazy(() => import('./workspace/RunWorkspace.js').then((module) => ({ default: module.RunWorkspace })))
+import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
@@ -63,7 +62,7 @@ export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
   /** `report` is the play report at `/play/<id>/report`; `id` is the play. */
-  mode: 'plays' | 'play' | 'report' | 'run' | 'receipt' | 'overview' | 'theatre' | 'explore'
+  mode: 'plays' | 'play' | 'report' | 'run' | 'receipt' | 'overview' | 'today' | 'theatre' | 'explore'
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -72,7 +71,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'overview' ? <OverviewPage api={api} /> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : mode === 'report' ? <PlayReportPage api={api} id={id} theme={theme} /> : <RunPage api={api} id={id} />}
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'overview' ? <OverviewPage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : mode === 'report' ? <PlayReportPage api={api} id={id} theme={theme} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
@@ -907,7 +906,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
         <Suspense fallback={<p className="ws-status" role="status">Opening the workspace…</p>}>
-          <RunWorkspace
+          <LazyRunWorkspace
             api={api}
             doc={doc}
             transcript={(node, select) =>

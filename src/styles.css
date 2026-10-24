@@ -1674,7 +1674,8 @@
 .ar-ws .ws-facts .live { color: var(--ar-c-run); }
 .ar-ws .state-pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px;
-  font: 600 var(--ar-text-s)/1.6 var(--ar-font-mono); white-space: nowrap;
+  /* Monospace is for identifiers, hashes and paths only (disco UI brief): a status word is UI text. */
+  font: 600 var(--ar-text-s)/1.6 var(--font-sans, system-ui, sans-serif); white-space: nowrap;
   color: var(--ar-c-neutral); border: 1px solid color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); background: none;
 }
 /* Status colour has one path: the `data-status="<axis>:<word>:<tone>"` that statusOf (src/workspace/data.ts) writes.
@@ -3668,3 +3669,54 @@
 .ar-ws .rw-phone .rw-releases { padding: 0 0 4px; }
 .rw-sheet.agent-record.ar-ws { height: 92svh; background: var(--bg-elevated, var(--bg-root)); color: var(--text-primary); border-top: 1px solid var(--border-subtle); border-radius: 16px 16px 0 0; padding: 16px; display: flex; flex-direction: column; gap: 8px; padding-bottom: env(safe-area-inset-bottom); }
 .rw-sheet-body { flex: 1; min-height: 0; overflow: auto; }
+
+/* Today (Today.tsx): the Discovery home, calm and readable from across the room. Four type sizes only: 48 px hero
+   figures, 20 px headings, 15 px body, 13 px secondary; 24-32 px between sections; one as-of in the header. */
+.ar-ws .td { display: grid; gap: 28px; max-width: 1320px; margin: 0 auto; padding: 8px 0 48px; font-family: var(--font-sans); font-size: 15px; }
+.ar-ws .td-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.ar-ws .td-head h1 { white-space: nowrap; }
+.ar-ws .td-head h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.ar-ws .td-head .as-of { margin-left: auto; font-size: 13px; }
+.ar-ws .td-label { margin: 0 0 4px; font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+.ar-ws .td-big { display: flex; align-items: baseline; gap: 12px; margin: 0; font-size: 48px; line-height: 1.05; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--text-primary); }
+.ar-ws .td-big span { font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--text-secondary); }
+.ar-ws .td-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.ar-ws .td-hero, .ar-ws .td-card, .ar-ws .td-plays { padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-panel, 16px); background: var(--bg-card); }
+.ar-ws .td-hero .td-big[data-count="0"] { color: hsl(var(--success)); }
+.ar-ws .td-needs { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.ar-ws .td-needs li { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; padding: 12px 0 0; border-top: 1px solid var(--border-subtle); }
+.ar-ws .td-need-text { margin: 0; font-size: 15px; line-height: 1.45; color: var(--text-primary); }
+.ar-ws .td-go { align-self: center; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: var(--radius-pill, 999px); background: var(--accent-surface-soft); color: var(--text-primary); text-decoration: none; transition: background-color 150ms ease-out; }
+.ar-ws .td-go:hover { background: var(--accent-surface-strong); }
+.ar-ws .td-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.ar-ws .td-runs { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.ar-ws .td-runs a { display: flex; align-items: center; gap: 10px; color: var(--text-primary); text-decoration: none; font-size: 15px; }
+.ar-ws .td-dots { display: block; max-width: 100%; height: auto; margin-top: 12px; overflow: visible; }
+.ar-ws .td-dots .td-n { fill: var(--text-dim, var(--text-muted)); }
+.ar-ws .td-dots line { stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; }
+.ar-ws .td-dots circle { fill: hsl(var(--success)); stroke: hsl(var(--success)); stroke-width: 2; }
+.ar-ws .td-dots circle[data-hollow] { fill: var(--bg-card); }
+.ar-ws .td-dots text { font-family: var(--font-sans); font-size: 12px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .td-plays ul { display: grid; margin: 12px 0 0; padding: 0; list-style: none; }
+.ar-ws .td-plays li + li { border-top: 1px solid var(--border-subtle); }
+.ar-ws .td-plays a { display: grid; grid-template-columns: 9rem minmax(10rem, 16rem) 8rem 1fr; align-items: center; gap: 16px; padding: 12px 4px; color: var(--text-primary); text-decoration: none; border-radius: var(--radius-md, 8px); transition: background-color 150ms ease-out; }
+.ar-ws .td-plays a:hover { background: var(--bg-hover); }
+.ar-ws .td-plays b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .td-steps { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(6px, 1fr); align-items: center; gap: 2px; font-size: 13px; }
+.ar-ws .td-steps i { display: block; height: 6px; border-radius: 2px; border: 1px solid var(--border-default); }
+.ar-ws .td-steps i[data-step="pass"] { background: hsl(var(--success)); border-color: transparent; }
+.ar-ws .td-steps i[data-step="fail"] { background: hsl(var(--error)); border-color: transparent; }
+.ar-ws .td-steps i[data-step="undecided"] { background: repeating-linear-gradient(135deg, hsl(var(--warning)) 0 2px, transparent 2px 4px); border-color: hsl(var(--warning)); }
+.ar-ws .td-steps em { margin-left: 6px; font-style: normal; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .td-steps.is-empty { display: block; color: var(--text-muted); }
+.ar-ws .td-play-line { font-size: 13px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) {
+  .ar-ws .td { gap: 20px; }
+  .ar-ws .td-row { grid-template-columns: 1fr; }
+  .ar-ws .td-hero, .ar-ws .td-card, .ar-ws .td-plays { padding: 16px; }
+  .ar-ws .td-needs li { grid-template-columns: 1fr; }
+  .ar-ws .td-plays a { grid-template-columns: auto 1fr; gap: 6px 12px; }
+  .ar-ws .td-plays .td-steps, .ar-ws .td-plays .td-play-line { grid-column: 1 / -1; white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) { .ar-ws .td * { transition: none !important; } }
+.ar-ws .td-more { margin-top: 12px; padding: 6px 14px; font: 600 13px var(--font-sans); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text-secondary); cursor: pointer; }
