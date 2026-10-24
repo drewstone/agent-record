@@ -23,6 +23,13 @@ const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'sho
 const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
+/** Agent text as a reader's line: markdown stripped, its first sentence, at most `words` words (the raw text sits behind "full"). */
+export function plainSummary(text: string | null | undefined, words = 20) {
+  const plain = (text ?? '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/(\*\*|__|`)(.+?)\1/g, '$2').replace(/^[#>\s]+/, '').replace(/\s+/g, ' ').trim()
+  const first = plain.split(/(?<=[.!?])\s/)[0] ?? plain
+  const cut = first.split(' ')
+  return cut.length > words ? `${cut.slice(0, words).join(' ')}…` : first
+}
 /** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
 const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
 
@@ -49,10 +56,35 @@ function useJourney(api: string, doc: RunDocument) {
 }
 type Model = NonNullable<ReturnType<typeof useJourney>['model']>
 
+type Blocker = { action?: string | null; owner?: string | null; text?: string; since?: string | null; kind?: string; dispute?: string | null }
+
+/**
+ * Who acts on the blocker (the lead, 21:45Z): Drew's own decision is a control, a check dispute's two rulings as the
+ * exact `disco steer --ruling` commands to run; anyone else's is "nothing for you", with since when they hold it.
+ */
+function NextStep({ runId, blocker }: { runId: string; blocker: Blocker }) {
+  const [copied, setCopied] = useState<string | null>(null)
+  const since = blocker.since ? `${day(ms(blocker.since))} ${clock(ms(blocker.since))}Z` : null
+  if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
+    const command = (verdict: 'upheld' | 'rejected') => `disco steer ${runId} "Drew's ruling" --ruling ${blocker.dispute} --verdict ${verdict}`
+    const copy = (verdict: 'upheld' | 'rejected') => void navigator.clipboard?.writeText(command(verdict)).then(() => setCopied(verdict))
+    return (
+      <p className="rj-next"><b>Your decision:</b> {blocker.action}
+        <span className="rj-decide">
+          <button type="button" onClick={() => copy('upheld')} title={command('upheld')}>{copied === 'upheld' ? 'Copied' : 'Uphold the agents'}</button>
+          <button type="button" onClick={() => copy('rejected')} title={command('rejected')}>{copied === 'rejected' ? 'Copied' : 'The check stands'}</button>
+        </span>
+        <span className="rj-muted"> copies the command for the Lab host</span>
+      </p>
+    )
+  }
+  return <p className="rj-next"><b>Nothing for you.</b> <span className="rj-muted">{blocker.owner ?? 'Its owner'} is on it{since ? ` since ${since}` : ''}: {blocker.action?.charAt(0).toLowerCase()}{blocker.action?.slice(1)}.</span></p>
+}
+
 /** Q3 on the run: the best release's steps as the hero, how long it has been stuck, and the action that clears it. */
 function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
   const stuck = m.plateau ? hours(ms(m.plateau.taggedAt), m.t1) : null
-  const blocker = doc.view?.blocker as ({ action?: string | null; owner?: string | null; text?: string } | null | undefined)
+  const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
       {m.best?.steps && (
@@ -65,7 +97,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
       <p className="rj-stuck">
         {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
       </p>
-      {blocker?.action && <p className="rj-next"><b>Next:</b> {blocker.action}<span className="rj-muted"> · {blocker.owner ?? 'owner not named'}</span>{blocker.text && <span className="rj-muted" title={blocker.text}> · why</span>}</p>}
+      {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} />}
       <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}${stuck !== null && m.plateau === m.releases[0] ? `, no step gained in ${stuck.toFixed(0)} h` : ''}`
@@ -128,6 +160,12 @@ function Lanes({ m, phone, picked, onPick }: { m: Model; phone: boolean; picked:
   )
 }
 
+/** A plain line, with the agent's own words behind "full" when the line shortened them. */
+function Full({ short, raw }: { short: string; raw: string }) {
+  if (short === raw.trim()) return <>{short}</>
+  return <span className="rj-full">{short} <details><summary>full</summary><p>{raw}</p></details></span>
+}
+
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
 function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void }) {
   const landed = m.releases.filter((r) => r.files?.[node.id]?.length)
@@ -155,8 +193,8 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
     <section className="rj-drill" aria-label={`${role}: what it did`}>
       <h2>{role}</h2>
       <dl className="rj-summary">
-        <dt>Task</dt><dd>{node.assignment ?? 'not recorded'}</dd>
-        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ?? 'no last words recorded'}</dd>
+        <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
+        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
         <dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd>
       </dl>
       {paths.length > 0 && (
@@ -197,13 +235,13 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
         <>
           <Ladder doc={doc} m={m} />
           <section aria-label="What the agents did">
-            <h2 className="rj-label">What the agents did · {m.nodes.length} agents, {[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work · select one</h2>
+            <h2 className="rj-label">What the agents did · {m.nodes.length} {m.nodes.length === 1 ? 'agent' : 'agents'}, {[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work · select one</h2>
             <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
           </section>
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
           <footer className="rj-foot">
             {m.best && m.data.code.available && <button type="button" className="rj-link" onClick={() => setTree(!tree)}>{tree ? 'Hide' : 'Browse'} every file in {m.best.release}</button>}
-            {receipt && <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt ({receipt.tag})</a>}
+            {receipt && <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt{/^rc\d+$/.test(receipt.tag) ? ` (${receipt.tag})` : ''}</a>}
           </footer>
           {tree && m.best && <div className="rj-tree"><CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} /></div>}
         </>

@@ -3634,6 +3634,12 @@
 .ar-ws .rj-step-undecided, .ar-ws .rj-step-unrun { background: color-mix(in srgb, var(--ar-c-warn, #f5a524) 26%, transparent); outline: 2px solid var(--ar-c-warn, #f5a524); }
 .ar-ws .rj-step-fail { background: color-mix(in srgb, var(--ar-c-fail, #ef4444) 26%, transparent); outline: 2px solid var(--ar-c-fail, #ef4444); }
 .ar-ws .rj-stuck, .ar-ws .rj-next, .ar-ws .rj-releases { margin: 0; font-size: 15px; }
+.ar-ws .rj-full details { display: inline; }
+.ar-ws .rj-full summary { display: inline; cursor: pointer; color: var(--ar-fg-muted); font-size: 13px; }
+.ar-ws .rj-full details[open] p { margin: 6px 0 0; white-space: pre-wrap; font-size: 13px; color: var(--ar-fg-muted); }
+.ar-ws .rj-decide { display: inline-flex; gap: 6px; margin-left: 8px; }
+.ar-ws .rj-decide button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--ar-border, currentColor); background: transparent; color: inherit; cursor: pointer; transition: background 220ms; }
+.ar-ws .rj-decide button:hover { background: color-mix(in srgb, var(--ar-fg-faint) 18%, transparent); }
 .ar-ws .rj-releases { color: var(--ar-fg-muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .ar-ws .rj-mini.rj-pass { color: var(--ar-c-ok, #22c55e); }
 .ar-ws .rj-mini.rj-fail { color: var(--ar-c-fail, #ef4444); }
@@ -3684,8 +3690,12 @@
 .ar-ws .ws-run:has(> .rj) > .run-tabs:not([data-run-tabs='now']) ~ .rr-page { display: block; }
 @keyframes rj-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (max-width: 640px) {
-  .ar-ws .rj-ladder { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ar-ws .rj-step { padding: 12px 10px; }
+  /* One segmented bar: the step labels drop, the "stuck at" line under it names the open step. */
+  .ar-ws .rj-ladder { gap: 3px; }
+  .ar-ws .rj-step { padding: 8px 0; border-radius: 4px; text-align: center; }
+  .ar-ws .rj-step > span:not(.rj-step-n) { display: none; }
+  .ar-ws .rj-step-n { font-size: 15px; }
+  .ar-ws .rj-step-undecided, .ar-ws .rj-step-unrun, .ar-ws .rj-step-fail { outline-offset: -2px; }
   .ar-ws .rj-summary { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .ar-ws .rj-lane .rj-bar { transition: none; } .ar-ws .rj-drill { animation: none; } }
