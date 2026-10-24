@@ -2,6 +2,7 @@ import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
 import { money, StatusPill, statusOf, tokens } from './data.js'
+import { viewChip } from './view.js'
 import { checkerLabel, checksByRun, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 
 type Play = PlayDocument & PlayHead
@@ -208,7 +209,8 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                     {full && row.inputDiffers && <span className="chip" title={`Input differs: ${row.inputDiffers}`}>{row.inputDiffers}</span>}
                   </td>
                   <td className="ledger-ending" title={row.ending?.reason ?? undefined}>
-                    {row.ending ? <StatusPill status={statusOf({ axis: 'run', state: row.ending.word, reason: row.ending.reason })} className="ending-glyph" /> : '—'}
+                    {/* The host's status for the run (views.run_status), so a win under an earlier check never reads "Passed". */}
+                    {row.ending ? <StatusPill status={row.ending.status ? viewChip(row.ending.status) : statusOf({ axis: 'run', state: row.ending.word, reason: row.ending.reason })} className="ending-glyph" /> : '—'}
                   </td>
                   <td className="ledger-bar">
                     <WallBar row={row} max={maxWall} />
