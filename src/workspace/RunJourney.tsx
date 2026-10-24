@@ -190,6 +190,26 @@ function askedBy(m: Model, node: Node) {
   return node.id === m.root ? 'the play press that started this run (prompt below)' : 'sender not captured'
 }
 
+/**
+ * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input names the prompt sent to the root and
+ * the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
+ */
+function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
+  const input = doc.input
+  const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
+  if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
+  const source = input.source?.path?.split('/').pop()
+  return (
+    <dl className="rj-trigger">
+      <dt>Asked</dt>
+      <dd>The play press for {doc.run.play} asked the {root ? who(root) : 'root agent'}: {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">its message was not recorded</span>}</dd>
+      <dt>Goal</dt>
+      <dd>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}
+        {source && <span className="rj-muted" title={input.source?.sha256 ?? undefined}> · from {source}</span>}</dd>
+    </dl>
+  )
+}
+
 function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void }) {
   const landed = m.releases.filter((r) => r.files?.[node.id]?.length)
   const changes = new Map<string, Release>()
@@ -240,7 +260,9 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
 
 export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode; phone: boolean }) {
   const { runUrl, model: m, error } = useJourney(api, doc)
-  const [picked, setPicked] = useState<string | null>(null)
+  const [chosen, setPicked] = useState<string | null>(null)
+  // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
+  const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
   const [tree, setTree] = useState(false)
   const view = doc.view
   const node = m?.nodes.find((n) => n.id === picked) ?? null
@@ -255,6 +277,7 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
         {m && <p className="rj-sentence">{view?.status.label ?? 'Ended'} after {hours(m.t0, m.t1).toFixed(1)} h{m.best ? `; best ${m.best.release} passes ${m.best.passed} of ${m.best.total} steps` : ''}.</p>}
+        {m && <Trigger doc={doc} m={m} />}
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
