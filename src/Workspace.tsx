@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
@@ -32,7 +32,7 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { OutputsView } from './workspace/Outputs.js'
@@ -50,6 +50,7 @@ import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { readSource } from './workspace/source-reader.js'
+import { useSearch } from './workspace/navigation.js'
 import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
@@ -76,20 +77,6 @@ export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
       {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
-}
-
-function useSearch() {
-  const [search, setSearch] = useState(() => window.location.search)
-  useEffect(() => {
-    const changed = () => setSearch(window.location.search)
-    window.addEventListener('popstate', changed)
-    return () => window.removeEventListener('popstate', changed)
-  }, [])
-  const update = useCallback((patch: Record<string, string | undefined | null>, replace = false) => {
-    writeSearch(patch, replace)
-    setSearch(window.location.search)
-  }, [])
-  return [useMemo(() => new URLSearchParams(search), [search]), update] as const
 }
 
 function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs: readonly (readonly [T, string])[]; value: T; onChange: (tab: T) => void; label: string }) {

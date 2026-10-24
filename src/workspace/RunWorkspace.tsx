@@ -30,6 +30,10 @@ export interface WorkspaceRelease {
   release: string
   commit: string | null
   taggedAt: string | null
+  /** When its check ran; the time of a release that was checked but never tagged (test-disposable-smoke rc2). */
+  at?: string | null
+  /** The check version that scored it (v1, v7). */
+  checker?: string | null
   checked: boolean
   passed?: number | null
   total?: number | null

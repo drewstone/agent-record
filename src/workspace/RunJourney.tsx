@@ -7,6 +7,7 @@ import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
 import { plainSummary, sinceLabel } from './plain-words.js'
+import { RunFilesPane } from './RunFilesPane.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
@@ -34,7 +35,9 @@ function useJourney(api: string, doc: RunDocument) {
     const data = ws.data
     if (!data) return null
     const nodes = data.nodes as Node[]
-    const releases = (data.releases as Release[]).filter((r) => r.taggedAt)
+    // A release checked but never tagged still counts (its check time stands in): dropping it printed "No release was
+    // checked" over a release that passed (root 10478 23:12Z, test-disposable-smoke rc2).
+    const releases = (data.releases as Release[]).map((r) => ({ ...r, taggedAt: r.taggedAt ?? r.at ?? null })).filter((r) => r.taggedAt)
     const t0 = Math.min(...nodes.map((n) => ms(n.start)).filter(Number.isFinite))
     const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)))
     const best = releases.find((r) => r.release === data.best) ?? releases.at(-1) ?? null
@@ -44,7 +47,8 @@ function useJourney(api: string, doc: RunDocument) {
     const plateau = best ? releases.find((r) => r.passed === best.passed) ?? best : null
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
-    return { data, nodes, releases, t0, t1, best, commits, root, plateau, open, same }
+    const attributed = releases.some((r) => Object.keys(r.by ?? {}).length > 0)
+    return { data, nodes, releases, t0, t1, best, commits, root, plateau, open, same, attributed }
   }, [ws.data, doc.run.id])
   return { runUrl, model, error: ws.error }
 }
@@ -105,6 +109,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
       )}
       <p className="rj-stuck">
         {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under check {m.best.checker ?? 'an earlier version'}, an earlier check; the current check has not run on it.</span>}
       </p>
       {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       <p className="rj-releases">
@@ -263,8 +268,15 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
   const [chosen, setPicked] = useState<string | null>(null)
   // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
   const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
-  const [tree, setTree] = useState(false)
   const view = doc.view
+  const single = m?.nodes.length === 1
+  // The work: one files pane for the best release's code or the retained artifacts (the answer opens first).
+  const work = m && (
+    <section className="rj-work" aria-label="The work">
+      <RunFilesPane api={api} doc={doc} codeAvailable={Boolean(m.best && m.data.code.available)}
+        code={m.best && <CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} />} />
+    </section>
+  )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
   const receipt = doc.receipt
   return (
@@ -282,16 +294,19 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
           <Ladder doc={doc} m={m} />
-          <section aria-label="What the agents did">
-            <h2 className="rj-label">What the agents did · {m.nodes.length} {m.nodes.length === 1 ? 'agent' : 'agents'}, {[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work · select one</h2>
-            <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
-          </section>
+          {single ? (
+            // One agent: its identity in a line, and the work itself gets the room a one-lane timeline would waste.
+            <p className="rj-one"><span className="rj-muted">1 agent ·</span> {who(m.nodes[0]!)} · {m.nodes[0]!.status}</p>
+          ) : (
+            <section aria-label="What the agents did">
+              <h2 className="rj-label">What the agents did · {m.nodes.length} agents{m.attributed ? `, ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''} · select one</h2>
+              <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
+            </section>
+          )}
+          {single && work}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
-          <footer className="rj-foot">
-            {m.best && m.data.code.available && <button type="button" className="rj-link" onClick={() => setTree(!tree)}>{tree ? 'Hide' : 'Browse'} every file in {m.best.release}</button>}
-            {receipt && <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt{/^rc\d+$/.test(receipt.tag) ? ` (${receipt.tag})` : ''}</a>}
-          </footer>
-          {tree && m.best && <div className="rj-tree"><CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} /></div>}
+          {!single && work}
+          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt{/^rc\d+$/.test(receipt.tag) ? ` (${receipt.tag})` : ''}</a></footer>}
         </>
       )}
     </section>
