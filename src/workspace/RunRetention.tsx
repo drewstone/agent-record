@@ -11,9 +11,9 @@ export function RunRetention({ retention }: { retention: NonNullable<RunReceipt[
     <p><span data-field="system.retention.removed">{retention.removed}</span> sandbox removals confirmed; <span data-field="system.retention.pending">{retention.pending}</span> pending.</p>
     <dl className="rr-facts">
       <dt>Requested retention</dt><dd><span data-field="system.retention.disposition">{retention.disposition}</span>; <span data-field="system.retention.workspace">{retention.workspace}</span> workspace</dd>
-      <dt>Requested native capture</dt><dd data-field="system.retention.requestedNativeCapture">{retention.requestedNativeCapture ?? retention.nativeCapture}</dd>
+      <dt>Requested native capture</dt><dd data-field={retention.requestedNativeCapture === undefined ? 'system.retention.nativeCapture' : 'system.retention.requestedNativeCapture'}>{retention.requestedNativeCapture ?? retention.nativeCapture}</dd>
       <dt>Observed native capture</dt><dd>unverified</dd>
-      <dt>Requested cloud evidence</dt><dd data-field="system.retention.requestedCloudEvidence">{retention.requestedCloudEvidence ?? retention.cloudEvidence}</dd>
+      <dt>Requested cloud evidence</dt><dd data-field={retention.requestedCloudEvidence === undefined ? 'system.retention.cloudEvidence' : 'system.retention.requestedCloudEvidence'}>{retention.requestedCloudEvidence ?? retention.cloudEvidence}</dd>
       <dt>Observed cloud evidence</dt><dd>unverified</dd>
       <dt>Snapshot absence</dt><dd data-field="system.retention.snapshotAbsenceVerified">{retention.snapshotAbsenceVerified === true ? 'verified' : 'unverified'}</dd>
     </dl>
