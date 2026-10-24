@@ -272,4 +272,6 @@ Use `print` to open the receipt's drawers and show commands instead of action bu
 `renderRunReceipt` from `@drewstone/agent-record/receipt` uses the same component to produce shareable static HTML.
 Supply the package stylesheet through its `css` option. The workspace standalone bundle accepts `data-mode="receipt"` and `data-id="runId@tag"`.
 
+Resource cleanup separates requested retention, native capture and cloud evidence policy from observed infrastructure state. Those policy strings never establish that capture is disabled: observed native capture and cloud evidence remain unverified. Confirmed sandbox removals and snapshot absence use their own recorded evidence, independently of task success.
+
 The fixture-to-DOM browser check is `node --test tests/run-receipt.browser.mjs` after a build, with `PLAYWRIGHT_MODULE` pointing to the installed Playwright module. `RECEIPT_EVIDENCE_DIR` retains desktop/phone captures in both themes outside the public repository.
