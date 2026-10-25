@@ -70,7 +70,7 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
       if (untagged?.rows)
         return (
           <span className="ledger-best is-unscored" title={[untagged.line, untagged.at ? `newest ${utc(untagged.at)}` : null].filter(Boolean).join('\n') || undefined}>
-            {untagged.rows} {untagged.rows === 1 ? 'check' : 'checks'}, no release <span className="faint">· {untagged.line ?? 'no line recorded'}</span>
+            {untagged.rows} {untagged.rows === 1 ? 'check' : 'checks'}, no release
           </span>
         )
       return <span className="faint" title="no check ran">—</span>
@@ -80,7 +80,6 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
     return (
       <span className="ledger-best is-unscored" title={[`${checks.rows} rows under ${checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')}; the check prints no score`, top ? `most: ${top.count}× ${top.reason}` : null].filter(Boolean).join('\n')}>
         {checks.solved ? `solved ×${checks.solved}` : verdicts.length === 1 ? verdictWord(verdicts[0]) : 'not solved'} <span className="num">×{checks.rows}</span>
-        <span className="faint"> {checks.checkers.map((c) => checkerLabel(play.checkers, c)).join(', ')} · score not recorded</span>
       </span>
     )
   }

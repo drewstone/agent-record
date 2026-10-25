@@ -32,11 +32,9 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
       <a className="finding-title" href={href} title={plain(item.text).slice(0, 600) || undefined}>
         {title}
       </a>
-      <span className="finding-meta faint">
+      <span className="finding-meta faint" title={[writer, at ? utc(at) : item.at ? `${utc(item.at)} (the record's time, not the commit's)` : null].filter(Boolean).join(' · ') || undefined}>
         <span className="chip kind-chip">{item.kind}</span>
         <span className="mono">{shortRun(play.id, item.runId)}</span>
-        {writer && <> · {writer}</>}
-        {at ? <> · {utc(at)}</> : !item.writtenAt && item.at ? <span title="The page's time as the record states it, not the commit that wrote it"> · {utc(item.at)}</span> : null}
         {item.duplicates && item.duplicates.length > 0 && <span className="chip" title="Pages that say the same thing, folded here"> +{item.duplicates.length} alike</span>}
       </span>
       {item.commits && item.commits.length > 0 && (
@@ -48,13 +46,13 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
               key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`}
               className="commit-chip"
               data-status={dataStatus(status)}
-              title={[`commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null].filter(Boolean).join('\n')}
+              title={[
+                [commit.run ? shortRun(play.id, commit.run) : null, verdictWord(commit.verdict), typeof commit.workloads === 'object' && commit.workloads?.total ? `${commit.workloads.passed}/${commit.workloads.total}` : null, commit.checker ? checkerLabel(play.checkers, commit.checker) : null].filter(Boolean).join(' · '),
+                `commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null,
+              ].filter(Boolean).join('\n')}
             >
               {status.shape}{' '}
               {commit.tag ? <b>{shortTag(commit.tag)}</b> : <>commit {commit.sha.slice(0, 7)}</>}
-              {commit.run && <> ({shortRun(play.id, commit.run)})</>} {verdictWord(commit.verdict)}
-              {typeof commit.workloads === 'object' && commit.workloads?.total ? ` ${commit.workloads.passed}/${commit.workloads.total}` : ''}
-              {commit.checker && <> · {checkerLabel(play.checkers, commit.checker)}</>}
             </span>
             )
           })}
@@ -78,19 +76,14 @@ export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: numb
     <section className="ws-section play-findings" data-play-findings aria-label="Findings">
       <header className="section-head">
         <h3>Findings</h3>
-        <p className="faint">
-          {GROUPS.filter(([id]) => counts.get(id))
-            .map(([id, label]) => `${counts.get(id)} ${label.toLowerCase()}`)
-            .join(' · ')}
-        </p>
       </header>
       {GROUPS.map(([id, label, why]) => {
         const rows = shown.filter((item) => groupOf(item) === id)
         if (!rows.length) return null
         return (
           <details key={id} className={`finding-group group-${id}`} open={id !== 'unchecked' || !limit}>
-            <summary>
-              <b>{label}</b> <span className="faint">{counts.get(id)} · {why}</span>
+            <summary title={why}>
+              <b>{label}</b> <span className="num">{counts.get(id)}</span>
             </summary>
             <ul>
               {rows.map((item) => (
