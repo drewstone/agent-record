@@ -112,7 +112,8 @@ function holdLine(view: HostView) {
   const blocker = view.blocker
   if (!blocker) return null
   const action = blocker.action ?? plainSummary(blocker.text, 16)
-  return `${blocker.owner === 'Drew' ? 'You' : blocker.owner ?? 'Its owner'}: ${action.charAt(0).toLowerCase()}${action.slice(1)}.`
+  // The play page's sentence, word for word (review 2 #3): "<owner> will <action>."
+  return `${blocker.owner === 'Drew' ? 'You' : blocker.owner ?? 'Its owner'} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.`
 }
 
 function TodayView({ doc }: { doc: OverviewDocument }) {

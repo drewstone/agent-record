@@ -37,7 +37,9 @@ export function findingTitle(raw: string, tag?: string | null) {
 
 function Row({ play, item }: { play: Play; item: FeedItem }) {
   const tags = [...new Map((item.commits ?? []).map((commit) => [commit.tag ?? commit.sha, commit])).values()]
-  const title = findingTitle(plain(item.title) || plain(item.text).slice(0, 140), tags.find((c) => c.tag)?.tag) || 'Untitled page'
+  const base = findingTitle(plain(item.title) || plain(item.text).slice(0, 140), tags.find((c) => c.tag)?.tag) || 'Untitled page'
+  // Two runs' handoffs at the same tag read alike; the run tells them apart (review 2 #12).
+  const title = /^Handoff\b/.test(base) ? `${base} (${shortRun(play.id, item.runId)})` : base
   const writer = item.writer ?? item.agentLabel ?? null
   const at = item.writtenAt ?? null
   const href = item.href ?? `/run/${encodeURIComponent(item.runId)}?section=findings`

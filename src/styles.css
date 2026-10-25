@@ -3819,3 +3819,12 @@
    separated by spacing and a hairline, never cards inside the page. */
 .ar-ws .play-standing-tab .ws-section, #agent-workspace[data-mode="play"] .ar-ws .ws-section { background: transparent; border: 0; border-top: 1px solid var(--ar-border); border-radius: 0; padding: 24px 0 0; --chart-canvas: var(--ar-bg); }
 .ar-ws .play-standing-tab { display: grid; gap: 32px; }
+.ar-ws .pj-hero-verdict { font-size: 32px; line-height: 1.15; }
+.ar-ws .pj-history { margin: 0; font-size: 14px; color: var(--ar-fg-muted); }
+.ar-ws .pj-gap-chart .pj-count { fill: var(--ar-c-warn, #f5a524); font-weight: 600; }
+@media (max-width: 640px) { .ar-ws .pj-hero-verdict { font-size: 18px; } }
+.ar-ws .rj-full summary { white-space: nowrap; }
+/* Hover and keyboard focus on every control (review 2 #5: /today fell to 55% focus, 52% hover). */
+.ar-ws :where(a, button, summary, [role=button], [tabindex="0"]):focus-visible { outline: 2px solid var(--ar-c-action); outline-offset: 2px; border-radius: 4px; }
+.ar-ws :where(.tj, .pj, .rj) a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ar-ws :where(.tj, .pj, .rj) summary:hover, .ar-ws :where(.tj, .pj, .rj) button:hover { color: var(--ar-fg); }

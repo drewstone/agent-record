@@ -7,7 +7,7 @@ import { StatusPill, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
-import { goalText, plainSummary, sinceLabel } from './plain-words.js'
+import { goalText, plainSummary } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 import { useSearch } from './navigation.js'
@@ -75,7 +75,6 @@ export function RulingButtons({ runId, dispute }: { runId: string; dispute: stri
 
 
 function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker; paused: boolean }) {
-  const since = sinceLabel(blocker.since)
   // While research is paused only Drew lifts it: point at Today's decision, never "nothing for you" beside it.
   const pause = paused && <p className="rj-next"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>
   if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
@@ -87,7 +86,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
   return (
     <>
       {pause}
-      <p className="rj-next">{!paused && <b>Nothing for you. </b>}<span className="rj-muted">{why}{blocker.owner ?? 'Its owner'} is on it{since ? ` since ${since}` : ''}: {blocker.action?.charAt(0).toLowerCase()}{blocker.action?.slice(1)}.</span></p>
+      <p className="rj-next">{!paused && <b>Nothing for you. </b>}<span className="rj-muted">{why}{blocker.owner ?? 'Its owner'} will {blocker.action?.charAt(0).toLowerCase()}{blocker.action?.slice(1)}.</span></p>
     </>
   )
 }
@@ -97,11 +96,10 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
+      {/* One line, like the play page's strip (review 2 #10: six 100 px tiles above the timeline). */}
       {m.best?.steps && m.best.steps.length > 1 && (
-        <ol className="rj-ladder">
-          {m.best.steps.map((s, i) => (
-            <li key={i} className={`rj-step rj-step-${s.state}`}><span className="rj-step-n">{i + 1}</span><span>{s.label}</span></li>
-          ))}
+        <ol className="pj-strip" aria-label={`Steps ${m.best.release} passed`}>
+          {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><i />{s.label}</li>)}
         </ol>
       )}
       <p className="rj-stuck">
@@ -110,7 +108,9 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
         {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : 'every step passes'}</> : 'No release was checked.'}
         {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
-      {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
+      {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
+          21c's Oct 23 blocker contradicted the play's current one). */}
+      {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
@@ -126,6 +126,13 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
 function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
+  const outcome = (n: Node) => {
+    if (crashed(n)) return 'crashed'
+    const commits = m.commits.get(n.id)
+    if (!commits) return n.id === m.root ? null : 'nothing shipped'
+    const into = m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release)
+    return `shipped ${commits} ${commits === 1 ? 'commit' : 'commits'}${into.length ? ` into ${into.length > 2 ? `${into[0]}…${into.at(-1)}` : into.join(', ')}` : ''}`
+  }
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
@@ -136,7 +143,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.id === m.root ? 'lead' : n.role ?? n.label,
-        detail: [n.harness, n.model?.split('/').pop(), m.commits.get(n.id) ? `${m.commits.get(n.id)} commits` : null].filter(Boolean).join(' · ') || undefined,
+        // Its outcome first (review 2 #2: the tooltip said only "1 commits"): shipped into which releases, crashed, or idle.
+        detail: [outcome(n), n.harness, n.model?.split('/').pop()].filter(Boolean).join(' · ') || undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
       }
@@ -150,7 +158,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => span.id && onPick(span.id)} />
+  // Room for about 20 agents before the rows scroll (review 2 #2: 3 of 17 sat below a 640 px inner scroll).
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} maxHeight={Math.min(m.nodes.length, 20) * 36 + 16} onSelect={(span) => span.id && onPick(span.id)} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
@@ -278,7 +287,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single && work}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
           {!single && work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt{/^rc\d+$/.test(receipt.tag) ? ` (${receipt.tag})` : ''}</a></footer>}
+          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Receipt of the published release, ${receipt.tag}` : 'Published receipt'}</a></footer>}
         </>
       )}
     </section>

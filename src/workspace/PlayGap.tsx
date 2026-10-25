@@ -24,15 +24,21 @@ const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'UTC' }) + 'Z' : '—')
 const shortRun = (runId: string | null | undefined) => (runId ? runId.slice(-3) : '')
 
-/** The hero's number and two sentences: best measured rate against the paper, then what passed and what the bar needs. */
+/**
+ * The hero as the answer (review 2 #1: "1,436 cycles/s" alone needed domain knowledge): how fast it proves, how much
+ * faster the check needs it, where the paper is, then what passed before the bar rose.
+ */
 export function gapHeadline(gap: PlayGapFacts) {
   const best = gap.measured.reduce<PlayGapFacts['measured'][number] | null>((a, b) => (!a || b.value > a.value ? b : a), null)
   const target = gap.metric.target
-  const passed = gap.passed ? `Passed under check ${gap.passed.checker} (${gap.passed.tag}, run ${gap.passed.run}).` : 'No release has passed a check.'
-  const need = gap.need
-    ? ` Since ${gap.need.checker}, a ${cyclesWord(gap.need.cycles)}-cycle prove must finish in ${gap.need.capS} s; ${gap.need.count} ran past it.`
-    : ''
-  return { best, target, sentence: passed + need }
+  const needRate = gap.need ? Math.round(gap.need.cycles / gap.need.capS) : null
+  const hero = best ? `Proves at ${best.value.toLocaleString()} ${gap.metric.unit}.` : 'No proving rate measured yet.'
+  const needs = needRate && best ? `The check needs ${needRate.toLocaleString()} (${(needRate / best.value).toFixed(1)}× faster)` : null
+  const paper = target ? `the paper reaches ${rate(target.min)}–${rate(target.max)}` : null
+  const verdict = [needs, paper].filter(Boolean).join('; ')
+  const passed = gap.passed ? `Passed under check ${gap.passed.checker} (${gap.passed.tag}, run ${gap.passed.run}) before the bar rose` : 'No release has passed a check'
+  const misses = gap.need ? `; since ${gap.need.checker}, ${gap.need.count} proves ran past the ${gap.need.capS} s cap.` : '.'
+  return { best, target, hero, sentence: verdict ? `${verdict.charAt(0).toUpperCase()}${verdict.slice(1)}.` : '', history: passed + misses }
 }
 
 type Mark = { key: string; x: number; y: number; kind: 'measured' | 'bound'; title: string; pill: string; rows: [string, string][]; reason?: string }
@@ -57,7 +63,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const w = measured ?? (phone ? 380 : 1000), h = phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
   const t0 = Math.min(...times) - 3_600_000, t1 = Math.max(now, ...times)
   const values = [...gap.measured.map((m) => m.value), ...gap.capMisses.map((m) => m.below), target?.max ?? 0].filter((v) => v > 0)
-  const lo = Math.floor(Math.log10(Math.min(...values) / 2)), hi = Math.ceil(Math.log10(Math.max(...values) * 1.2))
+  const lo = Math.floor(Math.log10(Math.min(...values))), hi = Math.ceil(Math.log10(Math.max(...values)))
   const x = (t: number) => left + ((t - t0) / Math.max(1, t1 - t0)) * (w - left - right)
   const y = (v: number) => top + (1 - (Math.log10(v) - lo) / (hi - lo)) * (h - top - bottom)
   const marks: Mark[] = [
@@ -71,6 +77,11 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const ticks = Array.from({ length: hi - lo + 1 }, (_, i) => 10 ** (lo + i))
   const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   const shown = checkers.filter((c) => ms(c.firstAt) > t0 && ms(c.firstAt) <= t1)
+  // A tick at each UTC midnight, thinned to at most 7 so labels never touch.
+  const allDays: number[] = []
+  for (let t = Math.ceil(t0 / 86_400_000) * 86_400_000; t < t1 - 43_200_000; t += 86_400_000) allDays.push(t)
+  const days = allDays.filter((_, i) => i % Math.ceil(allDays.length / (phone ? 3 : 7)) === 0)
+  const lastMiss = marks.filter((m) => m.kind === 'bound').reduce<Mark | null>((a, b) => (!a || b.x > a.x ? b : a), null)
   return (
     <div className="pj-gap" ref={box}>
       <svg className="pj-gap-chart" viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={`${gap.metric.label} per release on a log scale against the paper's ${target ? `${rate(target.min)}–${rate(target.max)}` : ''} ${gap.metric.unit}`} onMouseLeave={() => setOn(null)}>
@@ -86,7 +97,9 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
             {m.kind === 'measured' ? <circle cx={m.x} cy={m.y} r={5} /> : <path d={`M${m.x - 5} ${m.y - 4} h10 l-5 8z`} />}
           </g>
         ))}
-        {[t0, t1].map((t, i) => <text key={i} className="pj-tick" x={x(t)} y={h - 8} textAnchor={i ? 'end' : 'start'}>{i ? 'now' : day(t)}</text>)}
+        {days.map((t, i) => <text key={t} className="pj-tick" x={x(t)} y={h - 8} textAnchor={i === 0 ? 'start' : 'middle'}>{day(t)}</text>)}
+        <text className="pj-tick" x={x(t1)} y={h - 8} textAnchor="end">now</text>
+        {gap.need && lastMiss && <text className="pj-count" x={lastMiss.x + 10} y={lastMiss.y - 8}>×{gap.need.count}</text>}
       </svg>
       {picked && (
         <div className="pj-tip" role="tooltip" style={{ left: `${(picked.x / w) * 100}%`, top: `${(picked.y / h) * 100}%` }}>

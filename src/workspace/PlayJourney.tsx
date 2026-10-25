@@ -5,7 +5,7 @@ import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import { PlayLedger } from './PlayLedger.js'
 import { type Play, playAsOf } from './answers.js'
 import { StatusPill } from './data.js'
-import { plainSummary, sinceLabel } from './plain-words.js'
+import { plainSummary } from './plain-words.js'
 import { usePhone } from './use-phone.js'
 import { type HostView, viewChip, type ViewTrend } from './view.js'
 
@@ -63,13 +63,12 @@ function headline(play: Play, m: Model) {
 function Hold({ view, open }: { view: HostView; open: Model['open'] }) {
   const b = view.blocker
   const paused = view.paused as { since?: string | null } | null | undefined
-  const since = sinceLabel(b?.since)
   const action = b ? (b.action ?? plainSummary(b.text, 16)) : null
   const why = b?.why ? (open ? b.why.replace(/^The check/, `The ${open.label} check`) : b.why) : null
   const owner = b?.owner ?? 'Its owner'
   const held = b && action && (why
-    ? <>{why}; {owner} will {action.charAt(0).toLowerCase()}{action.slice(1)}{since ? ` (on it since ${since})` : ''}.</>
-    : <>{owner}{since ? ` since ${since}` : ''}: {action.charAt(0).toLowerCase()}{action.slice(1)}.</>)
+    ? <>{why}; {owner} will {action.charAt(0).toLowerCase()}{action.slice(1)}.</>
+    : <>{owner} will {action.charAt(0).toLowerCase()}{action.slice(1)}.</>)
   return (
     <>
       {paused && <p className="pj-hold"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>}
@@ -155,11 +154,12 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
       </header>
       <section className="pj-q3" aria-label="How close is it, and what stops it">
         {g ? (
-          <p className="pj-hero">{g.best ? g.best.value.toLocaleString() : '—'}<small> {gap!.metric.unit}{g.target ? ` · paper ${(g.target.min / 1e6).toFixed(1)}–${(g.target.max / 1e6).toFixed(1)}M` : ''}</small></p>
+          <p className="pj-hero pj-hero-verdict">{g.hero}</p>
         ) : (
           <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
         )}
         <p className="pj-sentence">{g ? g.sentence : headline(play, m)}</p>
+        {g && <p className="pj-history">{g.history}</p>}
         <Hold view={m.view} open={m.open} />
       </section>
       <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
