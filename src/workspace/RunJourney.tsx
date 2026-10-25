@@ -23,7 +23,7 @@ type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: b
 /** One stretch of an agent's time from its OpenCode store (epoch ms): a model call, a tool, or waiting between calls. */
 type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
-type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]> }
+type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean }
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const hours = (a: number, b: number) => (b - a) / 3_600_000
@@ -57,7 +57,7 @@ function useJourney(api: string, doc: RunDocument) {
     const nodes = data.nodes as Node[]
     // A release checked but never tagged still counts (its check time stands in): dropping it printed "No release was
     // checked" over a release that passed (root 10478 23:12Z, test-disposable-smoke rc2).
-    const releases = (data.releases as Release[]).map((r) => ({ ...r, taggedAt: r.taggedAt ?? r.at ?? null })).filter((r) => r.taggedAt)
+    const releases = (data.releases as Release[]).map((r) => ({ ...r, tagged: Boolean(r.taggedAt), taggedAt: r.taggedAt ?? r.at ?? null })).filter((r) => r.taggedAt)
     const t0 = Math.min(...nodes.map((n) => ms(n.start)).filter(Number.isFinite))
     const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)))
     const best = releases.find((r) => r.release === data.best) ?? releases.at(-1) ?? null
@@ -217,6 +217,14 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
+/**
+ * The release to diff against: the nearest earlier one with a tag. A release checked from a commit it never tagged
+ * (21c rc116) is no git ref, and its name answered 404 (root 2026-10-25: "The code at rc116 is unavailable").
+ */
+function before(m: Model, release: Release) {
+  return m.releases.slice(0, m.releases.indexOf(release)).reverse().find((r) => r.tagged)?.release ?? null
+}
+
 /** Tokens and list cost summed over the agents with a usage source; null when no agent has one (never a zero). */
 function runUsage(m: Model) {
   const usage = m.nodes.map((n) => n.usage).filter((u): u is Usage => Boolean(u))
@@ -305,7 +313,7 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
   const [file, setFile] = useState<string | null>(null)
   useEffect(() => setFile(null), [node.id])
   const release = file ? changes.get(file)! : null
-  const prev = release ? m.releases[m.releases.indexOf(release) - 1]?.release ?? null : null
+  const prev = release ? before(m, release) : null
   const role = node.id === m.root ? 'lead' : node.role ?? node.label
   const single = m.nodes.length === 1
   return (
@@ -355,7 +363,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
     <section className="rj-work" aria-label="The work">
       <RunFilesPane api={api} doc={doc}
         codeUnavailable={!m.data.code.available ? (m.data.code.reason ?? 'not available on this host') : !m.best ? 'no release was checked, so there is no release code to show' : null}
-        code={shown && <CodePane key={shown.release} runUrl={runUrl} refName={shown.release} previous={m.releases[m.releases.indexOf(shown) - 1]?.release ?? null} label={`Release ${shown.release}`} />} />
+        code={shown && <CodePane key={shown.release} runUrl={runUrl} refName={shown.release} previous={before(m, shown)} label={`Release ${shown.release}`} />} />
     </section>
   )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
