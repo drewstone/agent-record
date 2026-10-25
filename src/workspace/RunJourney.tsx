@@ -5,7 +5,7 @@ import { StatusPill, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
-import { plainSummary, sinceLabel } from './plain-words.js'
+import { goalText, plainSummary, sinceLabel } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 
@@ -98,7 +98,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
-      {m.best?.steps && (
+      {m.best?.steps && m.best.steps.length > 1 && (
         <ol className="rj-ladder">
           {m.best.steps.map((s, i) => (
             <li key={i} className={`rj-step rj-step-${s.state}`}><span className="rj-step-n">{i + 1}</span><span>{s.label}</span></li>
@@ -110,11 +110,11 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
         {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
       {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
-      <p className="rj-releases">
+      {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}${stuck !== null && m.plateau === m.releases[0] ? `, no step gained in ${stuck.toFixed(0)} h` : ''}`
           : m.releases.map((r) => <span key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined}>{r.release} {r.passed}/{r.total}</span>)}
-      </p>
+      </p>}
     </section>
   )
 }
@@ -180,7 +180,7 @@ function Full({ short, raw }: { short: string; raw: string }) {
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
 /** The agent as recorded: role, harness and model; a value the record lacks is left out, never guessed. */
-const who = (node: Node) => [node.role ?? node.label, node.harness, node.model].filter(Boolean).join(' · ')
+const who = (node: Node) => [node.role ?? node.label, node.harness, node.model?.split('/').pop()].filter(Boolean).join(' · ')
 
 /**
  * The agent's place in the run: the agent that spawned it (the workspace's spawn edge), or, for the root, the play press
@@ -204,12 +204,10 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
   const source = input.source?.path?.split('/').pop()
   return (
-    <dl className="rj-trigger">
-      <dt>Submitted</dt>
-      <dd>The play press for {doc.run.play} submitted this run to the {root ? who(root) : 'root agent'}, with the prompt {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">(not recorded)</span>}</dd>
-      <dt>Goal</dt>
-      <dd title={source ? `from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}</dd>
-    </dl>
+    <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
+      <p>{root ? (input.instruction ? <Full short={who(root)} raw={input.instruction} /> : who(root)) : 'root agent'}</p>
+      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 24)} raw={goalText(input.objective)} /></p>}
+    </div>
   )
 }
 
@@ -225,16 +223,17 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
   const release = file ? changes.get(file)! : null
   const prev = release ? m.releases[m.releases.indexOf(release) - 1]?.release ?? null : null
   const role = node.id === m.root ? 'lead' : node.role ?? node.label
+  const single = m.nodes.length === 1
   return (
     <section className="rj-drill" aria-label={`${role}: what it did`}>
-      <h2>{role}</h2>
-      <dl className="rj-summary">
+      {!single && <h2>{role}</h2>}
+      {!single && <dl className="rj-summary">
         <dt>Who</dt><dd>{who(node)}</dd>
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
-        <dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd>
-      </dl>
+        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd></>}
+      </dl>}
       {paths.length > 0 && (
         <div className="rj-changes">
           <h3>What changed</h3>
@@ -273,20 +272,16 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
       <header className="rj-head">
         <a className="rj-crumb" href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a>
         <div className="rj-title">
-          <h1>Run {shortRun(doc.run.play, doc.run.id)}</h1>
+          <h1 title={m ? `${hours(m.t0, m.t1).toFixed(1)} h` : undefined}>Run {shortRun(doc.run.play, doc.run.id)}</h1>
           {view && <StatusPill status={viewChip(view.status)} />}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
-        {m && <p className="rj-sentence">{view?.status.label ?? 'Ended'} after {hours(m.t0, m.t1).toFixed(1)} h{m.best ? `; best ${m.best.release} passes ${m.best.passed} of ${m.best.total} steps` : ''}.</p>}
         {m && <Trigger doc={doc} m={m} />}
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
           <Ladder doc={doc} m={m} />
-          {single ? (
-            // One agent: its identity in a line, and the work itself gets the room a one-lane timeline would waste.
-            <p className="rj-one">{who(m.nodes[0]!)} · {m.nodes[0]!.status}</p>
-          ) : (
+          {single ? null : (
             <section aria-label="What the agents did">
               <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''}</h2>
               <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />

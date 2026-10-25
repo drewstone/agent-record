@@ -50,15 +50,15 @@ import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { readSource } from './workspace/source-reader.js'
 import { artifactNavigation, useSearch } from './workspace/navigation.js'
+import { goalText } from './workspace/plain-words.js'
 import { LazyOutputsView, LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
-import { Inspector, VersionCanvas } from './workspace/VersionCanvas.js'
+import { Inspector, type Selection, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
-import type { Selection } from './workspace/VersionCanvas.js'
 import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
@@ -587,7 +587,7 @@ function RunsTable({
               </td>
               {purposes && (
                 <td className="run-purpose" data-purpose-basis={run.purposeBasis ?? undefined} title={run.purpose ? `${run.purpose}\n\nFrom the run record's ${run.purposeBasis ?? 'input'}` : 'The run record states no purpose'}>
-                  {run.purpose ? <div className="run-purpose-text">{run.purpose}</div> : <span className="faint">not stated</span>}
+                  {run.purpose ? <div className="run-purpose-text">{goalText(run.purpose)}</div> : <span className="faint">not stated</span>}
                 </td>
               )}
               <td className="run-state">

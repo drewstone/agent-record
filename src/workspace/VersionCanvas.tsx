@@ -5,6 +5,7 @@ import { duration, money, StatusPill, statusOf, useDocument, when } from './data
 import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Version } from './profile-compare.js'
 import { LazyOutputChanges } from './lazy-pages.js'
+import { goalText } from './plain-words.js'
 import { GradeControl, ScoresTable } from './Scores.js'
 import { headlineScore, latestNumericGrade, scoreRows } from './scores-model.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
@@ -67,7 +68,7 @@ function playGraphModel(play: PlayDocument, graph: ProfileGraphDocument | null, 
       lane: 'versions',
       at: version.run.startedAt ?? null,
       title: shortRun(play.id, version.run.id),
-      detail: version.run.purpose ?? version.root?.description ?? (version.root ? version.root.name : 'no registered profile on this host'),
+      detail: (version.run.purpose && goalText(version.run.purpose)) ?? version.root?.description ?? (version.root ? version.root.name : 'no registered profile on this host'),
       kind: 'version',
       chips: [
         { label: runWord(version.run.state), tone: statusOf({ axis: 'run', state: version.run.state, reason: version.run.reason }).tone },
@@ -221,7 +222,7 @@ function VersionInspector({ api, play, version }: { api: string; play: PlayDocum
         <StatusPill status={statusOf({ axis: 'run', state: run.state, reason: run.reason })} />
         {run.reason && <span className="faint">{run.reason.replaceAll('-', ' ')}</span>}
       </header>
-      {run.purpose && <p>{run.purpose}</p>}
+      {run.purpose && <p>{goalText(run.purpose)}</p>}
       <p className="faint">
         Started {when(run.startedAt)} · {duration(run.durationMs)} · {run.nodes ?? 'unknown'} agents
         {' · '}subscription use {money(run.spend.subscriptionUsd)} at API prices, not billed{!run.spend.subscriptionKnown && run.spend.subscriptionUsd !== null ? ' (partial)' : ''}
