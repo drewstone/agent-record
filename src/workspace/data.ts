@@ -40,8 +40,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         })
         if (!alive) return
         stale = response.headers.get('X-Workspace-Stale') === '1'
-        // A fresh answer, a 200 or 304 without the stale mark, ends the stale episode: the next one gets its quick retries again
-        // (root review of #180). An error answer is not fresh and leaves the budget as it is.
+        // Only a fresh 200 or 304 ends a stale episode and restores its quick retries; an error answer is not fresh (root, #180).
         if (!stale && (response.ok || response.status === 304)) retries = 0
         if (response.status === 304) {
           setState((current) => (current.stale === stale ? current : { ...current, stale }))
@@ -361,18 +360,6 @@ export function runStatus(
   const at = run.ending?.at ?? run.settledAt
   const base = statusOf({ axis: 'run', state: run.state, reason: run.reason, stopCause: run.stopCause, endedAt: at, newerStarted })
   return base.tone === 'neutral' && at && base.word.startsWith('Stopped') ? { ...base, word: `${base.word} ${at.slice(11, 16)}Z` } : base
-}
-
-/** Paid and list price, with unknown kept apart. */
-export function spendParts(spend: Spend | null | undefined) {
-  return {
-    paid: spend?.paidUsd ?? null,
-    sandbox: spend?.sandboxUsd ?? null,
-    router: spend?.routerUsd ?? null,
-    basis: spend?.costBasisUsd ?? null,
-    list: spend?.listUsd ?? null,
-    known: spend?.paidKnown ?? false,
-  }
 }
 
 /** Navigate the host page; the wall shells are separate documents. */

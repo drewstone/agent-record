@@ -96,8 +96,7 @@ export function RulingButtons({ runId, dispute }: { runId: string; dispute: stri
 }
 
 
-/** `said`: the line above already names the failing step, so the blocker gives only who acts (REVIEW-7 #6: 22a said the
- * hidden test set twice, once as the release's failure and once as the check's disk). */
+/** `said`: the line above names the failing step, so the blocker says only who acts (REVIEW-7 #6: 22a said it twice). */
 function NextStep({ runId, blocker, paused, said = false }: { runId: string; blocker: Blocker; paused: boolean; said?: boolean }) {
   // While research is paused only Drew lifts it: point at Today's decision, never "nothing for you" beside it.
   const pause = paused && <p className="rj-next"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>
