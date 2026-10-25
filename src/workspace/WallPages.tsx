@@ -14,8 +14,9 @@ import { useDocument } from './data.js'
 type State = 'ok' | 'warn' | 'breach' | 'stale' | 'unknown'
 interface Host { name: string; state: State; local: boolean; reportMin: number | null; reportLimitMin: number | null; load1: number | null; loadLimit: number | null; cores: number | null; diskFreeGb: number | null; diskFloorGb: number | null; swap: number | null; breached: string[]; over: string | null }
 interface Agent { name: string; lane: string; state: 'asks' | 'working' | 'blocked' | 'limited'; harness: string | null; model: string | null; effort: string | null; since: string | null; limitUntil: string | null; step: string | null }
-interface Seat { provider: string; name: string; state: string; week: number | null; fiveHour: number | null; back: string | null }
-interface FleetDoc { asOf: string | null; hosts: Host[]; agents: { counts: Record<string, number | null>; total: number | null; rows: Agent[] }; seats: { room: number | null; total: number | null; rows: Seat[] } }
+interface QuotaWindow { used: number | null; reset: string | null; label: string | null; why: string | null }
+interface Seat { provider: string; name: string; state: 'room' | 'empty' | 'unknown'; long: QuotaWindow; short: QuotaWindow; back: string | null }
+interface FleetDoc { asOf: string | null; hostsAt: string | null; agentsAt: string | null; seatsAt: string | null; hosts: Host[]; agents: { counts: Record<string, number | null>; total: number | null; rows: Agent[] }; seats: { room: number | null; limited: number | null; total: number | null; rows: Seat[] } }
 interface SandboxHost { name: string; id: string; type: string; state: string; running: number | null; parked: number | null; slots: number | null; occupied: number | null; cpu: number | null; monthlyUsd: number | null; autoscaled: boolean; retire: string | null; heldBy: string | null }
 interface SandboxesDoc {
   asOf: string | null; known: boolean; why: string | null
@@ -39,6 +40,7 @@ const age = (iso: string | null) => {
   const min = Math.max(0, (Date.now() - Date.parse(iso)) / 60_000)
   return min < 2 ? 'now' : min < 90 ? `${Math.round(min)} min` : min < 2880 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} d`
 }
+const ago = (min: number) => age(new Date(Date.now() - min * 60_000).toISOString())
 const asOf = (at: string | null, source: string) => (at ? { at, meaning: `when the host last read ${source} (${hm(at)})`, source } : null)
 
 function Page({ mode, title, at, source, doc, children }: { mode: string; title: string; at?: string | null; source: string; doc: { error?: string; data?: unknown }; children: () => ReactNode }) {
@@ -52,8 +54,9 @@ function Page({ mode, title, at, source, doc, children }: { mode: string; title:
 
 // ---------------------------------------------------------------- Fleet
 
-/** A host is up while its report is inside its limit (the local host always reports). */
-function hostUp(h: Host) { return h.local || (h.reportMin !== null && h.reportLimitMin !== null && h.reportMin <= h.reportLimitMin) }
+/** A host is up while its report's age (fleet now's reading of it plus the time since) is inside its limit; the local host
+ * has no report of its own, so its card says how old the reading is and claims nothing. Unknown is neither. */
+function hostUp(h: Host) { return h.reportMin === null || h.reportLimitMin === null ? null : h.reportMin <= h.reportLimitMin }
 
 /** Free disk against its floor on one scale from 0 to 1.5 floors (free past that fills the bar); the floor is the tick. */
 function DiskBar({ h }: { h: Host }) {
@@ -75,9 +78,9 @@ function HostCard({ h }: { h: Host }) {
   return (
     <li className="wp-host" data-state={h.state}>
       <Tip className="wp-host-head" text={h.over ? `Over a limit: ${h.over}` : up ? 'Inside every limit it reports' : 'No fresh report'}>
-        <i className="wp-dot" style={{ background: up ? TONE[h.state] : 'transparent', borderColor: TONE[h.state] }} />
+        <i className="wp-dot" style={{ background: up === false || (up === null && !h.local) ? 'transparent' : TONE[h.state], borderColor: TONE[h.state] }} />
         <b>{h.name}</b>
-        <span className={up ? 'wp-muted' : 'wp-warn'}>{h.local ? 'this host' : up ? 'up' : `no report for ${h.reportMin === null ? '—' : age(new Date(Date.now() - h.reportMin * 60_000).toISOString())}`}</span>
+        <span className={up === false ? 'wp-warn' : 'wp-muted'}>{h.local ? (h.reportMin === null ? 'not read' : `read ${ago(h.reportMin)} ago`) : up === null ? 'report age unknown' : up ? 'up' : `no report for ${ago(h.reportMin!)}`}</span>
       </Tip>
       <span className="wp-k">Load</span>
       <Tip className="wp-bar" text={`load1 ${num(h.load1, 1)} on ${h.cores ?? '—'} cores (${num(perCore, 2)} per core); the limit is ${num(h.loadLimit)}`}>
@@ -94,14 +97,15 @@ const AGENT_TONE: Record<string, string> = { asks: TONE.warn, working: TONE.ok, 
 
 function FleetView({ doc }: { doc: FleetDoc }) {
   const { counts } = doc.agents
-  const limited = doc.seats.rows.filter((s) => s.state !== 'room')
-  const seats = [...doc.seats.rows].sort((a, b) => (b.week ?? -1) - (a.week ?? -1))
+  // A seat with no long-window reading is listed apart, never drawn as 0% (an unknown is not a zero).
+  const read = doc.seats.rows.filter((s) => s.long.used !== null).sort((a, b) => b.long.used! - a.long.used!)
+  const unread = doc.seats.rows.filter((s) => s.long.used === null)
   return (
     <>
-      <section aria-label="Hosts"><ul className="wp-hosts" data-primary-content>{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul></section>
+      <section aria-label="Hosts"><h2>Hosts<AsOfStamp asOf={asOf(doc.hostsAt, 'fleet now')} /></h2><ul className="wp-hosts" data-primary-content>{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul></section>
       <div className="wp-split">
         <section aria-label="Agents">
-          <h2>Agents <span className="wp-muted">{doc.agents.total ?? '—'}</span></h2>
+          <h2>Agents <span className="wp-muted">{doc.agents.total ?? '—'}</span><AsOfStamp asOf={asOf(doc.agentsAt, 'agent panes')} /></h2>
           <Tip text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
           <ul className="wp-rows" data-primary-content>
             {doc.agents.rows.map((a) => (
@@ -116,10 +120,11 @@ function FleetView({ doc }: { doc: FleetDoc }) {
           </ul>
         </section>
         <section aria-label="Seats">
-          <h2>Seats <span className="wp-muted">{limited.length} of {doc.seats.rows.length} at a limit</span></h2>
-          <div data-primary-content><HBars limit={seats.length} max={1} format={pct}
-            rows={seats.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.week ?? 0, color: s.state === 'room' ? undefined : TONE.warn,
-              note: s.state === 'room' ? (s.week === null ? 'week not reported' : undefined) : `back ${s.back ? hm(s.back) : '—'}` }))} /></div>
+          <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit</span><AsOfStamp asOf={asOf(doc.seatsAt, 'subscription quotas')} /></h2>
+          <div data-primary-content><HBars limit={read.length} max={1} format={pct}
+            rows={read.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, color: s.state === 'empty' ? TONE.warn : undefined,
+              note: [s.long.label, s.state === 'empty' ? `back ${s.back ? hm(s.back) : '—'}` : s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} />
+            {unread.length > 0 && <p className="wp-muted wp-line">Not reported: {unread.map((s) => `${s.provider.toLowerCase()} ${s.name}${s.long.why ? ` (${s.long.why})` : ''}`).join(', ')}</p>}</div>
         </section>
       </div>
     </>
@@ -128,7 +133,8 @@ function FleetView({ doc }: { doc: FleetDoc }) {
 
 export function FleetPage({ api }: { api: string }) {
   const doc = useDocument<FleetDoc>(`${api}/wall/fleet`, 30_000, true)
-  return <Page mode="fleet" title="Fleet" at={doc.data?.asOf} source="host reports, agents and seats" doc={doc}>{() => <FleetView doc={doc.data!} />}</Page>
+  // Each Fleet section stamps its own source's read time; the header would repeat the oldest of them.
+  return <Page mode="fleet" title="Fleet" source="host reports, agents and seats" doc={doc}>{() => <FleetView doc={doc.data!} />}</Page>
 }
 
 // ---------------------------------------------------------------- Sandboxes
@@ -254,11 +260,13 @@ function IdeasView({ doc }: { doc: IdeasDoc }) {
   }, [])
   const pick = (id: string) => { history.pushState(null, '', `?idea=${encodeURIComponent(id)}`); setPicked(id) }
   const selected = rows.find((r) => r.id === picked) ?? rows[0]
-  const max = Math.max(1, ...doc.stages.map((s) => s.count ?? 0))
+  const counted = doc.stages.filter((s) => s.count !== null)
+  const max = Math.max(1, ...counted.map((s) => s.count!))
   return (
     <>
-      <p className="tj-hero">{doc.awaiting ? `${doc.awaiting} ${doc.awaiting === 1 ? 'idea waits' : 'ideas wait'} on you.` : 'No idea waits on you.'}</p>
-      <HBars limit={doc.stages.length} max={max} format={(v) => String(v)} rows={doc.stages.map((s) => ({ label: s.stage, value: s.count ?? 0, note: s.count === null ? 'not reported' : s.of !== null ? `of ${s.of} approved for Discovery` : undefined }))} />
+      <p className="tj-hero">{doc.awaiting === null ? 'The idea inbox was not read.' : doc.awaiting ? `${doc.awaiting} ${doc.awaiting === 1 ? 'idea waits' : 'ideas wait'} on you.` : 'No idea waits on you.'}</p>
+      <HBars limit={counted.length} max={max} format={(v) => String(v)} rows={counted.map((s) => ({ label: s.stage, value: s.count!, note: s.of !== null ? `of ${s.of} approved for Discovery` : undefined }))} />
+      {counted.length < doc.stages.length && <p className="wp-muted wp-line">Not reported: {doc.stages.filter((s) => s.count === null).map((s) => s.stage).join(', ')}</p>}
       <div className="wp-split">
         <ul className="wp-rows wp-ideas" aria-label="Ideas" data-primary-content>
           {rows.map((r) => (
