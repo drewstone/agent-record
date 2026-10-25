@@ -54,6 +54,9 @@ function useJourney(api: string, doc: RunDocument) {
 }
 type Model = NonNullable<ReturnType<typeof useJourney>['model']>
 
+/** A disposable run's requested teardown, as the host's run_view reads it from RECEIPT.json `system.retention`. */
+type Lifecycle = { state: string; sentence: string; source?: string | null; resources?: { id: string | null; removal: string | null; removedAt: string | null }[] }
+
 type Blocker = { why?: string | null; action?: string | null; owner?: string | null; text?: string; since?: string | null; kind?: string; dispute?: string | null }
 
 /**
@@ -93,7 +96,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
 
 /** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
 function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: (release: string) => void }) {
-  const lifecycle = (doc.view as { lifecycle?: { state: string; sentence: string } | null } | null | undefined)?.lifecycle ?? null
+  const lifecycle = (doc.view as { lifecycle?: Lifecycle | null } | null | undefined)?.lifecycle ?? null
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
@@ -106,10 +109,19 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       <p className="rj-stuck">
         {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : lifecycle && lifecycle.state !== 'done' ? 'every check step passes; the requested teardown is not confirmed' : 'every step passes'}</> : 'No release was checked.'}
         {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
-      {lifecycle && lifecycle.state !== 'done' && <p className="rj-life-line">{lifecycle.sentence}</p>}
+      {lifecycle && lifecycle.state !== 'done' && (
+        <p className="rj-life-line">
+          {lifecycle.sentence}{' '}
+          {/* The receipt's own records, so the reader sees what is known and what is not (root 2026-10-25 08:42Z). */}
+          <span className="rj-muted">
+            {lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ')}
+            {lifecycle.source ? ` · from RECEIPT.json (${lifecycle.source})` : ' · from RECEIPT.json'}
+          </span>
+        </p>
+      )}
       {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
       {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
@@ -257,7 +269,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
   // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
   const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
   const view = doc.view
-  const lifecycle = (view as { lifecycle?: { state: string; sentence: string } | null } | null | undefined)?.lifecycle ?? null
+  const lifecycle = (view as { lifecycle?: Lifecycle | null } | null | undefined)?.lifecycle ?? null
   const single = m?.nodes.length === 1
   // The release the code pane shows: the one a release chip picked (`codeRef`), else the best (review 1 #13).
   const [params, update] = useSearch()
