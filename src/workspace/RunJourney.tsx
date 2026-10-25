@@ -304,7 +304,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               the agent and its transcript below the fold (root 2026-10-25, 1072 px window). */}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
           {work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Receipt of the published release, ${receipt.tag}` : 'Published receipt'}</a></footer>}
+          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></footer>}
         </>
       )}
     </section>
