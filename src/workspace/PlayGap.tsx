@@ -22,7 +22,6 @@ export const cyclesWord = (n: number) => (Number.isInteger(Math.log2(n)) ? `2${S
 const rate = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : n.toLocaleString())
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'UTC' }) + 'Z' : '—')
-const shortRun = (runId: string | null | undefined) => (runId ? runId.slice(-3) : '')
 
 /**
  * The hero as the answer (review 2 #1: "1,436 cycles/s" alone needed domain knowledge): how fast it proves, how much
@@ -72,9 +71,9 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const x = (t: number) => left + ((t - t0) / Math.max(1, t1 - t0)) * (w - left - right)
   const y = (v: number) => top + (1 - (Math.log10(v) - lo) / (hi - lo)) * (h - top - bottom)
   const marks: Mark[] = [
-    ...gap.measured.map((m): Mark => ({ key: `m-${m.tag}-${m.at}`, x: x(ms(m.at)), y: y(m.value), kind: 'measured', title: `${m.tag} · run ${m.run ?? ''}`, pill: 'measured',
+    ...gap.measured.map((m): Mark => ({ key: `m-${m.tag}-${m.at}`, x: x(ms(m.at)), y: y(m.value), kind: 'measured', title: `${m.run ? `${m.run}/` : ''}${m.tag}`, pill: 'measured',
       rows: [['Rate', `${m.value.toLocaleString()} ${gap.metric.unit}`], ['Program', m.cycles ? `${cyclesWord(m.cycles)} cycles` : '—'], ['Gap to paper', ratio(m.value)], ['When', when(m.at)]] })),
-    ...gap.capMisses.map((m): Mark => ({ key: `b-${m.tag}-${m.at}`, x: x(ms(m.at)), y: y(m.below), kind: 'bound', title: `${m.tag ?? ''} · run ${shortRun(m.runId)}`, pill: 'ran past cap',
+    ...gap.capMisses.map((m): Mark => ({ key: `b-${m.tag}-${m.at}`, x: x(ms(m.at)), y: y(m.below), kind: 'bound', title: `${m.runId ? `${m.runId.slice(-3)}/` : ''}${m.tag ?? ''}`, pill: 'ran past cap',
       rows: [['Rate', `below ${m.below.toLocaleString()} ${gap.metric.unit}`], ['Program', `${cyclesWord(m.cycles)} cycles`], ['Proves', String(m.count)], ['Gap to paper', `over ${ratio(m.below)}`], ['When', when(m.at)]],
       reason: `Every prove ran past the ${m.capS} s cap under ${m.checker ?? 'the check'}.` })),
   ]

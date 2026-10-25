@@ -3082,10 +3082,6 @@
 .ar-ws .rr-command code { display:block; margin-top:8px; }
 .ar-ws .rr-chart { min-width:0; overflow:hidden; margin:12px 0; }
 /* Where turns ended: one status row per cause, its bar in the row's status ink (data-status owns the colour). */
-.ar-ws .rr-causes { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:max-content minmax(60px,1fr) max-content; gap:4px 12px; align-items:center; font-size:var(--ar-text-s); }
-.ar-ws .rr-causes li { display:contents; }
-.ar-ws .rr-causes li > i { display:block; height:8px; border-radius:2px; background:currentColor; opacity:.55; }
-.ar-ws .rr-causes li > span:last-child { color:var(--ar-fg-muted); font-family:var(--ar-font-body); white-space:nowrap; }
 .ar-ws .rr-now { border-bottom:1px solid var(--ar-border); padding:16px 0 20px; }
 .ar-ws .rr-now h2 { margin:0 0 8px; }
 .ar-ws .rr-now h3 { margin:16px 0 8px; font-size:var(--ar-text-m); }
@@ -3598,6 +3594,10 @@
 .ar-ws .rj-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .ar-ws .rj-title h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .ar-ws .rj-title .as-of { margin-left: auto; }
+.ar-ws .rr-causes { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:max-content minmax(60px,1fr) max-content; gap:4px 12px; align-items:center; font-size:var(--ar-text-s); }
+.ar-ws .rr-causes li { display:contents; }
+.ar-ws .rr-causes li > i { display:block; height:8px; border-radius:2px; background:currentColor; opacity:.55; }
+.ar-ws .rr-causes li > span:last-child { color:var(--ar-fg-muted); font-family:var(--ar-font-body); white-space:nowrap; }
 .ar-ws .rj-muted { color: var(--ar-fg-muted); }
 /* 32 px numerals on the type scale, 8/16/24 px gaps (REVIEW-5 #4: 26 px was a 7th size and the row broke the grid). */
 .ar-ws .rj-stats { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 0 0 24px; }
@@ -3937,3 +3937,39 @@
 .ar-ws .wp section > .ar-tip-anchor, .ar-ws .wp-stat > .ar-tip-anchor, .ar-ws .wp-table td > .ar-tip-anchor:has(.ov-meter) { display: block; }
 .ar-ws .wp-host { align-content: start; }
 @media (max-width: 760px) { .ar-ws .wp-table td > .wp-muted { display: none; } }
+/* ---- /play Releases: where each release stops; a picked bar lists its releases by run. */
+.ar-ws .release-stops { max-width: 960px; }
+.ar-ws .release-stops[data-picked] a { opacity: .6; }
+.ar-ws .release-list { display: grid; gap: 4px; margin-top: 16px; font-size: 14px; }
+.ar-ws .release-list p { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; }
+.ar-ws .release-list p > a:first-child { min-width: 40px; font-weight: 600; }
+.ar-ws .release-tag.is-faint { color: var(--ar-fg-muted); }
+/* The open tab is where you are, not a control: no pointer, so it never reads as a dead click. */
+.ar-ws .ws-tabs [role="tab"][aria-selected="true"] { cursor: default; }
+.ar-ws .release-stops .ov-hbar-label, .ar-ws .release-stops .ov-hbar-value { font-size: 14px; }
+.ar-ws .release-stops[data-picked] a[href] .ov-hbar-label { color: var(--ar-fg-muted); }
+/* The compact play header on a phone wraps its row instead of breaking the play's name mid-word ("ma gne tar- rust"). */
+@media (max-width: 700px) {
+  .ar-ws .play-head.is-compact { flex-wrap: wrap; height: auto; min-height: 56px; padding-top: 8px; padding-bottom: 8px; row-gap: 4px; }
+  .ar-ws .play-head.is-compact h1 { white-space: nowrap; }
+}
+/* ---- /play Setup: the bar, then what the agent was asked (opening lines), then folds. */
+.ar-ws .play-bar-table caption { caption-side: top; text-align: left; padding: 0 0 8px; font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .play-bar-table table { max-width: 640px; }
+.ar-ws .play-input { position: relative; }
+.ar-ws .play-input .input-run-picker { position: absolute; top: 12px; right: 0; margin: 0; }
+.ar-ws .play-input .input-run-picker select { font-size: 14px; padding: 4px 8px; }
+.ar-ws .input-text.is-short { color: var(--ar-fg); }
+.ar-ws .input-view.is-compact .input-more { margin-top: 12px; }
+.ar-ws .input-view.is-compact .input-more > summary { cursor: pointer; font-size: 14px; }
+/* ---- /play Runs: the release lineage above the ledger, labels on the type scale. */
+.ar-ws .ledger-lineage { margin: 0 0 16px; }
+.ar-ws .ledger-lineage .ov-axis { font-size: 12px; }
+.ar-ws .ledger-lineage .ov-gantt-label { font-family: var(--ar-font-mono, ui-monospace, monospace); }
+.ar-ws .wp-body { display: grid; gap: 28px; min-width: 0; }
+@media (max-width: 760px) { .ar-ws .wp-body { gap: 20px; } }
+.ar-ws .wp-groups { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 16px; margin-top: 12px; font-size: 14px; }
+.ar-ws .wp-group > summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.ar-ws .wp-group[open] { flex-basis: 100%; }
+.ar-ws .wp-awaiting { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.ar-ws .wp-ideas li > .wp-idea { margin: 4px 0 12px; }

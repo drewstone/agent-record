@@ -1,19 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { PlayInput } from '../workspace-model.js'
 import { MessageText, StructuredContent } from '../viewer/StructuredContent.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 
-function Long({ title, text }: { title: string; text: string | null }) {
+function Long({ title, text, clamp = 1400 }: { title: string; text: string | null; clamp?: number }) {
   const [open, setOpen] = useState(false)
   if (!text) return null
-  const long = text.length > 1400
+  const long = text.length > clamp
+  const short = clamp < 1400 && !/^\s*[{[]/.test(text)
   return (
     <section className="input-block" data-input={title.toLowerCase()}>
       <h4>{title}</h4>
-      <div className={`input-text ${long && !open ? 'clamped' : ''}`}>
-        {/^\s*[{[]/.test(text) ? <StructuredContent text={text} /> : <MessageText text={text} />}
+      {/* A short clamp renders only the opening words (cut at a word), so hidden text is never on the page. */}
+      <div className={`input-text ${long && !open ? (short ? 'is-short' : 'clamped') : ''}`}>
+        {/^\s*[{[]/.test(text) ? <StructuredContent text={text} /> : <MessageText text={long && !open && short ? `${text.slice(0, clamp).replace(/\s+\S*$/, '')} …` : text} />}
       </div>
       {long && (
         <button type="button" className="ui-button" onClick={() => setOpen(!open)}>
@@ -105,7 +107,8 @@ function FileReader({ api, runId, file }: { api: string; runId: string; file: Pl
   )
 }
 
-export function InputView(props: { input: PlayInput | null; api: string; changed?: boolean }) {
+/** `compact` (the play's Setup tab): the objective's opening line, and everything else, with the caller's `more`, in one fold under it. */
+export function InputView(props: { input: PlayInput | null; api: string; changed?: boolean; compact?: boolean; more?: ReactNode }) {
   return (
     <ValueScope>
       <InputBody {...props} />
@@ -113,7 +116,7 @@ export function InputView(props: { input: PlayInput | null; api: string; changed
   )
 }
 
-function InputBody({ input, api, changed }: { input: PlayInput | null; api: string; changed?: boolean }) {
+function InputBody({ input, api, changed, compact = false, more }: { input: PlayInput | null; api: string; changed?: boolean; compact?: boolean; more?: ReactNode }) {
   const [file, setFile] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const acceptance = input?.acceptance as Record<string, unknown> | null
@@ -126,13 +129,11 @@ function InputBody({ input, api, changed }: { input: PlayInput | null; api: stri
   const selected = input.files.find((item) => item.path === file)
   const profile = input.profile
   const { outsideCriterion, sandboxBounds: _b, budgetDerivation, ...restAcceptance } = acceptance ?? {}
-  return (
-    <div className="input-view" data-input-view>
-      <ValueControls />
-      {changed && <p className="input-changed">This run's input differs from the play's latest input.</p>}
+  const objective = <Long title="Objective" text={input.objective} clamp={compact ? 120 : undefined} />
+  const body = (
       <div className="input-columns">
         <div className="input-main">
-          <Long title="Objective" text={input.objective} />
+          {!compact && objective}
           <Long title="Instruction" text={input.instruction} />
           <Long title="Completion" text={input.completion} />
           {knowledgeLine(input.knowledge) ? <p className="input-line" data-input="knowledge"><b>Knowledge</b> {knowledgeLine(input.knowledge)}</p> : <Long title="Knowledge" text={input.knowledge} />}
@@ -229,6 +230,21 @@ function InputBody({ input, api, changed }: { input: PlayInput | null; api: stri
           </section>
         </aside>
       </div>
+  )
+  return (
+    <div className={`input-view${compact ? ' is-compact' : ''}`} data-input-view>
+      {!compact && <ValueControls />}
+      {changed && <p className="input-changed">This run's input differs from the play's latest input.</p>}
+      {compact ? (
+        <>
+          {objective}
+          <details className="input-details input-more">
+            <summary>Full input</summary>
+            {body}
+            {more}
+          </details>
+        </>
+      ) : body}
       {selected && <FileReader api={api} runId={input.runId} file={selected} />}
     </div>
   )
