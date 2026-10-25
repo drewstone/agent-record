@@ -2,8 +2,7 @@ import { useDocument, when } from './data.js'
 import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument } from './reliability-model.js'
 
 /**
- * The run failure causes still happening, on the plays page's Runs tab, each with its owner; the clean-run share and its
- * daily chart live on Today.
+ * The run failure causes still happening, on the plays page's Runs tab, each with its owner, under the clean-run share.
  */
 export function ReliabilityPanel({ api }: { api: string }) {
   const doc = useDocument<ReliabilityDocument>(`${api}/reliability`)
@@ -19,9 +18,8 @@ export function ReliabilityPanel({ api }: { api: string }) {
   const runs = data.runs
   return (
     <section className="reliability" aria-label="Failure causes still happening" data-reliability={data.rate ?? 'unknown'}>
-      {/* The clean-run share and its daily chart are Today's (one chart of one measure); this panel keeps what only it says:
-          the causes still happening and who owns each (re-audit 2026-10-24: the two charts disagreed on Oct 17). */}
-      <p className="faint">{percent(data.rate)} of {runs.settled} settled runs ran clean in the last {data.window.days} days; <a href="/today">the daily chart is on Today</a>.</p>
+      {/* No pointer to a chart: "the daily chart is on Today" named one Today does not draw (REVIEW-8 truth #4). */}
+      <p className="faint">{percent(data.rate)} of {runs.settled} settled runs ran clean in the last {data.window.days} days.</p>
       <div className="reliability-causes">
         <span className="answer-label">Top causes still happening (seen in the last {LIVE_HOURS} h)</span>
         {live.length ? (

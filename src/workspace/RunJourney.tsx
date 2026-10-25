@@ -422,7 +422,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single && work}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
           {!single && work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></footer>}
+          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt</a></footer>}
         </>
       )}
     </section>

@@ -368,7 +368,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
               ['standing', 'Standing'],
               ['releases', releaseCount ? `Releases ${releaseCount}${withheld ? ` · ${withheld} not published` : ''}` : 'Releases'],
               ['runs', `Runs ${runCount}`],
-              ['findings', findingCount ? `Findings ${findingCount}` : 'Findings'],
+              ['findings', findingCount ? `Findings ${doc?.runs.some((run) => run.findings === null) ? '≥' : ''}${findingCount}` : 'Findings'],
               ['setup', 'Setup'],
             ] as const}
           />
