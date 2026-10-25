@@ -142,7 +142,6 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
       </section>
       <section className="pj-q4" aria-label={`Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <Climb play={play} m={m} />
-        {p?.checker && <p className="pj-muted pj-note">Under check {p.checker}. Each dot is a release at its own score; the line is the best so far.</p>}
       </section>
     </div>
   )

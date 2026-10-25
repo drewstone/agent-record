@@ -18,7 +18,7 @@ export function OutcomeBar({ row, max }: { row: OutcomeRow; max: number }) {
   const open = row.open?.hours ?? 0
   const total = Object.values(by ?? {}).reduce((sum, value) => sum + value, 0)
   // No hours recorded is not zero hours.
-  if (!total && !open) return <span className="faint">attempts not recorded</span>
+  if (!total && !open) return <span className="faint" title="attempts not recorded">—</span>
   const parts = OUTCOME_ORDER.filter((outcome) => (by?.[outcome] ?? 0) > 0)
   const title = [
     ...parts.map((outcome) => `${OUTCOME_WORD[outcome]} ${by![outcome]!.toFixed(2)} h${row.triesByOutcome?.[outcome] !== undefined ? ` · ${row.triesByOutcome[outcome]} tries` : ''}`),
@@ -73,7 +73,7 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
             {untagged.rows} {untagged.rows === 1 ? 'check' : 'checks'}, no release <span className="faint">· {untagged.line ?? 'no line recorded'}</span>
           </span>
         )
-      return <span className="faint">no check ran</span>
+      return <span className="faint" title="no check ran">—</span>
     }
     const verdicts = [...new Set(checks.lines.flatMap((line) => line.verdicts))]
     const top = checks.lines[0]
@@ -103,12 +103,11 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
 
 function Cost({ row }: { row: PlayLedgerRow }) {
   const cost = row.cost ?? null
-  if (!cost || cost.provenance === 'unmetered') return <span className="faint" title="No settled attempt: nothing to price">unmetered</span>
+  if (!cost || cost.provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
   if (cost.apiUsd === null || cost.apiUsd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
     <span title={`API-equivalent${cost.provenance ? ` (${cost.provenance})` : ''}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
-      {money(cost.apiUsd)}
-      {cost.provenance === 'estimated' && <span className="faint"> est.</span>}
+      {cost.provenance === 'estimated' ? '≈' : ''}{money(cost.apiUsd)}
     </span>
   )
 }
@@ -241,7 +240,6 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                     {row.seat ? (
                       <>
                         {seatWords(row.seat)}
-                        {row.seatKind && <span className="faint"> {row.seatKind === 'subscription' ? 'sub' : row.seatKind}</span>}
                       </>
                     ) : (
                       <span className="faint">—</span>

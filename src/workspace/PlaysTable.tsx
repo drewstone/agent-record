@@ -47,8 +47,7 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
           return (
             <tr key={play.id} data-play={play.id} className="clickable" tabIndex={0} onClick={open} onKeyDown={(event) => event.key === 'Enter' && open()}>
               <td className="plays-name">
-                <a href={href} onClick={(event) => event.preventDefault()}>{play.title}</a>
-                {play.program && <small className="faint"> · {play.program}</small>}
+                <a href={href} title={play.program ? `program ${play.program}` : undefined} onClick={(event) => event.preventDefault()}>{play.title}</a>
               </td>
               <td className="plays-standing">
                 {view ? (
@@ -64,9 +63,8 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
               </td>
               <td className="plays-best">
                 {best ? (
-                  <span title={best.sentence}>
+                  <span title={`${best.runId ? `${runOf(best.runId)} ` : ''}${best.release}: ${best.sentence}`}>
                     <span className="mono">{best.release}</span>
-                    {best.runId && <span className="faint" title={best.runId}> {runOf(best.runId)}</span>}
                     <span className="td-steps" aria-label={best.sentence}>
                       {best.steps.map((step, i) => <i key={i} data-step={step.state} />)}
                       <em>{best.passed}/{best.total}</em>
@@ -75,7 +73,6 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
                 ) : legacy?.tag || legacy?.run ? (
                   <span title={[legacy.checker ? `under ${legacy.checker}` : null, legacy.verdict ? verdictWord(legacy.verdict) : null].filter(Boolean).join(' · ') || undefined}>
                     <span className="mono">{shortTag(legacy.tag) ?? 'workspace'}</span>
-                    {legacy.run && <span className="faint" title={legacy.run}> {runOf(legacy.run)}</span>}
                   </span>
                 ) : (
                   <span className="faint">—</span>
@@ -88,17 +85,15 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
                     {runOf(lastId)}
                   </a>
                 ) : '—'}
-                {lastStatus ? <> <StatusPill status={viewChip(lastStatus)} className="ending-word" /></> : last?.word ? <> <StatusPill status={endingStatus(last.word)} className="ending-word" /></> : null}
-                <small className="faint"> {short(lastStatus?.at ?? last?.at ?? play.latestRun?.startedAt)}</small>
+                <span title={short(lastStatus?.at ?? last?.at ?? play.latestRun?.startedAt) ?? undefined}>{lastStatus ? <> <StatusPill status={viewChip(lastStatus)} className="ending-word" /></> : last?.word ? <> <StatusPill status={endingStatus(last.word)} className="ending-word" /></> : null}</span>
               </td>
               <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
-                {runs}{runs !== play.runCount && <small className="faint"> of {play.runCount}</small>}
+                {runs}
               </td>
               <td className="num" title={cost?.priced !== null && cost?.priced !== undefined ? `${cost.priced} of ${cost.started ?? '?'} started runs priced${cost.provenance ? ` (${cost.provenance})` : ''}` : undefined}>
                 {cost?.apiEquivalentUsd !== null && cost?.apiEquivalentUsd !== undefined && cost.priced ? (
                   <>
-                    {money(cost.apiEquivalentUsd)}
-                    {cost.priced !== cost.started ? <small className="faint"> {cost.priced}/{cost.started}</small> : null}
+                    {money(cost.apiEquivalentUsd)}{cost.priced !== cost.started ? '+' : ''}
                   </>
                 ) : (
                   <span className="faint" title="API-equivalent not priced">—</span>
