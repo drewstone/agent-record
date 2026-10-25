@@ -390,7 +390,10 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             {tab === 'runs' && (
               <>
                 {doc.ledger ? (
-                  <PlayLedger play={doc} full onOpen={open} />
+                  <PlayLedger play={doc} full onOpen={open} action={!judged && (
+                    // The judged view is a control of the ledger, in its header, not a link floating under the tab.
+                    <button type="button" className="link-button play-judged-link" onClick={() => update({ judged: '1' })}>Judged dimensions</button>
+                  )} />
                 ) : (
                   <>
                     <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
@@ -399,19 +402,13 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                     </section>
                   </>
                 )}
-                {judged ? (
+                {judged && (
                   <section className="ws-section" data-section="judged">
                     <h3>Judged dimensions</h3>
                     <Status loading={extra.loading} error={extra.error}>
                       {assessments.length ? <AssessmentMatrix play={{ ...view!, assessments }} dimensions={dimensions.data} onOpen={open} /> : <p className="faint">No judged dimension resolves for this play&rsquo;s runs.</p>}
                     </Status>
                   </section>
-                ) : (
-                  <p className="faint play-judged-link">
-                    <button type="button" className="link-button" onClick={() => update({ judged: '1' })}>
-                      Judged dimensions →
-                    </button>
-                  </p>
                 )}
                 {view!.gaps.length > 0 && (
                   <section className="ws-section gaps">
@@ -431,46 +428,41 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             {tab === 'setup' && (
               <div className="play-setup" data-section="setup">
                 <PlayBarTable play={doc} />
-                <section className="ws-section">
-                  <h3>Input</h3>
+                <section className="ws-section play-input" data-section="input">
                   <div className="input-run-picker">
-                    <label className="ui-field">
-                      <span className="ui-label">Run</span>
-                      <select value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
-                        {doc.runs.map((run) => (
-                          <option key={run.id} value={run.id}>
-                            {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <select aria-label="Run" value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
+                      {doc.runs.map((run) => (
+                        <option key={run.id} value={run.id}>
+                          {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <Status loading={runDoc.loading} error={runDoc.error}>
-                    <InputView input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} />
+                    <InputView compact input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} more={<>
+                        <section className="input-block" data-section="versions">
+                          <h4>Profile versions</h4>
+                          <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
+                          <div className="lineage-layout">
+                            <section className="lineage-pane" aria-label="Version graph">
+                              {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
+                              <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />
+                            </section>
+                            <aside className="inspector-pane" aria-label="Inspector">
+                              <Inspector api={api} play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
+                            </aside>
+                          </div>
+                          <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
+                        </section>
+                        {graph && (
+                          <section className="input-block" data-section="profiles">
+                            <h4>Profiles</h4>
+                            <ProfileCanvas api={api} doc={graph} scope={playScope} selected={params.get('profile')} onSelect={(short) => update({ profile: short ?? undefined })} />
+                          </section>
+                        )}
+                    </>} />
                   </Status>
                 </section>
-                <section className="ws-section" data-section="versions">
-                  <h3>Profile versions</h3>
-                  <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
-                  <div className="lineage-layout">
-                    <section className="lineage-pane" aria-label="Version graph">
-                      {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
-                      <VersionCanvas play={doc} graph={graph} versions={shownVersions} selection={selection} onSelect={select} />
-                    </section>
-                    <aside className="inspector-pane" aria-label="Inspector">
-                      <Inspector api={api} play={doc} graph={graph} versions={versions} selection={selection ?? (shownVersions.at(-1) ? { kind: 'version', runId: shownVersions.at(-1)!.run.id } : null)} onSelect={select} />
-                    </aside>
-                  </div>
-                  <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
-                </section>
-                {graph && (
-                  <details className="ws-section" data-section="profiles">
-                    <summary>
-                      <b>Profiles</b> <span className="faint">every profile the play&rsquo;s runs registered or wrote</span>
-                    </summary>
-                    <ProfileCanvas api={api} doc={graph} scope={playScope} selected={params.get('profile')} onSelect={(short) => update({ profile: short ?? undefined })} />
-                  </details>
-                )}
               </div>
             )}
           </div>

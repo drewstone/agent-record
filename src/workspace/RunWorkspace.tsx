@@ -23,7 +23,10 @@ export interface WorkspaceNode {
   status: 'running' | 'waiting' | 'succeeded' | 'failed' | 'stopped' | 'idle' | 'unknown'
   turn: string | null
   lastAt: string | null
-  tokens: number | null
+  /** From the spawn journal: driver turns, worker restarts (ISO), and its "<label>:" commits in the run's deliverables. */
+  turns?: number | null
+  restarts?: string[]
+  shipped?: number
   hasCode: boolean
 }
 export interface WorkspaceRelease {

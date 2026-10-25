@@ -3587,14 +3587,9 @@
 .ar-ws .rj-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 14px; }
 .ar-ws .rj-summary dt { color: var(--ar-fg-muted); }
 .ar-ws .rj-summary dd { margin: 0; overflow-wrap: anywhere; }
-.ar-ws .rj-changes ul { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; }
-.ar-ws .rj-changes button { padding: 0; border: 0; background: none; color: var(--ar-c-action); cursor: pointer; text-align: left; overflow-wrap: anywhere; }
-.ar-ws .rj-changes button[aria-pressed='true'] { font-weight: 600; }
-.ar-ws .rj-changes details summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); margin-bottom: 8px; }
 /* The diff renderer fills its parent's height, as it did in the old file pane. */
 .ar-ws .rj-diff { height: 60vh; min-height: 360px; overflow: auto; border-radius: 8px; }
 .ar-ws .rj-transcript > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
-.ar-ws .rj-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 12px; }
 /* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,
    conversations, outputs): its "Now" tab, "Why it stopped" and the Now section repeat the ladder and sentence above. */
 .ar-ws .ws-run:has(> .rj) > .run-why, .ar-ws .ws-run:has(> .rj) > .rr-page { display: none; }
@@ -3827,7 +3822,6 @@
 .agent-record { --ar-c-warn: #7a4f00; }
 .agent-record[data-theme='dark'] { --ar-c-warn: #f5a524; }
 @media (prefers-color-scheme: dark) { .agent-record[data-theme='auto'] { --ar-c-warn: #f5a524; } }
-.ar-ws .rj-foot { margin-top: 0; padding-top: 0; }
 .ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
 .ar-ws .tj-rest { font-size: 14px; line-height: 1.6; }
 .ar-ws .rj-full-toggle { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ar-c-action); cursor: pointer; white-space: nowrap; }
@@ -3904,6 +3898,35 @@
 .ar-ws .wp section > .ar-tip-anchor, .ar-ws .wp-stat > .ar-tip-anchor, .ar-ws .wp-table td > .ar-tip-anchor:has(.ov-meter) { display: block; }
 .ar-ws .wp-host { align-content: start; }
 @media (max-width: 760px) { .ar-ws .wp-table td > .wp-muted { display: none; } }
+/* ---- /play Releases: where each release stops; a picked bar lists its releases by run. */
+.ar-ws .release-stops { max-width: 960px; }
+.ar-ws .release-stops[data-picked] a { opacity: .6; }
+.ar-ws .release-list { display: grid; gap: 4px; margin-top: 16px; font-size: 14px; }
+.ar-ws .release-list p { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; }
+.ar-ws .release-list p > a:first-child { min-width: 40px; font-weight: 600; }
+.ar-ws .release-tag.is-faint { color: var(--ar-fg-muted); }
+/* The open tab is where you are, not a control: no pointer, so it never reads as a dead click. */
+.ar-ws .ws-tabs [role="tab"][aria-selected="true"] { cursor: default; }
+.ar-ws .release-stops .ov-hbar-label, .ar-ws .release-stops .ov-hbar-value { font-size: 14px; }
+.ar-ws .release-stops[data-picked] a[href] .ov-hbar-label { color: var(--ar-fg-muted); }
+/* The compact play header on a phone wraps its row instead of breaking the play's name mid-word ("ma gne tar- rust"). */
+@media (max-width: 700px) {
+  .ar-ws .play-head.is-compact { flex-wrap: wrap; height: auto; min-height: 56px; padding-top: 8px; padding-bottom: 8px; row-gap: 4px; }
+  .ar-ws .play-head.is-compact h1 { white-space: nowrap; }
+}
+/* ---- /play Setup: the bar, then what the agent was asked (opening lines), then folds. */
+.ar-ws .play-bar-table caption { caption-side: top; text-align: left; padding: 0 0 8px; font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .play-bar-table table { max-width: 640px; }
+.ar-ws .play-input { position: relative; }
+.ar-ws .play-input .input-run-picker { position: absolute; top: 12px; right: 0; margin: 0; }
+.ar-ws .play-input .input-run-picker select { font-size: 14px; padding: 4px 8px; }
+.ar-ws .input-text.is-short { color: var(--ar-fg); }
+.ar-ws .input-view.is-compact .input-more { margin-top: 12px; }
+.ar-ws .input-view.is-compact .input-more > summary { cursor: pointer; font-size: 14px; }
+/* ---- /play Runs: the release lineage above the ledger, labels on the type scale. */
+.ar-ws .ledger-lineage { margin: 0 0 16px; }
+.ar-ws .ledger-lineage .ov-axis { font-size: 12px; }
+.ar-ws .ledger-lineage .ov-gantt-label { font-family: var(--ar-font-mono, ui-monospace, monospace); }
 .ar-ws .wp-body { display: grid; gap: 28px; min-width: 0; }
 @media (max-width: 760px) { .ar-ws .wp-body { gap: 20px; } }
 .ar-ws .wp-groups { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 16px; margin-top: 12px; font-size: 14px; }
