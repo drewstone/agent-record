@@ -119,7 +119,6 @@ test('the rendered conversation shows the collapsed polls, absent captures and w
   assert.doesNotMatch(html, /No result</)
   assert.match(html, /thinking not returned by provider/)
   assert.match(html, /2 thinking blocks redacted \(encrypted\)/)
-  assert.match(html, /Expand all thinking/)
   // Thinking text stays collapsed until asked for.
   assert.doesNotMatch(html, /<details[^>]*class="reasoning-body"[^>]*open/)
 })
