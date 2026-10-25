@@ -164,7 +164,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
   // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, failed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
-  // Shipped is commits, whatever the settle (disco-ui-review 23:22Z: 7 of 21c's 9 failed agents committed); a failure is a mark.
+  // Shipped is commits, whatever the settle (disco-ui-review 23:22Z: 7 of 21c's 9 failed agents committed); status 'failed' draws the failure.
   const tone = (n: Node): FlowSpan['outcome'] => (m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : failed(n) ? { tone: 'failed', label: 'Failed' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
@@ -184,7 +184,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         ...(tone(n) ? { outcome: tone(n) } : {}),
         // Its list-price cost so far; absent stays absent, never a zero. A restart is a notch on the bar (charts 0.20.0).
         ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : {}),
-        marks: [...(n.restarts ?? []).map((at) => ({ at: ms(at) - m.t0, kind: 'restart', label: `Restarted ${at.slice(11, 16)}Z` })), ...(failed(n) && n.end ? [{ at: ms(n.end) - m.t0, kind: 'failed', label: `Failed ${n.end.slice(11, 16)}Z` }] : [])],
+        marks: (n.restarts ?? []).map((at) => ({ at: ms(at) - m.t0, kind: 'restart', label: `Restarted ${at.slice(11, 16)}Z` })),
         // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
