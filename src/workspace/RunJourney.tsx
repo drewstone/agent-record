@@ -160,10 +160,16 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.id === m.root ? 'lead' : n.role ?? n.label,
         // Its outcome first (review 2 #2: the tooltip said only "1 commits"): shipped into which releases, crashed, or idle.
-        detail: [outcome(n), n.harness, n.model?.split('/').pop()].filter(Boolean).join(' · ') || undefined,
+        detail: [outcome(n), n.harness].filter(Boolean).join(' · ') || undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
+        // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
+        facts: [
+          { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
+          { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
+          ...(n.model ? [{ label: 'Model', value: n.model.split('/').pop()! }] : []),
+        ],
       }
     })
     return { spans, totalMs: m.t1 - m.t0, promptTokens: 0, completionTokens: 0, toolCalls: 0 }
