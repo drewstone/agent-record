@@ -230,8 +230,8 @@ function PlaysPage({ api }: { api: string }) {
       .map(([name, usd], index) => <span key={name} title={name}>{index ? ' + ' : ''}{money(usd!)}</span>))
     return <div className="ws-page ws-plays" data-plays-home="runs">
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
-      <ReliabilityPanel api={api} />
-      <div className="table-scroll" data-primary-content><table className="data-table runs-table" data-run-ledger>
+      {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer" data-primary-content><ReliabilityPanel api={api} />
+      <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <caption className="faint">{shown.length} runs, last 30 days</caption>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th><th className="num">Spend</th></tr></thead>
         <tbody>{shown.slice(0, shownRows).map((run) => <tr key={run.id}>
@@ -240,7 +240,7 @@ function PlaysPage({ api }: { api: string }) {
           <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
           <td className="num">{spend(run).length ? spend(run) : '—'}</td>
         </tr>)}</tbody>
-      </table></div>
+      </table></div></div>
       {!shown.length && <p className="chat-empty">No runs match.</p>}{shown.length > shownRows && <button type="button" className="plays-more" onClick={() => setShownRows(shown.length)}>Show all {shown.length} runs</button>}
     </div>
   }

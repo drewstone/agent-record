@@ -24,16 +24,16 @@ export function ReliabilityPanel({ api }: { api: string }) {
         <p title={data.definition || 'Clean: a settled run with no infra, harness or quota failure on any agent. Operator cancellations and running runs are outside the count.'}>
           <b className="reliability-rate">{percent(data.rate)}</b> of {runs.settled} settled runs ran clean in {data.window.days} days
         </p>
-        <div data-primary-content><DayBars rows={9} days={data.daily.map((day) => day.day)} series={[{ name: 'clean', color: 'var(--ar-c-ok)', values: data.daily.map((day) => day.clean) }, { name: 'hit by a failure', color: 'var(--ar-c-run)', values: data.daily.map((day) => day.hit) }, { name: 'failed', color: 'var(--ar-c-fail)', values: data.daily.map((day) => day.failed) }]} /></div>
+        <DayBars rows={9} days={data.daily.map((day) => day.day)} series={[{ name: 'clean', color: 'var(--ar-c-ok)', values: data.daily.map((day) => day.clean) }, { name: 'hit by a failure', color: 'var(--ar-c-run)', values: data.daily.map((day) => day.hit) }, { name: 'failed', color: 'var(--ar-c-fail)', values: data.daily.map((day) => day.failed) }]} />
       </div>
       <div className="reliability-causes">
         <span className="answer-label">Still failing runs ({LIVE_HOURS} h)</span>
         {live.length ? (
-          <div data-primary-content><HBars
+          <HBars
             color="var(--ar-c-fail)"
             format={(value) => `${value} lost`}
             rows={live.map((cause) => ({ label: cause.title, value: cause.runsLost, note: (cause.owner ?? 'no owner named').split(' (')[0] }))}
-          /></div>
+          />
         ) : (
           <p className="faint">None in {LIVE_HOURS} h.</p>
         )}
