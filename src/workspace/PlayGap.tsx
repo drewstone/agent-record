@@ -26,7 +26,7 @@ const shortRun = (runId: string | null | undefined) => (runId ? runId.slice(-3) 
 
 /**
  * The hero as the answer (review 2 #1: "1,436 cycles/s" alone needed domain knowledge): how fast it proves, how much
- * faster the check needs it, where the paper is, then what passed before the bar rose.
+ * faster the check needs it, and where the paper is; what passed before the bar rose is the chart's own marker.
  */
 export function gapHeadline(gap: PlayGapFacts) {
   const best = gap.measured.reduce<PlayGapFacts['measured'][number] | null>((a, b) => (!a || b.value > a.value ? b : a), null)
@@ -36,9 +36,7 @@ export function gapHeadline(gap: PlayGapFacts) {
   const needs = needRate && best ? `The check needs ${needRate.toLocaleString()} (${(needRate / best.value).toFixed(1)}× faster)` : null
   const paper = target ? `the paper reaches ${rate(target.min)}–${rate(target.max)}` : null
   const verdict = [needs, paper].filter(Boolean).join('; ')
-  const passed = gap.passed ? `Passed under check ${gap.passed.checker} (${gap.passed.tag}, run ${gap.passed.run}) before the bar rose` : 'No release has passed a check'
-  const misses = gap.need ? `; since ${gap.need.checker}, ${gap.need.count} proves ran past the ${gap.need.capS} s cap.` : '.'
-  return { best, target, hero, sentence: verdict ? `${verdict.charAt(0).toUpperCase()}${verdict.slice(1)}.` : '', history: passed + misses }
+  return { best, target, hero, sentence: verdict ? `${verdict.charAt(0).toUpperCase()}${verdict.slice(1)}.` : '' }
 }
 
 type Mark = { key: string; x: number; y: number; kind: 'measured' | 'bound'; title: string; pill: string; rows: [string, string][]; reason?: string }
@@ -60,7 +58,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const target = gap.metric.target
   const times = [...gap.measured.map((m) => ms(m.at)), ...gap.capMisses.map((m) => ms(m.at)), ms(gap.passed?.lastAt)].filter(Number.isFinite)
   if (!times.length) return null
-  const w = measured ?? (phone ? 380 : 1000), h = gap.measured.length <= 1 ? (phone ? 200 : 220) : phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
+  const w = measured ?? (phone ? 380 : 1000), h = gap.measured.length <= 1 ? 160 : phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
   const t0 = Math.min(...times) - 3_600_000, t1 = Math.max(now, ...times)
   // Fitted to our own data, a decade either side (lead 07:12Z: with the paper's band on the axis all our points sat in
   // the bottom tenth and the chart read flat); the paper, thousands of times higher, is an off-scale arrow.

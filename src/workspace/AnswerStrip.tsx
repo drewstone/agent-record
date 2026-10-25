@@ -6,9 +6,27 @@ import { StatusPill } from './data.js'
 /** The page's one as-of statement: the time on screen; its date, meaning and source in the tip. */
 export function AsOfStamp({ asOf }: { asOf: AsOf | null }) {
   if (!asOf) return null
+  // Data over 15 minutes old says its age (REVIEW-5 #8: /today read "as of 13:10Z" at 13:56Z beside fresher pages).
+  const age = Math.round((Date.now() - Date.parse(asOf.at)) / 60_000)
+  const stale = Number.isFinite(age) && age > 15
   return (
-    <span className="as-of" data-asof title={asOfTip(asOf)}>
-      as of {hm(asOf.at)}
+    <span className={`as-of${stale ? ' is-stale' : ''}`} data-asof title={asOfTip(asOf)}>
+      as of {hm(asOf.at)}{stale ? ` · ${age < 120 ? `${age} min` : `${Math.round(age / 60)} h`} old` : ''}
+    </span>
+  )
+}
+
+/**
+ * A hover and focus tooltip as an element, for marks a title attribute cannot serve: touch has no hover and a title
+ * never appears in the page (REVIEW-5 #13: the /today sparkline and ladder and the /plays status read as tipless).
+ */
+export function Tip({ text, children, className }: { text: string; children: ReactNode; className?: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span className={`ar-tip-anchor${className ? ` ${className}` : ''}`} tabIndex={0} aria-label={text}
+      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}>
+      {children}
+      {open && <span className="ar-tip" role="tooltip">{text}</span>}
     </span>
   )
 }

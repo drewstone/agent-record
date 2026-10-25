@@ -159,7 +159,7 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
           <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
         )}
         <p className="pj-sentence">{g ? g.sentence : headline(play, m)}</p>
-        {g && <p className="pj-history">{g.history}</p>}
+        {/* The pass under v4 and the cap misses are the chart's own markers (REVIEW-5 #11: the line repeated them). */}
         <Hold view={m.view} open={m.open} />
       </section>
       <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
