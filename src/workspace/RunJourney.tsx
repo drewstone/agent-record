@@ -45,8 +45,8 @@ function costText(u: Usage | null | undefined): { text: string; title: string } 
   const price = u.priceSource?.repository ? `; list price from ${u.priceSource.repository} ${u.priceSource.commit?.slice(0, 8) ?? ''}` : ''
   return { text: parts.join(' · ') || '—', title: `Read from ${from}${u.at ? `, updated ${ago(u.at)}` : ''}${price}` }
 }
-/** Crashed is the journal's failed settle only: a settled agent whose last words mention a crash it handled is not one (lead 2026-10-25). */
-const crashed = (n: Node) => n.status === 'failed'
+/** Failed is the journal's `down` settle (Runtime's one failure word: crash, deadline, validation); never words in a last turn (lead 2026-10-25). */
+const failed = (n: Node) => n.status === 'failed'
 
 function useJourney(api: string, doc: RunDocument) {
   const runUrl = `${api}/runs/${encodeURIComponent(doc.run.id)}`
@@ -166,10 +166,10 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
 function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
-  // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, crashed.
+  // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, failed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
-  const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
+  const tone = (n: Node): FlowSpan['outcome'] => (failed(n) ? { tone: 'failed', label: 'Failed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
@@ -184,7 +184,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         // shipped is the outcome pill and the card's Releases and Commits cells.
         detail: n.model?.split('/').pop() ?? undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
-        status: running(n) ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
+        status: running(n) ? 'running' as const : failed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
         // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
         ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
@@ -244,15 +244,15 @@ function Stats({ m, receiptUsd }: { m: Model; receiptUsd: number | null }) {
   // Without the run's stores (deleted with ~/.cache/disco on 10-25) the receipt's Runtime estimate, the figure /play prints.
   const own = runUsage(m)
   const { listUsd, complete } = own.listUsd != null ? own : { listUsd: receiptUsd, complete: true }
-  // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
+  // As the timeline's legend counts them: every agent that shipped, the lead included, and a failure counts as Failed even
   // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
-  const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
+  const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !failed(n)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
     ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, own.listUsd != null ? 'API-equivalent at list price; each agent\'s billed amount is in its card' : "Runtime's estimate from the receipt, the figure /play prints; the run's per-call stores are gone"] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
-    ['Crashed', String(m.nodes.filter(crashed).length)],
+    ['Failed', String(m.nodes.filter(failed).length)],
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
   ]
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
@@ -342,7 +342,7 @@ function Drill({ m, node, transcript, onPick, onOpen }: { m: Model; node: Node; 
         <dt>Who</dt><dd>{who(node)}</dd>
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full what="task" short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
-        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
+        <dt>Result</dt><dd>{failed(node) ? 'Failed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
         <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
         {/* Its files open in the code frame below, not as a list here (Drew 2026-10-25: "neglected ... nonsense" at the page's foot). */}
         {m.attributed && <><dt>Changed</dt><dd>{paths.length ? <button type="button" className="rj-full-toggle" onClick={() => onOpen(changes.get(code[0] ?? paths[0]!)!.release, code[0] ?? paths[0]!)}>{`${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}`}</button> : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
