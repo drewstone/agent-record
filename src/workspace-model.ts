@@ -429,7 +429,7 @@ export const feedItemSchema = z
     ledger: z.boolean(),
     sha256: z.string(),
     artifacts: z.array(z.object({ path: z.string(), storePath: z.string(), href: z.string() })).optional(),
-    reviews: z.array(scientificReviewSchema).optional(),
+    reviews: z.array(scientificReviewSchema).optional(), review: z.enum(['wrong', 'new', 'reproduction', 'known', 'unverifiable', 'pending']).optional(),
     ...playFindingFields,
   })
   .catchall(z.unknown())
@@ -928,8 +928,8 @@ export const findingsFeedSchema = z
     schema: z.literal('agent-workspace.findings-feed.v1'),
     builtAt: z.string(),
     since: z.string(),
-    runs: z.object({ considered: z.number().int(), withFindings: z.number().int(), results: z.number().int(), claims: z.number().int() }).catchall(z.unknown()),
-    items: z.array(feedItemSchema),
+    runs: z.object({ considered: z.number().int(), withFindings: z.number().int(), results: z.number().int(), claims: z.number().int(), pending: z.number().int().optional() }).catchall(z.unknown()),
+    items: z.array(feedItemSchema), shown: z.object({ items: z.number().int(), byReview: z.record(z.string(), z.number().int()) }).optional(),
   })
   .catchall(z.unknown())
 

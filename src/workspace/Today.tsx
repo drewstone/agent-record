@@ -1,4 +1,5 @@
 import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
+import { Lines } from '@tangle-network/charts/react'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { hm } from './answers.js'
 import { useDocument } from './data.js'
@@ -72,31 +73,25 @@ function Held({ items }: { items: OverviewAttention[] }) {
   )
 }
 
-/** Steps passed at the end of each day as a step line, the flat stretch since the best was reached shaded and labelled. */
-function Spark({ trend, now, w = 280, h = 56 }: { trend: ViewTrend; now: number; w?: number; h?: number }) {
-  const n = trend.passed.length
-  const x = (i: number) => 4 + (i * (w - 8)) / Math.max(1, n - 1)
-  const y = (v: number) => h - 6 - (v / Math.max(1, trend.total)) * (h - 22)
-  let path = ''
-  trend.passed.forEach((v, i) => {
-    if (v === null) return
-    path += path ? ` H${x(i)} V${y(v)}` : `M${x(i)} ${y(v)}`
-  })
-  const last = trend.passed.at(-1)
-  const flatDays = trend.movement === 'stuck' ? Math.min(n - 1, Math.floor((hoursSince(trend.since, now) ?? 0) / 24)) : 0
-  const from = x(n - 1 - flatDays)
+/**
+ * Is it moving (Q1): every checked release as a dot at its steps passed, the best so far as a step line under the play's
+ * step count, over the releases the host's trend lists; hovering names the release at that time.
+ */
+function TrendChart({ trend }: { trend: ViewTrend }) {
+  const checks = (trend.series ?? []).map((point) => ({ t: Date.parse(point.at), ...point })).filter((point) => Number.isFinite(point.t))
+  if (!checks.length) return null
+  let best = 0
+  const bestLine = checks.map((point) => [point.t, (best = Math.max(best, point.passed))] as [number, number])
+  const release = (t: number) => { const point = checks.reduce((a, b) => (Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a)); return `${point.release}${point.runId ? ` (${point.runId.slice(-3)})` : ''}` }
+  const span = [checks[0]!.t, checks.at(-1)!.t]
   return (
-    <svg className={`tj-spark tj-${trend.movement}`} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`steps passed at the end of each of the last ${n} days: ${trend.passed.map((v) => v ?? 'none').join(', ')} of ${trend.total}`}>
-      {flatDays > 0 && (
-        <g className="tj-plateau">
-          <rect x={from} y={12} width={x(n - 1) - from} height={h - 14} />
-          <text x={x(n - 1)} y={10} textAnchor="end">no step gained in {ago(hoursSince(trend.since, now))}</text>
-        </g>
-      )}
-      <line className="tj-spark-top" x1={4} x2={w - 4} y1={y(trend.total)} y2={y(trend.total)} />
-      {path && <path d={path} />}
-      {last !== null && last !== undefined && <circle cx={x(n - 1)} cy={y(last)} r={3} />}
-    </svg>
+    <div className="tj-chart">
+      <Lines rows={8} format={(v) => `${v}`} series={[
+        { name: 'checked release', color: 'var(--ar-c-info)', points: checks.map((point) => [point.t, point.passed]), dots: true, label: release },
+        { name: 'best so far', color: `var(--ar-c-${trend.movement === 'moving' ? 'ok' : trend.movement === 'regressed' ? 'fail' : 'run'})`, points: bestLine },
+        { name: `all ${trend.total} steps`, color: 'var(--ar-fg-faint)', points: span.map((t) => [t, trend.total] as [number, number]), dash: 'dash' },
+      ]} />
+    </div>
   )
 }
 
@@ -151,19 +146,21 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
       </section>
       <section className="tj-q2" aria-label="Is research working">
         {measured.length > 0 && (
-          <ul className="tj-rows">
+          <ul className="tj-rows" data-primary-content>
             {measured.map(({ play, title, view }) => (
               <li key={play}>
+                <span className="tj-row-head">
                 <a className="tj-row-title" href={playHref(play)}>{title}</a>
                 <Tip className="tj-ladder" text={`${view.trend.best} of ${view.trend.total} steps passed${view.progress?.steps.length ? `: ${view.progress.steps.map((step) => `${step.label} ${step.state}`).join(', ')}` : ''}`}>
                   <span className="tj-steps">{view.progress?.steps.map((step, i) => <i key={i} data-step={step.state} title={step.label} />)}</span>
                   <span className="tj-num">{view.trend.best}/{view.trend.total}</span>
                 </Tip>
-                <Tip text={`Steps passed at the end of each day: ${view.trend.passed.map((v, i) => `${view.trend.days[i] ?? ''} ${v ?? '—'}`).join(', ')} of ${view.trend.total}`}><Spark trend={view.trend} now={now} /></Tip>
                 <span className="tj-state">
                   <b className={`tj-word tj-${view.trend.movement}`}>{WORD[view.trend.movement]}</b> {moveLine(view.trend, now)}
                   {holdLine(view) && <span className="tj-muted tj-hold">{holdLine(view)}</span>}
                 </span>
+                </span>
+                <TrendChart trend={view.trend} />
               </li>
             ))}
           </ul>
@@ -186,7 +183,12 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             </div>
           </>
         )}
-        {solved.length > 0 && <p className="tj-rest">Solved: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}
+        {solved.length > 0 && (
+          <details className="tj-solved">
+            <summary><b>Solved</b> <span className="tj-muted">{solved.length}</span></summary>
+            <span className="tj-names">{solved.map((p) => <a key={p.play} href={playHref(p.play)}>{p.title}</a>)}</span>
+          </details>
+        )}
       </section>
     </div>
   )
