@@ -244,15 +244,17 @@ function runUsage(m: Model) {
 }
 
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
-function Stats({ m }: { m: Model }) {
-  const { listUsd, complete } = runUsage(m)
+function Stats({ m, receiptUsd }: { m: Model; receiptUsd: number | null }) {
+  // Without the run's stores (deleted with ~/.cache/disco on 10-25) the receipt's Runtime estimate, the figure /play prints.
+  const own = runUsage(m)
+  const { listUsd, complete } = own.listUsd != null ? own : { listUsd: receiptUsd, complete: true }
   // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
   // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
   const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
-    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, 'API-equivalent at list price; each agent\'s billed amount is in its card'] as [string, string, string]] : []),
+    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, own.listUsd != null ? 'API-equivalent at list price; each agent\'s billed amount is in its card' : "Runtime's estimate from the receipt, the figure /play prints; the run's per-call stores are gone"] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
     ['Crashed', String(m.nodes.filter(crashed).length)],
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
@@ -412,7 +414,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
-              <Stats m={m} />
+              <Stats m={m} receiptUsd={doc.run.spend?.apiEquivalentUsd ?? null} />
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
