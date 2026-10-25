@@ -66,17 +66,18 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
   const reader = file || baseline ? <RetainedFile key={`${doc.run.id}:${nav.version}:${path}`} file={(file ?? baseline)!} files={files} missingAfter={!file} absenceVerified={!file && !!baseline && retainedPageAbsent(inventory, baseline)} baseline={baseline} baselineInventory={before.data} comparisonSelected={nav.compare !== null} beforeLabel={beforeLabel} theme={theme} runId={doc.run.id} fileVersion={nav.version} navigation={nav} />
         : <div className="run-file-empty" role={selected ? 'alert' : undefined}><h3>{!inventory && !error ? 'Loading the retained work…' : selected ? 'This file is not in the retained inventory' : 'No artifact to preview'}</h3>{(inventory || error) && <p>{selected ?? 'No file content is available from this inventory.'}</p>}</div>
   return <section className="run-artifacts-wrap" aria-label="Files and artifacts" data-run-artifacts data-embedded={embedded || undefined}>
-    {/* Versions fold into one control until one is chosen: the file itself takes the first screen. */}
-    {(versions.length > 1 || nav.version || nav.compare) && <details className="run-file-selection" open={Boolean(nav.version || nav.compare) || undefined}><summary>Versions</summary>
-      <label>Version <select value={nav.version ?? ''} onChange={(event) => nav.onVersion(event.target.value || null)}><option value="">Current retained files</option>{unknownVersion && <option value={nav.version!}>Requested version · {nav.version!.slice(0, 8)}</option>}{versions.map((item) => <option key={item.commit} value={item.commit}>{item.label} · {item.commit.slice(0, 8)}</option>)}</select></label>
-      <label>Compare with <select value={nav.compare ?? ''} onChange={(event) => { nav.onCompare(event.target.value || null); if (event.target.value) nav.onView('diff') }}><option value="">Choose a recorded version</option>{unknownCompare && <option value={nav.compare!}>Requested version · {nav.compare!.slice(0, 8)}</option>}{versions.map((item) => <option key={item.commit} value={item.commit}>{item.label} · {item.commit.slice(0, 8)}</option>)}</select></label>
-    </details>}
     {error && <p className="run-file-notice" role="alert">Files are unavailable: {error}</p>}
     {inventory?.reason && <p className="run-file-notice" role="status">{inventory.reason}</p>}
     {currentView.data?.history.complete === false && <p className="run-file-notice">The retained version list is incomplete.{typeof currentView.data.history.omittedVersions === 'number' ? ` ${currentView.data.history.omittedVersions} additional versions are omitted.` : ' The number of omitted versions is unknown.'}</p>}
     {currentView.data?.history.state === 'unavailable' && <p className="run-file-notice">Version history is unavailable: {currentView.data.history.reason ?? 'No reason was recorded.'}</p>}
     {nav.compare && (before.error || comparison.error) && <p className="run-file-notice" role="alert">The comparison is unavailable: {before.error ?? comparison.error}</p>}
     <div className="run-file-browser"><WorkspaceFilesPane paths={paths} selectedPath={path ?? undefined} onSelect={(next) => { if (paths.includes(next)) { onSelect(next); setPane('file') } }} onBack={() => setPane('tree')} preview={pane === 'file' && path ? { path, content: reader } : undefined} search label="Retained artifacts" expansionKey={`${doc.run.id}:${nav.version ?? 'current'}`} surface="plain" /></div>
+    {/* Versions fold into one control under the file, which comes first: above it they put the literal answer at 730 px of
+        844 on a phone (root 2026-10-25, Chrome at 390x844). */}
+    {(versions.length > 1 || nav.version || nav.compare) && <details className="run-file-selection" open={Boolean(nav.version || nav.compare) || undefined}><summary>Versions</summary>
+      <label>Version <select value={nav.version ?? ''} onChange={(event) => nav.onVersion(event.target.value || null)}><option value="">Current retained files</option>{unknownVersion && <option value={nav.version!}>Requested version · {nav.version!.slice(0, 8)}</option>}{versions.map((item) => <option key={item.commit} value={item.commit}>{item.label} · {item.commit.slice(0, 8)}</option>)}</select></label>
+      <label>Compare with <select value={nav.compare ?? ''} onChange={(event) => { nav.onCompare(event.target.value || null); if (event.target.value) nav.onView('diff') }}><option value="">Choose a recorded version</option>{unknownCompare && <option value={nav.compare!}>Requested version · {nav.compare!.slice(0, 8)}</option>}{versions.map((item) => <option key={item.commit} value={item.commit}>{item.label} · {item.commit.slice(0, 8)}</option>)}</select></label>
+    </details>}
   </section>
 }
 

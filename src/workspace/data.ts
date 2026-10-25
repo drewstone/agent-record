@@ -40,6 +40,8 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         })
         if (!alive) return
         stale = response.headers.get('X-Workspace-Stale') === '1'
+        // Only a fresh 200 or 304 ends a stale episode and restores its quick retries; an error answer is not fresh (root, #180).
+        if (!stale && (response.ok || response.status === 304)) retries = 0
         if (response.status === 304) {
           setState((current) => (current.stale === stale ? current : { ...current, stale }))
           return
@@ -62,12 +64,12 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         if (alive && !controller.signal.aborted)
           setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
       } finally {
-        // A document served as last composed while the server recomposes it is asked for again, a few times at most.
-        if (alive && poll) timer = window.setTimeout(load, poll)
-        else if (alive && stale && retries < STALE_RETRIES) {
+        // A document served as last composed while the server recomposes it is asked for again soon, a few times at most,
+        // before the page's own poll: a polled page waited a whole interval and /today showed a 2 h old copy (REVIEW-7 #2).
+        if (alive && stale && retries < STALE_RETRIES) {
           timer = window.setTimeout(load, STALE_RETRY_MS * 1.5 ** retries)
           retries += 1
-        }
+        } else if (alive && poll) timer = window.setTimeout(load, poll)
       }
     }
     void load()
@@ -358,18 +360,6 @@ export function runStatus(
   const at = run.ending?.at ?? run.settledAt
   const base = statusOf({ axis: 'run', state: run.state, reason: run.reason, stopCause: run.stopCause, endedAt: at, newerStarted })
   return base.tone === 'neutral' && at && base.word.startsWith('Stopped') ? { ...base, word: `${base.word} ${at.slice(11, 16)}Z` } : base
-}
-
-/** Paid and list price, with unknown kept apart. */
-export function spendParts(spend: Spend | null | undefined) {
-  return {
-    paid: spend?.paidUsd ?? null,
-    sandbox: spend?.sandboxUsd ?? null,
-    router: spend?.routerUsd ?? null,
-    basis: spend?.costBasisUsd ?? null,
-    list: spend?.listUsd ?? null,
-    known: spend?.paidKnown ?? false,
-  }
 }
 
 /** Navigate the host page; the wall shells are separate documents. */

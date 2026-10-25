@@ -87,7 +87,6 @@ function Spark({ trend, now, w = 280, h = 56 }: { trend: ViewTrend; now: number;
   const from = x(n - 1 - flatDays)
   return (
     <svg className={`tj-spark tj-${trend.movement}`} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`steps passed at the end of each of the last ${n} days: ${trend.passed.map((v) => v ?? 'none').join(', ')} of ${trend.total}`}>
-      <title>{`Steps passed at the end of each day: ${trend.passed.map((v, i) => `${trend.days[i] ?? ''} ${v ?? '—'}`).join(', ')} of ${trend.total}`}</title>
       {flatDays > 0 && (
         <g className="tj-plateau">
           <rect x={from} y={12} width={x(n - 1) - from} height={h - 14} />
@@ -117,6 +116,10 @@ function holdLine(view: HostView) {
   return `${blocker.owner === 'Drew' ? 'You' : blocker.owner ?? 'Its owner'} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.`
 }
 
+/** A group's short label: what holds its plays, by the blocker's kind, or that no check counts their steps. */
+const groupLabel = (play: Play, reason: string | null) =>
+  !reason ? 'No step check' : play.view.blocker?.kind === 'stopped' ? 'Stopped' : play.view.blocker?.owner === 'Drew' ? 'Waiting on you' : 'Blocked'
+
 /** Plays grouped by what holds them, the largest group first; plays nothing holds group under null (they need a check). */
 function groups(plays: Play[]): [string | null, Play[]][] {
   const by = new Map<string | null, Play[]>()
@@ -132,7 +135,6 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
     .sort((a, b) => ORDER[a.view.trend.movement] - ORDER[b.view.trend.movement])
   const solved = plays.filter((p) => p.view.status.key === 'solved')
   const blind = plays.filter((p) => !p.view.trend && p.view.status.key !== 'solved')
-  const active = measured.length + blind.length
   const count = (m: Movement) => measured.filter((p) => p.view.trend.movement === m).length
   return (
     <div className="ws-page td tj" data-mode="today">
@@ -171,14 +173,17 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             {/* One row per reason, its plays named (REVIEW-5 #7: four rows said the same sentence, seven the same link). */}
             {/* Neutral and plain: amber under "Nothing needs you." read as a contradiction (REVIEW-6 #4). */}
             <h2 className="tj-finding"><b>{blind.length} {blind.length === 1 ? "play can't" : "plays can't"} show progress yet</b></h2>
-            <ul className="tj-rows tj-blind">
+            {/* A short label and count above each list, folded, the reason inside (REVIEW-7 #3: a 350 px gap between sentence
+                labels and their links). */}
+            <div className="tj-blind">
               {groups(blind).map(([reason, plays]) => (
-                <li key={reason ?? ''}>
-                  <span className="tj-state"><b>{reason ?? 'No check counts their steps'}</b></span>
+                <details key={reason ?? ''}>
+                  <summary><b>{groupLabel(plays[0]!, reason)}</b> <span className="tj-muted">{plays.length}</span></summary>
+                  {reason && <p className="tj-muted">{reason}</p>}
                   <span className="tj-names">{plays.map((p) => <a key={p.play} href={playHref(p.play, reason ? undefined : 'setup')}>{p.title}</a>)}</span>
-                </li>
+                </details>
               ))}
-            </ul>
+            </div>
           </>
         )}
         {solved.length > 0 && <p className="tj-rest">Solved: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}

@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.82.0",
+  "version": "0.83.0",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -89,7 +89,7 @@
     "@tangle-network/brand": "1.26.2",
     "@tangle-network/charts": "0.19.0",
     "@tangle-network/harness-sessions": "0.1.0",
-    "@tangle-network/sandbox-ui": "0.136.1",
+    "@tangle-network/sandbox-ui": "0.137.0",
     "@tangle-network/ui": "11.42.0",
     "@xterm/addon-fit": "~0.11.0",
     "@xterm/addon-web-links": "~0.12.0",
@@ -119,10 +119,5 @@
   "bin": {
     "agent-record-report": "tools/render-report.mjs",
     "agent-record-ingest": "tools/ingest.mjs"
-  },
-  "pnpm": {
-    "overrides": {
-      "@pierre/diffs": "1.5.2"
-    }
   }
 }
