@@ -302,16 +302,25 @@ function spawnedBy(m: Model, node: Node) {
  * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input is submission provenance: the
  * prompt the root was given and the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
  */
+/** A text's first sentence, whole; a run-on longer than 40 words is cut to 30. */
+const firstSentence = (text: string) => {
+  const first = text.split(/(?<=[.!?])\s+/)[0] ?? text
+  return first.split(/\s+/).length <= 40 ? first : plainSummary(first, 30)
+}
+
 function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const input = doc.input
   const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
   if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
   const source = input.source?.path?.split('/').pop()
   return (
-    <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
-      <p>{root ? who(root) : 'root agent'}</p>
+    <div className="rj-trigger">
+      {/* The goal's whole first sentence: a 14-word cut ended at "retain the…" and dropped the teardown this smoke is about
+          (root 2026-10-25 15:44Z). */}
+      {input.objective && <p><Full what="goal" short={firstSentence(goalText(input.objective))} raw={goalText(input.objective)} /></p>}
+      {/* Who ran it is not who started it (root 2026-10-25): the input records no initiator, only the press's source file. */}
+      <p className="rj-muted">Run by {root ? who(root) : 'the root agent'} · <span title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>started by: not recorded</span></p>
       {input.instruction && <Prompt text={input.instruction} />}
-      {input.objective && <p><Full what="goal" short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )
 }
@@ -404,10 +413,12 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
-          {/* The agent and what it was asked come before its files: an 11-byte answer filled the first screen and pushed
-              the agent and its transcript below the fold (root 2026-10-25, 1072 px window). */}
+          {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
+              answer sits in a phone's first screen (root 2026-10-25 15:44Z: ANSWER at 761 px of 844, under a collapsed
+              Transcript). With many agents the picked agent leads, then its files. */}
+          {single && work}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
-          {work}
+          {!single && work}
           {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></footer>}
         </>
       )}
