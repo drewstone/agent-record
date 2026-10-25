@@ -79,7 +79,7 @@ export function PlayReleases({ play }: { play: Play }) {
           }))} />
       </div>
       {selected && (
-        <div className="release-list" data-primary-content aria-label={label(selected)}>
+        <div className="release-list" aria-label={label(selected)}>
           {byRun.map((runId) => (
             <p key={runId}>
               <a className="mono" href={`/run/${encodeURIComponent(runId)}`}>{shortRun(play.id, runId)}</a>

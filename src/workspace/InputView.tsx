@@ -14,7 +14,7 @@ function Long({ title, text, clamp = 1400 }: { title: string; text: string | nul
     <section className="input-block" data-input={title.toLowerCase()}>
       <h4>{title}</h4>
       {/* A short clamp renders only the opening words (cut at a word), so hidden text is never on the page. */}
-      <div className={`input-text ${long && !open ? (short ? 'is-short' : 'clamped') : ''}`} data-primary-content={short ? '' : undefined}>
+      <div className={`input-text ${long && !open ? (short ? 'is-short' : 'clamped') : ''}`}>
         {/^\s*[{[]/.test(text) ? <StructuredContent text={text} /> : <MessageText text={long && !open && short ? `${text.slice(0, clamp).replace(/\s+\S*$/, '')} …` : text} />}
       </div>
       {long && (
@@ -129,7 +129,7 @@ function InputBody({ input, api, changed, compact = false }: { input: PlayInput 
   const selected = input.files.find((item) => item.path === file)
   const profile = input.profile
   const { outsideCriterion, sandboxBounds: _b, budgetDerivation, ...restAcceptance } = acceptance ?? {}
-  const objective = <Long title="Objective" text={input.objective} clamp={compact ? 360 : undefined} />
+  const objective = <Long title="Objective" text={input.objective} clamp={compact ? 120 : undefined} />
   const body = (
       <div className="input-columns">
         <div className="input-main">
@@ -239,7 +239,7 @@ function InputBody({ input, api, changed, compact = false }: { input: PlayInput 
         <>
           {objective}
           <details className="input-details input-more">
-            <summary>Instruction, acceptance, profile and files</summary>
+            <summary>Full input</summary>
             {body}
           </details>
         </>

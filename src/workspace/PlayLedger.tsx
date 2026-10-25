@@ -142,7 +142,7 @@ function LineageTree({ play, rows, now }: { play: Play; rows: PlayLedgerRow[]; n
   }
   const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   return (
-    <div className="ledger-lineage" data-primary-content aria-label="Release lineage">
+    <div className="ledger-lineage" aria-label="Release lineage">
       <Gantt colors={colors} now={now} axis={day} span={(a, b) => `${utc(new Date(a).toISOString())} – ${utc(new Date(b).toISOString())}`}
         rows={ordered.map((row) => ({
           // Labels are right-aligned, so an indent cannot show nesting; each fork names its parent release instead.
@@ -211,7 +211,6 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now() }: { p
   )
   return (
     <section className={`ws-section play-ledger ${full ? 'is-full' : ''}`} data-play-ledger aria-label="Runs">
-      {full && <LineageTree play={play} rows={shownRows} now={now} />}
       <header className="section-head">
         <h3>Runs</h3>
         {cost?.apiEquivalentUsd ? (
@@ -309,6 +308,8 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now() }: { p
           </tbody>
         </table>
       </div>
+      {/* The ledger answers the tab's question (how each run ended, at what cost); the lineage sits under it. */}
+      {full && <LineageTree play={play} rows={shownRows} now={now} />}
       {idleCount > 0 && (
         <button type="button" className="link-button ledger-idle" onClick={() => setIdleShown(!idleShown)} aria-expanded={idleShown}>
           {idleShown ? `Hide the ${idleCount} runs that did no work` : `+${idleCount} ${idleCount === 1 ? 'run' : 'runs'} that did no work`}
