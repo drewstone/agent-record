@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { PlaysDocument } from '../workspace-model.js'
 import { plainSummary } from './plain-words.js'
 import { endingStatus, go, money, StandingText, StatusPill, statusOf } from './data.js'
@@ -33,15 +32,11 @@ const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) =>
  * carried in `standing.view`), the words its play, run and Today pages print; a play whose page has not been composed
  * since the view existed falls back to its standing.
  */
-export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: boolean }) {
-  // The numeric columns sort, most first; a second click restores the host's order (review 1 #13: "Runs" looked sortable).
-  const [sort, setSort] = useState<'runs' | 'cost' | null>(null)
-  const runsOf = (play: PlayRow) => (!showHidden && play.counts ? play.counts.shown : play.runCount) ?? 0
-  const costOf = (play: PlayRow) => play.standing?.cost?.apiEquivalentUsd ?? -1
-  const ordered = sort ? [...rows].sort((a, b) => (sort === 'runs' ? runsOf(b) - runsOf(a) : costOf(b) - costOf(a))) : rows
-  const head = (key: 'runs' | 'cost', label: string, title?: string) => (
+export function PlaysTable({ rows, showHidden, sort, onSort }: { rows: PlayRow[]; showHidden: boolean; sort: string; onSort: (sort: 'runs' | 'spend' | null) => void }) {
+  // The numeric headers set the page's one order (its `sort` parameter), most first; a second click restores the latest-run order.
+  const head = (key: 'runs' | 'spend', label: string, title?: string) => (
     <th className="num" aria-sort={sort === key ? 'descending' : undefined} title={title}>
-      <button type="button" className="link-button sort-button" onClick={() => setSort(sort === key ? null : key)}>{label}</button>
+      <button type="button" className="link-button sort-button" onClick={() => onSort(sort === key ? null : key)}>{label}{sort === key ? ' ↓' : ''}</button>
     </th>
   )
   return (
@@ -53,11 +48,11 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
           <th>Best release</th>
           <th>Last run</th>
           {head('runs', 'Runs')}
-          {head('cost', 'API-equivalent', 'Every token at list price, whoever paid; how many started runs were priced')}
+          {head('spend', 'API-equivalent', 'Every token at list price, whoever paid; how many started runs were priced')}
         </tr>
       </thead>
       <tbody>
-        {ordered.map((play) => {
+        {rows.map((play) => {
           const href = `/play/${encodeURIComponent(play.id)}`
           const open = () => go(href)
           const runs = !showHidden && play.counts ? play.counts.shown : play.runCount

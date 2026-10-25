@@ -2284,13 +2284,22 @@
   .ar-ws .output-image-pair { grid-template-columns: 1fr; }
 }
 /* ---- The plays page's Runs tab: failure causes still happening. */
-.ar-ws .reliability { display: grid; gap: 12px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
-.ar-ws .reliability > p { margin: 0; }
-.ar-ws .reliability-causes { display: grid; gap: 4px; min-width: 0; }
-.ar-ws .reliability-causes ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
-.ar-ws .reliability-causes li { display: grid; gap: 1px; }
-.ar-ws .reliability-causes li .faint { font-size: var(--ar-text-s); }
-.ar-ws .reliability-definition { margin: 0; font-size: var(--ar-text-s); }
+.ar-ws .reliability { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 32px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
+.ar-ws .reliability-days, .ar-ws .reliability-causes { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.ar-ws .reliability-days > p, .ar-ws .reliability-causes > p { margin: 0; }
+.ar-ws .reliability-rate { font: 600 var(--ar-text-l)/1.2 var(--ar-font-body); }
+.ar-ws .reliability-causes .ov-hbars { gap: 4px 12px; }
+.ar-ws .reliability-causes .ov-hbars li > div { padding: 4px 0; }
+.ar-ws .reliability-causes .ov-hbar-label, .ar-ws .reliability-causes .ov-hbar-value { font-size: var(--ar-text-s); }
+.ar-ws .reliability-causes .ov-hbar-note, .ar-ws .reliability .ov-axis { font-size: 12px; }
+.ar-ws .runs-answer { display: grid; gap: 16px; min-width: 0; }
+.ar-ws .runs-table caption { caption-side: top; text-align: left; padding: 0 0 8px; }
+@media (max-width: 1100px) { .ar-ws .reliability { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  .ar-ws .reliability { padding: 12px; }
+  .ar-ws .reliability-causes .ov-hbars { grid-template-columns: minmax(0, 1fr) max-content; }
+  .ar-ws .reliability-causes .ov-hbar-label { grid-column: 1 / -1; white-space: normal; }
+}
 .ar-ws .nowrap { white-space: nowrap; }
 /* ---- Scores side by side, a writer's grade, and the readout's charts. */
 .ar-ws .scores-table { font-variant-numeric: tabular-nums; }
@@ -2715,24 +2724,35 @@
   .ar-ws .run-panel { padding-left: 0; padding-right: 0; }
 }
 
-/* ---- The Discovery home: what the runs found, newest first. */
-.ar-ws .findings-feed { display: grid; gap: 16px; min-width: 0; }
-.ar-ws .feed-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
-.ar-ws .feed-head p { margin: 8px 0 0; max-width: 90ch; font-size: var(--ar-text-s); }
-.ar-ws .feed-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.ar-ws .feed-filters select { width: auto; min-width: 170px; }
-.ar-ws .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
-.ar-ws .filter-chip { padding: 4px 12px; border: 1px solid var(--ar-border-strong); border-radius: 999px; background: transparent; color: var(--ar-fg-muted); font: 600 14px/1.4 var(--ar-font-body); }
-.agent-record.ar-ws .filter-chip.on, .agent-record.ar-ws .filter-chip.on:hover { border-color: var(--ws-accent); background: color-mix(in srgb, var(--ws-accent) 14%, transparent); color: var(--ar-fg); }
-.ar-ws .feed-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 16px; }
-.ar-ws .feed-card { display: grid; gap: 8px; height: 100%; box-sizing: border-box; padding: 16px 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; color: var(--ar-fg); text-decoration: none; transition: border-color .12s ease, background .12s ease; }
-.ar-ws .feed-card:hover, .ar-ws .feed-card:focus-visible { text-decoration: none; border-color: var(--ar-fg-faint); background: var(--ar-raised, var(--ar-bg-alt)); }
-.ar-ws .feed-card:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 2px; }
-.ar-ws .feed-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; color: var(--ar-fg-faint); min-width: 0; }
-.ar-ws .feed-title { font-weight: 600; overflow-wrap: anywhere; }
-.ar-ws .feed-text { align-self: start; color: var(--ar-fg-muted); font-size: var(--ar-text-s); line-height: 1.5; max-height: 4.5em; overflow-wrap: anywhere; }
-.ar-ws .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.ar-ws .feed-tags { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 12px; }
+/* ---- /plays Findings: outside-review bars (each a filter) over one line per finding, grouped by verdict. */
+.ar-ws .findings-feed { display: grid; grid-template-columns: 340px minmax(0, 1fr); align-items: start; gap: 24px 32px; min-width: 0; }
+.ar-ws .findings-trust { position: sticky; top: 16px; display: grid; gap: 12px; padding: 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
+.ar-ws .findings-trust > p { margin: 0; }
+.ar-ws .findings-trust .ov-hbars { grid-template-columns: minmax(0, 7rem) minmax(25%, 1fr) 3rem; gap: 4px 12px; }
+.ar-ws .findings-trust .ov-hbars li > a { padding: 4px 8px; }
+.ar-ws .findings-trust .ov-hbar-label, .ar-ws .findings-trust .ov-hbar-value { font-size: var(--ar-text-s); }
+.ar-ws .findings-trust .ov-hbars a { transition: opacity .15s ease-out, background .15s ease-out; }
+.ar-ws .findings-trust:not([data-review='all']) .ov-hbars a { opacity: .45; }
+.ar-ws .findings-trust[data-review='new'] a[href$='review=new'], .ar-ws .findings-trust[data-review='reproduction'] a[href$='review=reproduction'],
+.ar-ws .findings-trust[data-review='known'] a[href$='review=known'], .ar-ws .findings-trust[data-review='wrong'] a[href$='review=wrong'],
+.ar-ws .findings-trust[data-review='unverifiable'] a[href$='review=unverifiable'], .ar-ws .findings-trust[data-review='pending'] a[href$='review=pending'] { opacity: 1; background: var(--chart-live-hover, var(--ar-bg-alt)); }
+.ar-ws .finding-groups { display: grid; gap: 24px; min-width: 0; }
+.ar-ws .finding-groups h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.ar-ws .finding-groups .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ar-ws .finding-lines { list-style: none; margin: 0 0 8px; padding: 0; display: grid; border-top: 1px solid var(--ar-border); }
+.ar-ws .finding-line a { display: flex; align-items: baseline; gap: 16px; min-width: 0; padding: 8px 4px; border-bottom: 1px solid var(--ar-border); color: var(--ar-fg); text-decoration: none; transition: background .15s ease-out; }
+.ar-ws .finding-line a:hover, .ar-ws .finding-line a:focus-visible { background: var(--ar-bg-alt); text-decoration: none; }
+.ar-ws .finding-line-title { flex: 1; min-width: 0; }
+.ar-ws .finding-line-meta { flex: none; font-size: var(--ar-text-s); white-space: nowrap; }
+@media (max-width: 1100px) {
+  .ar-ws .findings-feed { grid-template-columns: minmax(0, 1fr); }
+  .ar-ws .findings-trust { position: static; }
+}
+@media (max-width: 700px) {
+  .ar-ws .findings-trust { padding: 12px; }
+  .ar-ws .finding-line a { flex-direction: column; align-items: stretch; gap: 4px; }
+  .ar-ws .finding-line-meta, .ar-ws .finding-line-title { white-space: normal; overflow-wrap: anywhere; }
+}
 
 /* ---- The Discovery overview: a banner with the fleet's state, KPI tiles, then sections of charts. */
 /* Sized in em off one 16px root. The wall's pages zoom by screen height (wall-scale.js: about 1.5 on the 2560x1440
@@ -3196,7 +3216,6 @@
   .ar-ws .ws-tabs::-webkit-scrollbar { display: none; }
   .ar-ws .ws-tabs button { flex: none; padding: 8px 12px; }
   .ar-ws .play-fact { padding: 4px 8px; }
-  .ar-ws .feed-card { padding: 12px; }
   /* B2: the run page fits 390 px: no side padding of its own, and no chart or command wider than the column. */
   .ar-ws .rr-page { padding: 12px 0; }
   .ar-ws .rr-page .rr-chart, .ar-ws .rr-page .tgc-figure, .ar-ws .rr-page svg { max-width: 100%; min-width: 0; }
@@ -3531,11 +3550,10 @@
   .ar-ws .plays-table thead, .ar-ws .plays-table td.num { display: none; }
   .ar-ws .plays-table, .ar-ws .plays-table tbody { display: block; }
   /* Only the pill sizes the right column: the last run's words sat in it and squeezed names to 93 px (REVIEW-7 #11). */
-  .ar-ws .plays-table tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
-  .ar-ws .plays-table .plays-name { grid-column: 1 / 3; }
-  .ar-ws .plays-table .plays-standing { grid-column: 3; }
-  .ar-ws .plays-table .plays-best { grid-column: 1; }
-  .ar-ws .plays-table .plays-last { grid-column: 2 / 4; justify-self: end; }
+  .ar-ws .plays-table tr { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
+  /* The name across the whole first line; pill, best release and last run on the second (REVIEW-7 #11). */
+  .ar-ws .plays-table .plays-name { grid-column: 1 / -1; }
+  .ar-ws .plays-table .plays-last { justify-self: end; }
   .ar-ws .plays-table td { display: block; padding: 0; border: 0; white-space: normal; }
   .ar-ws .plays-table .plays-standing { max-width: none; }
 }
@@ -3616,7 +3634,10 @@
 .ar-ws .tj-held summary { cursor: pointer; font-size: 14px; color: var(--ar-fg-muted); }
 .ar-ws .tj-held ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; font-size: 12px; }
 .ar-ws .tj-rows { list-style: none; margin: 0; padding: 0; display: grid; }
-.ar-ws .tj-rows li { display: grid; grid-template-columns: minmax(160px, 1.2fr) auto 280px minmax(220px, 2fr); align-items: center; gap: 12px 28px; padding: 20px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); font-size: 14px; }
+.ar-ws .tj-rows > li { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); align-items: center; gap: 16px 32px; padding: 20px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); font-size: 14px; }
+.ar-ws .tj-row-head { display: grid; justify-items: start; gap: 12px; }
+.ar-ws .tj-chart { min-width: 0; }
+.ar-ws .tj-chart .ov-axis { font-size: 12px; }
 .ar-ws .tj-row-title { font-size: 18px; font-weight: 600; }
 .ar-ws .tj-ladder { display: inline-flex; align-items: center; gap: 12px; }
 .ar-ws .tj-steps { display: inline-flex; gap: 4px; }
@@ -3627,19 +3648,15 @@
 .ar-ws .tj-num { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ar-ws .tj-state { display: grid; gap: 4px; }
 .ar-ws .tj-hold { font-size: 12px; }
-.ar-ws .tj-spark { display: block; overflow: visible; }
-.ar-ws .tj-spark path { fill: none; stroke-width: 2.5; stroke: currentColor; }
-.ar-ws .tj-spark circle { fill: currentColor; }
-.ar-ws .tj-spark-top { stroke: color-mix(in srgb, var(--ar-fg-faint) 50%, transparent); stroke-dasharray: 2 3; }
-.ar-ws .tj-plateau rect { fill: color-mix(in srgb, var(--ar-c-warn, #f5a524) 14%, transparent); }
-.ar-ws .tj-plateau text { fill: var(--ar-c-warn, #f5a524); font-size: 12px; }
 .ar-ws .tj-moving { color: var(--ar-c-ok, #22c55e); }
 .ar-ws .tj-stuck { color: var(--ar-c-warn, #f5a524); }
 .ar-ws .tj-regressed { color: var(--ar-c-fail, #ef4444); }
 .ar-ws .tj-word { font-weight: 600; }
 .ar-ws .tj-blind { display: grid; gap: 8px; }
-.ar-ws .tj-blind details { padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
-.ar-ws .tj-blind summary { cursor: pointer; font-size: 14px; }
+.ar-ws .tj-blind details, .ar-ws .tj-solved { padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
+.ar-ws .tj-blind summary, .ar-ws .tj-solved summary { cursor: pointer; font-size: 14px; }
+.ar-ws .tj-solved b { font-weight: 600; }
+.ar-ws .tj-solved .tj-names { margin-top: 8px; }
 .ar-ws .tj-blind details > p { margin: 8px 0; }
 .ar-ws .tj-blind .tj-names { margin-top: 8px; }
 .ar-ws .tj-blind b { font-weight: 600; }
@@ -3652,12 +3669,10 @@
 .ar-ws .tj-finding b { font-weight: 600; }
 /* One bold weight across the pages (REVIEW-6 #12: <b> rendered at 700). */
 .ar-ws b, .ar-ws strong { font-weight: 600; }
-.ar-ws .tj-rest { margin: 0; font-size: 12px; color: var(--ar-fg-muted); }
 @media (max-width: 1023px) {
   .ar-ws .tj-hero { font-size: 18px; }
   .ar-ws .tj-second { font-size: 14px; }
-  .ar-ws .tj-rows li { grid-template-columns: 1fr auto; }
-  .ar-ws .tj-rows li > span:has(> svg), .ar-ws .tj-state { grid-column: 1 / -1; }
+  .ar-ws .tj-rows > li { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .tj-row-title, .ar-ws .tj-num { font-size: 14px; }
 }
 
@@ -3825,7 +3840,6 @@
 .agent-record[data-theme='dark'] { --ar-c-warn: #f5a524; }
 @media (prefers-color-scheme: dark) { .agent-record[data-theme='auto'] { --ar-c-warn: #f5a524; } }
 .ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
-.ar-ws .tj-rest { font-size: 14px; line-height: 1.6; }
 .ar-ws .rj-full-toggle { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ar-c-action); cursor: pointer; white-space: nowrap; }
 .ar-ws .rj-full-text { white-space: pre-wrap; }
 /* Fleet, Sandboxes and Ideas (WallPages.tsx): the Today frame and type (12/14/18 px, hero 32), 4 px grid, color for state. */

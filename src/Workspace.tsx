@@ -4,7 +4,7 @@ import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
-import { FindingsFeed } from './workspace/FindingsFeed.js'
+import { FindingsFeed, REVIEWS } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayBarTable } from './workspace/PlayBarTable.js'
 import { PlayJourney, PlayJourneyStanding } from './workspace/PlayJourney.js'
@@ -128,14 +128,9 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
   if (!hidden) return null
   return (
     <div className="hidden-summary" data-hidden-summary>
-      <span>
-        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}:{' '}
-        {HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason, i) => (
-          <span key={reason}>
-            {i > 0 && ' · '}
-            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}
-          </span>
-        ))}
+      {/* The count alone; the reasons are its tooltip (the line was 20 words above the table). */}
+      <span title={HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason) => `${counts[reason]} ${reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}`).join(' · ')}>
+        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}
       </span>
       <label className="toggle hidden-filter">
         <input type="checkbox" checked={showHidden} onChange={(event) => onChange(event.target.checked)} data-show-hidden />
@@ -163,7 +158,8 @@ function PlaysPage({ api }: { api: string }) {
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.apiUsd ?? 0) + (spend.sandboxUsd ?? 0)
+    // Each order reads the column it sorts: API-equivalent, and the runs the filter shows.
+    const spent = (play: PlaysDocument['plays'][number]) => play.standing?.cost?.apiEquivalentUsd ?? -1, runsShown = (play: PlaysDocument['plays'][number]) => (!showHidden && play.counts ? play.counts.shown : play.runCount) ?? 0
     const matching = (plays.data?.plays ?? []).filter(
       (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
     )
@@ -174,9 +170,9 @@ function PlaysPage({ api }: { api: string }) {
         sort === 'name'
           ? a.title.localeCompare(b.title)
           : sort === 'spend'
-            ? spent(b.spend) - spent(a.spend)
+            ? spent(b) - spent(a)
             : sort === 'runs'
-              ? b.runCount - a.runCount
+              ? runsShown(b) - runsShown(a)
               : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
       )
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
@@ -185,7 +181,7 @@ function PlaysPage({ api }: { api: string }) {
   const order = home !== 'plays' ? null : (
     <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
       <option value="latest">Latest run first</option>
-      <option value="spend">Most spend first</option>
+      <option value="spend">Most API-equivalent first</option>
       <option value="runs">Most runs first</option>
       <option value="name">By name</option>
     </select>
@@ -220,7 +216,7 @@ function PlaysPage({ api }: { api: string }) {
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
-        <FindingsFeed api={api} query={query} program={program} />
+        <FindingsFeed api={api} query={query} program={program} review={REVIEWS.find(([id]) => id === params.get('review'))?.[0] ?? null} onReview={(review) => update({ review: review ?? undefined })} />
         {frontiers}
       </div>
     )
@@ -229,23 +225,23 @@ function PlaysPage({ api }: { api: string }) {
     const all = plays.data?.runs ?? []
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
-    // An unknown is one line (design-system section 2): a missing reading prints a dash, and the line counts them.
-    const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd)), clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
-    const unrecorded = shown.filter((run) => [run.subscriptionUsd, run.apiUsd, run.sandboxUsd].every((usd) => usd === null || usd === undefined)).length
+    const clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
+    // One spend cell: each part the run has a reading for, named in its tooltip; a dash when it has none (no per-run meter).
+    const spend = (run: (typeof all)[number]) => (([['subscription at API prices', run.subscriptionUsd], ['billed API', run.apiUsd], ['billed sandbox', run.sandboxUsd]] as const).filter(([, usd]) => usd !== null && usd !== undefined)
+      .map(([name, usd], index) => <span key={name} title={name}>{index ? ' + ' : ''}{money(usd!)}</span>))
     return <div className="ws-page ws-plays" data-plays-home="runs">
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
-      <ReliabilityPanel api={api} />
-      <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.{unrecorded ? ` No spend reading for ${unrecorded} of them (subscription, API and sandbox; no per-run meter).` : ''}</p>
+      {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer" data-primary-content><ReliabilityPanel api={api} />
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
-        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
-          <th className="num">Subscription at API prices</th><th className="num">Billed API</th><th className="num">Billed sandbox</th></tr></thead>
+        <caption className="faint">{shown.length} runs, last 30 days</caption>
+        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th><th className="num">Spend</th></tr></thead>
         <tbody>{shown.slice(0, shownRows).map((run) => <tr key={run.id}>
           <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono" title={run.id}> {/\d{6}(\d\d[a-z])$/.exec(run.id)?.[1] ?? run.id}</small></td>
           <td><StatusPill status={runStatus(run, newerStarted(run, all))} /></td>
           <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
-          <td className="num">{cash(run.subscriptionUsd)}</td><td className="num">{cash(run.apiUsd)}</td><td className="num">{cash(run.sandboxUsd)}</td>
+          <td className="num">{spend(run).length ? spend(run) : '—'}</td>
         </tr>)}</tbody>
-      </table></div>
+      </table></div></div>
       {!shown.length && <p className="chat-empty">No runs match.</p>}{shown.length > shownRows && <button type="button" className="plays-more" onClick={() => setShownRows(shown.length)}>Show all {shown.length} runs</button>}
     </div>
   }
@@ -255,8 +251,8 @@ function PlaysPage({ api }: { api: string }) {
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
-          <div className="table-scroll">
-            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} />
+          <div className="table-scroll" data-primary-content>
+            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} />
           </div>
           {rows.length > shownRows && (
             <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>
