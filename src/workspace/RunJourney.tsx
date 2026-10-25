@@ -27,6 +27,8 @@ const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.t
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
 /** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
+/** "4 m ago", "3 h ago" from now. */
+const ago = (iso: string) => { const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60_000); return m < 90 ? `${Math.round(m)} m ago` : `${Math.round(m / 60)} h ago` }
 const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
 
 function useJourney(api: string, doc: RunDocument) {
@@ -212,7 +214,12 @@ function spawnedBy(m: Model, node: Node) {
   const edge = m.data.edges.find((e) => e.kind === 'spawn' && e.to === node.id)
   const parent = edge ? m.nodes.find((n) => n.id === edge.from) : null
   if (parent) return `${parent.role ?? parent.label} (${parent.label})`
-  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not recorded'
+  // The id path names the parent when the journal's edge is missing: run:s6 is the root's child (lead 2026-10-25 10:00Z).
+  const prefix = node.id.includes(':') ? node.id.slice(0, node.id.lastIndexOf(':')) : null
+  const byPath = prefix ? m.nodes.find((n) => n.id === prefix) : null
+  if (byPath) return `${byPath.id === m.root ? 'the lead' : byPath.role ?? byPath.label} (${byPath.label})`
+  if (prefix && prefix === m.root) return 'the lead'
+  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not in the spawn journal'
 }
 
 /**
@@ -252,8 +259,8 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
         <dt>Who</dt><dd>{who(node)}</dd>
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
-        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
-        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd></>}
+        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
+        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
       </dl>}
       {paths.length > 0 && (
         <div className="rj-changes">
