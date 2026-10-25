@@ -86,7 +86,7 @@ function HostCard({ h }: { h: Host }) {
       <Tip className="wp-host-head" text={h.over ? `Over a limit: ${h.over}` : up ? 'Inside every limit it reports' : 'No fresh report'}>
         <i className="wp-dot" style={{ background: up === false || (up === null && !h.local) ? 'transparent' : TONE[h.state], borderColor: TONE[h.state] }} />
         <b>{h.name}</b>
-        <span className={up === false ? 'wp-warn' : 'wp-muted'}>{h.local ? (h.reportMin === null ? 'not read' : `read ${ago(h.reportMin)} ago`) : up === null ? 'report age unknown' : up ? 'up' : `no report for ${ago(h.reportMin!)}`}</span>
+        <span className={up === false ? 'wp-warn' : 'wp-muted'}>{h.local ? (h.reportMin === null ? 'not read' : h.reportMin < 2 ? 'read now' : `read ${ago(h.reportMin)} ago`) : up === null ? 'report age unknown' : up ? 'up' : `no report for ${ago(h.reportMin!)}`}</span>
       </Tip>
       <span className="wp-k">Load</span>
       <Tip className="wp-bar" text={`load1 ${num(h.load1, 1)} on ${h.cores ?? '—'} cores (${num(perCore, 2)} per core); the limit is ${num(h.loadLimit)}`}>
@@ -138,10 +138,10 @@ function FleetView({ doc }: { doc: FleetDoc }) {
       <div className="wp-split">
         <section aria-label="Agents">
           <h2>Agents<StaleStamp at={doc.agentsAt} source="agent panes" /></h2>
-          <Tip text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
+          <Tip className="wp-agents-meter" text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
           <div className="wp-groups">
             {AGENT_STATES.map((state) => <AgentGroup key={state} state={state} count={counts[state] ?? null} rows={doc.agents.rows.filter((a) => a.state === state)} />)}
-            <span className="wp-muted">{counts.idle ?? '—'} idle</span>
+            <span className="wp-muted wp-idle">{counts.idle ?? '—'} idle</span>
           </div>
         </section>
         <section aria-label="Seats">
@@ -242,12 +242,12 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
             series={[{ name: 'subscription at API prices', color: 'var(--ar-accent)', values: daily('subscription') }, { name: 'billed API', color: TONE.warn, values: daily('api') }, { name: 'billed sandbox', color: TONE.ok, values: daily('sandbox') }]} /></div>
         </section>
       </div>
-      <details className="wp-group" aria-label="Why parked sandboxes stay"><summary>Why {t.parked ?? '—'} sandboxes stay parked</summary>
+      <details className="wp-group" aria-label="Why parked sandboxes stay"><summary>Why {t.parked ?? '—'} stay parked</summary>
         <div><HBars limit={doc.parked.length} format={(v) => String(v)} color={TONE.warn}
           rows={doc.parked.map((c) => ({ label: c.label, value: c.boxes, note: `${c.discovery} Discovery's${c.hours === null ? '' : ` · ${num(c.hours, 1)} h`}` }))} /></div>
       </details>
       {/* The harness latency matrix is still the wall's drawer (tangle-tools fleet/README.md "Harness lifecycle latency"). */}
-      <a className="wp-go" href="/?profile=discovery&drawer=harness-lifecycle#discovery-fleet">Harness lifecycle latency</a>
+      <a className="wp-go" href="/?profile=discovery&drawer=harness-lifecycle#discovery-fleet">Harness latency</a>
     </>
   )
 }
@@ -272,7 +272,7 @@ function IdeaDetail({ idea, decideUrl }: { idea: Idea; decideUrl: string | null 
       <p>{idea.summary}</p>
       {shown.length > 0 && <ol>{shown.map((s) => <li key={s}>{s}</li>)}</ol>}
       {idea.problemStatements.length > 3 && <button type="button" className="wp-link" onClick={() => setAll(!all)}>{all ? 'Fewer problems' : `All ${idea.problemStatements.length} problems`}</button>}
-      {decideUrl && <a className="wp-go" href={decideUrl} target="_blank" rel="noreferrer">{idea.stage === 'awaiting' ? 'Decide in Idea Triage' : 'Open in Idea Triage'}</a>}
+      {decideUrl && <a className="wp-go" href={decideUrl}>{idea.stage === 'awaiting' ? 'Decide in Idea Triage' : 'Open in Idea Triage'}</a>}
     </article>
   )
 }
