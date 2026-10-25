@@ -60,7 +60,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const target = gap.metric.target
   const times = [...gap.measured.map((m) => ms(m.at)), ...gap.capMisses.map((m) => ms(m.at)), ms(gap.passed?.lastAt)].filter(Number.isFinite)
   if (!times.length) return null
-  const w = measured ?? (phone ? 380 : 1000), h = phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
+  const w = measured ?? (phone ? 380 : 1000), h = gap.measured.length <= 1 ? (phone ? 200 : 220) : phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
   const t0 = Math.min(...times) - 3_600_000, t1 = Math.max(now, ...times)
   // Fitted to our own data, a decade either side (lead 07:12Z: with the paper's band on the axis all our points sat in
   // the bottom tenth and the chart read flat); the paper, thousands of times higher, is an off-scale arrow.
@@ -92,7 +92,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
     <div className="pj-gap" ref={box}>
       <svg className="pj-gap-chart" viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={`${gap.metric.label} per release on a log scale against the paper's ${target ? `${rate(target.min)}–${rate(target.max)}` : ''} ${gap.metric.unit}`} onMouseLeave={() => setOn(null)}>
         {ticks.map((v) => <g key={v} className="pj-grid"><line x1={left} x2={w - right} y1={y(v)} y2={y(v)} /><text x={left - 8} y={y(v) + 4} textAnchor="end">{rate(v)}</text></g>)}
-        {target && offScale && <g className="pj-band pj-offscale"><text x={w - right - 6} y={top + 12} textAnchor="end">paper {rate(target.min)}–{rate(target.max)} ↑{offScale.ratio ? ` ×${offScale.ratio.toLocaleString()}` : ''}</text></g>}
+        {target && offScale && <g className="pj-band pj-offscale"><text x={w - right - 6} y={top + 40} textAnchor="end">paper {rate(target.min)}–{rate(target.max)} ↑{offScale.ratio ? ` ×${offScale.ratio.toLocaleString()}` : ''}</text></g>}
         {target && !offScale && <g className="pj-band"><rect x={left} width={w - left - right} y={y(Math.min(target.max, 10 ** hi))} height={Math.max(2, y(target.min) - y(Math.min(target.max, 10 ** hi)))} /><text x={w - right - 6} y={y(target.max) + 14} textAnchor="end">paper {rate(target.min)}–{rate(target.max)}</text></g>}
         {gap.need && <g className="pj-need"><line x1={left} x2={w - right} y1={y(gap.need.cycles / gap.need.capS)} y2={y(gap.need.cycles / gap.need.capS)} /><text x={w - right - 6} y={y(gap.need.cycles / gap.need.capS) - 6} textAnchor="end">needed: {cyclesWord(gap.need.cycles)} cycles in {gap.need.capS} s</text></g>}
         {shown.map((c) => <g key={c.label} className="pj-check"><line x1={x(ms(c.firstAt))} x2={x(ms(c.firstAt))} y1={top} y2={h - bottom} /><text x={x(ms(c.firstAt)) + 4} y={top + 10}>{c.label}</text></g>)}
@@ -102,6 +102,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
             onMouseEnter={() => setOn(m.key)} onFocus={() => setOn(m.key)} onBlur={() => setOn(null)} onClick={() => setOn(m.key)}>
             <circle className="pj-hit" cx={m.x} cy={m.y} r={16} />
             {m.kind === 'measured' ? <circle cx={m.x} cy={m.y} r={5} /> : <path d={`M${m.x - 5} ${m.y - 4} h10 l-5 8z`} />}
+            {m.kind === 'measured' && gap.measured.length <= 3 && <text className="pj-dot-label" x={m.x + 10} y={m.y + 4}>{m.title.split(' · ')[0]} · {m.rows[0]![1].replace(` ${gap.metric.unit}`, '/s')}</text>}
           </g>
         ))}
         {days.map((t, i) => <text key={t} className="pj-tick" x={x(t)} y={h - 8} textAnchor={i === 0 ? 'start' : 'middle'}>{day(t)}</text>)}
