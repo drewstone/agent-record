@@ -158,8 +158,8 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
     agents: ledger.rows.some((row) => row.agents !== null && row.agents !== undefined),
     model: ledger.rows.some((row) => row.model || row.harness),
   }
-  const head = (key: SortKey, label: string, title?: string) => (
-    <th aria-sort={sort === key ? 'descending' : undefined} title={title}>
+  const head = (key: SortKey, label: string, title?: string, className?: string) => (
+    <th className={className} aria-sort={sort === key ? 'descending' : undefined} title={title}>
       <button type="button" className="link-button sort-button" onClick={() => setSort(sort === key ? 'newest' : key)}>
         {label}
       </button>
@@ -201,7 +201,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
               {has.done && <th className="num" title="Share of agent-hours in completed turns">Done</th>}
               {has.tries && <th className="num">Tries</th>}
               {has.best && head('score', 'Best check')}
-              {has.cost && head('cost', 'API-equiv.')}
+              {has.cost && head('cost', 'API-equiv.', undefined, 'ledger-cost')}
               {has.seat && <th>Seat</th>}
               {full && has.tokens && <th className="num">Tokens in / out</th>}
               {full && has.agents && <th className="num">Agents</th>}
@@ -245,7 +245,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                     </td>
                   )}
                   {has.cost && (
-                    <td className="num">
+                    <td className="num ledger-cost">
                       <Cost row={row} />
                     </td>
                   )}
