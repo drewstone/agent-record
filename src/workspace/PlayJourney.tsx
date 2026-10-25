@@ -1,6 +1,7 @@
 import { AsOfStamp } from './AnswerStrip.js'
 import { PlayAgainstBar, PlayClimb } from './PlayClimb.js'
 import { PlayFindings } from './PlayFindings.js'
+import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import { PlayLedger } from './PlayLedger.js'
 import { type Play, playAsOf } from './answers.js'
 import { StatusPill } from './data.js'
@@ -123,11 +124,28 @@ function Climb({ play, m }: { play: Play; m: Model }) {
   )
 }
 
-/** The play's head on the standing tab: title, score, one sentence, who acts, and the climb with the ladder as its axis. */
+/** The ladder under the current check as one strip: each step a dot and its name, the open one lit. */
+function StepStrip({ m }: { m: Model }) {
+  if (!m.steps.length) return null
+  return (
+    <ol className="pj-strip" aria-label={`Steps under check ${m.view.progress?.checker ?? ''}`}>
+      {m.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><i />{s.label}</li>)}
+    </ol>
+  )
+}
+
+/**
+ * The play's head on the standing tab. With a measured gap to the paper (the host's `gap`), the hero is that gap: the best
+ * proving rate against the paper's band, what passed and what the current bar needs, and the rate chart; the ladder is a
+ * strip above the chart. Without one, the steps passed over time stay the hero.
+ */
 export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: number }) {
   const m = model(play, now)
   if (!m) return null
   const p = m.view.progress
+  const gap = (play as { gap?: PlayGapFacts | null }).gap ?? null
+  const g = gap ? gapHeadline(gap) : null
+  const checkers = ((play as { checkers?: { label: string; firstAt: string }[] }).checkers ?? [])
   return (
     <div className="pj">
       <header className="pj-title">
@@ -136,12 +154,17 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
         <AsOfStamp asOf={playAsOf(play)} />
       </header>
       <section className="pj-q3" aria-label="How close is it, and what stops it">
-        <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
-        <p className="pj-sentence">{headline(play, m)}</p>
+        {g ? (
+          <p className="pj-hero">{g.best ? g.best.value.toLocaleString() : '—'}<small> {gap!.metric.unit}{g.target ? ` · paper ${(g.target.min / 1e6).toFixed(1)}–${(g.target.max / 1e6).toFixed(1)}M` : ''}</small></p>
+        ) : (
+          <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
+        )}
+        <p className="pj-sentence">{g ? g.sentence : headline(play, m)}</p>
         <Hold view={m.view} open={m.open} />
       </section>
-      <section className="pj-q4" aria-label={`Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
-        <Climb play={play} m={m} />
+      <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
+        <StepStrip m={m} />
+        {gap ? <GapChart gap={gap} checkers={checkers} now={now} /> : <Climb play={play} m={m} />}
       </section>
     </div>
   )
