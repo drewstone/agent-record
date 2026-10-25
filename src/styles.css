@@ -3573,6 +3573,7 @@
 .ar-ws .rj-title h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .ar-ws .rj-title .as-of { margin-left: auto; }
 .ar-ws .rj-muted { color: var(--ar-fg-muted); }
+.ar-ws .rj-activity { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
 /* 32 px numerals on the type scale, 8/16/24 px gaps (REVIEW-5 #4: 26 px was a 7th size and the row broke the grid). */
 .ar-ws .rj-stats { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 0 0 24px; }
 .ar-ws .rj-stats > div { display: flex; flex-direction: column-reverse; gap: 8px; }
