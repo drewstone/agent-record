@@ -1,5 +1,5 @@
 import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
-import { type ReactNode, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
 import { money, StatusPill, statusOf, tokens } from './data.js'
 import { viewChip } from './view.js'
@@ -115,23 +115,6 @@ function Cost({ row }: { row: PlayLedgerRow }) {
   )
 }
 
-/**
- * The runs' fork lines (REVIEW-8 chart 4, Drew: "what is rc2?"): each run and, on the arrow, the release its successor
- * forked from, so 22a reads as the newest step of one line from 20b, not a restart.
- */
-function Lineage({ play, rows }: { play: Play; rows: PlayLedgerRow[] }) {
-  const forks = rows.filter((row) => row.lineage?.kind === 'fork' && row.lineage.parentRun)
-  if (!forks.length) return null
-  const children = new Map<string, PlayLedgerRow[]>()
-  for (const row of forks) children.set(row.lineage!.parentRun!, [...(children.get(row.lineage!.parentRun!) ?? []), row])
-  const forked = new Set(forks.map((row) => row.runId))
-  const chain = (run: string): ReactNode => <>
-    <a href={`/run/${encodeURIComponent(run)}`}>{shortRun(play.id, run)}</a>
-    {(children.get(run) ?? []).map((child) => <span key={child.runId}> <span className="faint">─{shortTag(child.lineage!.parentTag) ?? ''}→</span> {chain(child.runId)}</span>)}
-  </>
-  return <p className="ledger-lineage" aria-label="Fork lines">{[...children.keys()].filter((run) => !forked.has(run)).map((run, i) => <span key={run}>{i ? ' · ' : ''}{chain(run)}</span>)}</p>
-}
-
 const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
   row.lineage?.kind === 'wrong-base' ? 'wrong base' : playLineage(play, row.runId).from ? `⑂ ${playLineage(play, row.runId).from}` : null
 
@@ -211,7 +194,6 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
           )}
         </ul>
       </header>
-      <Lineage play={play} rows={ledger.rows} />
       <div className="table-scroll">
         <table className="data-table ledger-table">
           <thead>
