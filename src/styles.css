@@ -4003,3 +4003,7 @@
   .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
   .ar-ws .play-input .input-run-picker select { width: 100%; }
 }
+/* The per-state counts below the agents meter carry its numbers; its key would repeat them. */
+.ar-ws .wp-agents-meter .ov-meter-key { display: none; }
+.ar-ws .wp-groups .wp-idle { line-height: 20px; }
+.ar-ws .wp-group > summary { line-height: 20px; }
