@@ -1,6 +1,6 @@
 import { ENDING_COLORS, OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { Gantt } from '@tangle-network/charts/react'
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
 import { money, StatusPill, statusOf } from './data.js'
 import { useSearch } from './navigation.js'
@@ -164,7 +164,7 @@ const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
  * attempt outcome on one shared axis, completed share, tries, best score, API-equivalent cost and seat. `full` adds
  * the release lineage above it and how each run's input differs.
  */
-export function PlayLedger({ play, full = false, onOpen, now = Date.now() }: { play: Play; full?: boolean; onOpen?: (runId: string) => void; now?: number }) {
+export function PlayLedger({ play, full = false, onOpen, now = Date.now(), action }: { play: Play; full?: boolean; onOpen?: (runId: string) => void; now?: number; action?: ReactNode }) {
   const ledger = play.ledger ?? null
   const [params, update] = useSearch()
   const sort: SortKey = (['wall', 'agent', 'cost', 'score'] as const).find((key) => key === params.get('sort')) ?? 'newest'
@@ -213,6 +213,7 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now() }: { p
     <section className={`ws-section play-ledger ${full ? 'is-full' : ''}`} data-play-ledger aria-label="Runs">
       <header className="section-head">
         <h3>Runs</h3>
+        {action}
         {cost?.apiEquivalentUsd ? (
           <p className="ledger-spend" title={`API-equivalent${cost.provenance ? ` (${cost.provenance})` : ''}, not a bill`}>
             {cost.provenance === 'estimated' ? '≈' : ''}{money(cost.apiEquivalentUsd)}

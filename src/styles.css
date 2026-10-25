@@ -3947,7 +3947,7 @@
 .ar-ws .play-input .input-run-picker select { font-size: 14px; padding: 4px 8px; }
 .ar-ws .input-text.is-short { color: var(--ar-fg); }
 .ar-ws .input-view.is-compact .input-more { margin-top: 12px; }
-.ar-ws .input-view.is-compact .input-more > summary, .ar-ws .play-setup > details > summary { cursor: pointer; font-size: 14px; }
+.ar-ws .input-view.is-compact .input-more > summary { cursor: pointer; font-size: 14px; }
 /* ---- /play Runs: the release lineage above the ledger, labels on the type scale. */
 .ar-ws .ledger-lineage { margin: 0 0 16px; }
 .ar-ws .ledger-lineage .ov-axis { font-size: 12px; }

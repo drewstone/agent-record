@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { PlayInput } from '../workspace-model.js'
@@ -107,8 +107,8 @@ function FileReader({ api, runId, file }: { api: string; runId: string; file: Pl
   )
 }
 
-/** `compact` (the play's Setup tab): the objective's opening lines, and everything else in one fold under it. */
-export function InputView(props: { input: PlayInput | null; api: string; changed?: boolean; compact?: boolean }) {
+/** `compact` (the play's Setup tab): the objective's opening line, and everything else, with the caller's `more`, in one fold under it. */
+export function InputView(props: { input: PlayInput | null; api: string; changed?: boolean; compact?: boolean; more?: ReactNode }) {
   return (
     <ValueScope>
       <InputBody {...props} />
@@ -116,7 +116,7 @@ export function InputView(props: { input: PlayInput | null; api: string; changed
   )
 }
 
-function InputBody({ input, api, changed, compact = false }: { input: PlayInput | null; api: string; changed?: boolean; compact?: boolean }) {
+function InputBody({ input, api, changed, compact = false, more }: { input: PlayInput | null; api: string; changed?: boolean; compact?: boolean; more?: ReactNode }) {
   const [file, setFile] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const acceptance = input?.acceptance as Record<string, unknown> | null
@@ -241,6 +241,7 @@ function InputBody({ input, api, changed, compact = false }: { input: PlayInput 
           <details className="input-details input-more">
             <summary>Full input</summary>
             {body}
+            {more}
           </details>
         </>
       ) : body}
