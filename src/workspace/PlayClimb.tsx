@@ -397,7 +397,6 @@ function ClimbBrush({ play, climb, extent, window, onWindow }: { play: Play; cli
             </button>
           )
         })}
-        <span className="faint climb-brush-hint">Drag across the strip to zoom; ← → step, + − zoom, 0 resets.</span>
       </div>
       <div
         ref={bar}
@@ -502,43 +501,34 @@ function VerdictStrip({ play, climb }: { play: Play; climb: Climb }) {
  */
 function ChecksSaid({ play, climb }: { play: Play; climb: Climb }) {
   const byRun = useMemo(() => checksByRun(climb), [climb])
-  const [open, setOpen] = useState<string | null>(null)
   const runs = [...climb.groups].reverse().map((group) => byRun.get(group.runId)).filter((run): run is NonNullable<typeof run> => !!run && run.rows > 0)
   if (!runs.length) return null
+  // One line per run, its most frequent reason and how often it was said; the rest open on click (lead 05:45Z).
   return (
     <div className="checks-said" data-checks-said>
       <h4>What the checks said</h4>
       <ol>
         {runs.map((run) => {
-          // In the order each line was first said, so a run reads as what its checks failed on over time; the newest
-          // lines are where it ended, so those show first and earlier ones on request.
           const lines = [...run.lines].sort((a, b) => String(a.firstAt).localeCompare(String(b.firstAt)))
-          const shown = open === run.runId ? lines : lines.slice(-4)
+          const top = [...lines].sort((a, b) => b.count - a.count)[0]
           return (
             <li key={run.runId} data-run={run.runId}>
-              <p className="checks-said-run">
-                <a className="mono" href={`/run/${encodeURIComponent(run.runId)}`}>{shortRun(play.id, run.runId)}</a>
-                <span className="faint">
-                  {' '}
-                  {run.rows} {run.rows === 1 ? 'row' : 'rows'} under {run.checkers.map((checker) => checkerLabel(play.checkers, checker)).join(', ') || 'an unrecorded checker'}
-                  {run.solved ? ` · ${run.solved} solved` : ' · none solved'}
-                  {run.scored < run.rows ? ` · ${run.rows - run.scored} without a score` : ''}
-                </span>
-              </p>
-              <ul>
-                {shown.map((line) => (
-                  <li key={line.reason} title={[line.line, line.firstAt ? `${utc(line.firstAt)} to ${utc(line.lastAt)}` : null, line.verdicts.map(verdictWord).join(', ')].filter(Boolean).join('\n')}>
-                    <b className="num">{line.count}×</b>
-                    <span className="checks-said-reason">{line.reason}</span>
-                    <span className="faint mono">{tagsWords(line.tags) ?? ''}</span>
-                  </li>
-                ))}
-              </ul>
-              {lines.length > 4 && (
-                <button type="button" className="link-button" onClick={() => setOpen(open === run.runId ? null : run.runId)}>
-                  {open === run.runId ? 'only the last 4' : `${lines.length - 4} earlier ${lines.length - 4 === 1 ? 'line' : 'lines'}`}
-                </button>
-              )}
+              <details>
+                <summary className="checks-said-run" title={`${run.rows} rows under ${run.checkers.map((checker) => checkerLabel(play.checkers, checker)).join(', ')}${run.solved ? `, ${run.solved} solved` : ''}`}>
+                  <a className="mono" href={`/run/${encodeURIComponent(run.runId)}`}>{shortRun(play.id, run.runId)}</a>
+                  {top && <> <b className="num">{top.count}×</b> <span className="checks-said-reason">{top.reason}</span></>}
+                  {lines.length > 1 && <span className="faint"> +{lines.length - 1}</span>}
+                </summary>
+                <ul>
+                  {lines.map((line) => (
+                    <li key={line.reason} title={[line.line, line.firstAt ? `${utc(line.firstAt)} to ${utc(line.lastAt)}` : null, line.verdicts.map(verdictWord).join(', ')].filter(Boolean).join('\n')}>
+                      <b className="num">{line.count}×</b>
+                      <span className="checks-said-reason">{line.reason}</span>
+                      <span className="faint mono">{tagsWords(line.tags) ?? ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </li>
           )
         })}
@@ -583,13 +573,7 @@ export function PlayClimb({ play }: { play: Play }) {
     <section className="ws-section play-climb" data-play-climb aria-label="Climb">
       <header className="section-head">
         <h3>Climb</h3>
-        <p className="faint">
-          {graded
-            ? timed
-              ? 'Progress under the current check over time; earlier checks are dashed grey, and each check change is marked. Filled marks pass, rings fail; ◆ is a tag gate.'
-              : 'Check progress of each checked release, grouped by run. Filled marks pass, rings fail, hatched squares under the axis are unverified; ◆ is a tag gate.'
-            : 'This check passes or fails without partial progress: each run’s checked releases with their verdicts.'}
-        </p>
+        <p className="climb-key faint" aria-label="Marks">● pass ○ fail ◆ gate</p>
         {graded && extent && (
           <div className="seg climb-mode" role="group" aria-label="Climb axis">
             <button type="button" aria-pressed={!timed} onClick={() => choose('release')}>By release</button>
@@ -658,11 +642,7 @@ export function PlayAgainstBar({ play }: { play: Play }) {
   return (
     <section className="ws-section play-bar" data-play-bar aria-label="Against the bar">
       <header className="section-head">
-        <h3>Against the bar</h3>
-        <p className="faint">
-          Each release’s measurements on the climb’s axis, the bar as a shaded band{bar?.source ? ` (${bar.source})` : ''}. Filled: comparable and passing; ✕ a failing candidate; * not comparable; ? comparability unknown.
-          {bar?.condition && bar.checkCondition ? ` Bar: ${bar.condition}. Ours: ${bar.checkCondition}.` : ''}
-        </p>
+        <h3 title={[bar?.source, bar?.condition ? `Bar: ${bar.condition}` : null, bar?.checkCondition ? `Ours: ${bar.checkCondition}` : null].filter(Boolean).join('\n') || undefined}>Against the bar</h3>
       </header>
       <FigureView figure={figure} />
     </section>

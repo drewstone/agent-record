@@ -176,8 +176,8 @@ export function PlayJourneyStanding({ play, onOpen, onMore }: { play: Play; onOp
     <div className="play-standing-tab" data-section="standing">
       <details className="pj-every">
         <summary>Show every release</summary>
-        <PlayClimb play={play} />
         <PlayAgainstBar play={play} />
+        <PlayClimb play={play} />
       </details>
       <PlayLedger play={play} onOpen={onOpen} />
       <PlayFindings play={play} limit={6} onMore={onMore} />
