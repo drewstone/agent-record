@@ -136,7 +136,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
         <p className="rj-life-line">
           {/* The header pill names it; the line gives the counts, and the receipt's own records stay one toggle away
               (root 2026-10-25 08:42Z: resource ids and source reachable). */}
-          <Full short={lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, '').replace(/^./, (c) => c.toUpperCase())}
+          <Full what="teardown record" short={lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, '').replace(/^./, (c) => c.toUpperCase())}
             raw={`${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`} />
         </p>
       )}
@@ -239,13 +239,14 @@ function Stats({ m }: { m: Model }) {
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
 }
 
-function Full({ short, raw }: { short: string; raw: string }) {
+/** `what` names the text for a screen reader ("full goal"), so each "full" button says what it opens (root 2026-10-25). */
+function Full({ short, raw, what }: { short: string; raw: string; what: string }) {
   // A button, not <details>: Chrome lays a <details> out as a block, which left "full" alone on its own line (review 3 #8).
   const [open, setOpen] = useState(false)
   if (short === raw.trim()) return <>{short}</>
   return (
     <span className="rj-full">
-      {open ? <span className="rj-full-text">{raw}</span> : short} <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
+      {open ? <span className="rj-full-text">{raw}</span> : short} <button type="button" className="rj-full-toggle" aria-expanded={open} aria-label={`${open ? 'Show less of' : 'Show full'} ${what}`} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
     </span>
   )
 }
@@ -253,7 +254,7 @@ function Full({ short, raw }: { short: string; raw: string }) {
 /** The opening prompt under its own name: a "full" after the agent line read as dead (review 4 #11). */
 function Prompt({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
-  return <> <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'hide prompt' : 'prompt'}</button>{open && <span className="rj-full-text rj-prompt">{text}</span>}</>
+  return <> <button type="button" className="rj-full-toggle" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} the opening prompt`} onClick={() => setOpen(!open)}>{open ? 'hide prompt' : 'prompt'}</button>{open && <span className="rj-full-text rj-prompt">{text}</span>}</>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -289,7 +290,7 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   return (
     <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
       <p>{root ? who(root) : 'root agent'}{input.instruction && <Prompt text={input.instruction} />}</p>
-      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
+      {input.objective && <p><Full what="goal" short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )
 }
@@ -313,8 +314,8 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
       {!single && <dl className="rj-summary">
         <dt>Who</dt><dd>{who(node)}</dd>
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
-        <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
-        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
+        <dt>Task</dt><dd>{node.assignment ? <Full what="task" short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
+        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
         <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
         {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
       </dl>}
