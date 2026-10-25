@@ -12,7 +12,7 @@ export const RUN_TABS: readonly { id: RunTab; label: string; parts: readonly (re
   { id: 'built', label: 'Built', parts: [['versions', 'Versions'], ['outputs', 'Outputs'], ['readout', 'Readout']] },
   { id: 'agents', label: 'Conversations', parts: [['agents', 'Conversations']] },
   { id: 'findings', label: 'Findings', parts: [['findings', 'Findings']] },
-  { id: 'how', label: 'How it ran', parts: [['spend', 'Spend'], ['assessments', 'Assessments'], ['coverage', 'Capture'], ['profiles', 'Profiles'], ['graph', 'Graph'], ['input', 'Input']] },
+  { id: 'how', label: 'How it ran', parts: [['spend', 'Time and cost'], ['assessments', 'Assessments'], ['coverage', 'Capture'], ['profiles', 'Profiles'], ['graph', 'Graph'], ['input', 'Input']] },
 ]
 
 /** The tab a section belongs to; the overview (null) is Now. */

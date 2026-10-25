@@ -1,11 +1,12 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
-import { FlowWaterfall, Lines } from '@tangle-network/charts/react'
+import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { releaseName, shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
+import { RunActivity } from './RunActivity.js'
 import { viewAsOf, viewChip } from './view.js'
 import { goalText, plainSummary, stepWord } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
@@ -163,24 +164,6 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * sizes from its container, truncates long names at the end with the full name in the tooltip, and zooms. Each release
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
-/**
- * Is the run working or idling (REVIEW-8 chart 3, Drew): agents working at each of the host's progress samples and
- * tokens per minute from the run's metered token series, on one time axis under the timeline.
- */
-function Activity({ doc }: { doc: RunDocument }) {
-  const working = (doc.progress?.samples ?? []).map((s): [number, number] => [Date.parse(s.at), s.working])
-  const metered = ((doc as { lineage?: { series?: [string, number][] }[] }).lineage?.[0]?.series ?? []).map(([at, n]): [number, number] => [Date.parse(at), n])
-  const rate = metered.slice(1).map(([t, n], i): [number, number] => [t, t > metered[i]![0] ? ((n - metered[i]![1]) * 60_000) / (t - metered[i]![0]) : 0])
-  if (working.length < 2 && rate.length < 2) return null
-  const axis = (t: number) => new Date(t).toISOString().slice(11, 16)
-  return (
-    <div className="rj-activity" aria-label="Agents working and tokens per minute">
-      {working.length > 1 && <Lines rows={3} axis={axis} series={[{ name: 'agents working', color: 'var(--ar-accent, #8e59ff)', points: working }]} />}
-      {rate.length > 1 && <Lines rows={3} axis={axis} format={(v) => tokens(v)} series={[{ name: 'tokens per minute', color: 'var(--ar-c-ok, #22c55e)', points: rate }]} />}
-    </div>
-  )
-}
-
 function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
   // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, crashed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
@@ -432,7 +415,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
             <section aria-label="What the agents did">
               <Stats m={m} />
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
-              <Activity doc={doc} />
+              <RunActivity doc={doc} />
             </section>
           )}
           {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
