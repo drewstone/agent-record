@@ -157,11 +157,11 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
           </ul>
         )}
         {blind.length > 0 && (
-          <p className="tj-finding">
-            <b>{blind.length} of {active} active plays have no check that counts steps, so we cannot tell if they move.</b>{' '}
-            {' '}
-            {blind.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, 'setup')} title={`${p.title}: set up a check that counts steps`}>{p.title}</a></span>)}
-          </p>
+          <details className="tj-finding">
+            {/* The names fold behind the finding: twelve titles in a paragraph were the page's longest text (review 1 #14). */}
+            <summary><b>{blind.length} of {active} active plays have no check that counts steps.</b></summary>
+            <p>{blind.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, 'setup')} title={`${p.title}: set up a check that counts steps`}>{p.title}</a></span>)}</p>
+          </details>
         )}
         {solved.length > 0 && <p className="tj-rest">Solved: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}
       </section>

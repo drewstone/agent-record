@@ -3600,29 +3600,6 @@
 .ar-ws .rj-releases { color: var(--ar-fg-muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .ar-ws .rj-mini.rj-pass { color: var(--ar-c-ok, #22c55e); }
 .ar-ws .rj-mini.rj-fail { color: var(--ar-c-fail, #ef4444); }
-.ar-ws .rj-lanes { display: block; overflow: visible; }
-.ar-ws .rj-lanes text { font: 12px var(--ar-font-body); fill: var(--ar-fg-muted); }
-.ar-ws .rj-lanes .rj-lane-label { font-size: 13px; fill: var(--ar-fg); }
-.ar-ws .rj-plateau rect { fill: color-mix(in srgb, var(--ar-c-warn, #f5a524) 16%, transparent); }
-.ar-ws .rj-plateau text { fill: var(--ar-c-warn, #f5a524); }
-.ar-ws .rj-rel line { stroke: var(--ar-border); stroke-width: 1; }
-.ar-ws .rj-rel path { fill: var(--ar-fg-faint); }
-.ar-ws .rj-rel.rj-near path { fill: var(--ar-c-warn, #f5a524); }
-.ar-ws .rj-rel.rj-pass path { fill: var(--ar-c-ok, #22c55e); }
-.ar-ws .rj-rel.rj-fail path { fill: var(--ar-c-fail, #ef4444); }
-.ar-ws .rj-rel.rj-best text { fill: var(--ar-fg); font-weight: 600; }
-.ar-ws .rj-produced { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 2; }
-.ar-ws .rj-lane { cursor: pointer; outline: none; }
-.ar-ws .rj-lane .rj-bar { fill: color-mix(in srgb, var(--ar-fg-faint) 40%, transparent); transition: fill 150ms ease-out; }
-/* The whole row is the lane's target, not only its bar. */
-.ar-ws .rj-lane rect.rj-hit { fill: transparent; pointer-events: all; }
-.ar-ws .rj-lane:hover rect.rj-hit, .ar-ws .rj-lane.rj-on rect.rj-hit { fill: color-mix(in srgb, var(--ar-fg-faint) 10%, transparent); stroke: none; }
-.ar-ws .rj-lane.rj-lead .rj-bar { fill: color-mix(in srgb, var(--ar-fg-muted) 45%, transparent); }
-.ar-ws .rj-lane.rj-shipped .rj-bar { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 55%, transparent); }
-.ar-ws .rj-lane.rj-crash .rj-bar { fill: color-mix(in srgb, var(--ar-c-fail, #ef4444) 75%, transparent); }
-.ar-ws .rj-lane circle { fill: var(--ar-c-ok, #22c55e); stroke: var(--ar-bg); stroke-width: 2; }
-.ar-ws .rj-lane:hover .rj-lane-label, .ar-ws .rj-lane.rj-on .rj-lane-label, .ar-ws .rj-lane:focus-visible .rj-lane-label { font-weight: 600; text-decoration: underline; }
-.ar-ws .rj-lane.rj-on .rj-bar { stroke: var(--ar-fg); stroke-width: 1.5; }
 .ar-ws .rj-drill { display: grid; gap: 18px; padding-top: 24px; border-top: 1px solid var(--ar-border); animation: rj-in 220ms ease-out; }
 .ar-ws .rj-drill h2 { margin: 0; font-size: 26px; font-weight: 650; }
 .ar-ws .rj-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0; font-size: 15px; }
@@ -3652,7 +3629,7 @@
   .ar-ws .rj-step-undecided, .ar-ws .rj-step-unrun, .ar-ws .rj-step-fail { outline-offset: -2px; }
   .ar-ws .rj-summary { grid-template-columns: minmax(0, 1fr); }
 }
-@media (prefers-reduced-motion: reduce) { .ar-ws .rj-lane .rj-bar { transition: none; } .ar-ws .rj-drill { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ar-ws .rj-drill { animation: none; } }
 
 /* Today (Today.tsx): one focal line, color only for state. */
 .ar-ws .tj { gap: 36px; }
@@ -3787,3 +3764,41 @@
 
 }.ar-ws details.run-file-selection > summary { cursor: pointer; font-size: 13px; color: var(--ar-fg-muted); flex-basis: 100%; }
 .ar-ws details.run-file-selection:not([open]) { padding-bottom: 6px; }
+/* Play gap hero (lead 2026-10-25 05:45Z): one type scale, chart text at the page's 13 px. */
+.ar-ws .pj-strip { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ar-fg-muted); }
+.ar-ws .pj-strip li { display: inline-flex; align-items: center; gap: 6px; }
+.ar-ws .pj-strip i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ar-fg-muted); }
+.ar-ws .pj-strip [data-step=pass] i { background: var(--ar-c-ok, #22c55e); border-color: var(--ar-c-ok, #22c55e); }
+.ar-ws .pj-strip [data-step=fail] i { background: var(--ar-c-fail, #ef4444); border-color: var(--ar-c-fail, #ef4444); }
+.ar-ws .pj-strip .is-open { color: var(--ar-c-warn, #f5a524); font-weight: 600; }
+.ar-ws .pj-gap { position: relative; }
+.ar-ws .pj-gap-chart { display: block; overflow: visible; }
+.ar-ws .pj-gap-chart text { font-size: 13px; fill: var(--ar-fg-muted); }
+.ar-ws .pj-band rect { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 16%, transparent); }
+.ar-ws .pj-band text { fill: var(--ar-c-ok, #22c55e); }
+.ar-ws .pj-need line { stroke: var(--ar-c-warn, #f5a524); stroke-dasharray: 6 4; stroke-width: 1.5; }
+.ar-ws .pj-need text { fill: var(--ar-c-warn, #f5a524); }
+.ar-ws .pj-check line, .ar-ws .pj-pass line { stroke: color-mix(in srgb, var(--ar-fg-faint) 45%, transparent); stroke-dasharray: 2 4; }
+.ar-ws .pj-pass line { stroke: var(--ar-c-ok, #22c55e); }
+.ar-ws .pj-mark { cursor: pointer; outline: none; }
+.ar-ws .pj-hit { fill: transparent; }
+.ar-ws .pj-measured circle:not(.pj-hit) { fill: var(--ar-fg); }
+.ar-ws .pj-bound path { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 1.5; }
+.ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
+.ar-ws .pj-tip { position: absolute; transform: translate(-50%, calc(-100% - 14px)); min-width: 200px; max-width: 280px; padding: 8px 12px; border: 1px solid var(--ar-border, #333); border-radius: 8px; background: var(--ar-bg-alt); font-size: 13px; pointer-events: none; z-index: 2; }
+.ar-ws .pj-tip p { margin: 0; }
+.ar-ws .pj-tip dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 6px 0 0; }
+.ar-ws .pj-tip dl div { display: contents; }
+.ar-ws .pj-tip dt { color: var(--ar-fg-muted); }
+.ar-ws .pj-tip dd { margin: 0; font-variant-numeric: tabular-nums; }
+.ar-ws .pj-tip-reason { margin-top: 6px !important; color: var(--ar-fg-muted); }
+.ar-ws .pj-pill { font-size: 12px; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--ar-fg) 10%, transparent); }
+.ar-ws .pj-pill.pj-bound { color: var(--ar-c-warn, #f5a524); }
+/* One content column on every page (review 1 #8: Today 84 px, Plays 60, others 45, and six left edges on /play): one
+   left edge and one gutter, 24 px, 16 px on a phone. Page bodies (Today, the run journey) fill it rather than centring
+   their own narrower column. */
+.ar-ws .ws-page { width: 100%; max-width: 1440px; margin-inline: auto; padding-inline: 24px; box-sizing: border-box; }
+.ar-ws .td, .ar-ws .rj { max-width: none; margin: 0; }
+@media (max-width: 700px) { .ar-ws .ws-page, .ar-ws .ws-page[data-section="overview"] { padding-inline: 16px; } }
+.ar-ws .play-ledger .ledger-spend { margin: 0 0 0 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ar-ws .play-ledger .ledger-idle { margin-top: 8px; font-size: 13px; }

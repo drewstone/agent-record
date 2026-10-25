@@ -1,4 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
+import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
 import { StatusPill, useDocument } from './data.js'
@@ -11,17 +13,15 @@ import { RunFilesPane } from './RunFilesPane.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
- * ladder, one sentence, the action that clears the blocker), then what the agents did across the run's hours (one lane
- * per agent, coloured by outcome, releases on top, the plateau shaded and the span that produced the best release
- * outlined), then, for the lane picked, its summary, what it changed (code first) and its transcript.
+ * ladder, one sentence, the action that clears the blocker), then what the agents did across the run's hours (the shared
+ * agent timeline, releases as markers), then, for the agent picked, its summary, what it changed (code first) and its
+ * transcript.
  */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]> }
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const hours = (a: number, b: number) => (b - a) / 3_600_000
-const clock = (t: number) => new Date(t).toISOString().slice(11, 16)
-const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
@@ -44,11 +44,10 @@ function useJourney(api: string, doc: RunDocument) {
     const commits = new Map<string, number>()
     for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
     const root = nodes.find((n) => n.role === 'root' || n.role === 'lead')?.id ?? doc.run.id
-    const plateau = best ? releases.find((r) => r.passed === best.passed) ?? best : null
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
     const attributed = releases.some((r) => Object.keys(r.by ?? {}).length > 0)
-    return { data, nodes, releases, t0, t1, best, commits, root, plateau, open, same, attributed }
+    return { data, nodes, releases, t0, t1, best, commits, root, open, same, attributed }
   }, [ws.data, doc.run.id])
   return { runUrl, model, error: ws.error }
 }
@@ -92,9 +91,8 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
   )
 }
 
-/** Q3 on the run: the best release's steps as the hero, how long it has been stuck, and the action that clears it. */
+/** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
 function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
-  const stuck = m.plateau ? hours(ms(m.plateau.taggedAt), m.t1) : null
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
@@ -106,70 +104,50 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
         </ol>
       )}
       <p className="rj-stuck">
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
+        {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
+            standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
+        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : 'every step passes'}</> : 'No release was checked.'}
         {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
       {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
-          ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}${stuck !== null && m.plateau === m.releases[0] ? `, no step gained in ${stuck.toFixed(0)} h` : ''}`
+          ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
           : m.releases.map((r) => <span key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined}>{r.release} {r.passed}/{r.total}</span>)}
       </p>}
     </section>
   )
 }
 
-/** Q5: one lane per agent across the run's hours; green shipped, red crashed, grey idle; releases and the plateau on top. */
-function Lanes({ m, phone, picked, onPick }: { m: Model; phone: boolean; picked: string | null; onPick: (id: string) => void }) {
-  const lanes = [...m.nodes].sort((a, b) => (a.id === m.root ? -1 : b.id === m.root ? 1 : ms(a.start) - ms(b.start)))
-  const W = phone ? 358 : 1420, L = phone ? 0 : 170, laneH = phone ? 30 : 30, top = 58
-  const H = top + lanes.length * laneH + 30
-  const x = (t: number) => L + ((t - m.t0) / (m.t1 - m.t0)) * (W - L - 14)
-  const bestBy = new Set(Object.keys(m.best?.by ?? {}))
-  const prevBest = m.best ? m.releases[m.releases.indexOf(m.best) - 1] : undefined
-  const ticks = Array.from({ length: phone ? 3 : 7 }, (_, i) => m.t0 + ((m.t1 - m.t0) * i) / (phone ? 2 : 6))
-  const kind = (n: Node) => (crashed(n) ? 'crash' : n.id === m.root ? 'lead' : m.commits.has(n.id) ? 'shipped' : 'idle')
-  return (
-    <svg className="rj-lanes" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Agents across the run's hours, releases on top">
-      {m.plateau && m.open && (
-        <g className="rj-plateau">
-          <rect x={x(ms(m.plateau.taggedAt))} y={top - 34} width={x(m.t1) - x(ms(m.plateau.taggedAt))} height={22} rx={4} />
-          <text x={x(ms(m.plateau.taggedAt)) + 6} y={top - 19}>no step gained since {m.plateau.release}</text>
-        </g>
-      )}
-      {m.releases.map((r) => {
-        const rx = x(ms(r.taggedAt))
-        return (
-          <g key={r.release} className={`rj-rel rj-${relTone(r)}${r === m.best ? ' rj-best' : ''}`}>
-            <line x1={rx} x2={rx} y1={top - 6} y2={H - 26} />
-            <path d={`M${rx} ${top - 9} l5 6 l-5 6 l-5 -6z`} />
-            {r === m.best && <text x={rx} y={top - 40} textAnchor="end">{r.release} best</text>}
-          </g>
-        )
-      })}
-      {m.best && prevBest && bestBy.size > 0 && (() => {
-        const rows = lanes.map((n, i) => (bestBy.has(n.id) ? i : -1)).filter((i) => i >= 0)
-        return <rect className="rj-produced" x={x(ms(prevBest.taggedAt))} y={top + Math.min(...rows) * laneH + 2} width={x(ms(m.best.taggedAt)) - x(ms(prevBest.taggedAt))} height={(Math.max(...rows) - Math.min(...rows) + 1) * laneH - 4} rx={6} />
-      })()}
-      {lanes.map((n, i) => {
-        const y = top + i * laneH
-        const a = x(ms(n.start)), b = x(ms(n.end ?? n.lastAt))
-        const label = `${n.id === m.root ? 'lead' : n.role ?? n.label}${m.commits.get(n.id) ? ` · ${m.commits.get(n.id)}` : ''}`
-        return (
-          <g key={n.id} className={`rj-lane rj-${kind(n)}${picked === n.id ? ' rj-on' : ''}`} onClick={() => onPick(n.id)} onKeyDown={(e) => e.key === 'Enter' && onPick(n.id)} role="button" tabIndex={0} aria-pressed={picked === n.id}>
-            <rect className="rj-hit" x={0} y={y} width={W} height={laneH} />
-            {!phone && <text className="rj-lane-label" x={L - 12} y={y + laneH / 2 + 4} textAnchor="end">{label}</text>}
-            <rect className="rj-bar" x={a} y={y + (phone ? 13 : 7)} width={Math.max(4, b - a)} height={phone ? 11 : 16} rx={4}>
-              <title>{crashed(n) ? 'Its last words report a crash' : n.id === m.root ? 'The lead' : m.commits.has(n.id) ? `Its work is in ${m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ')}` : 'None of its work landed in a release'}</title>
-            </rect>
-            {phone && <text className="rj-lane-label" x={Math.min(a, W - 90)} y={y + 10}>{label}</text>}
-            {m.releases.filter((r) => r.by?.[n.id]).map((r) => <circle key={r.release} cx={x(ms(r.taggedAt))} cy={y + (phone ? 18 : 15)} r={3.5} />)}
-          </g>
-        )
-      })}
-      {ticks.map((t, i) => <text key={t} className="rj-axis" x={x(t)} y={H - 8} textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}>{day(t)} {clock(t)}</text>)}
-    </svg>
-  )
+/**
+ * Q5: one row per agent across the run's hours in the shared agent timeline (charts FlowWaterfall, agents view), which
+ * sizes from its container, truncates long names at the end with the full name in the tooltip, and zooms. Each release
+ * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
+ */
+function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
+  const trace = useMemo((): FlowTrace => {
+    const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
+    const ids = new Set(m.nodes.map((n) => n.id))
+    const spans: FlowSpan[] = m.nodes.filter((n) => Number.isFinite(ms(n.start))).map((n) => {
+      const end = ms(n.end ?? n.lastAt)
+      const running = live && !n.end && ['running', 'waiting'].includes(n.status)
+      const from = parent.get(n.id)
+      return {
+        id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
+        name: n.id === m.root ? 'lead' : n.role ?? n.label,
+        detail: [n.harness, n.model?.split('/').pop(), m.commits.get(n.id) ? `${m.commits.get(n.id)} commits` : null].filter(Boolean).join(' · ') || undefined,
+        startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
+        status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
+      }
+    })
+    return { spans, totalMs: m.t1 - m.t0, promptTokens: 0, completionTokens: 0, toolCalls: 0 }
+  }, [m, live])
+  const markers = useMemo((): FlowMarker[] => m.releases.map((r) => ({
+    at: ms(r.taggedAt) - m.t0,
+    label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
+    tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
+  })), [m])
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => span.id && onPick(span.id)} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
@@ -250,7 +228,7 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
   )
 }
 
-export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode; phone: boolean }) {
+export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode }) {
   const { runUrl, model: m, error } = useJourney(api, doc)
   const [chosen, setPicked] = useState<string | null>(null)
   // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
@@ -284,7 +262,7 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
           {single ? null : (
             <section aria-label="What the agents did">
               <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''}</h2>
-              <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
+              <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
           {single && work}

@@ -2,6 +2,7 @@ import type { FeedItem, PlayDocument } from '../workspace-model.js'
 import { dataStatus, statusOf } from './data.js'
 import { plain } from './FindingsFeed.js'
 import { checkerLabel, type PlayHead, shortRun, shortTag, utc, verdictWord } from './play-standing.js'
+import { plainSummary } from './plain-words.js'
 
 type Play = PlayDocument & PlayHead
 
@@ -22,14 +23,27 @@ const commitStatus = (play: Play, commit: { verdict?: string | null; checker?: s
   return statusOf({ axis: 'result', verdict: commit.verdict, current: named?.current ?? true, checker: named?.label ?? null })
 }
 
+/**
+ * An agent's page title as one plain sentence (review 1 #12): no parenthesised branches, tips or hashes, no shouted
+ * words, no "PLAY —" prefix, sentence case, at most 14 words. The agent's own title stays the link's tooltip.
+ */
+export function findingTitle(raw: string, tag?: string | null) {
+  const parts = raw.replace(/\s*\([^)]*(\)|$)/g, '').replace(/\b(tip\s+)?[0-9a-f]{7,40}\b/g, '').replace(/\s+@\s*/g, ' ').split(/\s+—\s+/)
+  const kept = parts.length > 1 && /^[A-Z0-9-]+$/.test(parts[0]!.trim()) ? parts.slice(1) : parts
+  const words = kept.join(': ').replace(/\s+\+\s+/g, ', ').replace(/\b([A-Z]{4,}|THE|AND|FOR|NOT|ALL)\b/g, (w) => w.toLowerCase()).replace(/\s+/g, ' ').trim()
+  const line = (words.split(' ').length < 2 && tag ? `${words} at ${tag}` : words).replace(/^./, (c) => c.toUpperCase())
+  return plainSummary(line, 14)
+}
+
 function Row({ play, item }: { play: Play; item: FeedItem }) {
-  const title = plain(item.title) || plain(item.text).slice(0, 140) || 'Untitled page'
+  const tags = [...new Map((item.commits ?? []).map((commit) => [commit.tag ?? commit.sha, commit])).values()]
+  const title = findingTitle(plain(item.title) || plain(item.text).slice(0, 140), tags.find((c) => c.tag)?.tag) || 'Untitled page'
   const writer = item.writer ?? item.agentLabel ?? null
   const at = item.writtenAt ?? null
   const href = item.href ?? `/run/${encodeURIComponent(item.runId)}?section=findings`
   return (
     <li className="finding-row" data-finding={item.id ?? item.sha256} data-group={groupOf(item)}>
-      <a className="finding-title" href={href} title={plain(item.text).slice(0, 600) || undefined}>
+      <a className="finding-title" href={href} title={[plain(item.title), plain(item.text).slice(0, 600)].filter(Boolean).join('\n\n') || undefined}>
         {title}
       </a>
       <span className="finding-meta faint" title={[writer, at ? utc(at) : item.at ? `${utc(item.at)} (the record's time, not the commit's)` : null].filter(Boolean).join(' · ') || undefined}>
@@ -37,9 +51,10 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
         <span className="mono">{shortRun(play.id, item.runId)}</span>
         {item.duplicates && item.duplicates.length > 0 && <span className="chip" title="Pages that say the same thing, folded here"> +{item.duplicates.length} alike</span>}
       </span>
-      {item.commits && item.commits.length > 0 && (
+      {tags.length > 0 && (
         <span className="finding-commits">
-          {item.commits.map((commit) => {
+          {/* One chip per release: the same tag cited under two checks or kinds was drawn twice (rc125). */}
+          {tags.map((commit) => {
             const status = commitStatus(play, commit)
             return (
             <span
@@ -69,7 +84,9 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
 export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: number; onMore?: () => void }) {
   const items = play.findings ?? []
   if (!items.length) return null
-  const ordered = GROUPS.flatMap(([id]) => items.filter((item) => groupOf(item) === id))
+  // Newest first within a group, so the three newest verified findings lead (review 1 #12).
+  const newest = (a: FeedItem, b: FeedItem) => Date.parse(b.writtenAt ?? b.at ?? '') - Date.parse(a.writtenAt ?? a.at ?? '') || 0
+  const ordered = GROUPS.flatMap(([id]) => items.filter((item) => groupOf(item) === id).sort(newest))
   const shown = limit ? ordered.slice(0, limit) : ordered
   const counts = new Map(GROUPS.map(([id]) => [id, items.filter((item) => groupOf(item) === id).length]))
   return (
