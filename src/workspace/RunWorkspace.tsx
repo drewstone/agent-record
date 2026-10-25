@@ -5,6 +5,7 @@ import type { RunDocument } from '../workspace-model.js'
 import { useDocument } from './data.js'
 import { useSearch } from './navigation.js'
 import { RefDiff, type RefTree, useRefFile } from './ref-file.js'
+import type { ReleaseLineage } from './play-standing.js'
 import { RunJourney } from './RunJourney.js'
 
 /**
@@ -48,6 +49,8 @@ export interface RunWorkspaceDocument {
   releases: WorkspaceRelease[]
   best: string | null
   code: { available: boolean; reason: string | null }
+  /** Where its releases sit in the play (tangle-tools run_workspace.release_lineage). */
+  lineage?: ReleaseLineage | null
 }
 
 /** The code at a ref (an agent's branch or a release), its tree and one file, with a diff against the previous release. */

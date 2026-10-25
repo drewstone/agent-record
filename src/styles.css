@@ -3062,10 +3062,6 @@
 .ar-ws .rr-command code { display:block; margin-top:8px; }
 .ar-ws .rr-chart { min-width:0; overflow:hidden; margin:12px 0; }
 /* Where turns ended: one status row per cause, its bar in the row's status ink (data-status owns the colour). */
-.ar-ws .rr-causes { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:max-content minmax(60px,1fr) max-content; gap:4px 12px; align-items:center; font-size:var(--ar-text-s); }
-.ar-ws .rr-causes li { display:contents; }
-.ar-ws .rr-causes li > i { display:block; height:8px; border-radius:2px; background:currentColor; opacity:.55; }
-.ar-ws .rr-causes li > span:last-child { color:var(--ar-fg-muted); font-family:var(--ar-font-body); white-space:nowrap; }
 .ar-ws .rr-now { border-bottom:1px solid var(--ar-border); padding:16px 0 20px; }
 .ar-ws .rr-now h2 { margin:0 0 8px; }
 .ar-ws .rr-now h3 { margin:16px 0 8px; font-size:var(--ar-text-m); }
@@ -3580,6 +3576,10 @@
 .ar-ws .rj-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .ar-ws .rj-title h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .ar-ws .rj-title .as-of { margin-left: auto; }
+.ar-ws .rr-causes { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:max-content minmax(60px,1fr) max-content; gap:4px 12px; align-items:center; font-size:var(--ar-text-s); }
+.ar-ws .rr-causes li { display:contents; }
+.ar-ws .rr-causes li > i { display:block; height:8px; border-radius:2px; background:currentColor; opacity:.55; }
+.ar-ws .rr-causes li > span:last-child { color:var(--ar-fg-muted); font-family:var(--ar-font-body); white-space:nowrap; }
 .ar-ws .rj-muted { color: var(--ar-fg-muted); }
 /* 32 px numerals on the type scale, 8/16/24 px gaps (REVIEW-5 #4: 26 px was a 7th size and the row broke the grid). */
 .ar-ws .rj-stats { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 0 0 24px; }
