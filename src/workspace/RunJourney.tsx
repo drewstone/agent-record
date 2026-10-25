@@ -213,7 +213,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => onPick(span.kind === 'pipeline' ? span.id : span.parentId ?? span.id)} />
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
@@ -221,8 +221,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
  * The release to diff against: the nearest earlier one with a tag. A release checked from a commit it never tagged
  * (21c rc116) is no git ref, and its name answered 404 (root 2026-10-25: "The code at rc116 is unavailable").
  */
-function before(m: Model, release: Release) {
-  return m.releases.slice(0, m.releases.indexOf(release)).reverse().find((r) => r.tagged)?.release ?? null
+function before(m: Model, release: { release: string }) {
+  return m.releases.slice(0, m.releases.findIndex((r) => r.release === release.release)).reverse().find((r) => r.tagged)?.release ?? null
 }
 
 /** Tokens and list cost summed over the agents with a usage source; null when no agent has one (never a zero). */
