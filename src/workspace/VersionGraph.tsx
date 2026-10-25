@@ -5,6 +5,8 @@ import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.
 import { money, useDocument, when } from './data.js'
 import { flagLabel, layoutVersionGraph, pagesVersion, PICKED, runGraphModel, scoreLine } from './version-graph.js'
 import { RunRoles } from './RoleScorecards.js'
+import { Lines } from '@tangle-network/charts/react'
+import type { RunWorkspaceDocument } from './RunWorkspace.js'
 import type { GraphModel, GraphNode } from './version-graph.js'
 
 // Geometry, in CSS pixels at the workspace's type scale; a phone gets narrower lanes so the text keeps its room.
@@ -95,23 +97,37 @@ export function VersionGraph({
   return (
     <div className="version-graph" data-version-graph={label}>
       <div className="vg-toolbar" role="group" aria-label={`${label}: lanes`}>
-        <button type="button" className={`vg-lane-chip ${lane === null ? 'on' : ''}`} aria-pressed={lane === null} onClick={() => setLane(null)}>
-          all lanes
-        </button>
-        {allLanes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`vg-lane-chip ${lane === item.id ? 'on' : ''}`}
-            aria-pressed={lane === item.id}
-            data-lane={item.id}
-            title={item.detail ?? undefined}
-            onClick={() => setLane(lane === item.id ? null : item.id)}
-          >
-            <i className={`vg-swatch vg-c${colorOf.get(item.id)}`} aria-hidden="true" />
-            {item.label}
-          </button>
-        ))}
+        {/* Many lanes read as one control, not a row of chips (REVIEW-8: 17 chips were chrome words on Built). */}
+        {allLanes.length > 5 ? (
+          <label className="vg-lane-select">
+            <span className="sr-only">Lane</span>
+            <select value={lane ?? ''} onChange={(event) => setLane(event.target.value || null)}>
+              <option value="">All {allLanes.length} lanes</option>
+              {allLanes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+          </label>
+        ) : (
+          <>
+            {/* Showing every lane already, the chip is a state, not a control (REVIEW-8 sweep: a dead click). */}
+            <button type="button" className={`vg-lane-chip ${lane === null ? 'on' : ''}`} aria-pressed={lane === null} disabled={lane === null} onClick={() => setLane(null)}>
+              all lanes
+            </button>
+            {allLanes.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`vg-lane-chip ${lane === item.id ? 'on' : ''}`}
+                aria-pressed={lane === item.id}
+                data-lane={item.id}
+                title={item.detail ?? undefined}
+                onClick={() => setLane(lane === item.id ? null : item.id)}
+              >
+                <i className={`vg-swatch vg-c${colorOf.get(item.id)}`} aria-hidden="true" />
+                {item.label}
+              </button>
+            ))}
+          </>
+        )}
         {hasMerges && (
           <label className="vg-toggle">
             <input type="checkbox" checked={hideMerges} onChange={(event) => setHideMerges(event.target.checked)} /> hide merges
@@ -194,54 +210,84 @@ export function RunVersions({
   poll,
   selected,
   onSelect,
+  onClose,
   onOpenAgent,
 }: {
   runUrl: string
   poll?: number
   selected: string | null
   onSelect: (commit: string) => void
+  onClose: () => void
   onOpenAgent: (node: string) => void
 }) {
   const fetched = useDocument<unknown>(`${runUrl}/versions`, poll, true)
+  // Polled like /versions while the run is live, so new releases reach the chart (Codex review on #190).
+  const workspace = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, poll, true)
+  useEffect(() => {
+    if (!selected) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [selected, onClose])
   const parsed = useMemo(() => {
     if (fetched.data === undefined) return null
     const result = versionGraphDocumentSchema.safeParse(fetched.data)
     return result.success ? { doc: result.data, error: null } : { doc: null, error: result.error.issues[0]?.message ?? 'invalid version graph' }
   }, [fetched.data])
   const model = useMemo(() => (parsed?.doc?.available ? runGraphModel(parsed.doc, when) : null), [parsed])
-  if (!parsed) {
-    return (
-      <p className="ws-status run-panel" role={fetched.error ? 'alert' : 'status'}>
-        {fetched.error ? `No version graph for this run: ${fetched.error}. Runs pressed before discovery-lab#1411 keep no deliverables.git.` : 'Loading the version graph…'}
-      </p>
-    )
-  }
-  if (parsed.error || !parsed.doc) return <p className="ws-status run-panel" role="alert">The version graph is unreadable: {parsed.error}</p>
+  const releases = <CodeReleases releases={workspace.data?.releases ?? []} />
+  // Code releases and page versions are independent records: a run without deliverables.git still shows its releases.
+  const missing = !parsed ? (
+    <p className="ws-status run-panel" role={fetched.error ? 'alert' : 'status'}>
+      {fetched.error ? `No version graph for this run: ${fetched.error}. Runs pressed before discovery-lab#1411 keep no deliverables.git.` : 'Loading the version graph…'}
+    </p>
+  ) : parsed.error || !parsed.doc ? <p className="ws-status run-panel" role="alert">The version graph is unreadable: {parsed.error}</p>
+    : !parsed.doc.available || !model ? <p className="ws-status run-panel">{parsed.doc.reason ?? 'This run keeps no version graph.'}</p> : null
+  if (missing || !parsed?.doc || !model) return <div className="run-built no-inspector" data-section="versions">{releases}{missing}</div>
   const doc = parsed.doc
-  if (!doc.available || !model) return <p className="ws-status run-panel">{doc.reason ?? 'This run keeps no version graph.'}</p>
-  const commit = doc.commits.find((item) => item.id === selected) ?? doc.commits.find((item) => item.id === doc.tags.find((tag) => tag.best)?.commit) ?? doc.commits[0] ?? null
+  // The inspector opens on a chosen version only: the graph is the page, the inspector its detail (REVIEW-8 Built 65).
+  const commit = doc.commits.find((item) => item.id === selected) ?? null
   return (
-    <div className="lineage-layout run-versions" data-section="versions">
-      <section className="lineage-pane" aria-label="Version graph">
-        <Releases doc={doc} selected={commit?.id ?? null} onSelect={onSelect} />
-        <p className="faint lineage-key">
-          Every version this run's agents wrote, newest first: <b>main</b> is the shared store as it was, each other lane one worker's own line
-          (its pages and the profiles it spawned), merged into main write by write. {doc.commits.length} commits on {doc.lanes.length} lanes
-          {doc.builtAt ? `, read ${when(doc.builtAt)}` : ''}.
-        </p>
-        <VersionGraph model={model} selected={commit?.id ?? null} onSelect={onSelect} label="Run versions" />
-        {doc.roles && <RunRoles roles={doc.roles} />}
-      </section>
-      <aside className="inspector-pane" aria-label="Inspector">
-        {commit ? (
-          <ValueScope>
-            <CommitInspector doc={doc} commit={commit} onSelect={onSelect} onOpenAgent={onOpenAgent} />
-          </ValueScope>
-        ) : (
-          <p className="faint">No version to show.</p>
+    <div className={`run-built${commit ? '' : ' no-inspector'}`} data-section="versions">
+      {releases}
+      <div className="lineage-layout run-versions">
+        <section className="lineage-pane" aria-label="Version graph">
+          <p className="faint lineage-key">{doc.commits.length} page versions on {doc.lanes.length} lanes{doc.builtAt ? ` · read ${when(doc.builtAt)}` : ''}</p>
+          <div data-primary-content><VersionGraph model={model} selected={commit?.id ?? null} onSelect={onSelect} label="Run versions" /></div>
+          <Releases doc={doc} selected={commit?.id ?? null} onSelect={onSelect} />
+          {doc.roles && <RunRoles roles={doc.roles} />}
+        </section>
+        {commit && (
+          <aside className="inspector-pane" aria-label="Inspector">
+            <button type="button" className="inspector-close link-button" aria-label="Close the inspector" onClick={onClose}>Close</button>
+            <ValueScope>
+              <CommitInspector doc={doc} commit={commit} onSelect={onSelect} onOpenAgent={onOpenAgent} />
+            </ValueScope>
+          </aside>
         )}
-      </aside>
+      </div>
     </div>
+  )
+}
+
+/**
+ * What the run built, release by release: the steps of the play's check each code release passed, over the run's time
+ * (workspace `releases`, the same rows the run's header counts). The page versions below are its knowledge pages.
+ */
+function CodeReleases({ releases }: { releases: RunWorkspaceDocument['releases'] }) {
+  const scored = releases.filter((r) => r.at && r.passed != null && r.total).map((r) => ({ at: Date.parse(r.at!), r }))
+  if (scored.length < 2) return null
+  const total = Math.max(...scored.map(({ r }) => r.total!))
+  // The axis says when; each dot names its release and steps in the readout (22a: a nearest-release axis read "rc1 · 03:33").
+  const name = (t: number) => {
+    const item = scored.find((entry) => entry.at === t)
+    return item ? `${item.r.release} · ${item.r.passed} of ${item.r.total} steps` : 'steps passed'
+  }
+  return (
+    <section className="built-releases" aria-label="Steps passed by each release">
+      <h3>Steps passed by each release</h3>
+      <Lines rows={5} axis={(t) => new Date(t).toISOString().slice(11, 16)} format={(v) => `${v} of ${total}`} series={[{ name: 'steps passed', color: 'var(--ar-accent, #8e59ff)', dots: true, label: name, points: scored.map(({ at, r }) => [at, r.passed!]) }]} />
+    </section>
   )
 }
 
@@ -249,8 +295,8 @@ export function RunVersions({
 function Releases({ doc, selected, onSelect }: { doc: VersionGraphDocument; selected: string | null; onSelect: (commit: string) => void }) {
   if (doc.tags.length === 0) return <p className="faint vg-releases-empty">No page version is tagged yet.</p>
   return (
-    <section className="vg-releases" aria-label="Page versions">
-      <h3>Page versions</h3>
+    <details className="vg-releases" aria-label="Page versions">
+      <summary>Page versions · {doc.tags.length}</summary>
       <div className="vg-table-scroll">
       <table className="data-table">
         <thead>
@@ -293,7 +339,7 @@ function Releases({ doc, selected, onSelect }: { doc: VersionGraphDocument; sele
       </table>
       </div>
       {doc.rule && <p className="faint">The deliverable is the best tag by {doc.rule}.</p>}
-    </section>
+    </details>
   )
 }
 

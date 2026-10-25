@@ -138,10 +138,9 @@ function SourcesCard({ findings }: { findings: Findings }) {
     <section className="finding-card" aria-label="Sources" data-findings-sources>
       <h3 className="kicker tone-info">Sources</h3>
       <div className="source-counts">
-        <span><b>{sources.citations.length}</b> papers cited</span>
-        <span><b>{sources.webSearches.length}</b> web searches</span>
-        <span><b>{sources.webFetches.length}</b> pages fetched</span>
-        <span><b>{reads}</b> knowledge reads</span>
+        {([[sources.citations.length, 'papers cited'], [sources.webSearches.length, 'web searches'], [sources.webFetches.length, 'pages fetched'], [reads, 'knowledge reads']] as const)
+          .filter(([count]) => count > 0)
+          .map(([count, label]) => <span key={label}><b>{count}</b> {label}</span>)}
       </div>
       {sources.citations.length > 0 && (
         <ul className="citation-list">
@@ -230,46 +229,44 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
     const frame = requestAnimationFrame(() => document.querySelector(`[data-finding="${open}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
     return () => cancelAnimationFrame(frame)
   }, [open, hiddenOpen])
+  useEffect(() => {
+    if (!open) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(null) }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [open, setOpen])
   if (!findings || (!findings.total && !findings.agents.some((agent) => agent.lastWords))) return null
   const pageHref = (item: FindingItem) => `${runUrl}/page/${item.sha256}`
   const shown = all || hiddenOpen ? groups.lead : groups.lead.slice(0, SHOWN)
-  const agentsWithLead = new Set(groups.lead.map((item) => item.agent).filter(Boolean)).size
-  const retainedPageAuthors = new Set(findings.items.map((item) => item.agent).filter(Boolean)).size
   const notSettled = doc.run.state !== 'winner' && doc.run.state !== 'running'
   return (
     <section className="run-findings" aria-label="What this run found" data-findings={findings.total}>
       <div className="findings-main">
-        <h2 className="kicker tone-finding">What this run found</h2>
-        {groups.results.length > 0 ? (
-          <div className="findings-lead">
-            {groups.results.map((item) => (
-              <p key={item.sha256}>
-                <b>{short(item.agentLabel)}:</b> {item.answer ?? item.summary}
-              </p>
-            ))}
-          </div>
-        ) : (
-          <p className="findings-lead">
-            {groups.lead.length
-              ? `${plural(groups.lead.length, 'result or claim')} written by ${plural(agentsWithLead, 'agent')}.`
-              : 'No result or claim pages recorded.'}
-          </p>
-        )}
-        {!groups.lead.length && doc.run.nodes !== null && findings.items.length > 0 && (
-          <p className="faint card-note">This run has {plural(doc.run.nodes, 'agent node')}; {plural(retainedPageAuthors, 'agent')} wrote its {plural(findings.items.length, 'retained page')}.</p>
-        )}
+        {/* The tab names the question and counts the pages; the caution says what the rows cannot. The answers and the rows
+            are the view's one primary surface (data-primary-content: one region per view). */}
+        {!groups.lead.length && <p className="findings-lead">{findings.items.length ? `No result or claim pages; ${plural(findings.items.length, 'other page')} below.` : 'No result or claim pages recorded.'}</p>}
         {notSettled && groups.lead.length > 0 && (
-          <p className="findings-caution">
-            The run ended as {doc.run.state.replaceAll('-', ' ')}, so none of this reached its declared result. Every page below is
-            what an agent wrote and kept.
-          </p>
+          <p className="findings-caution">Ended {doc.run.state.replaceAll('-', ' ')}: none of these reached the run's declared result.</p>
         )}
-        {groups.lead.length > 0 && (
-          <ol className="finding-list">
-            {shown.map((item) => (
-              <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => setOpen(open === item.sha256 ? null : item.sha256)} />
-            ))}
-          </ol>
+        {(groups.results.length > 0 || groups.lead.length > 0) && (
+          <div className="findings-primary" data-primary-content>
+            {groups.results.length > 0 && (
+              <div className="findings-lead">
+                {groups.results.map((item) => (
+                  <p key={item.sha256}>
+                    <b>{short(item.agentLabel)}:</b> {item.answer ?? item.summary}
+                  </p>
+                ))}
+              </div>
+            )}
+            {groups.lead.length > 0 && (
+              <ol className="finding-list">
+                {shown.map((item) => (
+                  <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => setOpen(open === item.sha256 ? null : item.sha256)} />
+                ))}
+              </ol>
+            )}
+          </div>
         )}
         {groups.lead.length > SHOWN && (
           <button type="button" className="ui-button" onClick={() => setAll((value) => !value)}>

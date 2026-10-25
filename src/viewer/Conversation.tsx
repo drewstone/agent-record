@@ -167,11 +167,6 @@ export function Conversation({
       else map.set(row.event.id, row.key)
     return map
   }, [rows])
-  const shown = rows.flatMap((row) => (row.kind === 'event' ? [row.event] : []))
-  const tools = shown.flatMap((event) => callsOf(event).map((call) => `tool:${anchor(event)}:${call.id}`))
-  const thoughts = shown.filter((event) => typeof event.detail.reasoning === 'string' && event.detail.reasoning).map((event) => `reasoning:${anchor(event)}`)
-  const allExpanded = tools.length > 0 && tools.every((key) => opened.has(key))
-  const allThinking = thoughts.length > 0 && thoughts.every((key) => opened.has(key))
   const retained = (index.byActor.get(actor) ?? []).some(
     (item) => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length),
   )
@@ -272,49 +267,10 @@ export function Conversation({
   const render = (row: ConversationRow) => <ConversationRowView row={row} context={{ index, cutoff, selected, opened, anchor, opener, setOpen, sourceButton, flagMarks, paired, thinkingSpan, flags, live }} />
   return (
     <>
-      {(tools.length > 0 || thoughts.length > 0) && (
-        <div className="conversation-toolbar">
-          {thoughts.length > 0 && (
-            <button
-              type="button"
-              className="tool-expansion"
-              data-expand-thinking
-              aria-pressed={allThinking}
-              onClick={() =>
-                setOpened((current) => {
-                  const next = new Set(current)
-                  for (const key of thoughts)
-                    if (allThinking) next.delete(key)
-                    else next.add(key)
-                  return next
-                })
-              }
-            >
-              {allThinking ? 'Collapse all thinking' : 'Expand all thinking'}
-            </button>
-          )}
-          {tools.length > 0 && <button
-            type="button"
-            className="tool-expansion"
-            data-expand-tools
-            aria-pressed={allExpanded}
-            onClick={() =>
-              setOpened((current) => {
-                const next = new Set(current)
-                for (const key of tools)
-                  if (allExpanded) next.delete(key)
-                  else next.add(key)
-                return next
-              })
-            }
-          >
-            {allExpanded ? 'Collapse tools' : 'Expand tools'}
-          </button>}
-        </div>
-      )}
       <div
         className="conversation-scroll"
         data-chat
+        data-primary-content
         ref={scroll}
         tabIndex={0}
         aria-label="Scrollable retained conversation"

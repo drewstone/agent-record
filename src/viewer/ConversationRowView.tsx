@@ -7,6 +7,8 @@ import { argsLabel, callStatus, hollowSummary, outputTokens, pollSummary, thinki
 import type { CallState, ConversationRow } from './conversation-rows.js'
 import type { EventFlag } from './Conversation.js'
 import { messageIdentity } from './message-identity.js'
+import { promptText } from './prompt-text.js'
+import { AgentTimeline } from '@tangle-network/sandbox-ui/chat'
 
 /** A run-lifecycle event (start, stop, restart), drawn as a thin marker row. */
 export const isLifecycle = (event: RecordEvent) =>
@@ -372,6 +374,46 @@ export function ConversationRowView({ row, context }: { row: ConversationRow; co
           {output !== null && <span className="thinking-why">text withheld by the provider</span>}
           {flagMarks(event)}
           {sourceButton(event)}
+        </article>
+      )
+    }
+    // Prose renders as the kit's chat transcript (sandbox-ui ./chat AgentTimeline): the prompt as a card under its sender,
+    // the agent's words as reading text with its calls under them. Tool results, failed requests and withheld bodies keep
+    // the rows below: the kit has no words for "not captured" or "pending".
+    if (message && !standalone && !failed && !finding) {
+      const body = user ? promptText(message) : message
+      const short = user && !opened.has(promptKey) && body.length > 280
+      return (
+        <article
+          className={['chat-message', 'kit-message', user && 'assignment-message', selected === event.id && 'selected', flags?.has(event.id) && 'flagged'].filter(Boolean).join(' ')}
+          data-entry={event.id}
+          data-message={event.id}
+          data-message-node={event.node}
+        >
+          {reasoning && (
+            <details className="reasoning-body" open={opened.has(reasoningKey)} onToggle={(e) => setOpen(reasoningKey, e.currentTarget.open)}>
+              <summary><span>Reasoning</span><span className="reasoning-preview">{compact(reasoning).slice(0, 160)}</span></summary>
+              {opened.has(reasoningKey) && <MessageText text={reasoning} />}
+            </details>
+          )}
+          <AgentTimeline
+            items={[{
+              id: event.id,
+              kind: 'message',
+              role: user ? 'user' : 'assistant',
+              content: short ? `${body.slice(0, 280).trimEnd()}…` : body,
+              timestamp: new Date(event.at),
+              ...(user ? { author: { id: author.senderId ?? 'prompt', name: author.reconstructed ? 'Recorded assignment' : author.senderId || author.label !== 'Sender not captured' ? author.label : 'Prompt' } } : {}),
+              ...(calls.length ? { toolCalls: <ToolExecutionStack event={event} at={at} message={message} context={context} /> } : {}),
+            }]}
+          />
+          <footer className="message-foot">
+            <time dateTime={event.at}>{utcTime(event.at)}</time>
+            {user && body.length > 280 && <button type="button" className="link-button" data-open-key={promptKey} aria-expanded={!short} onClick={() => setOpen(promptKey, short)}>{short ? 'Full prompt' : 'Shorter'}</button>}
+            {flagMarks(event)}
+            {sourceButton(event)}
+          </footer>
+          {!short && <FullOutput clip={calls.length ? undefined : clip} open={opener(event)}>{null}</FullOutput>}
         </article>
       )
     }
