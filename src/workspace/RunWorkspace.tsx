@@ -74,6 +74,7 @@ export function CodePane({ runUrl, refName, previous, label }: { runUrl: string;
     : mode === 'diff' ? <RefDiff key={`${previous}:${path}`} runUrl={runUrl} base={previous} head={refName} path={path} headTree={tree.data} />
     : file.state === 'error' ? <p className="rw-empty" role="alert">{file.error}</p>
     : file.state === 'absent' ? <p className="rw-empty">This file is not in {label}.</p>
+    : file.state === 'binary' ? <p className="rw-empty">This file is not text, so it has no inline preview. <a href={file.href} download={path.split('/').pop()}>Download it at {file.commit.slice(0, 12)}</a>.</p>
     : file.state === 'ready' ? <FilePreview filename={path.split('/').pop() ?? path} content={file.text} hideHeader />
     : <p className="rw-empty" role="status">Reading {path}…</p>
   return (
