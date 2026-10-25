@@ -146,10 +146,11 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
-          // A release checked from a commit it never tagged has no code to open (21c rc116 opened a 404 pane): a label, not a button.
+          // A release with no tag recorded has no name the code reader resolves (21c rc116 opened a 404 pane): a label, not a
+          // button. Its tooltip says what was recorded; whether its commit's code was kept is not known (root review of #179).
           : m.releases.map((r) => r.tagged
             ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
-            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.sentence ?? r.release}. Checked from commit ${r.commit ?? 'not recorded'}, never tagged, so its code was not kept.`}>{r.release} {r.passed}/{r.total}</Tip>)}
+            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.sentence ?? r.release}. No release tag recorded. Recorded commit: ${r.commit ?? 'none'}.`}>{r.release} {r.passed}/{r.total}</Tip>)}
       </p>}
     </section>
   )
