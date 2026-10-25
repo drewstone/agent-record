@@ -3953,3 +3953,13 @@
 .ar-ws .wp-group[open] { flex-basis: 100%; }
 .ar-ws .wp-awaiting { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .ar-ws .wp-ideas li > .wp-idea { margin: 4px 0 12px; }
+/* /play Releases bars on the 4 px grid (HBars spaces in em: .3em/.4em at 14 px is 4.2/5.6 px). */
+.ar-ws .release-stops .ov-hbars { gap: 4px 12px; }
+.ar-ws .release-stops .ov-hbars li > a, .ar-ws .release-stops .ov-hbars li > div { padding: 4px 8px; row-gap: 4px; }
+@media (max-width: 700px) {
+  /* Setup on a phone: the bar's three columns fit by wrapping their values, and the run picker sits in the flow above the objective instead of over its label. */
+  .ar-ws .play-bar-table .data-table th, .ar-ws .play-bar-table .data-table td { padding-left: 8px; padding-right: 8px; }
+  .ar-ws .play-bar-table .data-table .num { white-space: normal; }
+  .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
+  .ar-ws .play-input .input-run-picker select { width: 100%; }
+}
