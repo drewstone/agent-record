@@ -3840,3 +3840,5 @@
 .ar-ws .rj-foot { margin-top: 0; padding-top: 0; }
 .ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
 .ar-ws .tj-rest { font-size: 14px; line-height: 1.6; }
+.ar-ws .rj-full-toggle { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ar-c-action); cursor: pointer; white-space: nowrap; }
+.ar-ws .rj-full-text { display: block; margin: 8px 0 0; white-space: pre-wrap; font-size: 12px; color: var(--ar-fg-muted); }

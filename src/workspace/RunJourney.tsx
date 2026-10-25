@@ -168,8 +168,15 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
 function Full({ short, raw }: { short: string; raw: string }) {
+  // A button, not <details>: Chrome lays a <details> out as a block, which left "full" alone on its own line (review 3 #8).
+  const [open, setOpen] = useState(false)
   if (short === raw.trim()) return <>{short}</>
-  return <span className="rj-full">{short} <details><summary>full</summary><p>{raw}</p></details></span>
+  return (
+    <span className="rj-full">
+      {short} <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
+      {open && <span className="rj-full-text">{raw}</span>}
+    </span>
+  )
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
