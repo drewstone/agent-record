@@ -76,8 +76,6 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
     {currentView.data?.history.state === 'unavailable' && <p className="run-file-notice">Version history is unavailable: {currentView.data.history.reason ?? 'No reason was recorded.'}</p>}
     {nav.compare && (before.error || comparison.error) && <p className="run-file-notice" role="alert">The comparison is unavailable: {before.error ?? comparison.error}</p>}
     <div className="run-file-browser"><WorkspaceFilesPane paths={paths} selectedPath={path ?? undefined} onSelect={(next) => { if (paths.includes(next)) { onSelect(next); setPane('file') } }} onBack={() => setPane('tree')} preview={pane === 'file' && path ? { path, content: reader } : undefined} search label="Retained artifacts" expansionKey={`${doc.run.id}:${nav.version ?? 'current'}`} surface="plain" /></div>
-    <details className="run-file-scope"><summary>What this file inventory includes</summary><p>{inventory?.scopeDetails ?? 'The retained-file scope has not been received.'}</p>{inventory && <p>Inventory composed at {inventory.generatedAt}.</p>}{inventory?.source.runDocumentStale && <p>The source document is stale.</p>}</details>
-    {currentView.data && <a className="run-file-provenance" href={currentView.data.provenanceHref}>Inspect the profiles and configuration that produced this work</a>}
   </section>
 }
 

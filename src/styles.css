@@ -3710,7 +3710,6 @@
 .ar-ws .pj-hero small { font-size: 26px; color: var(--ar-fg-muted); font-weight: 500; }
 .ar-ws .pj-hold { margin: 0; font-size: 15px; }
 .ar-ws .pj-muted { color: var(--ar-fg-muted); }
-.ar-ws .pj-note { margin: 0; font-size: 13px; }
 .ar-ws .pj-climb { display: block; overflow: visible; }
 .ar-ws .pj-grid line { stroke: color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
 .ar-ws .pj-grid text, .ar-ws .pj-tick { fill: var(--ar-fg-muted); font-size: 12px; }
@@ -3742,7 +3741,6 @@
 .ar-ws .run-file-selection label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--ar-fg-muted); }
 .ar-ws .run-file-selection select { max-width: 100%; min-height: 36px; padding: 6px 10px; color: var(--ar-fg); background: var(--ar-bg); border: 1px solid var(--ar-border); border-radius: var(--ar-radius, 6px); font: inherit; }
 .ar-ws .run-file-notice { margin: 0 0 12px; padding: 12px 16px; border-left: 2px solid var(--ar-c-run); background: var(--ar-bg-alt); font-size: 13px; line-height: 1.6; }
-.ar-ws .run-file-provenance { display: inline-block; margin-top: 14px; font-size: 13px; }
 .ar-ws .run-file { min-width: 0; }
 .ar-ws .run-file { display: flex; flex-direction: column; min-height: 320px; }
 .ar-ws .run-file-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border-default, var(--ar-border)); }
@@ -3786,7 +3784,6 @@
 .ar-ws .run-file-sources { flex: none; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ar-border); }
 .ar-ws .run-files-pane > .run-artifacts-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; padding: 12px; }
 .ar-ws .run-file-browser { flex: 1; min-height: 320px; height: 100%; }
-.ar-ws .run-file-scope { flex: none; padding: 10px 0; font-size: 12px; color: var(--ar-fg-muted); }
 .ar-ws .run-file-selection { flex: none; }
 .ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection { gap: 10px; }
 .ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection label { flex: 1; min-width: 0; }

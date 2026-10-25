@@ -33,7 +33,7 @@ function split(items: OverviewAttention[]) {
 /** One of Drew's decisions: the action, why, and the control that does it (the host is read-only, so a control copies its command). */
 function Decision({ item, now }: { item: OverviewAttention; now: number }) {
   const why = item.kind === 'standdown'
-    ? `Research paused ${ago(hoursSince(item.since, now))}: ${plainReason(item.text.replace(/^Research is stood down:?\s*/, ''))}. Only you can lift it.`
+    ? `Research paused ${ago(hoursSince(item.since, now))}: ${plainReason(item.text.replace(/^Research is stood down:?\s*/, ''))}.`
     : plainSummary(item.text, 24)
   return (
     <li className="tj-decision">
@@ -159,11 +159,11 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
         {blind.length > 0 && (
           <p className="tj-finding">
             <b>{blind.length} of {active} active plays have no check that counts steps, so we cannot tell if they move.</b>{' '}
-            <span className="tj-muted">Fix: </span>
+            {' '}
             {blind.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, 'setup')} title={`${p.title}: set up a check that counts steps`}>{p.title}</a></span>)}
           </p>
         )}
-        {solved.length > 0 && <p className="tj-rest">Solved this week: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}
+        {solved.length > 0 && <p className="tj-rest">Solved: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}
       </section>
     </div>
   )

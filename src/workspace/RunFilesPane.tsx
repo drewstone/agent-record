@@ -15,7 +15,6 @@ export function RunFilesPane({ api, doc, code, codeUnavailable }: { api: string;
     <div className="rw-file-modes run-file-sources" role="group" aria-label="File source">
       <button type="button" aria-pressed={source === 'code'} disabled={Boolean(codeUnavailable)} title={codeUnavailable ?? undefined} onClick={() => update({ fileSource: 'code', file: null, fileIdentity: null, fileView: null })}>Code</button>
       <button type="button" aria-pressed={source === 'artifacts'} onClick={() => update({ fileSource: 'artifacts', file: null, fileIdentity: null, fileView: null })}>Retained artifacts</button>
-      {codeUnavailable && <span className="rj-muted">Code: {codeUnavailable}</span>}
     </div>
     {source === 'code' ? code : <RunArtifacts api={api} doc={doc} selected={params.get('file')} onSelect={(file) => update({ file, fileSource: 'artifacts', fileIdentity: null })} navigation={navigation} embedded />}
   </div>

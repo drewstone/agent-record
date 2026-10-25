@@ -80,9 +80,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
   const pause = paused && <p className="rj-next"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>
   if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
     return (
-      <p className="rj-next"><b>Your decision:</b> {blocker.action} <RulingButtons runId={runId} dispute={blocker.dispute} />
-        <span className="rj-muted"> copies the command for the Lab host</span>
-      </p>
+      <p className="rj-next"><b>Your decision:</b> {blocker.action} <RulingButtons runId={runId} dispute={blocker.dispute} /></p>
     )
   }
   const why = blocker.why ? `${blocker.why}; ` : ''
@@ -109,7 +107,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
       )}
       <p className="rj-stuck">
         {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
-        {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under check {m.best.checker ?? 'an earlier version'}, an earlier check; the current check has not run on it.</span>}
+        {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
       {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       <p className="rj-releases">
@@ -210,8 +208,7 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
       <dt>Submitted</dt>
       <dd>The play press for {doc.run.play} submitted this run to the {root ? who(root) : 'root agent'}, with the prompt {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">(not recorded)</span>}</dd>
       <dt>Goal</dt>
-      <dd>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}
-        {source && <span className="rj-muted" title={input.source?.sha256 ?? undefined}> · from {source}</span>}</dd>
+      <dd title={source ? `from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}</dd>
     </dl>
   )
 }
@@ -288,10 +285,10 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
           <Ladder doc={doc} m={m} />
           {single ? (
             // One agent: its identity in a line, and the work itself gets the room a one-lane timeline would waste.
-            <p className="rj-one"><span className="rj-muted">1 agent ·</span> {who(m.nodes[0]!)} · {m.nodes[0]!.status}</p>
+            <p className="rj-one">{who(m.nodes[0]!)} · {m.nodes[0]!.status}</p>
           ) : (
             <section aria-label="What the agents did">
-              <h2 className="rj-label">What the agents did · {m.nodes.length} agents{m.attributed ? `, ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''} · select one</h2>
+              <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''}</h2>
               <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
             </section>
           )}
