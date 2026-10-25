@@ -3920,7 +3920,6 @@
 .ar-ws .release-tag.is-faint { color: var(--ar-fg-muted); }
 /* The open tab is where you are, not a control: no pointer, so it never reads as a dead click. */
 .ar-ws .ws-tabs [role="tab"][aria-selected="true"] { cursor: default; }
-.ar-ws .release-stops .ov-hbar-label, .ar-ws .release-stops .ov-hbar-value { font-size: 14px; }
 .ar-ws .release-stops[data-picked] a[href] .ov-hbar-label { color: var(--ar-fg-muted); }
 /* The compact play header on a phone wraps its row instead of breaking the play's name mid-word ("ma gne tar- rust"). */
 @media (max-width: 700px) {
@@ -3936,9 +3935,8 @@
 .ar-ws .input-text.is-short { color: var(--ar-fg); }
 .ar-ws .input-view.is-compact .input-more { margin-top: 12px; }
 .ar-ws .input-view.is-compact .input-more > summary { cursor: pointer; font-size: 14px; }
-/* ---- /play Runs: the release lineage above the ledger, labels on the type scale. */
-.ar-ws .ledger-lineage { margin: 0 0 16px; }
-.ar-ws .ledger-lineage .ov-axis { font-size: 12px; }
+/* ---- /play Runs: the release lineage under the ledger. */
+.ar-ws .ledger-lineage { margin: 16px 0 0; }
 .ar-ws .ledger-lineage .ov-gantt-label { font-family: var(--ar-font-mono, ui-monospace, monospace); }
 .ar-ws .wp-body { display: grid; gap: 28px; min-width: 0; }
 @media (max-width: 760px) { .ar-ws .wp-body { gap: 20px; } }
@@ -4004,9 +4002,6 @@
 .ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbars li > :is(a, div) { row-gap: 4px; padding: 4px 8px; }
 .ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbar-label { font-size: 14px; }
 .ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-hbar-note, .ov-hbars-more) { font-size: 12px; padding: 4px 8px; }
-/* /play Releases bars on the 4 px grid (HBars spaces in em: .3em/.4em at 14 px is 4.2/5.6 px). */
-.ar-ws .release-stops .ov-hbars { gap: 4px 12px; }
-.ar-ws .release-stops .ov-hbars li > a, .ar-ws .release-stops .ov-hbars li > div { padding: 4px 8px; row-gap: 4px; }
 @media (max-width: 700px) {
   /* Setup on a phone: the bar's three columns fit by wrapping their values, and the run picker sits in the flow above the objective instead of over its label. */
   .ar-ws .play-bar-table .data-table th, .ar-ws .play-bar-table .data-table td { padding-left: 8px; padding-right: 8px; }
