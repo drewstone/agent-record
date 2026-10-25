@@ -41,7 +41,7 @@ export function PlayReleases({ play }: { play: Play }) {
     const step = Number(key.split('-')[1])
     if (key.startsWith('stop-')) return `Stopped at ${steps[step - 1]?.label ?? `step ${step}`}`
     if (key.startsWith('open-')) return `No verdict at ${steps[step - 1]?.label ?? `step ${step}`}`
-    return { passed: `Passed all ${steps.length} steps`, 'passed-replaced': `Passed ${checkersOf(key).join(', ')}, since replaced`, uncounted: 'Check counts no steps', unchecked: 'Not checked' }[key] ?? key
+    return { passed: `Passed all ${steps.length} steps`, 'passed-replaced': `Passed ${checkersOf(key).join(', ')}, since replaced`, uncounted: `${checkersOf(key).join(', ')}: no step score`, unchecked: 'Not checked' }[key] ?? key
   }
   const color = (key: string) =>
     // Colour is state only: the steps that stop releases are the play's open problem; everything else is neutral.
