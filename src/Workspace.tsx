@@ -4,7 +4,7 @@ import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
-import { FindingsFeed } from './workspace/FindingsFeed.js'
+import { FindingsFeed, REVIEWS } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayBarTable } from './workspace/PlayBarTable.js'
 import { PlayJourney, PlayJourneyStanding } from './workspace/PlayJourney.js'
@@ -219,7 +219,7 @@ function PlaysPage({ api }: { api: string }) {
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
-        <FindingsFeed api={api} query={query} program={program} />
+        <FindingsFeed api={api} query={query} program={program} review={REVIEWS.find(([id]) => id === params.get('review'))?.[0] ?? null} onReview={(review) => update({ review: review ?? undefined })} />
         {frontiers}
       </div>
     )
