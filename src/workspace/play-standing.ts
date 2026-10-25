@@ -420,12 +420,9 @@ export const playPageFields = {
 export type PlayBlocker = z.infer<typeof playBlockerSchema>
 export type PlayBest = z.infer<typeof playBestSchema>
 export type PlayChecker = z.infer<typeof playCheckerSchema>
-export type PlayBar = z.infer<typeof playBarSchema>
 export type PlayBarMetric = z.infer<typeof playBarMetricSchema>
 export type PlayStanding = z.infer<typeof playStandingSchema>
-export type PlayLive = z.infer<typeof playLiveSchema>
 export type PlayClimb = z.infer<typeof playClimbSchema>
-export type PlayBarSeries = z.infer<typeof playBarSeriesSchema>
 export type PlayLedger = z.infer<typeof playLedgerSchema>
 export type PlayLedgerRow = z.infer<typeof playLedgerRowSchema>
 export type PlayRelease = z.infer<typeof playReleaseSchema>
@@ -477,6 +474,22 @@ export const seatWords = (seat: string | null | undefined) => (seat ? (seat.spli
 
 /** A tag without its run prefix: `rc14`. */
 export const shortTag = (tag: string | null | undefined) => tag?.split('/').pop() ?? null
+
+/** Where a run's releases sit in the play: the run/tag it forked from and each tag's place among the published releases. */
+export type ReleaseLineage = { from: string | null; of: number; ordinals: Record<string, number> }
+/**
+ * A release by its place in the play, not its bare per-run number (Drew 2026-10-25: "what is rc2? i thought we were at
+ * like rc23?"): "rc2 · from 21c/rc125 · release 67 of 67 in the play". The host's run workspace carries the lineage.
+ */
+export const releaseName = (tag: string, lineage?: ReleaseLineage | null) =>
+  [tag, lineage?.from && `from ${lineage.from}`, lineage?.ordinals[tag] && `release ${lineage.ordinals[tag]} of ${lineage.of} in the play`].filter(Boolean).join(' · ')
+/** The same lineage on /play, from its own document: the run's fork in its ledger row and the published releases' order. */
+export function playLineage(play: PlayHead & { id: string }, runId: string): ReleaseLineage {
+  const published = (play.releases ?? []).filter((r) => r.state === 'published')
+  const fork = play.ledger?.rows.find((row) => row.runId === runId)?.lineage
+  return { from: fork?.kind === 'fork' && fork.parentRun ? `${shortRun(play.id, fork.parentRun)}${fork.parentTag ? `/${shortTag(fork.parentTag)}` : ''}` : null, of: published.length,
+    ordinals: Object.fromEntries(published.flatMap((r, i) => (r.runId === runId ? [[r.tag, i + 1]] : []))) }
+}
 
 /**
  * Verdict words, as every page writes them, in the result grammar `statusOf` uses (design-system section 1): a miss is
@@ -563,14 +576,6 @@ export function checkerIndex(checkers: readonly PlayChecker[] | undefined, id: s
   return checkers.filter((item) => item !== current).indexOf(found) + 1
 }
 
-/** A ruling as one phrase: its label (else reason, else who ruled) and its time, never the time twice. */
-export function rulingWords(ruling: { label?: string | null; reason?: string | null; by?: string | null; at?: string | null } | null | undefined): string | null {
-  if (!ruling) return null
-  const text = ruling.label ?? ruling.reason ?? (ruling.by ? `${ruling.by} ruling` : 'ruling')
-  const at = utc(ruling.at)
-  return at && !text.includes(at) && !text.includes(at.slice(6)) ? `${text} ${at}` : text
-}
-
 /** The hover text of a checker: its label, ruling and digest. */
 export function checkerTitle(checker: PlayChecker): string {
   const ruling = checker.ruling
@@ -584,8 +589,6 @@ export function checkerTitle(checker: PlayChecker): string {
 /** Stage words: `stage 5 of 6 (workloads)`, `4 of 15 workloads`. */
 export const stageWords = (best: { stage?: string | null; reached?: number | null; of?: number | null } | null | undefined) =>
   best?.reached !== null && best?.reached !== undefined && best.of ? `stage ${best.reached} of ${best.of}${best.stage ? ` (${best.stage})` : ''}` : null
-export const workloadWords = (value: { passed: number | null; total: number | null } | null | undefined) =>
-  value && value.passed !== null && value.total ? `${value.passed} of ${value.total} workloads` : null
 
 /** Compact SI numbers for a metric's unit: 202k, 7.2M, 385,792 B → 377 KiB, 319 ms. */
 export function metricValue(value: number | null | undefined, unit: string): string {
@@ -652,20 +655,6 @@ export function barSide(metric: PlayBarMetric, value: number | null | undefined)
   if (low === null || high === null) return null
   if (value >= low && value <= high) return 'within'
   return (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low) ? 'past' : 'short'
-}
-
-/** How far a value is from a metric's target, as text: "36× below the bar", "within the bar", "0.6× of the bar". */
-export function gapWords(metric: PlayBarMetric, value: number | null | undefined): string | null {
-  const t = metric.target
-  if (!t || value === null || value === undefined || !(value > 0)) return null
-  const low = t.min ?? t.approx ?? t.max ?? null
-  const high = t.max ?? t.approx ?? t.min ?? null
-  if (low === null || high === null) return null
-  if (value >= low && value <= high) return 'within the bar'
-  const ratio = value < low ? low / value : value / high
-  const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
-  const better = (metric.direction === 'up' && value > high) || (metric.direction === 'down' && value < low)
-  return better ? `${times}× past the bar` : `${times}× ${value < low ? 'below' : 'above'} the bar`
 }
 
 /** A check line without its verdict word, digests or the tail after ` | `: the words that say why, for grouping. */

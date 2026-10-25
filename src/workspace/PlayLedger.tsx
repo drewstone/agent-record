@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
 import { money, StatusPill, statusOf, tokens } from './data.js'
 import { viewChip } from './view.js'
-import { checkerLabel, checksByRun, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
+import { checkerLabel, checksByRun, type PlayHead, type PlayLedgerRow, playLineage, releaseName, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 
 type Play = PlayDocument & PlayHead
 type SortKey = 'newest' | 'wall' | 'agent' | 'cost' | 'score'
@@ -98,7 +98,7 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
       {stage && !superseded && <span className="num"> · {stage}</span>}
       {workloads && <span className="num"> · {workloads}</span>}
       {!superseded && label && <span className="faint"> {label}</span>}
-      {best.tag && <span className="faint mono"> {shortTag(best.tag)}</span>}
+      {best.tag && <span className="faint mono" title={releaseName(shortTag(best.tag)!, playLineage(play, row.runId))}> {shortTag(best.tag)}</span>}
       {superseded && <span className="faint"> (superseded)</span>}
     </span>
   )
@@ -116,7 +116,7 @@ function Cost({ row }: { row: PlayLedgerRow }) {
 }
 
 const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
-  row.lineage?.kind === 'fork' && row.lineage.parentRun ? `⑂ ${shortRun(play.id, row.lineage.parentRun)}${row.lineage.parentTag ? `@${shortTag(row.lineage.parentTag)}` : ''}` : row.lineage?.kind === 'wrong-base' ? 'wrong base' : null
+  row.lineage?.kind === 'wrong-base' ? 'wrong base' : playLineage(play, row.runId).from ? `⑂ ${playLineage(play, row.runId).from}` : null
 
 /**
  * The run ledger (charts c and e): for each run its ending, wall time with idle time hatched, agent-hours stacked by

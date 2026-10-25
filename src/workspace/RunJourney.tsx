@@ -4,7 +4,7 @@ import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
-import { shortRun } from './play-standing.js'
+import { releaseName, shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
 import { goalText, plainSummary, stepWord } from './plain-words.js'
@@ -131,7 +131,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
         {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
             teardown; this line says only what the release reached. */}
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b> · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
       {lifecycle && lifecycle.state !== 'done' && (
         <p className="rj-life-line">
@@ -150,7 +150,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
           // A release with no tag recorded has no name the code reader resolves (21c rc116 opened a 404 pane): a label, not a
           // button. Its tooltip says what was recorded; whether its commit's code was kept is not known (root review of #179).
           : m.releases.map((r) => r.tagged
-            ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
+            ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={[releaseName(r.release, m.data.lineage), r.sentence].filter(Boolean).join('\n')} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
             // One plain sentence (REVIEW-7 #5: the check's raw text leaked into it and contradicted the count).
             : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.release} passed ${r.passed ?? '?'} of ${r.total ?? '?'} steps. No release tag recorded; recorded commit ${r.commit ?? 'none'}.`}>{r.release} {r.passed}/{r.total}</Tip>)}
       </p>}
@@ -255,7 +255,7 @@ function Stats({ m }: { m: Model }) {
     ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, 'API-equivalent at list price; each agent\'s billed amount is in its card'] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
     ['Crashed', String(m.nodes.filter(crashed).length)],
-    ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`] as [string, string]] : []),
+    ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
   ]
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
 }
