@@ -51,7 +51,7 @@ import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { readSource } from './workspace/source-reader.js'
 import { artifactNavigation, useSearch } from './workspace/navigation.js'
 import { goalText } from './workspace/plain-words.js'
-import { LazyOutputsView, LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
+import { isLazyMode, type LazyMode, LazyOutputsView, LazyPage, LazyRunWorkspace } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
@@ -64,7 +64,7 @@ import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscripti
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
   api: string
-  mode: 'plays' | 'play' | 'run' | 'receipt' | 'today' | 'theatre' | 'explore'
+  mode: 'plays' | 'play' | 'run' | 'receipt' | 'theatre' | 'explore' | LazyMode
   id: string
   theme?: 'light' | 'dark' | 'auto'
 }
@@ -73,7 +73,7 @@ export interface WorkspaceProps {
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
 }
