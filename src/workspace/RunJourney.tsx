@@ -168,14 +168,6 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
   const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
-  const outcome = (n: Node) => {
-    if (crashed(n)) return 'crashed'
-    const commits = m.commits.get(n.id)
-    if (!commits) return n.id === m.root ? null : running(n) ? 'running' : 'nothing shipped'
-    const into = m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release)
-    // Short enough not to clip in the row (review 4 #2: 13 of 17 clipped); the harness is in the card.
-    return `${commits} ${commits === 1 ? 'commit' : 'commits'}${into.length ? ` → ${into.length > 2 ? `${into[0]}…${into.at(-1)}` : into.join(', ')}` : ''}`
-  }
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
@@ -185,8 +177,9 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.id === m.root ? 'lead' : n.role ?? n.label,
-        // Its outcome first (review 2 #2: the tooltip said only "1 commits"): shipped into which releases, crashed, or idle.
-        detail: outcome(n) ?? undefined,
+        // The lane label is name plus short model, four words at most (REVIEW-8 gate 1, as the reference frames); what it
+        // shipped is the outcome pill and the card's Releases and Commits cells.
+        detail: n.model?.split('/').pop() ?? undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running(n) ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
@@ -197,7 +190,6 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
           { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
           ...(n.harness ? [{ label: 'Harness', value: n.harness }] : []),
-          ...(n.model ? [{ label: 'Model', value: n.model.split('/').pop()! }] : []),
           ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
           ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
         ],
