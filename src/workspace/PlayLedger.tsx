@@ -122,6 +122,7 @@ const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
 export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: boolean; onOpen?: (runId: string) => void }) {
   const ledger = play.ledger ?? null
   const [sort, setSort] = useState<SortKey>('newest')
+  const [idleShown, setIdleShown] = useState(false)
   const checks = useMemo(() => checksByRun(play.climb), [play.climb])
   const rows = useMemo(() => {
     const list = [...(ledger?.rows ?? [])]
@@ -133,6 +134,14 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
     return list
   }, [ledger, sort])
   if (!ledger || !ledger.rows.length) return null
+  // A run that did no work (stopped at once, never started, or crashed inside half an hour with no check) folds into
+  // one line, so the table shows the runs that did (review 1 #11: nine such rows on magnetar-rust).
+  const agentHoursOf = (row: PlayLedgerRow) => Object.values(row.hoursByOutcome ?? {}).reduce((sum, value) => sum + value, 0) + (row.open?.hours ?? 0)
+  const idle = (row: PlayLedgerRow) => !row.best && !checks.get(row.runId)?.rows && (row.wallHours ?? 0) < 0.5 && agentHoursOf(row) < 0.5
+  const idleCount = rows.filter(idle).length
+  const shownRows = idleShown ? rows : rows.filter((row) => !idle(row))
+  const cost = (play.standing as { cost?: { apiEquivalentUsd?: number | null; provenance?: string | null } } | null)?.cost ?? null
+  const gained = (play.view as { trend?: { best?: number } | null } | undefined)?.trend?.best ?? null
   const maxWall = Math.max(1, ...ledger.rows.map((row) => row.wallHours ?? 0))
   const maxAgent = Math.max(1, ...ledger.rows.map((row) => Object.values(row.hoursByOutcome ?? {}).reduce((sum, value) => sum + value, 0) + (row.open?.hours ?? 0)))
   const present = new Set(ledger.rows.flatMap((row) => Object.entries(row.hoursByOutcome ?? {}).filter(([, value]) => value > 0).map(([key]) => key)))
@@ -160,6 +169,12 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
     <section className={`ws-section play-ledger ${full ? 'is-full' : ''}`} data-play-ledger aria-label="Runs">
       <header className="section-head">
         <h3>Runs</h3>
+        {cost?.apiEquivalentUsd ? (
+          <p className="ledger-spend" title={`API-equivalent${cost.provenance ? ` (${cost.provenance})` : ''}, not a bill`}>
+            {cost.provenance === 'estimated' ? '≈' : ''}{money(cost.apiEquivalentUsd)}
+            {gained ? <span className="faint"> · {cost.provenance === 'estimated' ? '≈' : ''}{money(cost.apiEquivalentUsd / gained)} per step passed</span> : null}
+          </p>
+        ) : null}
         <ul className="outcome-legend" aria-label="Attempt outcomes">
           {OUTCOME_ORDER.filter((outcome) => present.has(outcome)).map((outcome) => (
             <li key={outcome}>
@@ -194,7 +209,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
+            {shownRows.map((row) => {
               const tries = Object.values(row.triesByOutcome ?? {}).reduce((sum, value) => sum + value, 0)
               const fork = lineageGlyph(play, row)
               return (
@@ -263,6 +278,11 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
           </tbody>
         </table>
       </div>
+      {idleCount > 0 && (
+        <button type="button" className="link-button ledger-idle" onClick={() => setIdleShown(!idleShown)} aria-expanded={idleShown}>
+          {idleShown ? `Hide the ${idleCount} runs that did no work` : `+${idleCount} ${idleCount === 1 ? 'run' : 'runs'} that did no work`}
+        </button>
+      )}
       {(ledger.olderSummary || (ledger.runsTotal && ledger.runsShown && ledger.runsTotal > ledger.runsShown)) && (
         <p className="faint ledger-older">
           {ledger.runsShown} of {ledger.runsTotal} runs shown

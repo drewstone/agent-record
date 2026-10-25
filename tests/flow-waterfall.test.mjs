@@ -21,7 +21,8 @@ test('retained Discovery capture reaches the shared waterfall without cumulative
   assert.equal(exact(html, 'Tokens'), '754,448 tokens')
   assert.equal(field(html, 'Cost'), 'Unknown')
   assert.equal(field(html, 'Tool calls'), String(record.events.reduce((sum, event) => sum + (event.detail.publicToolCalls?.length ?? 0), 0)))
-  assert.match(html, /data-span-kind="handoff"/)
+  // charts 0.17.0 draws a handoff as a connector between the two rows rather than a row of its own.
+  assert.match(html, /data-span-kind="handoff"|class="fw-link /)
   assert.match(html, /data-span-kind="model"/)
   assert.match(html, /data-span-kind="tool"/)
   assert.match(html, /aria-label="Search trace"|>Search trace<\/label>/)
