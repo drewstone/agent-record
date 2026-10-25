@@ -84,7 +84,10 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
     )
   }
   // The stage the check stopped at, by name: "6/6" for rc2 read as six of six passed beside the run page's 5 of 6 (REVIEW-5 #1).
-  const stage = best.reached !== null && best.reached !== undefined && best.of ? `reached ${best.stage ?? `stage ${best.reached} of ${best.of}`}` : null
+  // The stage by the ladder's own label ("hidden test set"), not its key ("hidden").
+  const steps = (play as unknown as { view?: { progress?: { steps?: { name: string; label: string }[] } | null } | null }).view?.progress?.steps ?? []
+  const stageLabel = steps.find((step) => step.name === best.stage)?.label ?? best.stage
+  const stage = best.reached !== null && best.reached !== undefined && best.of ? `reached ${stageLabel ?? `stage ${best.reached} of ${best.of}`}` : null
   const workloads = best.workloads?.total ? `${best.workloads.passed}/${best.workloads.total}` : null
   const current = play.checkers?.find((item) => item.current)?.label ?? null
   const label = best.checker ? checkerLabel(play.checkers, best.checker) : null
