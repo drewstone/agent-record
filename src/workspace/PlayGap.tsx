@@ -62,15 +62,21 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   if (!times.length) return null
   const w = measured ?? (phone ? 380 : 1000), h = phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
   const t0 = Math.min(...times) - 3_600_000, t1 = Math.max(now, ...times)
-  const values = [...gap.measured.map((m) => m.value), ...gap.capMisses.map((m) => m.below), target?.max ?? 0].filter((v) => v > 0)
-  const lo = Math.floor(Math.log10(Math.min(...values))), hi = Math.ceil(Math.log10(Math.max(...values)))
+  // Fitted to our own data, a decade either side (lead 07:12Z: with the paper's band on the axis all our points sat in
+  // the bottom tenth and the chart read flat); the paper, thousands of times higher, is an off-scale arrow.
+  const values = [...gap.measured.map((m) => m.value), ...gap.capMisses.map((m) => m.below)].filter((v) => v > 0)
+  if (!values.length && target) values.push(target.min)
+  const lo = Math.floor(Math.log10(Math.min(...values) / 2)), hi = Math.ceil(Math.log10(Math.max(...values) * 1.5))
+  const best = gap.measured.reduce((a, b) => Math.max(a, b.value), 0)
+  const offScale = target && target.min > 10 ** hi ? { ratio: best ? Math.round(target.min / best) : null } : null
+  const ratio = (v: number) => (target && v > 0 ? `×${Math.round(target.min / v).toLocaleString()}` : '—')
   const x = (t: number) => left + ((t - t0) / Math.max(1, t1 - t0)) * (w - left - right)
   const y = (v: number) => top + (1 - (Math.log10(v) - lo) / (hi - lo)) * (h - top - bottom)
   const marks: Mark[] = [
     ...gap.measured.map((m): Mark => ({ key: `m-${m.tag}-${m.at}`, x: x(ms(m.at)), y: y(m.value), kind: 'measured', title: `${m.tag} · run ${m.run ?? ''}`, pill: 'measured',
-      rows: [['Rate', `${m.value.toLocaleString()} ${gap.metric.unit}`], ['Program', m.cycles ? `${cyclesWord(m.cycles)} cycles` : '—'], ['When', when(m.at)]] })),
+      rows: [['Rate', `${m.value.toLocaleString()} ${gap.metric.unit}`], ['Program', m.cycles ? `${cyclesWord(m.cycles)} cycles` : '—'], ['Gap to paper', ratio(m.value)], ['When', when(m.at)]] })),
     ...gap.capMisses.map((m): Mark => ({ key: `b-${m.tag}-${m.at}`, x: x(ms(m.at)), y: y(m.below), kind: 'bound', title: `${m.tag ?? ''} · run ${shortRun(m.runId)}`, pill: 'ran past cap',
-      rows: [['Rate', `below ${m.below.toLocaleString()} ${gap.metric.unit}`], ['Program', `${cyclesWord(m.cycles)} cycles`], ['Proves', String(m.count)], ['When', when(m.at)]],
+      rows: [['Rate', `below ${m.below.toLocaleString()} ${gap.metric.unit}`], ['Program', `${cyclesWord(m.cycles)} cycles`], ['Proves', String(m.count)], ['Gap to paper', `over ${ratio(m.below)}`], ['When', when(m.at)]],
       reason: `Every prove ran past the ${m.capS} s cap under ${m.checker ?? 'the check'}.` })),
   ]
   const picked = marks.find((m) => m.key === on) ?? null
@@ -86,7 +92,8 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
     <div className="pj-gap" ref={box}>
       <svg className="pj-gap-chart" viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={`${gap.metric.label} per release on a log scale against the paper's ${target ? `${rate(target.min)}–${rate(target.max)}` : ''} ${gap.metric.unit}`} onMouseLeave={() => setOn(null)}>
         {ticks.map((v) => <g key={v} className="pj-grid"><line x1={left} x2={w - right} y1={y(v)} y2={y(v)} /><text x={left - 8} y={y(v) + 4} textAnchor="end">{rate(v)}</text></g>)}
-        {target && <g className="pj-band"><rect x={left} width={w - left - right} y={y(Math.min(target.max, 10 ** hi))} height={Math.max(2, y(target.min) - y(Math.min(target.max, 10 ** hi)))} /><text x={w - right - 6} y={y(target.max) + 14} textAnchor="end">paper {rate(target.min)}–{rate(target.max)}</text></g>}
+        {target && offScale && <g className="pj-band pj-offscale"><text x={w - right - 6} y={top + 12} textAnchor="end">paper {rate(target.min)}–{rate(target.max)} ↑{offScale.ratio ? ` ×${offScale.ratio.toLocaleString()}` : ''}</text></g>}
+        {target && !offScale && <g className="pj-band"><rect x={left} width={w - left - right} y={y(Math.min(target.max, 10 ** hi))} height={Math.max(2, y(target.min) - y(Math.min(target.max, 10 ** hi)))} /><text x={w - right - 6} y={y(target.max) + 14} textAnchor="end">paper {rate(target.min)}–{rate(target.max)}</text></g>}
         {gap.need && <g className="pj-need"><line x1={left} x2={w - right} y1={y(gap.need.cycles / gap.need.capS)} y2={y(gap.need.cycles / gap.need.capS)} /><text x={w - right - 6} y={y(gap.need.cycles / gap.need.capS) - 6} textAnchor="end">needed: {cyclesWord(gap.need.cycles)} cycles in {gap.need.capS} s</text></g>}
         {shown.map((c) => <g key={c.label} className="pj-check"><line x1={x(ms(c.firstAt))} x2={x(ms(c.firstAt))} y1={top} y2={h - bottom} /><text x={x(ms(c.firstAt)) + 4} y={top + 10}>{c.label}</text></g>)}
         {gap.passed?.lastAt && <g className="pj-pass"><line x1={x(ms(gap.passed.lastAt))} x2={x(ms(gap.passed.lastAt))} y1={top} y2={h - bottom} /><text x={x(ms(gap.passed.lastAt)) + 4} y={top + 26}>{gap.passed.tag} passed {gap.passed.checker}</text></g>}
