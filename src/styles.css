@@ -3962,6 +3962,12 @@
   .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
   .ar-ws .play-input .input-run-picker select { width: 100%; }
 }
+/* /play Setup on a wide screen: the bar and what the agent was asked side by side, so the tab fills its width. */
+@media (min-width: 1100px) {
+  .ar-ws .play-setup { grid-template-columns: minmax(0, 640px) minmax(0, 1fr); column-gap: 48px; align-items: start; }
+  .ar-ws .play-setup > .play-input { padding-top: 0; border-top: 0; }
+  .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
+}
 /* The per-state counts below the agents meter carry its numbers; its key would repeat them. */
 .ar-ws .wp-agents-meter .ov-meter-key { display: none; }
 .ar-ws .wp-groups .wp-idle { line-height: 20px; }
