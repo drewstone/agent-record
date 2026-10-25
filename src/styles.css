@@ -3726,8 +3726,8 @@
 .ar-ws .run-file-content > [role] { margin: 0; }
 .ar-ws .run-file-content :where(pre, table, img, video) { max-width: 100%; }
 .ar-ws .run-file-content pre { overflow: auto; }
-.ar-ws .run-file-proof { display: flex; flex-direction: column; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--border-default, var(--ar-border)); color: var(--text-muted, var(--ar-fg-muted)); font-size: 12px; }
-.ar-ws .run-file-proof code { font-size: 12px; overflow-wrap: anywhere; }
+.ar-ws .run-file-links { display: inline-flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ar-ws .run-file-proof > span, .ar-ws .run-file-proof > code { display: block; margin-top: 4px; font-size: 12px; overflow-wrap: anywhere; }
 .ar-ws .run-file-versions { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px; font-size: 12px; }
 .ar-ws .run-file-empty { padding: 24px; color: var(--text-secondary, var(--ar-fg-muted)); line-height: 1.65; }
 @media (max-width: 600px) {
@@ -3736,8 +3736,6 @@
   .ar-ws .rj { gap: 24px; }
 }
 
-.ar-ws .run-file-proof details > span, .ar-ws .run-file-proof details > code { display: block; margin-top: 8px; }
-.ar-ws .run-file-proof summary { cursor: pointer; }
 .ar-ws .run-file-modes button:disabled { opacity: .5; cursor: default; }
 
 @media (max-width: 600px) {
@@ -3756,6 +3754,7 @@
 .ar-ws .run-file-sources { flex: none; gap: 8px; padding: 12px 12px; border-bottom: 1px solid var(--ar-border); }
 .ar-ws .run-files-pane > .run-artifacts-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; padding: 12px; }
 .ar-ws .run-file-browser { flex: 1; min-height: 320px; height: 100%; }
+.ar-ws .run-file-browser:has(.run-file[data-fit=content]) { flex: 0 0 auto; min-height: 0; height: auto; }
 .ar-ws .run-file-selection { flex: none; }
 .ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection { gap: 12px; }
 .ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection label { flex: 1; min-width: 0; }
@@ -3831,7 +3830,6 @@
 .ar-ws :where(.tj, .pj, .rj) a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .ar-ws :where(.tj, .pj, .rj) summary:hover, .ar-ws :where(.tj, .pj, .rj) button:hover { color: var(--ar-fg); }
 .ar-ws .rj-life { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ar-c-warn, #f5a524); background: color-mix(in srgb, var(--ar-c-warn, #f5a524) 14%, transparent); }
-.ar-ws .rj-life-line { margin: 0; font-size: 14px; color: var(--ar-c-warn, #f5a524); }
 /* A short file takes the height it needs, up to the panel's; it never fills the first screen alone. */
 .ar-ws .rj-work > .run-files-pane { height: auto; max-height: calc(100svh - 160px); min-height: 0; }
 
