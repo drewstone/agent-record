@@ -274,7 +274,7 @@ function Full({ short, raw, what }: { short: string; raw: string; what: string }
  */
 function Prompt({ text }: { text: string }) {
   // What it is, on its own line and not behind Details (root 23:24Z): the run input's instruction, sent as the user role; no sender is recorded.
-  return <details className="rj-prompt"><summary>Opening prompt <span className="rj-muted">· user role · the run input's instruction · sender not recorded</span></summary><p className="rj-full-text">{text}</p></details>
+  return <details className="rj-prompt"><summary title="The run input's instruction, sent in the user role; no sender is recorded">Opening prompt <span className="rj-muted">· user role · sender not recorded</span></summary><p className="rj-full-text">{text}</p></details>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -386,7 +386,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <h1 title={m ? `${hours(m.t0, m.t1).toFixed(1)} h` : undefined}>Run {shortRun(doc.run.play, doc.run.id)}</h1>
           {/* The goal includes its own teardown: an unconfirmed cleanup is the run's state, said once with its counts and
               receipt records (root 23:24Z); the check's verdict then sits on the hero line. */}
-          {lifecycle && lifecycle.state !== 'done' ? <span className="rj-life" title={`${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`}>{lifecycle.sentence}</span> : view && <StatusPill status={viewChip(view.status)} />}
+          {lifecycle && lifecycle.state !== 'done' ? <span className="rj-life" title={`${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`}>{lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, 'Teardown: ').split(';')[0]}</span> : view && <StatusPill status={viewChip(view.status)} />}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
         {m && <Trigger doc={doc} m={m} />}
