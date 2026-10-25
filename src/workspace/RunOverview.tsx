@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { FigureView, Meter } from '@tangle-network/charts/react'
+import { FigureView, HBars, Meter } from '@tangle-network/charts/react'
 import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
 import type { RecordNode } from '../record.js'
 import type { RunCheck, RunDocument, RunProgress } from '../workspace-model.js'
@@ -33,7 +33,7 @@ export function RunOverview({ api, doc, play = null, open, print = false }: { ap
   // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
   const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
   return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} successor={successor}
-    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} actNow={!settled && block?.severity === 'red' ? (block.owner ?? 'Discovery operator') : null} trace={!print && <RunFlowWaterfall api={api} doc={doc} />} />
+    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} trace={!print && <RunFlowWaterfall api={api} doc={doc} />} />
 }
 
 /**
@@ -342,21 +342,7 @@ const RECEIPT_STATUS: Record<RunReceipt['outcome']['status'], StatusInput> = {
   cancelled: { axis: 'run', state: 'cancelled' },
 }
 
-/** Why turns ended, one status row per cause: hours as a bar, tries as a count, the word and shape from statusOf. */
-type TurnCause = NonNullable<NonNullable<RunReceipt['system']>['attempts']>['causes'][number]
-function TurnEndings({ causes, live, actNow }: { causes: TurnCause[]; live: boolean; actNow: string | null }) {
-  const most = Math.max(...causes.map((cause) => cause.hours ?? 0), 0)
-  return <ul className="rr-causes">{causes.map((cause) => {
-    const status = statusOf({ axis: 'cause', cause: cause.cause, label: cause.label, live, actNow })
-    return <li key={cause.cause} data-status={dataStatus(status)}>
-      <StatusPill status={status} title={cause.label ?? cause.cause} />
-      <i style={{ width: `${most > 0 ? ((cause.hours ?? 0) / most) * 100 : 0}%` }} aria-hidden="true" />
-      <span>{cause.hours === null ? '—' : hoursText(cause.hours)} · {cause.tries} {cause.tries === 1 ? 'try' : 'tries'}</span>
-    </li>
-  })}</ul>
-}
-
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null, successor = null, trace }: { api?: string; receipt: RunReceipt; trace?: ReactNode; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null; successor?: { runId: string; run: string } | null }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, successor = null, trace }: { api?: string; receipt: RunReceipt; trace?: ReactNode; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; successor?: { runId: string; run: string } | null }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -374,7 +360,8 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
   // What was billed: the receipt's reconciled total, else the host's reading of a seat-paid host placement ($0 per call).
   const billed = r.cost.billedUsd.total.usd ?? billing?.billedUsd ?? null
   const plan = r.cost.plan ?? (billing?.seat ? `${billing.seat} seat` : null)
-  const failures = (r.system?.attempts?.causes ?? []).filter((cause) => cause.cause !== 'completed' && cause.tries > 0)
+  const causes = (r.system?.attempts?.causes ?? []).filter((cause) => cause.tries > 0)
+  const failures = causes.filter((cause) => cause.cause !== 'completed')
   const workers = r.system?.workers ?? null
   const firstPassAt = r.system?.play?.firstPassAt ?? null
   const behavior = r.behaviorExpectations ?? r.system?.behaviorExpectations
@@ -457,7 +444,7 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
     {(lanes.length > 0 || marks.length > 0) && <Drawer title="Where the time went" print={print}><div className="rr-chart" data-field="timeline"><FigureView figure={figure} /></div></Drawer>}
     {(Boolean(r.versions?.rows.length) || recorded(r.chosen.why) || Boolean(open)) && <Drawer title="Versions" print={print}><p data-field="chosen.why">{r.chosen.why}</p>{r.versions?.rows.length ? <><div className="rr-table" data-field="versions.rows"><table><thead><tr><th>Version</th><th>Check</th><th>Result</th></tr></thead><tbody>{r.versions.rows.map((row, i) => row.checks.map((check, j) => <tr key={`${row.tag}-${check.id}`}><th><span data-field={`versions.rows.${i}.tag`} data-value={row.tag} title={row.tag}>{pagesVersion(row.tag)}</span></th><td data-field={`versions.rows.${i}.checks.${j}.label`}>{check.label ?? check.id}</td><td data-field={`versions.rows.${i}.checks.${j}.result`}>{check.result}</td></tr>))}</tbody></table></div>{versionFigure && <div className="rr-chart" data-field="versions"><FigureView figure={versionFigure} /></div>}</> : null}{open && !print && <button onClick={() => open('versions')}>Open version history</button>}</Drawer>}
     {(recorded(r.work.toolCalls) || recorded(r.work.tries) || lanes.length > 0 || (r.lineage?.chain.length ?? 0) > 1 || recorded(r.outcome.reason) || Boolean(r.system?.errors?.top.length) || failures.length > 0 || Boolean(workers?.count) || Boolean(open)) && <Drawer title="How it ran" print={print}>
-      {failures.length > 0 && <div className="rr-chart" data-field="system.attempts.causes"><p className="rr-muted">Where turns ended: {r.system!.attempts!.failed} of {r.system!.attempts!.tries} tries, hours each cause took</p><TurnEndings causes={failures} live={!settled} actNow={actNow} /></div>}
+      {failures.length > 0 && <div className="rr-chart" data-field="system.attempts.causes"><p className="rr-muted">How its {r.system!.attempts!.tries} tries ended, {r.system!.attempts!.failed} of them failures (REVIEW-8 chart 2)</p><HBars rows={causes.map((cause) => ({ label: statusOf({ axis: 'cause', cause: cause.cause, label: cause.label, live: !settled }).word, value: cause.tries, note: cause.hours === null ? undefined : hoursText(cause.hours), color: cause.cause === 'completed' ? 'var(--ar-c-ok, #22c55e)' : 'var(--ar-c-fail, #ef4444)' }))} format={(v) => `${v} ${v === 1 ? 'try' : 'tries'}`} /></div>}
       <dl className="rr-facts">
       <Fact label="Tool calls" when={recorded(r.work.toolCalls)}><Field path="work.toolCalls" value={r.work.toolCalls} /></Fact>
       <Fact label="Tries" when={recorded(r.work.tries)}><Field path="work.tries" value={r.work.tries} /></Fact>
