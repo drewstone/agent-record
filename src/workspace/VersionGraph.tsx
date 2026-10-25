@@ -97,7 +97,8 @@ export function VersionGraph({
   return (
     <div className="version-graph" data-version-graph={label}>
       <div className="vg-toolbar" role="group" aria-label={`${label}: lanes`}>
-        <button type="button" className={`vg-lane-chip ${lane === null ? 'on' : ''}`} aria-pressed={lane === null} onClick={() => setLane(null)}>
+        {/* Showing every lane already, the chip is a state, not a control (REVIEW-8 sweep: a dead click). */}
+        <button type="button" className={`vg-lane-chip ${lane === null ? 'on' : ''}`} aria-pressed={lane === null} disabled={lane === null} onClick={() => setLane(null)}>
           all lanes
         </button>
         {allLanes.map((item) => (

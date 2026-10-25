@@ -3958,3 +3958,4 @@
 .ar-ws .run-details-panel .built-releases { border: 0; padding: 0 0 8px; background: transparent; }
 .ar-ws .run-details-panel .agent-rail.details-agents { position: static; max-height: none; border: 0; border-radius: 0; }
 .ar-ws .run-details-panel > .ws-status { padding: 16px; }
+.ar-ws .vg-lane-chip:disabled { cursor: default; opacity: 1; }
