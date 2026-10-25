@@ -3847,8 +3847,6 @@
 .ar-ws .wp-warn { color: var(--ar-c-warn, #f5a524); }
 .ar-ws .wp-num { font-variant-numeric: tabular-nums; color: var(--ar-fg-muted); text-align: right; }
 .ar-ws .wp-k { font-size: 12px; color: var(--ar-fg-muted); }
-.ar-ws .wp .ov-meter-text, .ar-ws .wp .ov-hbar-note, .ar-ws .wp .ov-meter-key, .ar-ws .wp .ov-hbars-more { font: 12px var(--font-sans); font-variant-numeric: tabular-nums; }
-.ar-ws .wp .ov-hbars { font-size: 14px; }
 .ar-ws .wp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
 .ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; }
 .ar-ws .wp-hosts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
@@ -4019,17 +4017,6 @@
 .ar-ws .wp-agents-meter .ov-meter-key { display: none; }
 .ar-ws .wp-groups .wp-idle { line-height: 20px; }
 .ar-ws .wp-group > summary { line-height: 20px; }
-/* charts' live.css sizes in em (11.2/12.6/13.3 px and 2-6 px gaps here); on these pages the 12/14 px scale and 4 px grid hold. */
-.ar-ws .wp .ov-hbar-label, .ar-ws .wp .ov-hbar-value { font-size: 14px; font-weight: 400; }
-.ar-ws .wp .ov-meter-key b { font-weight: 600; }
-.ar-ws .wp .ov-axis { font-size: 12px; }
-.ar-ws .wp .ov-empty { font-size: 14px; }
-.ar-ws .wp .ov-meter { gap: 4px; }
-.ar-ws .wp .ov-meter-key { margin: 4px 0 0; gap: 4px 16px; }
-.ar-ws .wp .ov-meter-key li { gap: 4px; }
-.ar-ws .wp .ov-hbars { gap: 4px 12px; }
-.ar-ws .wp .ov-hbars li > a, .ar-ws .wp .ov-hbars li > div { padding: 4px 8px; row-gap: 4px; }
-.ar-ws .wp .ov-hbars-more { padding: 0 8px; }
 .ar-ws .wp-foot { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 24px; font-size: 14px; }
 .ar-ws .wp-idea ol .wp-group > summary { font-weight: 600; }
 .ar-ws .wp-idea ol .wp-group p { margin: 4px 0 0; color: var(--ar-fg-muted); }
