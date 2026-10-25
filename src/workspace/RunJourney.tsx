@@ -3,7 +3,7 @@ import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
-import { money, StatusPill, tokens, useDocument } from './data.js'
+import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
@@ -19,7 +19,9 @@ import { useSearch } from './navigation.js'
  * transcript.
  */
 /** An agent's usage as the host read it (tangle-tools agent_usage): its OpenCode store while it runs, else its record. */
-type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null }
+type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null; steps?: Step[] }
+/** One stretch of an agent's time from its OpenCode store (epoch ms): a model call, a tool, or waiting between calls. */
+type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]> }
 
@@ -157,28 +159,30 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  */
 function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
   // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, crashed.
-  const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
+  // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
+  const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
+  const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
   const outcome = (n: Node) => {
     if (crashed(n)) return 'crashed'
     const commits = m.commits.get(n.id)
-    if (!commits) return n.id === m.root ? null : 'nothing shipped'
+    if (!commits) return n.id === m.root ? null : running(n) ? 'running' : 'nothing shipped'
     const into = m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release)
-    return `shipped ${commits} ${commits === 1 ? 'commit' : 'commits'}${into.length ? ` into ${into.length > 2 ? `${into[0]}…${into.at(-1)}` : into.join(', ')}` : ''}`
+    // Short enough not to clip in the row (review 4 #2: 13 of 17 clipped); the harness is in the card.
+    return `${commits} ${commits === 1 ? 'commit' : 'commits'}${into.length ? ` → ${into.length > 2 ? `${into[0]}…${into.at(-1)}` : into.join(', ')}` : ''}`
   }
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
     const spans: FlowSpan[] = m.nodes.filter((n) => Number.isFinite(ms(n.start))).map((n) => {
       const end = ms(n.end ?? n.lastAt)
-      const running = live && !n.end && ['running', 'waiting'].includes(n.status)
       const from = parent.get(n.id)
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.id === m.root ? 'lead' : n.role ?? n.label,
         // Its outcome first (review 2 #2: the tooltip said only "1 commits"): shipped into which releases, crashed, or idle.
-        detail: [outcome(n), n.harness].filter(Boolean).join(' · ') || undefined,
+        detail: outcome(n) ?? undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
-        status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
+        status: running(n) ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
         // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
         ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
@@ -186,13 +190,21 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
           { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
+          ...(n.harness ? [{ label: 'Harness', value: n.harness }] : []),
           ...(n.model ? [{ label: 'Model', value: n.model.split('/').pop()! }] : []),
           ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
           ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
         ],
       }
     })
-    return { spans, totalMs: m.t1 - m.t0, promptTokens: 0, completionTokens: 0, toolCalls: 0 }
+    const { tokens: measured, listUsd } = runUsage(m)
+    // Each agent's steps as its child spans, so its bar is drawn in thinking / tool / waiting / failed segments (review 4 #1).
+    const steps: FlowSpan[] = m.nodes.flatMap((n) => (n.usage?.steps ?? []).map((step, i) => ({
+      id: `${n.id}#${i}`, parentId: n.id, kind: step.kind, name: step.kind === 'model' ? 'thinking' : step.kind,
+      startMs: step.startMs - m.t0, endMs: step.endMs - m.t0, status: step.failed ? 'failed' as const : 'done' as const,
+    })))
+    spans.push(...steps)
+    return { spans, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: 0, ...(listUsd != null ? { costUsd: listUsd, costBasis: 'list' as const } : {}) }
   }, [m, live])
   // Releases that moved the score, the best and the newest: 17c tagged 205 releases, and a line for each buried the rows.
   const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
@@ -201,10 +213,32 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => span.id && onPick(span.id)} />
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => onPick(span.kind === 'pipeline' ? span.id : span.parentId ?? span.id)} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
+/** Tokens and list cost summed over the agents with a usage source; null when no agent has one (never a zero). */
+function runUsage(m: Model) {
+  const usage = m.nodes.map((n) => n.usage).filter((u): u is Usage => Boolean(u))
+  const sum = (pick: (u: Usage) => number | null) => (usage.some((u) => pick(u) != null) ? usage.reduce((a, u) => a + (pick(u) ?? 0), 0) : null)
+  return { tokens: sum((u) => u.tokens), listUsd: sum((u) => u.listUsd), complete: usage.length === m.nodes.length && usage.every((u) => u.listComplete) }
+}
+
+/** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
+function Stats({ m }: { m: Model }) {
+  const { listUsd, complete } = runUsage(m)
+  const shipped = [...m.commits.keys()].filter((id) => id !== m.root).length
+  const stats: [string, string, string?][] = [
+    ['Duration', duration(m.t1 - m.t0)],
+    ['Agents', String(m.nodes.length)],
+    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, 'API-equivalent at list price; each agent\'s billed amount is in its card'] as [string, string, string]] : []),
+    ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
+    ['Crashed', String(m.nodes.filter(crashed).length)],
+    ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`] as [string, string]] : []),
+  ]
+  return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+}
+
 function Full({ short, raw }: { short: string; raw: string }) {
   // A button, not <details>: Chrome lays a <details> out as a block, which left "full" alone on its own line (review 3 #8).
   const [open, setOpen] = useState(false)
@@ -214,6 +248,12 @@ function Full({ short, raw }: { short: string; raw: string }) {
       {open ? <span className="rj-full-text">{raw}</span> : short} <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
     </span>
   )
+}
+
+/** The opening prompt under its own name: a "full" after the agent line read as dead (review 4 #11). */
+function Prompt({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return <> <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'hide prompt' : 'prompt'}</button>{open && <span className="rj-full-text rj-prompt">{text}</span>}</>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -248,7 +288,7 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const source = input.source?.path?.split('/').pop()
   return (
     <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
-      <p>{root ? (input.instruction ? <Full short={who(root)} raw={input.instruction} /> : who(root)) : 'root agent'}</p>
+      <p>{root ? who(root) : 'root agent'}{input.instruction && <Prompt text={input.instruction} />}</p>
       {input.objective && <p><Full short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )
@@ -338,8 +378,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
-              {/* The run in one line beside the timeline's own count and hours (review 3 #1): who shipped, and the best release. */}
-              <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped` : ''}{m.best ? ` · best ${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}` : ''}</h2>
+              <Stats m={m} />
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
