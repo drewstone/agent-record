@@ -3,7 +3,7 @@ import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
-import { StatusPill, useDocument } from './data.js'
+import { money, StatusPill, tokens, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
@@ -18,7 +18,9 @@ import { useSearch } from './navigation.js'
  * agent timeline, releases as markers), then, for the agent picked, its summary, what it changed (code first) and its
  * transcript.
  */
-type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null }
+/** An agent's usage as the host read it (tangle-tools agent_usage): its OpenCode store while it runs, else its record. */
+type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null }
+type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]> }
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
@@ -27,6 +29,21 @@ const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.t
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
 /** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
+/** "4 m ago", "3 h ago" from now. */
+const ago = (iso: string) => { const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60_000); return m < 90 ? `${Math.round(m)} m ago` : `${Math.round(m / 60)} h ago` }
+/**
+ * Two numbers, always (lead 10:05Z): API-equivalent at list price and what the seat billed, with the tokens and how
+ * complete the pricing is ("≥$4.12 list, 38 of 41 calls priced"). "—" only when the host has no source at all.
+ */
+function costText(u: Usage | null | undefined): { text: string; title: string } {
+  if (!u) return { text: '—', title: 'No usage source: no OpenCode store on this host and no usage in the record' }
+  const list = u.listUsd == null ? null : `${u.listComplete ? '≈' : '≥'}${money(u.listUsd)} list`
+  const partial = !u.listComplete && u.calls ? `, ${u.pricedCalls ?? 0} of ${u.calls} calls priced` : ''
+  const parts = [list && `${list}${partial}`, u.billedUsd != null && `${money(u.billedUsd)} billed`, u.tokens != null && `${tokens(u.tokens)} tokens`].filter(Boolean)
+  const from = u.source === 'opencode store' ? `its OpenCode store${u.matchedBy ? ` (matched by ${u.matchedBy})` : ''}` : 'the run record'
+  const price = u.priceSource?.repository ? `; list price from ${u.priceSource.repository} ${u.priceSource.commit?.slice(0, 8) ?? ''}` : ''
+  return { text: parts.join(' · ') || '—', title: `Read from ${from}${u.at ? `, updated ${ago(u.at)}` : ''}${price}` }
+}
 const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
 
 function useJourney(api: string, doc: RunDocument) {
@@ -53,6 +70,9 @@ function useJourney(api: string, doc: RunDocument) {
   return { runUrl, model, error: ws.error }
 }
 type Model = NonNullable<ReturnType<typeof useJourney>['model']>
+
+/** A disposable run's requested teardown, as the host's run_view reads it from RECEIPT.json `system.retention`. */
+type Lifecycle = { state: string; sentence: string; source?: string | null; resources?: { id: string | null; removal: string | null; removedAt: string | null }[] }
 
 type Blocker = { why?: string | null; action?: string | null; owner?: string | null; text?: string; since?: string | null; kind?: string; dispute?: string | null }
 
@@ -93,7 +113,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
 
 /** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
 function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: (release: string) => void }) {
-  const lifecycle = (doc.view as { lifecycle?: { state: string; sentence: string } | null } | null | undefined)?.lifecycle ?? null
+  const lifecycle = (doc.view as { lifecycle?: Lifecycle | null } | null | undefined)?.lifecycle ?? null
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
@@ -106,10 +126,18 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       <p className="rj-stuck">
         {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : 'every step passes'}</> : 'No release was checked.'}
-        {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
+        {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
+            teardown; this line says only what the release reached. */}
+        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
-      {lifecycle && lifecycle.state !== 'done' && <p className="rj-life-line">{lifecycle.sentence}</p>}
+      {lifecycle && lifecycle.state !== 'done' && (
+        <p className="rj-life-line">
+          {/* The header pill names it; the line gives the counts, and the receipt's own records stay one toggle away
+              (root 2026-10-25 08:42Z: resource ids and source reachable). */}
+          <Full short={lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, '').replace(/^./, (c) => c.toUpperCase())}
+            raw={`${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`} />
+        </p>
+      )}
       {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
       {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
@@ -148,10 +176,20 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.id === m.root ? 'lead' : n.role ?? n.label,
         // Its outcome first (review 2 #2: the tooltip said only "1 commits"): shipped into which releases, crashed, or idle.
-        detail: [outcome(n), n.harness, n.model?.split('/').pop()].filter(Boolean).join(' · ') || undefined,
+        detail: [outcome(n), n.harness].filter(Boolean).join(' · ') || undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
+        // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
+        ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
+        // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
+        facts: [
+          { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
+          { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
+          ...(n.model ? [{ label: 'Model', value: n.model.split('/').pop()! }] : []),
+          ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
+          ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
+        ],
       }
     })
     return { spans, totalMs: m.t1 - m.t0, promptTokens: 0, completionTokens: 0, toolCalls: 0 }
@@ -168,8 +206,14 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
 function Full({ short, raw }: { short: string; raw: string }) {
+  // A button, not <details>: Chrome lays a <details> out as a block, which left "full" alone on its own line (review 3 #8).
+  const [open, setOpen] = useState(false)
   if (short === raw.trim()) return <>{short}</>
-  return <span className="rj-full">{short} <details><summary>full</summary><p>{raw}</p></details></span>
+  return (
+    <span className="rj-full">
+      {open ? <span className="rj-full-text">{raw}</span> : short} <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
+    </span>
+  )
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -185,7 +229,12 @@ function spawnedBy(m: Model, node: Node) {
   const edge = m.data.edges.find((e) => e.kind === 'spawn' && e.to === node.id)
   const parent = edge ? m.nodes.find((n) => n.id === edge.from) : null
   if (parent) return `${parent.role ?? parent.label} (${parent.label})`
-  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not recorded'
+  // The id path names the parent when the journal's edge is missing: run:s6 is the root's child (lead 2026-10-25 10:00Z).
+  const prefix = node.id.includes(':') ? node.id.slice(0, node.id.lastIndexOf(':')) : null
+  const byPath = prefix ? m.nodes.find((n) => n.id === prefix) : null
+  if (byPath) return `${byPath.id === m.root ? 'the lead' : byPath.role ?? byPath.label} (${byPath.label})`
+  if (prefix && prefix === m.root) return 'the lead'
+  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not in the spawn journal'
 }
 
 /**
@@ -200,7 +249,7 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   return (
     <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
       <p>{root ? (input.instruction ? <Full short={who(root)} raw={input.instruction} /> : who(root)) : 'root agent'}</p>
-      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 24)} raw={goalText(input.objective)} /></p>}
+      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )
 }
@@ -225,8 +274,9 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
         <dt>Who</dt><dd>{who(node)}</dd>
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
-        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
-        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd></>}
+        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
+        <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
+        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
       </dl>}
       {paths.length > 0 && (
         <div className="rj-changes">
@@ -250,7 +300,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
   // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
   const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
   const view = doc.view
-  const lifecycle = (view as { lifecycle?: { state: string; sentence: string } | null } | null | undefined)?.lifecycle ?? null
+  const lifecycle = (view as { lifecycle?: Lifecycle | null } | null | undefined)?.lifecycle ?? null
   const single = m?.nodes.length === 1
   // The release the code pane shows: the one a release chip picked (`codeRef`), else the best (review 1 #13).
   const [params, update] = useSearch()
@@ -288,7 +338,8 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
-              <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''}</h2>
+              {/* The run in one line beside the timeline's own count and hours (review 3 #1): who shipped, and the best release. */}
+              <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped` : ''}{m.best ? ` · best ${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}` : ''}</h2>
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
@@ -296,7 +347,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               the agent and its transcript below the fold (root 2026-10-25, 1072 px window). */}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
           {work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Receipt of the published release, ${receipt.tag}` : 'Published receipt'}</a></footer>}
+          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></footer>}
         </>
       )}
     </section>

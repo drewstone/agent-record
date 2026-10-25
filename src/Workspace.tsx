@@ -746,7 +746,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <Suspense fallback={<p className="ws-status" role="status">Opening the workspace…</p>}>
+        <Suspense fallback={<p className="ws-status" role="status">Loading…</p>}>
           <LazyRunWorkspace
             api={api}
             doc={doc}
@@ -758,10 +758,10 @@ function RunPage({ api, id }: { api: string; id: string }) {
               )
             }
           />
+          {tabs}
+          <RunWhy doc={doc} play={play.data} />
+          <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
         </Suspense>
-        {tabs}
-        <RunWhy doc={doc} play={play.data} />
-        <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
       </div>
     )
   const openFinding = (sha: string) => {
