@@ -3580,11 +3580,15 @@
    (green shipped or passed, amber near or stuck, red crashed or failed), grey for everything else. */
 .ar-ws .rj { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; width: 100%; max-width: 1440px; margin: 0 auto; padding: 8px 0 48px; }
 .ar-ws .rj > * { min-width: 0; }
-.ar-ws .rj-head { display: grid; gap: 8px; }
-.ar-ws .rj-crumb { font-size: 12px; color: var(--ar-fg-muted); text-decoration: none; }
-.ar-ws .rj-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.ar-ws .rj-title h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
-.ar-ws .rj-title .as-of { margin-left: auto; }
+/* The run's one header row (lead 2026-10-25): name, status, teardown, numerals; the as-of at its end. */
+.ar-ws .rj-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.ar-ws .rj-bar h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.ar-ws .rj-bar .rj-stats { margin: 0 0 0 auto; }
+.ar-ws .rj-bar .as-of { margin-left: 0; }
+/* The code frame fills TraceWorkspace's files slot (70% of the viewport at least). */
+.ar-ws .sandbox-trace-workspace .run-files-pane { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.ar-ws .rj-details > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.ar-ws .rj-details[open] { display: grid; gap: 24px; }
 .ar-ws .rj-sentence { margin: 0; font-size: 14px; }
 .ar-ws .rj-muted { color: var(--ar-fg-muted); }
 /* 32 px numerals on the type scale, 8/16/24 px gaps (REVIEW-5 #4: 26 px was a 7th size and the row broke the grid). */

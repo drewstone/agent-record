@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
-import { FlowWaterfall } from '@tangle-network/charts/react'
+import { TraceWorkspace } from '@tangle-network/sandbox-ui/run'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
@@ -10,7 +10,6 @@ import { viewAsOf, viewChip } from './view.js'
 import { goalText, plainSummary, stepWord } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
-import { useSearch } from './navigation.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
@@ -164,7 +163,13 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * sizes from its container, truncates long names at the end with the full name in the tooltip, and zooms. Each release
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
-function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
+/**
+ * The waterfall and the code under it (Drew 2026-10-25, lead's layout): sandbox-ui's TraceWorkspace draws the agent lanes;
+ * a bar or lane click selects that agent (its lane lifts, the others dim, its transcript opens in the right-hand drawer on
+ * the host's per-agent stream) and Escape or the drawer's close clears it. `files` is the code frame the page scopes to the
+ * selected agent and the time cursor.
+ */
+function Lanes({ m, live, runUrl, files, selected, onSelect, onTime }: { m: Model; live: boolean; runUrl: string; files: ReactNode; selected: string | undefined; onSelect: (id: string | undefined) => void; onTime: (t: number | null) => void }) {
   // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, crashed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
@@ -220,7 +225,11 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
+  return (
+    <TraceWorkspace trace={trace} live={live} startedAt={m.t0} defaultView="agents" label="What the agents did" events={markers}
+      streamUrl={(id) => `${runUrl}/agents/${encodeURIComponent(id)}/stream`}
+      selectedAgentId={selected} onSelectAgent={onSelect} onTimeChange={onTime} files={files} />
+  )
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
@@ -238,24 +247,23 @@ function before(m: Model, release: { release: string }) {
  */
 function runUsage(m: Model) {
   const whole = (m.data as { runUsage?: Usage | null }).runUsage
-  if (whole) return { tokens: whole.tokens, listUsd: whole.listUsd, complete: whole.listComplete }
+  if (whole) return { tokens: whole.tokens, listUsd: whole.listUsd, billedUsd: whole.billedUsd, complete: whole.listComplete }
   const usage = m.nodes.map((n) => n.usage).filter((u): u is Usage => Boolean(u))
   const sum = (pick: (u: Usage) => number | null) => (usage.some((u) => pick(u) != null) ? usage.reduce((a, u) => a + (pick(u) ?? 0), 0) : null)
-  return { tokens: sum((u) => u.tokens), listUsd: sum((u) => u.listUsd), complete: usage.length === m.nodes.length && usage.every((u) => u.listComplete) }
+  return { tokens: sum((u) => u.tokens), listUsd: sum((u) => u.listUsd), billedUsd: sum((u) => u.billedUsd), complete: usage.length === m.nodes.length && usage.every((u) => u.listComplete) }
 }
 
-/** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
+/**
+ * The run's numbers as large numerals in its one header row (lead 2026-10-25): duration, cost at list price and billed,
+ * tokens, and the best release with its steps. Who shipped or crashed is the timeline legend's; an unmeasured value is
+ * left out, never a zero.
+ */
 function Stats({ m }: { m: Model }) {
-  const { listUsd, complete } = runUsage(m)
-  // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
-  // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
-  const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
+  const { listUsd, billedUsd, tokens: used, complete } = runUsage(m)
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
-    ['Agents', String(m.nodes.length)],
-    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, 'API-equivalent at list price; each agent\'s billed amount is in its card'] as [string, string, string]] : []),
-    ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
-    ['Crashed', String(m.nodes.filter(crashed).length)],
+    ...(listUsd != null ? [[billedUsd != null ? `list · ${money(billedUsd)} billed` : 'list', `${complete ? '≈' : '≥'}${money(listUsd)}`, 'API-equivalent at list price, every OpenCode store on the run\'s host; billed is what the seat charged'] as [string, string, string]] : []),
+    ...(used != null ? [['Tokens', tokens(used)] as [string, string]] : []),
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`] as [string, string]] : []),
   ]
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
@@ -371,61 +379,54 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
 
 export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode }) {
   const { runUrl, model: m, error } = useJourney(api, doc)
-  const [chosen, setPicked] = useState<string | null>(null)
-  // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
-  const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
+  const [selected, setSelected] = useState<string | undefined>()
+  const [cursor, setCursor] = useState<number | null>(null)
+  // The release a chip in Details picked for the code frame, else the best (review 1 #13).
+  const [chip, setChip] = useState<string | null>(null)
   const view = doc.view
   const lifecycle = (view as { lifecycle?: Lifecycle | null } | null | undefined)?.lifecycle ?? null
-  const single = m?.nodes.length === 1
-  // The release the code pane shows: the one a release chip picked (`codeRef`), else the best (review 1 #13).
-  const [params, update] = useSearch()
-  const shown = m ? (m.releases.find((r) => r.release === params.get('codeRef')) ?? m.best) : null
-  const openRelease = (release: string) => {
-    update({ codeRef: release, fileSource: 'code', codeFile: null, codeView: null })
-    document.querySelector('.rj-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-  // The work: one files pane for the best release's code or the retained artifacts (the answer opens first).
-  const work = m && (
-    <section className="rj-work" aria-label="The work">
-      <RunFilesPane api={api} doc={doc}
-        codeUnavailable={!m.data.code.available ? (m.data.code.reason ?? 'not available on this host') : !m.best ? 'no release was checked, so there is no release code to show' : null}
-        code={shown && <CodePane key={shown.release} runUrl={runUrl} refName={shown.release} previous={before(m, shown)} label={`Release ${shown.release}`} />} />
-    </section>
+  if (!m) return <section className="rj" data-run-journey><p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p></section>
+  const node = m.nodes.find((n) => n.id === selected) ?? (m.nodes.length === 1 ? m.nodes[0]! : null)
+  const shown = m.releases.find((r) => r.release === chip) ?? m.best
+  // The time cursor as a UTC minute: the code reads every ref as it stood then (tangle-tools at=); a minute keeps a scrub
+  // from asking the host for a tree per frame.
+  const at = cursor === null ? null : new Date(Math.floor((m.t0 + cursor) / 60_000) * 60_000).toISOString()
+  const atMs = at ? Date.parse(at) : Infinity
+  // The selected agent's own branch when the host can name it (its session is journal-bound), else the release.
+  const branch = selected && node?.hasCode ? node : null
+  const lastTag = [...m.releases].reverse().find((r) => r.tagged && ms(r.taggedAt) <= atMs)?.release ?? null
+  const firstChange = branch ? m.releases.flatMap((r) => r.files?.[branch.id] ?? []).find((p) => !ARTEFACT.test(p)) ?? null : null
+  const code = branch
+    ? <CodePane key={branch.id} runUrl={runUrl} refName={branch.id} previous={lastTag} at={at} initial={firstChange} label={`${branch.role ?? branch.label}'s branch`} />
+    : shown && <CodePane key={shown.release} runUrl={runUrl} refName={shown.release} previous={before(m, shown)} at={at} label={`Release ${shown.release}`} />
+  const files = (
+    <RunFilesPane api={api} doc={doc} code={code}
+      codeUnavailable={!m.data.code.available ? (m.data.code.reason ?? 'not available on this host') : !m.best && !branch ? 'no release was checked, so there is no release code to show' : null} />
   )
-  const node = m?.nodes.find((n) => n.id === picked) ?? null
   const receipt = doc.receipt
+  const status = view ? plainSummary(view.sentence, 12) : undefined
   return (
     <section className="rj" data-run-journey>
-      <header className="rj-head">
-        <a className="rj-crumb" href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a>
-        <div className="rj-title">
-          <h1 title={m ? `${hours(m.t0, m.t1).toFixed(1)} h` : undefined}>Run {shortRun(doc.run.play, doc.run.id)}</h1>
-          {view && <StatusPill status={viewChip(view.status)} />}
-          {/* The check's verdict is not the requested lifecycle: a disposable run says whether its teardown is confirmed
-              (root 2026-10-25; the host's run_view lifecycle, from the receipt's retention records). */}
-          {lifecycle && lifecycle.state !== 'done' && <span className="rj-life" title={lifecycle.sentence}>Teardown not confirmed</span>}
-          {view && <AsOfStamp asOf={viewAsOf(view)} />}
-        </div>
-        {m && <Trigger doc={doc} m={m} />}
+      {/* One row under the nav: the run, its status (the sentence is the pill's tooltip), an unconfirmed teardown, and its
+          numbers. No crumb, title repeat or paragraph (lead 2026-10-25, Drew: "the top of the run duplicates the header nav
+          bar and it starts with tons of text"). */}
+      <header className="rj-bar">
+        <h1>Run {shortRun(doc.run.play, doc.run.id)}</h1>
+        {view && <Tip text={status ?? ''}><StatusPill status={viewChip(view.status)} /></Tip>}
+        {lifecycle && lifecycle.state !== 'done' && <Tip text={lifecycle.sentence}><span className="rj-life">Teardown not confirmed</span></Tip>}
+        <Stats m={m} />
+        {view && <AsOfStamp asOf={viewAsOf(view)} />}
       </header>
-      {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
-        <>
-          <Ladder doc={doc} m={m} onRelease={openRelease} />
-          {single ? null : (
-            <section aria-label="What the agents did">
-              <Stats m={m} />
-              <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
-            </section>
-          )}
-          {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
-              answer sits in a phone's first screen (root 2026-10-25 15:44Z: ANSWER at 761 px of 844, under a collapsed
-              Transcript). With many agents the picked agent leads, then its files. */}
-          {single && work}
-          {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
-          {!single && work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></footer>}
-        </>
-      )}
+      <Lanes m={m} live={Boolean(doc.execution?.alive)} runUrl={runUrl} files={files} selected={selected} onSelect={setSelected} onTime={setCursor} />
+      {/* Everything else, one collapsed disclosure (lead 2026-10-25 gate 4): what started it, the steps, the releases, the
+          selected agent's record and the receipt. */}
+      <details className="rj-details">
+        <summary>Details</summary>
+        <Trigger doc={doc} m={m} />
+        <Ladder doc={doc} m={m} onRelease={(release) => { setChip(release); setSelected(undefined) }} />
+        {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={(id) => setSelected(id)} />}
+        {receipt && <p className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></p>}
+      </details>
     </section>
   )
 }

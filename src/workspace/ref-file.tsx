@@ -18,13 +18,16 @@ export type RefTree = { commit: string; paths: string[]; cut: boolean }
 
 /**
  * `pinned` is the tree the caller already shows: the file is read at that tree's commit, never at a second read of a
- * ref that may have moved in between, so the bytes always belong to the visible listing.
+ * ref that may have moved in between, so the bytes always belong to the visible listing. `at` reads the ref as it stood
+ * at that UTC time (the run page's time cursor).
  */
-export function useRefFile(runUrl: string, ref: string | null, path: string | null, pinned?: RefTree | null): RefFile {
-  const fetched = useDocument<RefTree>(!pinned && ref && path ? `${runUrl}/tree?ref=${encodeURIComponent(ref)}` : null)
+export const atQuery = (at?: string | null) => (at ? `&at=${encodeURIComponent(at)}` : '')
+
+export function useRefFile(runUrl: string, ref: string | null, path: string | null, pinned?: RefTree | null, at?: string | null): RefFile {
+  const fetched = useDocument<RefTree>(!pinned && ref && path ? `${runUrl}/tree?ref=${encodeURIComponent(ref)}${atQuery(at)}` : null)
   const tree = pinned ? { data: pinned, error: undefined } : fetched
   const listed = Boolean(tree.data && path && tree.data.paths.includes(path))
-  const href = tree.data && listed && ref && path ? `${runUrl}/blob?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}&expectedCommit=${tree.data.commit}` : null
+  const href = tree.data && listed && ref && path ? `${runUrl}/blob?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}&expectedCommit=${tree.data.commit}${atQuery(at)}` : null
   const binary = Boolean(path && BINARY.has(resolveFilePreviewKind(path)))
   const file = useFileText(binary ? null : href, tree.data?.commit)
   if (!ref || !path) return { state: 'idle' }
@@ -40,9 +43,9 @@ export function useRefFile(runUrl: string, ref: string | null, path: string | nu
 }
 
 /** A file's change between two refs; `base` null means there is no earlier release, so every line is new. */
-export function RefDiff({ runUrl, base, head, path, headTree }: { runUrl: string; base: string | null; head: string; path: string; headTree?: RefTree | null }) {
+export function RefDiff({ runUrl, base, head, path, headTree, at }: { runUrl: string; base: string | null; head: string; path: string; headTree?: RefTree | null; at?: string | null }) {
   const before = useRefFile(runUrl, base, path)
-  const after = useRefFile(runUrl, head, path, headTree)
+  const after = useRefFile(runUrl, head, path, headTree, at)
   const failed = [before, after].find((side): side is { state: 'error'; error: string } => side.state === 'error')
   if (failed) return <p className="rj-muted" role="alert">{failed.error}</p>
   if (after.state === 'loading' || before.state === 'loading' || after.state === 'idle') return <p className="rj-muted" role="status">Reading {path}…</p>
