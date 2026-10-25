@@ -3,7 +3,7 @@ import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
-import { StatusPill, useDocument } from './data.js'
+import { money, StatusPill, tokens, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
@@ -18,7 +18,9 @@ import { useSearch } from './navigation.js'
  * agent timeline, releases as markers), then, for the agent picked, its summary, what it changed (code first) and its
  * transcript.
  */
-type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null }
+/** An agent's usage as the host read it (tangle-tools agent_usage): its OpenCode store while it runs, else its record. */
+type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null }
+type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]> }
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
@@ -29,6 +31,19 @@ const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|res
 /** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
 /** "4 m ago", "3 h ago" from now. */
 const ago = (iso: string) => { const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60_000); return m < 90 ? `${Math.round(m)} m ago` : `${Math.round(m / 60)} h ago` }
+/**
+ * Two numbers, always (lead 10:05Z): API-equivalent at list price and what the seat billed, with the tokens and how
+ * complete the pricing is ("≥$4.12 list, 38 of 41 calls priced"). "—" only when the host has no source at all.
+ */
+function costText(u: Usage | null | undefined): { text: string; title: string } {
+  if (!u) return { text: '—', title: 'No usage source: no OpenCode store on this host and no usage in the record' }
+  const list = u.listUsd == null ? null : `${u.listComplete ? '≈' : '≥'}${money(u.listUsd)} list`
+  const partial = !u.listComplete && u.calls ? `, ${u.pricedCalls ?? 0} of ${u.calls} calls priced` : ''
+  const parts = [list && `${list}${partial}`, u.billedUsd != null && `${money(u.billedUsd)} billed`, u.tokens != null && `${tokens(u.tokens)} tokens`].filter(Boolean)
+  const from = u.source === 'opencode store' ? `its OpenCode store${u.matchedBy ? ` (matched by ${u.matchedBy})` : ''}` : 'the run record'
+  const price = u.priceSource?.repository ? `; list price from ${u.priceSource.repository} ${u.priceSource.commit?.slice(0, 8) ?? ''}` : ''
+  return { text: parts.join(' · ') || '—', title: `Read from ${from}${u.at ? `, updated ${ago(u.at)}` : ''}${price}` }
+}
 const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
 
 function useJourney(api: string, doc: RunDocument) {
@@ -167,12 +182,14 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
         // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
-        ...(typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
+        ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
         // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
           { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
           ...(n.model ? [{ label: 'Model', value: n.model.split('/').pop()! }] : []),
+          ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
+          ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
         ],
       }
     })
@@ -195,8 +212,7 @@ function Full({ short, raw }: { short: string; raw: string }) {
   if (short === raw.trim()) return <>{short}</>
   return (
     <span className="rj-full">
-      {short} <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
-      {open && <span className="rj-full-text">{raw}</span>}
+      {open ? <span className="rj-full-text">{raw}</span> : short} <button type="button" className="rj-full-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'full'}</button>
     </span>
   )
 }
@@ -260,6 +276,7 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
+        <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
         {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
       </dl>}
       {paths.length > 0 && (
