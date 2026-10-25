@@ -1,4 +1,5 @@
 import { latestNumericGrade } from './scores-model.js'
+import { goalText } from './plain-words.js'
 import { useState } from 'react'
 import type { FinalOutput, OutputFile, Readout, TraceReview, TraceReviewQuestion } from '../workspace-model.js'
 import {
@@ -366,7 +367,7 @@ export function FinalOutputPanel({ output, grading, run, now = Date.now() }: { o
         {output.checkedAt && <span className="faint final-checked">checked {when(output.checkedAt)}</span>}
       </header>
       {output.readout && <ReadoutSection readout={output.readout} output={output} grading={grading} run={run} now={now} />}
-      {output.traceReview && <TraceReviewSection review={output.traceReview} runGoal={run?.purpose ?? null} />}
+      {output.traceReview && <TraceReviewSection review={output.traceReview} runGoal={run?.purpose ? goalText(run.purpose) : null} />}
       {declared ? (
         <>
           <p className="final-declared">

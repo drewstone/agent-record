@@ -15,3 +15,13 @@ export function plainSummary(text: string | null | undefined, words = 20) {
 
 /** `Oct 23 13:47Z`. */
 export const sinceLabel = (iso: string | null | undefined) => (iso && !Number.isNaN(Date.parse(iso)) ? `${day(Date.parse(iso))} ${clock(Date.parse(iso))}Z` : null)
+
+/**
+ * A goal as the reader needs it: never who said it or when (lead 2026-10-25). Drops a leading "Play <id>: " and a
+ * leading attributed quote ("Drew, 2026-10-17: \"…\"."), keeping the goal text after it; text without either is unchanged.
+ */
+export function goalText(text: string | null | undefined): string {
+  const raw = (text ?? '').trim()
+  const goal = raw.replace(/^Play [\w.-]+:\s*/, '').replace(/^[A-Z][\w .'-]{0,40},\s*\d{4}-\d{2}-\d{2}:\s*(\u201c[^\u201d]*\u201d|"[^"]*")[.,]?\s*/, '').trim()
+  return goal || raw
+}

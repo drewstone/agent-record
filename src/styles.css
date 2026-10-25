@@ -3729,10 +3729,8 @@
 }
 
 /* The run's trigger on the landing (RunJourney Trigger): who asked whom what. */
-.ar-ws .rj-trigger { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 6px 0 0; font-size: 15px; max-width: 110ch; }
-.ar-ws .rj-trigger dt { color: var(--ar-fg-muted); font-size: 13px; padding-top: 2px; }
-.ar-ws .rj-trigger dd { margin: 0; }
-.ar-ws .rj-trigger q { font-style: normal; }
+.ar-ws .rj-trigger { display: grid; gap: 4px; margin: 6px 0 0; font-size: 15px; max-width: 110ch; }
+.ar-ws .rj-trigger p { margin: 0; }
 
 /* Run files pane: code or retained artifacts (RunFilesPane, RunArtifacts, RetainedFile). */
 /* Composition only. Shared UI and Brand own file rendering, controls, type and color roles. */

@@ -5,7 +5,7 @@ import { StatusPill, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
-import { plainSummary, sinceLabel } from './plain-words.js'
+import { goalText, plainSummary, sinceLabel } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 
@@ -180,7 +180,7 @@ function Full({ short, raw }: { short: string; raw: string }) {
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
 /** The agent as recorded: role, harness and model; a value the record lacks is left out, never guessed. */
-const who = (node: Node) => [node.role ?? node.label, node.harness, node.model].filter(Boolean).join(' · ')
+const who = (node: Node) => [node.role ?? node.label, node.harness, node.model?.split('/').pop()].filter(Boolean).join(' · ')
 
 /**
  * The agent's place in the run: the agent that spawned it (the workspace's spawn edge), or, for the root, the play press
@@ -204,12 +204,10 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
   const source = input.source?.path?.split('/').pop()
   return (
-    <dl className="rj-trigger">
-      <dt>Submitted</dt>
-      <dd>The play press for {doc.run.play} submitted this run to the {root ? who(root) : 'root agent'}, with the prompt {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">(not recorded)</span>}</dd>
-      <dt>Goal</dt>
-      <dd title={source ? `from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}</dd>
-    </dl>
+    <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
+      <p>{root ? (input.instruction ? <Full short={who(root)} raw={input.instruction} /> : who(root)) : 'root agent'}</p>
+      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 24)} raw={goalText(input.objective)} /></p>}
+    </div>
   )
 }
 
