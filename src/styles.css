@@ -3606,14 +3606,9 @@
 .ar-ws .rj-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 14px; }
 .ar-ws .rj-summary dt { color: var(--ar-fg-muted); }
 .ar-ws .rj-summary dd { margin: 0; overflow-wrap: anywhere; }
-.ar-ws .rj-changes ul { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; }
-.ar-ws .rj-changes button { padding: 0; border: 0; background: none; color: var(--ar-c-action); cursor: pointer; text-align: left; overflow-wrap: anywhere; }
-.ar-ws .rj-changes button[aria-pressed='true'] { font-weight: 600; }
-.ar-ws .rj-changes details summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); margin-bottom: 8px; }
 /* The diff renderer fills its parent's height, as it did in the old file pane. */
 .ar-ws .rj-diff { height: 60vh; min-height: 360px; overflow: auto; border-radius: 8px; }
 .ar-ws .rj-transcript > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
-.ar-ws .rj-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 12px; }
 /* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,
    conversations, outputs): its "Now" tab, "Why it stopped" and the Now section repeat the ladder and sentence above. */
 .ar-ws .ws-run:has(> .rj) > .run-why, .ar-ws .ws-run:has(> .rj) > .rr-page { display: none; }
@@ -3846,7 +3841,6 @@
 .agent-record { --ar-c-warn: #7a4f00; }
 .agent-record[data-theme='dark'] { --ar-c-warn: #f5a524; }
 @media (prefers-color-scheme: dark) { .agent-record[data-theme='auto'] { --ar-c-warn: #f5a524; } }
-.ar-ws .rj-foot { margin-top: 0; padding-top: 0; }
 .ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
 .ar-ws .tj-rest { font-size: 14px; line-height: 1.6; }
 .ar-ws .rj-full-toggle { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ar-c-action); cursor: pointer; white-space: nowrap; }

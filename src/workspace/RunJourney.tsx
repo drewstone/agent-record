@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
@@ -8,7 +8,6 @@ import { releaseName, shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
 import { goalText, plainSummary, stepWord } from './plain-words.js'
-import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 import { useSearch } from './navigation.js'
 
@@ -131,7 +130,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
         {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
             teardown; this line says only what the release reached. */}
-        {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b> · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
       {lifecycle && lifecycle.state !== 'done' && (
         <p className="rj-life-line">
@@ -322,17 +321,13 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   )
 }
 
-function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void }) {
+function Drill({ m, node, transcript, onPick, onOpen }: { m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void; onOpen: (release: string, path: string) => void }) {
   const landed = m.releases.filter((r) => r.files?.[node.id]?.length)
   const changes = new Map<string, Release>()
   for (const r of landed) for (const path of r.files![node.id]!) changes.set(path, r)
   const paths = [...changes.keys()]
   const code = paths.filter((p) => !ARTEFACT.test(p))
   const artefacts = paths.filter((p) => ARTEFACT.test(p))
-  const [file, setFile] = useState<string | null>(null)
-  useEffect(() => setFile(null), [node.id])
-  const release = file ? changes.get(file)! : null
-  const prev = release ? before(m, release) : null
   const role = node.id === m.root ? 'lead' : node.role ?? node.label
   const single = m.nodes.length === 1
   return (
@@ -344,16 +339,9 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
         <dt>Task</dt><dd>{node.assignment ? <Full what="task" short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
         <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
-        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
+        {/* Its files open in the code frame below, not as a list here (Drew 2026-10-25: "neglected ... nonsense" at the page's foot). */}
+        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? <button type="button" className="rj-full-toggle" onClick={() => onOpen(changes.get(code[0] ?? paths[0]!)!.release, code[0] ?? paths[0]!)}>{`${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}`}</button> : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
       </dl>}
-      {paths.length > 0 && (
-        <div className="rj-changes">
-          <h3>What changed</h3>
-          <ul>{code.map((p) => <li key={p}><button type="button" aria-pressed={file === p} onClick={() => setFile(file === p ? null : p)} className="mono">{p}</button><span className="rj-muted"> {changes.get(p)!.release}</span></li>)}</ul>
-          {artefacts.length > 0 && <details><summary>{artefacts.length} logs and outputs</summary><ul>{artefacts.map((p) => <li key={p}><button type="button" onClick={() => setFile(p)} className="mono">{p}</button></li>)}</ul></details>}
-          {file && release && <RefDiff key={`${release.release}:${file}`} runUrl={runUrl} base={prev} head={release.release} path={file} />}
-        </div>
-      )}
       <details className="rj-transcript">
         <summary>Transcript</summary>
         {transcript(node.id, onPick)}
@@ -386,7 +374,6 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
     </section>
   )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
-  const receipt = doc.receipt
   return (
     <section className="rj" data-run-journey>
       <header className="rj-head">
@@ -414,9 +401,8 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               answer sits in a phone's first screen (root 2026-10-25 15:44Z: ANSWER at 761 px of 844, under a collapsed
               Transcript). With many agents the picked agent leads, then its files. */}
           {single && work}
-          {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
+          {node && <Drill m={m} node={node} transcript={transcript} onOpen={(release, path) => { update({ codeRef: release, fileSource: 'code', codeFile: path, codeView: 'diff' }); document.querySelector('.rj-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} onPick={setPicked} />}
           {!single && work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt</a></footer>}
         </>
       )}
     </section>
