@@ -8,7 +8,6 @@ import { FindingsFeed, REVIEWS } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayBarTable } from './workspace/PlayBarTable.js'
 import { PlayJourney, PlayJourneyStanding } from './workspace/PlayJourney.js'
-import { BeadString } from './workspace/BeadString.js'
 import { ExplorePage } from './workspace/Explore.js'
 import { PlayHeader } from './workspace/PlayHead.js'
 import { PlayAgainstBar, PlayClimb } from './workspace/PlayClimb.js'
@@ -29,7 +28,6 @@ import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
 import { agentState, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
-import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
 import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when } from './workspace/data.js'
@@ -46,6 +44,9 @@ import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
+import { RunHow } from './workspace/RunHow.js'
+import { detailsOf, RunDetails } from './workspace/RunDetails.js'
+import { Coverage } from './workspace/Coverage.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
 import { readSource } from './workspace/source-reader.js'
@@ -644,7 +645,6 @@ function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
   return [...causes.values()]
 }
 
-const SPEEDS = [1, 4, 16, 64, 256, 1024, 4096]
 /** The selected agent's own views; the run's spend, assessments, input and coverage are sections of the run page. */
 type AgentTab = 'messages' | 'timeline' | 'usage'
 const AGENT_TABS = [
@@ -731,6 +731,32 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
   const counts = overviewCounts(doc, index)
   const tabs = <RunTabBar section={section} counts={counts} onOpen={(next) => (next ? open(next, { tab: undefined }) : update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined }))} />
+  const openFinding = (sha: string) => {
+    setFinding(sha)
+    open('findings')
+  }
+  const selectAgent = (node: string) => update({ section: 'agents', node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })
+  const grading = { api, runId: summary.id, onSaved: () => setRevision((value) => value + 1) }
+  const loadingAgent = (
+    <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>
+      {agent.fetchError || agent.error
+        ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}`
+        : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
+    </p>
+  )
+  // How it ran reads the run document and the nodes part's per-agent stats; it needs no agent's record part.
+  const how = <RunHow doc={doc} runUrl={runUrl} agents={index ? index.actors.filter((item) => item.kind !== 'finding') : []} stats={nodes.stats} onAgent={(node) => `?section=agents&node=${encodeURIComponent(node)}`} wasteLabel={(dimension) => wasteLabel(dimension, catalogue)} />
+  const versionsPanel = (
+    <RunVersions
+      runUrl={runUrl}
+      poll={doc.live.polling ? 15_000 : undefined}
+      selected={params.get('commit')}
+      onSelect={(commit) => update({ section: section ?? undefined, commit })}
+      onClose={() => update({ commit: undefined })}
+      onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
+    />
+  )
+  const details = detailsOf(params)
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
@@ -746,25 +772,17 @@ function RunPage({ api, id }: { api: string; id: string }) {
               )
             }
           />
-          {tabs}
+          <RunDetails tab={details} counts={counts} onTab={(next) => update({ details: next === 'built' ? undefined : next, commit: undefined }, true)}>
+            {details === 'built' && versionsPanel}
+            {details === 'agents' && (index ? <div className="agent-rail details-agents"><AgentTable index={index} stats={nodes.stats} doc={doc} assessments={assessments.data?.rows ?? []} dimensions={catalogue} selected={null} onSelect={selectAgent} /></div> : <p className="ws-status" role="status">Loading the agents…</p>)}
+            {details === 'findings' && (doc.findings?.total ? <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} /> : <p className="ws-status">No knowledge pages were recorded for this run.</p>)}
+            {details === 'how' && how}
+          </RunDetails>
           <RunWhy doc={doc} play={play.data} />
           <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
         </Suspense>
       </div>
     )
-  const openFinding = (sha: string) => {
-    setFinding(sha)
-    open('findings')
-  }
-  const selectAgent = (node: string) => update({ section: 'agents', node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })
-  const grading = { api, runId: summary.id, onSaved: () => setRevision((value) => value + 1) }
-  const loadingAgent = (
-    <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>
-      {agent.fetchError || agent.error
-        ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}`
-        : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
-    </p>
-  )
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
       <RunStatusLine doc={doc} play={play.data} />
@@ -805,15 +823,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           )}
         </>
       )}
-      {section === 'versions' && (
-        <RunVersions
-          runUrl={runUrl}
-          poll={doc.live.polling ? 15_000 : undefined}
-          selected={params.get('commit')}
-          onSelect={(commit) => update({ section: 'versions', commit })}
-          onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
-        />
-      )}
+      {section === 'versions' && versionsPanel}
       {section === 'profiles' && (
         <RunProfiles
           api={api}
@@ -872,7 +882,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
           </section>
         </div>
       )}
-      {index && (section === 'spend' || section === 'assessments' || section === 'coverage') && actor && (
+      {section === 'spend' && <section className="run-panel" aria-label="Time and cost">{how}</section>}
+      {index && (section === 'assessments' || section === 'coverage') && actor && (
         <section className="run-panel" aria-label={section}>
           {agent.index ? (
             <RunPanels
@@ -999,9 +1010,6 @@ function RunBody({
   const cutoff = at && Number.isFinite(ms(at)) ? Math.max(index.start, Math.min(index.end, ms(at))) : index.end
   const [category, setCategory] = useState('all')
   const [query, setQuery] = useState('')
-  const [playing, setPlaying] = useState(false)
-  // Real multiples of recorded time; the default plays the whole run in about two minutes.
-  const [speed, setSpeed] = useState(() => String(SPEEDS.find((value) => (index.end - index.start) / value <= 120_000) ?? SPEEDS.at(-1)))
   const [zoom, setZoom] = useState(1)
   const [metric, setMetric] = useState<Metric>('cumulative')
   const [axis, setAxis] = useState<Axis>('time')
@@ -1015,22 +1023,11 @@ function RunBody({
   const live = !!doc.live.polling && (!node?.status || /^(running|pending|active|live|started|spawned|paused|waiting)$/i.test(node.status))
   const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
   const flags = useMemo(() => flagsFrom(assessments?.rows ?? [], catalogue), [assessments, catalogue])
-  // This agent's lane in the run receipt's timeline (its attempts and spans), named by the node id after the run id.
-  const lane = useMemo(() => {
-    const lanes = doc.receipt?.timeline?.lanes ?? []
-    const local = actor.startsWith(`${runId}:`) ? actor.slice(runId.length + 1) : actor === runId ? 'root' : actor
-    return lanes.find((item) => item.id === local) ?? null
-  }, [doc.receipt, actor, runId])
-  const latest = useRef({ cutoff, index, update })
-  latest.current = { cutoff, index, update }
-
   const select = (patch: Record<string, string | undefined | null>, replace = false) => update(patch, replace)
   const selectNode = (id: string) => {
-    setPlaying(false)
     select({ node: id, event: undefined })
   }
   const inspect = (event: RecordEvent, source = false) => {
-    setPlaying(false)
     setTooltip(null)
     if (source) setDetail({ event })
     select({ node: index.canonical(event.node), event: event.id, ...(ms(event.at) > cutoff ? { t: undefined } : {}) })
@@ -1055,35 +1052,6 @@ function RunBody({
     inspect(next)
   }
 
-  useEffect(() => {
-    if (!playing) return
-    let previous = performance.now()
-    const timer = window.setInterval(() => {
-      const current = latest.current
-      const now = performance.now()
-      const next = advancePlayback({
-        cutoff: current.cutoff,
-        start: current.index.start,
-        end: current.index.end,
-        elapsedMs: now - previous,
-        speed: Number(speed),
-        mode: 'rate',
-        eventTimes: [],
-      })
-      previous = now
-      current.update({ t: next >= current.index.end ? undefined : new Date(next).toISOString() }, true)
-      if (next >= current.index.end) setPlaying(false)
-    }, 150)
-    const stop = () => {
-      if (document.hidden) setPlaying(false)
-    }
-    document.addEventListener('visibilitychange', stop)
-    return () => {
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', stop)
-    }
-  }, [playing, speed])
-
   const categories = useMemo(() => [...new Set(index.events.map((event) => event.category))].sort(), [index])
   const listFromRecord = useMemo(() => {
     let total: number | null = null
@@ -1091,7 +1059,6 @@ function RunBody({
       if (typeof event.detail.costListUsd === 'number') total = (total ?? 0) + event.detail.costListUsd
     return total
   }, [index, actor])
-  const position = index.end > index.start ? ((cutoff - index.start) / (index.end - index.start)) * 1000 : 1000
   const role = roleOf(node)
   const model = node?.servedModel ? `${node.servedModel}` : node?.model ? `${node.model} (declared)` : null
   const measured = useMemo(() => measuredUsage(index, actor), [index, actor])
@@ -1113,61 +1080,21 @@ function RunBody({
               </p>
             </div>
           </div>
-          <div className="agent-capture" data-capture={nodeCapture?.status}>
-            <span className={`capture-chip capture-${nodeCapture?.status ?? 'unknown'}`}>
-              {nodeCapture?.status === 'complete' ? 'Complete conversation' : nodeCapture?.status === 'lossy' ? 'Partial conversation' : nodeCapture?.status === 'absent' ? 'No conversation' : 'Capture unknown'}
-            </span>
-            <span className="faint mono">{nodeCapture?.channel}{nodeCapture?.reason ? ` · ${nodeCapture.reason}` : ''}</span>
-          </div>
+          {/* A complete capture is the norm and says nothing; only a partial or missing one is worth the words. */}
+          {nodeCapture?.status !== 'complete' && (
+            <div className="agent-capture" data-capture={nodeCapture?.status}>
+              <span className={`capture-chip capture-${nodeCapture?.status ?? 'unknown'}`} title={[nodeCapture?.channel, nodeCapture?.reason].filter(Boolean).join(' · ')}>
+                {nodeCapture?.status === 'lossy' ? 'Partial conversation' : nodeCapture?.status === 'absent' ? 'No conversation' : 'Capture unknown'}
+              </span>
+            </div>
+          )}
         </div>
-        <div className="replay" data-replay>
-          <button
-            type="button"
-            className="ui-button"
-            data-play
-            disabled={index.end <= index.start}
-            onClick={() => {
-              if (!playing && cutoff >= index.end) select({ t: new Date(index.start).toISOString() }, true)
-              setPlaying(!playing)
-            }}
-          >
-            {playing ? 'Pause' : 'Play'}
-          </button>
-          <select aria-label="Replay speed, as a multiple of recorded time" title="Multiple of recorded time" value={speed} onChange={(event) => setSpeed(event.target.value)} data-speed>
-            {SPEEDS.map((value) => <option key={value} value={String(value)}>{value}×</option>)}
-          </select>
-          <input
-            type="range"
-            min={0}
-            max={1000}
-            value={position}
-            aria-label="Recorded time"
-            aria-valuetext={utcTime(new Date(cutoff).toISOString(), true)}
-            data-cursor
-            onChange={(event) => {
-              setPlaying(false)
-              const value = index.start + ((index.end - index.start) * Number(event.target.value)) / 1000
-              select({ t: Number(event.target.value) >= 1000 ? undefined : new Date(value).toISOString() }, true)
-            }}
-          />
-          <output data-clock>
-            {interval(cutoff - index.start)} <small>{utcTime(new Date(cutoff).toISOString())}</small>
-          </output>
-          <button type="button" className="ui-button" data-full disabled={cutoff >= index.end} onClick={() => { setPlaying(false); select({ t: undefined }, true) }}>
-            Full time
-          </button>
-        </div>
-        {lane && (
-          <BeadString
-            lane={lane}
-            start={index.start}
-            end={index.end}
-            cutoff={cutoff}
-            onSeek={(iso) => {
-              setPlaying(false)
-              select({ t: iso, tab: undefined }, true)
-            }}
-          />
+        {/* Time travel lives on the run's waterfall (Now); a link from there opens this agent as of that moment. */}
+        {cutoff < index.end && (
+          <p className="as-of-chip" data-cursor>
+            As of {utcTime(new Date(cutoff).toISOString())}
+            <button type="button" className="link-button" data-full onClick={() => select({ t: undefined }, true)}>Show all</button>
+          </p>
         )}
         <Tabs label="Agent record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={AGENT_TABS} />
         <div className="ws-panel-body" role="tabpanel">
@@ -1195,8 +1122,7 @@ function RunBody({
                 selected={params.get('event') ?? undefined}
                 inspect={inspect}
                 openSource={(sha, event) => {
-                  setPlaying(false)
-                  setDetail({ event, sha })
+                                setDetail({ event, sha })
                 }}
                 flags={flags}
                 lifecycle={lifecycle}
@@ -1284,7 +1210,7 @@ function RunPanels({
   stats,
   onSelectAgent,
 }: {
-  section: 'spend' | 'assessments' | 'coverage'
+  section: 'assessments' | 'coverage'
   doc: RunDocument
   index: RecordIndex
   actor: string
@@ -1296,13 +1222,6 @@ function RunPanels({
   stats: Record<string, NodeStats>
   onSelectAgent: (id: string) => void
 }) {
-  const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
-  const listFromRecord = useMemo(() => {
-    let total: number | null = null
-    for (const event of index.byActor.get(actor) ?? [])
-      if (typeof event.detail.costListUsd === 'number') total = (total ?? 0) + event.detail.costListUsd
-    return total
-  }, [index, actor])
   // A cited event of another agent is in that agent's part: open the agent it names (event ids start with the node id).
   const cite = (eventId: string) => {
     const event = index.byEvent.get(eventId)
@@ -1312,32 +1231,7 @@ function RunPanels({
   }
   if (section === 'assessments')
     return <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => update({ dim: dimension }, true)} onCite={cite} />
-  if (section === 'coverage') return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
-  return (
-    <div className="spend-tab">
-      <h3>Agents in this run</h3>
-      <SpendBars
-        rows={agentSpendRows(doc.spend.nodes, index.actors.filter((item) => item.kind !== 'finding'))}
-        onOpen={(row) => row.href && onSelectAgent(row.href)}
-        why="no per-agent meter"
-      />
-      {byModel(doc.spend).length > 0 && (
-        <>
-          <h3>By model</h3>
-          <p className="faint">The Router bill cannot be split by model.</p>
-          <SpendBars rows={byModel(doc.spend)} noun="models" />
-        </>
-      )}
-      <SeatWeeksPanel spend={doc.spend} />
-      <p className="faint">Activity and waste price recorded model usage at API rates; they do not allocate charges.</p>
-      <div className="breakdown-grid">
-        <BreakdownTable title="By activity" rows={(doc.spend.byCategory ?? []).map((row) => ({ ...row, label: row.category }))} />
-        <BreakdownTable title="Waste" rows={(doc.spend.waste ?? []).map((row) => ({ ...row, label: wasteLabel(row.dimension, catalogue) }))} />
-      </div>
-      <h3>Selected agent: {index.nodes.get(actor)?.label ?? actor}</h3>
-      <NodeSpendPanel spend={doc.spend.nodes[actor]} listFromRecord={listFromRecord} />
-    </div>
-  )
+  return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
 }
 
 /** An agent with no recorded event: say what is missing instead of an empty pane, and lead to its agents. */
@@ -1363,53 +1257,6 @@ function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: str
             </button>
           ))}
         </p>
-      )}
-    </div>
-  )
-}
-
-const CAPTURE_WORD: Record<string, string> = { complete: 'Captured', lossy: 'Partly captured', absent: 'Not captured' }
-
-/**
- * Each agent's capture and state. `index` holds only the selected agent's part, so whether an agent's usage was measured
- * comes from the nodes part's per-agent stats, as in the agents table; on magnetar-rust-20261018b the event scan alone
- * printed "no usage recorded" for the 14 workers whose 62.5M tokens the record holds.
- */
-function Coverage({ index, doc, gaps: recordGaps, stats, onSelect }: { index: RecordIndex; doc: RunDocument; gaps: RecordGap[]; stats: Record<string, NodeStats>; onSelect: (id: string) => void }) {
-  const gaps = [...recordGaps, ...doc.spend.gaps]
-  const measured = (id: string) => measuredUsage(index, id) || (!!stats[id] && (stats[id]!.tokens !== null || stats[id]!.listUsd !== null))
-  return (
-    <div className="coverage-tab" data-coverage>
-      <table className="data-table">
-        <thead>
-          <tr><th>Agent</th><th>Channel</th><th>Capture</th><th>Reason</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-          {index.actors.filter((node) => node.kind !== 'finding').map((node) => {
-            const capture = node.capture
-            return (
-              <tr key={node.id} className="clickable" onClick={() => onSelect(node.id)}>
-                <td className="mono">{node.label}</td>
-                <td className="mono">{capture?.channel ?? '—'}</td>
-                <td><span className={`capture-chip capture-${capture?.status ?? 'unknown'}`}>{CAPTURE_WORD[capture?.status ?? ''] ?? 'Capture unknown'}</span></td>
-                <td className="mono faint">{capture?.reason ?? ''}</td>
-                <td>{agentState(node, measured(node.id), doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === node.id)?.status ?? 'running') : null)}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {gaps.length > 0 && (
-        <>
-          <h3>Missing evidence</h3>
-          <ul className="gap-list">
-            {gaps.map((gap, i) => (
-              <li key={i}>
-                <code>{gap.code}</code> {gap.nodeId && <span className="mono">{index.nodes.get(gap.nodeId)?.label ?? gap.nodeId}</span>} {gap.detail}
-              </li>
-            ))}
-          </ul>
-        </>
       )}
     </div>
   )

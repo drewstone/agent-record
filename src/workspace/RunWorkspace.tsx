@@ -23,7 +23,10 @@ export interface WorkspaceNode {
   status: 'running' | 'waiting' | 'succeeded' | 'failed' | 'stopped' | 'idle' | 'unknown'
   turn: string | null
   lastAt: string | null
-  tokens: number | null
+  /** From the spawn journal: driver turns, worker restarts (ISO), and its "<label>:" commits in the run's deliverables. */
+  turns?: number | null
+  restarts?: string[]
+  shipped?: number
   hasCode: boolean
 }
 export interface WorkspaceRelease {
@@ -49,6 +52,8 @@ export interface RunWorkspaceDocument {
   releases: WorkspaceRelease[]
   best: string | null
   code: { available: boolean; reason: string | null }
+  /** Stretches over 30 min with no agent turn, named by the cancellation that opened them (tangle-tools run_journal). */
+  pauses?: { from: string; to: string; reason: string }[]
   /** Where its releases sit in the play (tangle-tools run_workspace.release_lineage). */
   lineage?: ReleaseLineage | null
 }

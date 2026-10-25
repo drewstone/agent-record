@@ -82,11 +82,12 @@ function HostCard({ h }: { h: Host }) {
   const perCore = h.load1 !== null && h.cores ? h.load1 / h.cores : null
   const loadShare = h.load1 !== null && h.loadLimit ? h.load1 / h.loadLimit : null
   return (
-    <li className="wp-host" data-state={h.state}>
+    <li className="wp-host" data-up={up === false ? 'no' : undefined}>
       <Tip className="wp-host-head" text={h.over ? `Over a limit: ${h.over}` : up ? 'Inside every limit it reports' : 'No fresh report'}>
-        <i className="wp-dot" style={{ background: up === false || (up === null && !h.local) ? 'transparent' : TONE[h.state], borderColor: TONE[h.state] }} />
+        {/* The dot says whether the host reports (filled: up or freshly read; hollow: no report or unknown); breaches are the red line below. */}
+        <i className="wp-dot" style={{ background: up || (h.local && h.reportMin !== null && h.reportMin < 15) ? TONE.ok : 'transparent', borderColor: up === false ? TONE.warn : up || h.local ? TONE.ok : TONE.unknown }} />
         <b>{h.name}</b>
-        <span className={up === false ? 'wp-warn' : 'wp-muted'}>{h.local ? (h.reportMin === null ? 'not read' : `read ${ago(h.reportMin)} ago`) : up === null ? 'report age unknown' : up ? 'up' : `no report for ${ago(h.reportMin!)}`}</span>
+        <span className={up === false ? 'wp-warn' : 'wp-muted'}>{h.local ? (h.reportMin === null ? 'not read' : h.reportMin < 2 ? 'read now' : `read ${ago(h.reportMin)} ago`) : up === null ? 'report age unknown' : up ? 'up' : `no report for ${ago(h.reportMin!)}`}</span>
       </Tip>
       <span className="wp-k">Load</span>
       <Tip className="wp-bar" text={`load1 ${num(h.load1, 1)} on ${h.cores ?? '—'} cores (${num(perCore, 2)} per core); the limit is ${num(h.loadLimit)}`}>
@@ -138,10 +139,10 @@ function FleetView({ doc }: { doc: FleetDoc }) {
       <div className="wp-split">
         <section aria-label="Agents">
           <h2>Agents<StaleStamp at={doc.agentsAt} source="agent panes" /></h2>
-          <Tip text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
+          <Tip className="wp-agents-meter" text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
           <div className="wp-groups">
             {AGENT_STATES.map((state) => <AgentGroup key={state} state={state} count={counts[state] ?? null} rows={doc.agents.rows.filter((a) => a.state === state)} />)}
-            <span className="wp-muted">{counts.idle ?? '—'} idle</span>
+            <span className="wp-muted wp-idle">{counts.idle ?? '—'} idle</span>
           </div>
         </section>
         <section aria-label="Seats">
@@ -206,6 +207,8 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
   const named = { subscription: 'Subscription at API prices', api: 'Billed API', sandbox: 'Billed sandbox' } as const
   const measured = (Object.keys(named) as (keyof typeof named)[]).filter((name) => doc.spendDaily[name].length)
   const spendTitle = `${measured.length === 1 ? named[measured[0]!] : 'Discovery spend'}, daily`
+  const lastDay = days.at(-1)
+  const spendStale = lastDay ? Date.now() - Date.parse(`${lastDay}T23:59:59Z`) > 2 * 86_400_000 : false
   if (!doc.known) return <p className="ws-status" role="alert">The host scan is unavailable: {doc.why ?? 'not reported'}</p>
   return (
     <>
@@ -237,17 +240,19 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
       <div className="wp-split">
         <section aria-label="Hosts over time"><h2><Tip text={`Autoscaler decision ${doc.scaler.decision}: ${doc.scaler.current} counted, target ${doc.scaler.target}, max ${doc.scaler.max}; birth breaker ${doc.scaler.breaker}; ${doc.scaler.pendingRetirement ?? 0} pending retirement; last error ${doc.scaler.error ?? 'none'}`}>Autoscaled hosts, 7 days</Tip></h2>
           <div><Lines series={[{ name: 'hosts', color: 'var(--ar-accent)', points: doc.hostsOverTime.filter(([at]) => at >= week).map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
-        <section aria-label="Spend by kind"><h2>{spendTitle}</h2>
+        <section aria-label="Spend by kind"><h2>{spendTitle}{lastDay && <span className={spendStale ? 'as-of is-stale' : 'as-of'}>to {lastDay.slice(5)}</span>}</h2>
           <div><DayBars days={days} format={(v) => usd(v)} missing="not recorded" tick={(day) => day.slice(5)}
             series={[{ name: 'subscription at API prices', color: 'var(--ar-accent)', values: daily('subscription') }, { name: 'billed API', color: TONE.warn, values: daily('api') }, { name: 'billed sandbox', color: TONE.ok, values: daily('sandbox') }]} /></div>
         </section>
       </div>
-      <details className="wp-group" aria-label="Why parked sandboxes stay"><summary>Why {t.parked ?? '—'} sandboxes stay parked</summary>
+      <div className="wp-foot">
+      <details className="wp-group" aria-label="Why parked sandboxes stay"><summary>Why {t.parked ?? '—'} stay parked</summary>
         <div><HBars limit={doc.parked.length} format={(v) => String(v)} color={TONE.warn}
           rows={doc.parked.map((c) => ({ label: c.label, value: c.boxes, note: `${c.discovery} Discovery's${c.hours === null ? '' : ` · ${num(c.hours, 1)} h`}` }))} /></div>
       </details>
       {/* The harness latency matrix is still the wall's drawer (tangle-tools fleet/README.md "Harness lifecycle latency"). */}
-      <a className="wp-go" href="/?profile=discovery&drawer=harness-lifecycle#discovery-fleet">Harness lifecycle latency</a>
+      <a href="/?profile=discovery&drawer=harness-lifecycle#discovery-fleet">Harness latency</a>
+      </div>
     </>
   )
 }
@@ -262,17 +267,32 @@ export function SandboxesPage({ api }: { api: string }) {
 
 const STAGE_ORDER: Record<string, number> = { awaiting: 0, approved: 1, routed: 2, launched: 3, discarded: 4 }
 
+/** A problem statement's title (its text before the first colon, when short) and the rest. */
+const claim = (text: string): [string, string] => {
+  const at = text.indexOf(':')
+  return at > 0 && at < 80 ? [text.slice(0, at), text.slice(at + 1).trim()] : [text, '']
+}
+
+/** An idea: its title, where it goes and since when, the summary's first sentence (the rest opens), each problem as a
+ * titled line that opens to its statement, and the link to decide it. */
 function IdeaDetail({ idea, decideUrl }: { idea: Idea; decideUrl: string | null }) {
-  const [all, setAll] = useState(false)
-  const shown = all ? idea.problemStatements : idea.problemStatements.slice(0, 3)
+  const first = idea.summary.match(/^.*?[.!?](\s|$)/)?.[0]?.trim() ?? idea.summary
+  const rest = idea.summary.slice(first.length).trim()
   return (
     <article className="wp-idea">
       <h2>#{idea.id} {idea.title}</h2>
       <p className="wp-muted">{idea.destination} · {idea.stage}{idea.created ? ` · ${age(idea.created)} ago` : ''}</p>
-      <p>{idea.summary}</p>
-      {shown.length > 0 && <ol>{shown.map((s) => <li key={s}>{s}</li>)}</ol>}
-      {idea.problemStatements.length > 3 && <button type="button" className="wp-link" onClick={() => setAll(!all)}>{all ? 'Fewer problems' : `All ${idea.problemStatements.length} problems`}</button>}
-      {decideUrl && <a className="wp-go" href={decideUrl} target="_blank" rel="noreferrer">{idea.stage === 'awaiting' ? 'Decide in Idea Triage' : 'Open in Idea Triage'}</a>}
+      <p>{first}</p>
+      {rest && <details className="wp-group"><summary>More</summary><p>{rest}</p></details>}
+      {idea.problemStatements.length > 0 && (
+        <ol>
+          {idea.problemStatements.map((statement) => {
+            const [title, body] = claim(statement)
+            return <li key={statement}>{body ? <details className="wp-group"><summary>{title}</summary><p>{body}</p></details> : title}</li>
+          })}
+        </ol>
+      )}
+      {decideUrl && <a className="wp-go" href={decideUrl}>{idea.stage === 'awaiting' ? 'Decide in Idea Triage' : 'Open in Idea Triage'}</a>}
     </article>
   )
 }

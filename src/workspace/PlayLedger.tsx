@@ -111,8 +111,8 @@ function Cost({ row }: { row: PlayLedgerRow }) {
   if (!cost || cost.provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
   if (cost.apiUsd === null || cost.apiUsd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
-    <span title={`API-equivalent at list price, ${cost.provenance?.startsWith('per call') ? `${cost.provenance} from the run's OpenCode stores, the run page's figure` : cost.provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : cost.provenance ?? 'unknown source'}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
-      {cost.provenance === 'per call, partly priced' ? '≥' : cost.provenance === 'estimated' || cost.provenance === 'per call' ? '≈' : ''}{money(cost.apiUsd)}
+    <span title={`API-equivalent at list price, ${cost.provenance?.startsWith('per') ? `${cost.provenance}, the run page's figure` : cost.provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : cost.provenance ?? 'unknown source'}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
+      {cost.provenance?.endsWith('at least') ? '≥' : cost.provenance === 'estimated' || cost.provenance === 'per call' ? '≈' : ''}{money(cost.apiUsd)}
     </span>
   )
 }

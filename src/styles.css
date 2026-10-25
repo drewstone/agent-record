@@ -1799,11 +1799,6 @@
 .ar-ws .polarity-none { color: var(--ar-fg-faint); background: transparent; }
 
 /* run layout */
-.ar-ws .replay { display: grid; grid-template-columns: auto auto minmax(80px, 1fr) auto auto; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px solid var(--ar-border); }
-.ar-ws .replay input[type='range'] { width: 100%; accent-color: var(--ws-frame); }
-.ar-ws .replay output { font: var(--ar-text-s) var(--ar-font-body); white-space: nowrap; }
-.ar-ws .replay output small { color: var(--ar-fg-muted); margin-left: 4px; }
-.ar-ws .replay select { width: auto; min-height: 2rem; padding: .3rem .5rem; }
 .ar-ws .ws-panel { background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; min-width: 0; display: flex; flex-direction: column; }
 .ar-ws .agent-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px 12px; flex-wrap: wrap; }
 .ar-ws .agent-identity { display: flex; gap: 12px; align-items: center; min-width: 0; flex: 1 1 360px; }
@@ -1936,8 +1931,6 @@
   .ar-ws .spend-chip { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
   .ar-ws .spend-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .ar-ws .spend-value { text-align: left; }
-  .ar-ws .replay { grid-template-columns: auto auto minmax(0, 1fr); }
-  .ar-ws .replay output, .ar-ws .replay [data-full] { grid-column: span 3; }
   .ar-ws .kv > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 
@@ -3161,6 +3154,8 @@
   --chart-tier-s:var(--ar-c-action); --chart-tier-a:var(--ar-c-info); --chart-tier-b:#1f7f88; --chart-tier-c:#9b59b6;
   --chart-live-fg:var(--ar-fg); --chart-live-muted:var(--ar-fg-muted); --chart-live-faint:var(--ar-fg-faint);
   --chart-live-font-mono:var(--ar-font-body); --chart-live-surface:var(--ar-bg);
+  /* A hovered bar row takes the page's hover tone; the package default (#eee) turned a dark-theme row white over light text. */
+  --chart-live-hover:var(--ar-hover, var(--ar-bg-alt));
   /* The chart package's status roles take this renderer's tones (design-system section 1): a breach, a failed check, a
      died mark and a meter near its cap are history or a research miss, so neutral; red is never a chart default. Run
      endings: solved is pass, live is attention, every other ending is neutral and told apart by its shape. An attempt's
@@ -3405,18 +3400,6 @@
 .ar-ws .climb-brush-tick.is-pass { background: var(--ar-c-neutral); }
 .ar-ws .climb-brush-window { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--ar-c-info) 22%, transparent); border-left: 2px solid var(--ar-c-info); border-right: 2px solid var(--ar-c-info); pointer-events: none; }
 
-/* ---------- One agent's attempts as beads on a string (run page, under the replay) ---------- */
-.ar-ws .bead-string { display: grid; gap: 4px; padding: 8px 16px 8px; border-bottom: 1px solid var(--ar-border); }
-.ar-ws .bead-track { position: relative; height: 18px; margin: 0 8px; }
-.ar-ws .bead-track::before { content: ''; position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: color-mix(in srgb, var(--ar-fg-muted) 25%, transparent); }
-.ar-ws .bead-span { position: absolute; top: 7px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ar-fg-muted) 65%, transparent); }
-.ar-ws .bead-span:not(.state-work) { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ar-fg-muted) 55%, transparent) 0 2px, transparent 2px 4px); }
-.ar-ws .bead-cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--ar-c-info); }
-.ar-ws .bead { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -8px; padding: 0; border: 0; border-radius: 50%; background: var(--bead); box-shadow: 0 0 0 2px var(--ws-panel); cursor: pointer; opacity: .55; }
-.ar-ws .bead.is-past { opacity: 1; }
-.ar-ws .bead:hover, .ar-ws .bead:focus-visible { transform: scale(1.35); outline: none; box-shadow: 0 0 0 2px var(--ws-panel), 0 0 0 3px var(--ar-fg); }
-.ar-ws .bead-summary { margin: 0; font-size: 12px; }
-.ar-ws .bead-key { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; vertical-align: 0; }
 
 .agent-record .assignment-source { margin-top: 0.5rem; }
 .agent-record .assignment-source summary { font: var(--ar-text-s) var(--ar-font-mono); color: var(--ar-fg-faint); cursor: pointer; }
@@ -3624,14 +3607,9 @@
 .ar-ws .rj-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 14px; }
 .ar-ws .rj-summary dt { color: var(--ar-fg-muted); }
 .ar-ws .rj-summary dd { margin: 0; overflow-wrap: anywhere; }
-.ar-ws .rj-changes ul { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; }
-.ar-ws .rj-changes button { padding: 0; border: 0; background: none; color: var(--ar-c-action); cursor: pointer; text-align: left; overflow-wrap: anywhere; }
-.ar-ws .rj-changes button[aria-pressed='true'] { font-weight: 600; }
-.ar-ws .rj-changes details summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); margin-bottom: 8px; }
 /* The diff renderer fills its parent's height, as it did in the old file pane. */
 .ar-ws .rj-diff { height: 60vh; min-height: 360px; overflow: auto; border-radius: 8px; }
 .ar-ws .rj-transcript > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
-.ar-ws .rj-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 12px; }
 /* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,
    conversations, outputs): its "Now" tab, "Why it stopped" and the Now section repeat the ladder and sentence above. */
 .ar-ws .ws-run:has(> .rj) > .run-why, .ar-ws .ws-run:has(> .rj) > .rr-page { display: none; }
@@ -3861,7 +3839,6 @@
 .agent-record { --ar-c-warn: #7a4f00; }
 .agent-record[data-theme='dark'] { --ar-c-warn: #f5a524; }
 @media (prefers-color-scheme: dark) { .agent-record[data-theme='auto'] { --ar-c-warn: #f5a524; } }
-.ar-ws .rj-foot { margin-top: 0; padding-top: 0; }
 .ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
 .ar-ws .rj-full-toggle { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ar-c-action); cursor: pointer; white-space: nowrap; }
 .ar-ws .rj-full-text { white-space: pre-wrap; }
@@ -3878,7 +3855,7 @@
 .ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; }
 .ar-ws .wp-hosts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 .ar-ws .wp-host { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 16px; border-radius: 8px; background: var(--ar-surface); box-shadow: inset 0 0 0 1px var(--ar-line); }
-.ar-ws .wp-host[data-state="breach"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-fail, #ef4444) 50%, transparent); }
+.ar-ws .wp-host[data-up="no"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-warn, #f5a524) 50%, transparent); }
 .ar-ws .wp-host-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .ar-ws .wp-host-head b { font-size: 18px; font-weight: 600; }
 .ar-ws .wp-host-head > span:last-child { margin-left: auto; }
@@ -3923,7 +3900,6 @@
   .ar-ws .wp .tj-hero { font-size: 18px; }
 }
 .ar-ws .wp-over { grid-column: 1 / -1; font-size: 12px; color: var(--ar-c-fail, #ef4444); }
-.ar-ws .wp-host[data-state="warn"] .wp-over { color: var(--ar-c-warn, #f5a524); }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
 @media (max-width: 760px) {
   .ar-ws .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -3973,3 +3949,95 @@
 .ar-ws .wp-group[open] { flex-basis: 100%; }
 .ar-ws .wp-awaiting { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .ar-ws .wp-ideas li > .wp-idea { margin: 4px 0 12px; }
+/* How it ran (REVIEW-8 62): numbers, the run over time, then where time and tokens went; 4 px grid, 12/14/32 type. */
+.ar-ws .how { display: grid; gap: 24px; padding: 16px; }
+.ar-ws .how .how-stats { margin: 0; }
+.ar-ws .run-activity.stacked { display: grid; gap: 8px; }
+.ar-ws .run-activity.stacked figure { margin: 0; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; align-items: start; }
+.ar-ws .run-activity.stacked figcaption { font: 400 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); padding-top: 4px; }
+.ar-ws .how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 24px 32px; }
+.ar-ws .how-grid h3 { margin: 0 0 12px; font: 600 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); }
+.ar-ws .how-grid .ov-hbars + .ov-hbars { margin-top: 8px; }
+@media (max-width: 640px) { .ar-ws .how { padding: 12px; } .ar-ws .run-activity.stacked figure { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+/* Conversations rail (REVIEW-8 60): name, outcome shape, tokens; the state word and price live in the row tooltip. */
+.ar-ws .agent-rail .agent-row > :nth-child(5) { display: block; }
+.ar-ws .agent-rail .agent-row > :nth-child(6) { display: none; }
+.ar-ws .agent-rail .state-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ar-ws .agent-rail .agent-row { grid-template-columns: minmax(0, 1fr) 24px 56px; }
+.ar-ws .agent-rail .agent-row-head > :nth-child(2) { visibility: hidden; }
+/* Run Findings (REVIEW-8: 8 dead clicks): /play's .finding-row two-column grid (above) also matched these rows, so an open
+   row's body sat beside its head and covered the head's meta. Run rows stack: head, then body. */
+.ar-ws .run-findings .finding-row { display: block; padding: 0; border-left: 0; }
+.ar-ws .run-findings .findings-main { gap: 16px; }
+.ar-ws .run-findings .findings-caution { margin: 0; font-size: 12px; color: var(--ar-fg-muted); }
+/* Conversations: the kit's transcript per row, its time and controls in one quiet line under it. */
+.ar-ws .chat-message.kit-message { display: grid; gap: 4px; padding: 12px 16px; }
+.ar-ws .kit-message .message-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .kit-message .message-foot .message-source { margin-left: auto; }
+.ar-ws .as-of-chip { display: flex; align-items: center; gap: 12px; margin: 0; padding: 8px 16px; font-size: 12px; color: var(--ar-fg-muted); border-top: 1px solid var(--ar-border); }
+/* Built (REVIEW-8 65): the code releases' steps first, then the page-version graph full width; the inspector opens beside
+   it only for a chosen version. */
+.ar-ws .run-built { display: grid; gap: 16px; }
+.ar-ws .built-releases { padding: 16px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
+.ar-ws .built-releases h3 { margin: 0 0 12px; font: 600 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); }
+.ar-ws .run-built.no-inspector .lineage-layout { grid-template-columns: minmax(0, 1fr); }
+.ar-ws .run-built .lineage-key { margin: 12px 16px 0; font-size: 12px; }
+.ar-ws .run-built details.vg-releases { margin: 8px 16px 16px; }
+.ar-ws .run-built details.vg-releases > summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .inspector-close { float: right; font-size: 12px; }
+.ar-ws .findings-primary { display: grid; gap: 16px; min-width: 0; }
+/* Now's Details (Drew, 2026-10-25): under the code frame, one region; the selected tab's panel sits directly beneath its tab
+   and fills the space, in both themes on the same surface and border tokens as the run's other panels. */
+.ar-ws .run-details { display: grid; gap: 0; margin-top: 24px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
+.ar-ws .run-details > .run-tab-strip { display: flex; gap: 4px; padding: 8px 8px 0; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .run-details-panel { min-width: 0; min-height: 320px; }
+.ar-ws .run-details-panel > .run-built, .ar-ws .run-details-panel > .run-findings { padding: 16px; }
+.ar-ws .run-details-panel .lineage-layout { border: 0; border-radius: 0; height: auto; max-height: 70vh; }
+.ar-ws .run-details-panel .built-releases { border: 0; padding: 0 0 8px; background: transparent; }
+.ar-ws .run-details-panel .agent-rail.details-agents { position: static; max-height: none; border: 0; border-radius: 0; }
+.ar-ws .run-details-panel > .ws-status { padding: 16px; }
+.ar-ws .vg-lane-chip:disabled { cursor: default; opacity: 1; }
+.ar-ws .vg-lane-select select { min-height: 32px; padding: 4px 8px; font: 14px var(--ar-font-body); }
+/* Charts on the run tabs on the page's type scale and 4 px grid: the package sizes in em (0.8em axes = 11.2 px, 0.25em gaps =
+   4.2 px at 14 px); here axes, marks and notes are 12 px, labels 14 px, gaps 4/8/12/16 px. */
+.ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-axis, .ov-mark-label) { font-size: 12px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-events, .ov-key) { margin-top: 8px; gap: 4px 16px; font-size: 12px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbars { gap: 4px 12px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbars li > :is(a, div) { row-gap: 4px; padding: 4px 8px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbar-label { font-size: 14px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-hbar-note, .ov-hbars-more) { font-size: 12px; padding: 4px 8px; }
+/* /play Releases bars on the 4 px grid (HBars spaces in em: .3em/.4em at 14 px is 4.2/5.6 px). */
+.ar-ws .release-stops .ov-hbars { gap: 4px 12px; }
+.ar-ws .release-stops .ov-hbars li > a, .ar-ws .release-stops .ov-hbars li > div { padding: 4px 8px; row-gap: 4px; }
+@media (max-width: 700px) {
+  /* Setup on a phone: the bar's three columns fit by wrapping their values, and the run picker sits in the flow above the objective instead of over its label. */
+  .ar-ws .play-bar-table .data-table th, .ar-ws .play-bar-table .data-table td { padding-left: 8px; padding-right: 8px; }
+  .ar-ws .play-bar-table .data-table .num { white-space: normal; }
+  .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
+  .ar-ws .play-input .input-run-picker select { width: 100%; }
+}
+/* /play Setup on a wide screen: the bar and what the agent was asked side by side, so the tab fills its width. */
+@media (min-width: 1100px) {
+  .ar-ws .play-setup { grid-template-columns: minmax(0, 640px) minmax(0, 1fr); column-gap: 48px; align-items: start; }
+  .ar-ws .play-setup > .play-input { padding-top: 0; border-top: 0; }
+  .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
+}
+/* The per-state counts below the agents meter carry its numbers; its key would repeat them. */
+.ar-ws .wp-agents-meter .ov-meter-key { display: none; }
+.ar-ws .wp-groups .wp-idle { line-height: 20px; }
+.ar-ws .wp-group > summary { line-height: 20px; }
+/* charts' live.css sizes in em (11.2/12.6/13.3 px and 2-6 px gaps here); on these pages the 12/14 px scale and 4 px grid hold. */
+.ar-ws .wp .ov-hbar-label, .ar-ws .wp .ov-hbar-value { font-size: 14px; font-weight: 400; }
+.ar-ws .wp .ov-meter-key b { font-weight: 600; }
+.ar-ws .wp .ov-axis { font-size: 12px; }
+.ar-ws .wp .ov-empty { font-size: 14px; }
+.ar-ws .wp .ov-meter { gap: 4px; }
+.ar-ws .wp .ov-meter-key { margin: 4px 0 0; gap: 4px 16px; }
+.ar-ws .wp .ov-meter-key li { gap: 4px; }
+.ar-ws .wp .ov-hbars { gap: 4px 12px; }
+.ar-ws .wp .ov-hbars li > a, .ar-ws .wp .ov-hbars li > div { padding: 4px 8px; row-gap: 4px; }
+.ar-ws .wp .ov-hbars-more { padding: 0 8px; }
+.ar-ws .wp-foot { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 24px; font-size: 14px; }
+.ar-ws .wp-idea ol .wp-group > summary { font-weight: 600; }
+.ar-ws .wp-idea ol .wp-group p { margin: 4px 0 0; color: var(--ar-fg-muted); }
+.ar-ws .wp h2 .as-of { font-size: 12px; font-weight: 400; }

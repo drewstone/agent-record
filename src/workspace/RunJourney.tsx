@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
@@ -6,9 +6,9 @@ import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { releaseName, shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
+import { RunActivity } from './RunActivity.js'
 import { viewAsOf, viewChip } from './view.js'
 import { goalText, plainSummary, stepWord } from './plain-words.js'
-import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 import { useSearch } from './navigation.js'
 
@@ -22,6 +22,7 @@ import { useSearch } from './navigation.js'
 type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null; steps?: Step[] }
 /** One stretch of an agent's time from its OpenCode store (epoch ms): a model call, a tool, or waiting between calls. */
 type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
+/** Start, end (null while live) and status come from the run's spawn journal (tangle-tools run_journal). */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean }
 
@@ -30,7 +31,6 @@ const hours = (a: number, b: number) => (b - a) / 3_600_000
 const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
-/** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
 /** "4 m ago", "3 h ago" from now. */
 const ago = (iso: string) => { const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60_000); return m < 90 ? `${Math.round(m)} m ago` : `${Math.round(m / 60)} h ago` }
 /**
@@ -46,7 +46,8 @@ function costText(u: Usage | null | undefined): { text: string; title: string } 
   const price = u.priceSource?.repository ? `; list price from ${u.priceSource.repository} ${u.priceSource.commit?.slice(0, 8) ?? ''}` : ''
   return { text: parts.join(' · ') || '—', title: `Read from ${from}${u.at ? `, updated ${ago(u.at)}` : ''}${price}` }
 }
-const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
+/** Failed is the journal's `down` settle (Runtime's one failure word: crash, deadline, validation); never words in a last turn (lead 2026-10-25). */
+const failed = (n: Node) => n.status === 'failed'
 
 function useJourney(api: string, doc: RunDocument) {
   const runUrl = `${api}/runs/${encodeURIComponent(doc.run.id)}`
@@ -59,10 +60,12 @@ function useJourney(api: string, doc: RunDocument) {
     // checked" over a release that passed (root 10478 23:12Z, test-disposable-smoke rc2).
     const releases = (data.releases as Release[]).map((r) => ({ ...r, tagged: Boolean(r.taggedAt), taggedAt: r.taggedAt ?? r.at ?? null })).filter((r) => r.taggedAt)
     const t0 = Math.min(...nodes.map((n) => ms(n.start)).filter(Number.isFinite))
-    const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)))
+    const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)), data.live ? Date.now() : -Infinity)
     const best = releases.find((r) => r.release === data.best) ?? releases.at(-1) ?? null
     const commits = new Map<string, number>()
-    for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
+    // What each agent shipped is its commits in the run's deliverables; a host without them falls back to release attribution.
+    if (nodes.some((n) => typeof n.shipped === 'number')) for (const n of nodes) commits.set(n.id, n.shipped ?? 0)
+    else for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
     const root = nodes.find((n) => n.role === 'root' || n.role === 'lead')?.id ?? doc.run.id
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
@@ -131,7 +134,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
         {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
             teardown; this line says only what the release reached. */}
-        {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b> · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
       {lifecycle && lifecycle.state !== 'done' && (
         <p className="rj-life-line">
@@ -164,15 +167,17 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
 function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
-  // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, crashed.
+  // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, failed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
-  const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
+  // Shipped is commits, whatever the settle (disco-ui-review 23:22Z: 7 of 21c's 9 failed agents committed); a failure is a mark.
+  const tone = (n: Node): FlowSpan['outcome'] => (m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : failed(n) ? { tone: 'failed', label: 'Failed' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
     const spans: FlowSpan[] = m.nodes.filter((n) => Number.isFinite(ms(n.start))).map((n) => {
-      const end = ms(n.end ?? n.lastAt)
+      // A live agent's bar runs to now; its end is the journal's settle or cancel.
+      const end = running(n) ? Date.now() : ms(n.end ?? n.lastAt)
       const from = parent.get(n.id)
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
@@ -181,14 +186,16 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         // shipped is the outcome pill and the card's Releases and Commits cells.
         detail: n.model?.split('/').pop() ?? undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
-        status: running(n) ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
+        status: running(n) ? 'running' as const : failed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
-        // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
-        ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
+        // Its list-price cost so far; absent stays absent, never a zero. A restart is a notch on the bar (charts 0.20.0).
+        ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : {}),
+        marks: [...(n.restarts ?? []).map((at) => ({ at: ms(at) - m.t0, kind: 'restart', label: `Restarted ${at.slice(11, 16)}Z` })), ...(failed(n) && n.end ? [{ at: ms(n.end) - m.t0, kind: 'failed', label: `Failed ${n.end.slice(11, 16)}Z` }] : [])],
         // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
           { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
+          ...(n.turns != null ? [{ label: 'Turns', value: String(n.turns) }] : []),
           ...(n.harness ? [{ label: 'Harness', value: n.harness }] : []),
           ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
           ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
@@ -202,7 +209,9 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
       startMs: step.startMs - m.t0, endMs: step.endMs - m.t0, status: step.failed ? 'failed' as const : 'done' as const,
     })))
     spans.push(...steps)
-    return { spans, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: 0, ...(listUsd != null ? { costUsd: listUsd, costBasis: 'list' as const } : {}) }
+    // A stretch with no agent turn is a labelled band (tangle-tools run_journal pauses: 22a's 4 h 40 m after the GTR guard stop).
+    const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}: ${p.reason}` }))
+    return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: 0, ...(listUsd != null ? { costUsd: listUsd, costBasis: 'list' as const } : {}) }
   }, [m, live])
   // Releases that moved the score, the best and the newest: 17c tagged 205 releases, and a line for each buried the rows.
   const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
@@ -240,15 +249,14 @@ function Stats({ m, receiptUsd }: { m: Model; receiptUsd: number | null }) {
   // Without the run's stores (deleted with ~/.cache/disco on 10-25) the receipt's Runtime estimate, the figure /play prints.
   const own = runUsage(m)
   const { listUsd, complete } = own.listUsd != null ? own : { listUsd: receiptUsd, complete: true }
-  // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
-  // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
-  const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
+  // As the timeline's legend counts them: every agent that committed, the lead included; Failed counts settles, not a category.
+  const shipped = m.nodes.filter((n) => m.commits.get(n.id)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
     ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, own.listUsd != null ? 'API-equivalent at list price; each agent\'s billed amount is in its card' : "Runtime's estimate from the receipt, the figure /play prints; the run's per-call stores are gone"] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
-    ['Crashed', String(m.nodes.filter(crashed).length)],
+    ['Failed', String(m.nodes.filter(failed).length)],
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
   ]
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
@@ -322,17 +330,13 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   )
 }
 
-function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void }) {
+function Drill({ m, node, transcript, onPick, onOpen }: { m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void; onOpen: (release: string, path: string) => void }) {
   const landed = m.releases.filter((r) => r.files?.[node.id]?.length)
   const changes = new Map<string, Release>()
   for (const r of landed) for (const path of r.files![node.id]!) changes.set(path, r)
   const paths = [...changes.keys()]
   const code = paths.filter((p) => !ARTEFACT.test(p))
   const artefacts = paths.filter((p) => ARTEFACT.test(p))
-  const [file, setFile] = useState<string | null>(null)
-  useEffect(() => setFile(null), [node.id])
-  const release = file ? changes.get(file)! : null
-  const prev = release ? before(m, release) : null
   const role = node.id === m.root ? 'lead' : node.role ?? node.label
   const single = m.nodes.length === 1
   return (
@@ -342,18 +346,11 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
         <dt>Who</dt><dd>{who(node)}</dd>
         <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full what="task" short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
-        <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
+        <dt>Result</dt><dd>{failed(node) ? 'Failed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
         <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
-        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
+        {/* Its files open in the code frame below, not as a list here (Drew 2026-10-25: "neglected ... nonsense" at the page's foot). */}
+        {m.attributed && <><dt>Changed</dt><dd>{paths.length ? <button type="button" className="rj-full-toggle" onClick={() => onOpen(changes.get(code[0] ?? paths[0]!)!.release, code[0] ?? paths[0]!)}>{`${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}`}</button> : node.status === 'running' ? (node.hasCode ? 'work on its branch, not yet in a release' : 'nothing committed yet') : 'nothing that landed in a release'}</dd></>}
       </dl>}
-      {paths.length > 0 && (
-        <div className="rj-changes">
-          <h3>What changed</h3>
-          <ul>{code.map((p) => <li key={p}><button type="button" aria-pressed={file === p} onClick={() => setFile(file === p ? null : p)} className="mono">{p}</button><span className="rj-muted"> {changes.get(p)!.release}</span></li>)}</ul>
-          {artefacts.length > 0 && <details><summary>{artefacts.length} logs and outputs</summary><ul>{artefacts.map((p) => <li key={p}><button type="button" onClick={() => setFile(p)} className="mono">{p}</button></li>)}</ul></details>}
-          {file && release && <RefDiff key={`${release.release}:${file}`} runUrl={runUrl} base={prev} head={release.release} path={file} />}
-        </div>
-      )}
       <details className="rj-transcript">
         <summary>Transcript</summary>
         {transcript(node.id, onPick)}
@@ -386,7 +383,6 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
     </section>
   )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
-  const receipt = doc.receipt
   return (
     <section className="rj" data-run-journey>
       <header className="rj-head">
@@ -407,16 +403,16 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single ? null : (
             <section aria-label="What the agents did">
               <Stats m={m} receiptUsd={doc.run.spend?.apiEquivalentUsd ?? null} />
-              <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
+              <Lanes m={m} live={m.data.live} onPick={setPicked} />
+              <RunActivity doc={doc} />
             </section>
           )}
           {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
               answer sits in a phone's first screen (root 2026-10-25 15:44Z: ANSWER at 761 px of 844, under a collapsed
               Transcript). With many agents the picked agent leads, then its files. */}
           {single && work}
-          {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
+          {node && <Drill m={m} node={node} transcript={transcript} onOpen={(release, path) => { update({ codeRef: release, fileSource: 'code', codeFile: path, codeView: 'diff' }); document.querySelector('.rj-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} onPick={setPicked} />}
           {!single && work}
-          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt</a></footer>}
         </>
       )}
     </section>
