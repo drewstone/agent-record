@@ -21,8 +21,8 @@ importers:
         specifier: 1.26.2
         version: 1.26.2(react@19.3.0)
       '@tangle-network/charts':
-        specifier: 0.16.0
-        version: 0.16.0(react@19.3.0)
+        specifier: 0.17.0
+        version: 0.17.0(react@19.3.0)
       '@tangle-network/harness-sessions':
         specifier: 0.1.0
         version: 0.1.0
@@ -845,8 +845,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/charts@0.16.0':
-    resolution: {integrity: sha512-/Vp/m1+1EWax7+idhoErH1xXuOa8koKpng8aRkF390fRognUeB7BNkLB27ICemzCyrlbv85O724ZDrygVLUKiw==}
+  '@tangle-network/charts@0.17.0':
+    resolution: {integrity: sha512-wUl3mtEz4M9OU8MPrFsPy93fllRAiS83/1T/Jnkxaq54KLXBQl6ezoUvxqJvhEBf6XQ6qPP1Y1U7XIcaHnUdwg==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -2714,7 +2714,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.0
 
-  '@tangle-network/charts@0.16.0(react@19.3.0)':
+  '@tangle-network/charts@0.17.0(react@19.3.0)':
     optionalDependencies:
       react: 19.3.0
 

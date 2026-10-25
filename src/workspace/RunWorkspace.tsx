@@ -6,7 +6,6 @@ import { useDocument } from './data.js'
 import { useSearch } from './navigation.js'
 import { RefDiff, type RefTree, useRefFile } from './ref-file.js'
 import { RunJourney } from './RunJourney.js'
-import { usePhone } from './use-phone.js'
 
 /**
  * The run's workspace document (agent-workspace.run-workspace.v1, tangle-tools run_workspace.py): its agents with their
@@ -96,5 +95,5 @@ export function CodePane({ runUrl, refName, previous, label }: { runUrl: string;
 type RunWorkspaceProps = { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode }
 
 export function RunWorkspace({ api, doc, transcript }: RunWorkspaceProps) {
-  return <RunJourney api={api} doc={doc} transcript={transcript} phone={usePhone()} />
+  return <RunJourney api={api} doc={doc} transcript={transcript} />
 }

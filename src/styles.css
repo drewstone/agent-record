@@ -3600,29 +3600,6 @@
 .ar-ws .rj-releases { color: var(--ar-fg-muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .ar-ws .rj-mini.rj-pass { color: var(--ar-c-ok, #22c55e); }
 .ar-ws .rj-mini.rj-fail { color: var(--ar-c-fail, #ef4444); }
-.ar-ws .rj-lanes { display: block; overflow: visible; }
-.ar-ws .rj-lanes text { font: 12px var(--ar-font-body); fill: var(--ar-fg-muted); }
-.ar-ws .rj-lanes .rj-lane-label { font-size: 13px; fill: var(--ar-fg); }
-.ar-ws .rj-plateau rect { fill: color-mix(in srgb, var(--ar-c-warn, #f5a524) 16%, transparent); }
-.ar-ws .rj-plateau text { fill: var(--ar-c-warn, #f5a524); }
-.ar-ws .rj-rel line { stroke: var(--ar-border); stroke-width: 1; }
-.ar-ws .rj-rel path { fill: var(--ar-fg-faint); }
-.ar-ws .rj-rel.rj-near path { fill: var(--ar-c-warn, #f5a524); }
-.ar-ws .rj-rel.rj-pass path { fill: var(--ar-c-ok, #22c55e); }
-.ar-ws .rj-rel.rj-fail path { fill: var(--ar-c-fail, #ef4444); }
-.ar-ws .rj-rel.rj-best text { fill: var(--ar-fg); font-weight: 600; }
-.ar-ws .rj-produced { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 2; }
-.ar-ws .rj-lane { cursor: pointer; outline: none; }
-.ar-ws .rj-lane .rj-bar { fill: color-mix(in srgb, var(--ar-fg-faint) 40%, transparent); transition: fill 150ms ease-out; }
-/* The whole row is the lane's target, not only its bar. */
-.ar-ws .rj-lane rect.rj-hit { fill: transparent; pointer-events: all; }
-.ar-ws .rj-lane:hover rect.rj-hit, .ar-ws .rj-lane.rj-on rect.rj-hit { fill: color-mix(in srgb, var(--ar-fg-faint) 10%, transparent); stroke: none; }
-.ar-ws .rj-lane.rj-lead .rj-bar { fill: color-mix(in srgb, var(--ar-fg-muted) 45%, transparent); }
-.ar-ws .rj-lane.rj-shipped .rj-bar { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 55%, transparent); }
-.ar-ws .rj-lane.rj-crash .rj-bar { fill: color-mix(in srgb, var(--ar-c-fail, #ef4444) 75%, transparent); }
-.ar-ws .rj-lane circle { fill: var(--ar-c-ok, #22c55e); stroke: var(--ar-bg); stroke-width: 2; }
-.ar-ws .rj-lane:hover .rj-lane-label, .ar-ws .rj-lane.rj-on .rj-lane-label, .ar-ws .rj-lane:focus-visible .rj-lane-label { font-weight: 600; text-decoration: underline; }
-.ar-ws .rj-lane.rj-on .rj-bar { stroke: var(--ar-fg); stroke-width: 1.5; }
 .ar-ws .rj-drill { display: grid; gap: 18px; padding-top: 24px; border-top: 1px solid var(--ar-border); animation: rj-in 220ms ease-out; }
 .ar-ws .rj-drill h2 { margin: 0; font-size: 26px; font-weight: 650; }
 .ar-ws .rj-summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0; font-size: 15px; }
@@ -3652,7 +3629,7 @@
   .ar-ws .rj-step-undecided, .ar-ws .rj-step-unrun, .ar-ws .rj-step-fail { outline-offset: -2px; }
   .ar-ws .rj-summary { grid-template-columns: minmax(0, 1fr); }
 }
-@media (prefers-reduced-motion: reduce) { .ar-ws .rj-lane .rj-bar { transition: none; } .ar-ws .rj-drill { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ar-ws .rj-drill { animation: none; } }
 
 /* Today (Today.tsx): one focal line, color only for state. */
 .ar-ws .tj { gap: 36px; }
