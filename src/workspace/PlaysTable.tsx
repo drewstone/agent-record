@@ -1,4 +1,5 @@
 import type { PlaysDocument } from '../workspace-model.js'
+import { plainSummary } from './plain-words.js'
 import { endingStatus, go, money, StandingText, StatusPill, statusOf } from './data.js'
 import { shortTag, verdictWord } from './play-standing.js'
 import { viewChip } from './view.js'
@@ -10,8 +11,16 @@ const short = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${
 /** A run's short id, `21c` for `magnetar-rust-20261021c` or `root-1-20261019b`; the full id is the link's title. */
 const runOf = (run: string) => /\d{6}(\d\d[a-z])$/.exec(run)?.[1] ?? run
 /** What the row's other columns do not say: the decision the play needs, else what blocks it. */
-const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) =>
-  view.needsYou?.length ? { tone: 'needs', text: `Needs you: ${view.needsYou[0]!.text}` } : view.blocker ? { tone: 'blocked', text: `Blocked: ${view.blocker.text}` } : null
+/**
+ * What holds the play, in at most ten plain words: the host's plain why (or action) for the blocker, never its raw
+ * text (a stopped run's blocker carries the operator's whole reason); the full text stays in the row's title.
+ */
+const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) => {
+  const need = view.needsYou?.[0] as { text: string; action?: string | null } | undefined
+  if (need) return { tone: 'needs', text: `Needs you: ${plainSummary(need.action ?? need.text, 10)}` }
+  const b = view.blocker
+  return b ? { tone: 'blocked', text: `${b.kind === 'stopped' ? 'Stopped' : 'Blocked'}: ${plainSummary(b.why ?? b.text, 10)}` } : null
+}
 
 /**
  * One line per play. Its status, best release and last run's status are the play's view (tangle-tools views.play_view,
