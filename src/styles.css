@@ -3134,6 +3134,8 @@
   --chart-tier-s:var(--ar-c-action); --chart-tier-a:var(--ar-c-info); --chart-tier-b:#1f7f88; --chart-tier-c:#9b59b6;
   --chart-live-fg:var(--ar-fg); --chart-live-muted:var(--ar-fg-muted); --chart-live-faint:var(--ar-fg-faint);
   --chart-live-font-mono:var(--ar-font-body); --chart-live-surface:var(--ar-bg);
+  /* A hovered bar row takes the page's hover tone; the package default (#eee) turned a dark-theme row white over light text. */
+  --chart-live-hover:var(--ar-hover, var(--ar-bg-alt));
   /* The chart package's status roles take this renderer's tones (design-system section 1): a breach, a failed check, a
      died mark and a meter near its cap are history or a research miss, so neutral; red is never a chart default. Run
      endings: solved is pass, live is attention, every other ending is neutral and told apart by its shape. An attempt's
@@ -3983,3 +3985,11 @@
 .ar-ws .run-details-panel > .ws-status { padding: 16px; }
 .ar-ws .vg-lane-chip:disabled { cursor: default; opacity: 1; }
 .ar-ws .vg-lane-select select { min-height: 32px; padding: 4px 8px; font: 14px var(--ar-font-body); }
+/* Charts on the run tabs on the page's type scale and 4 px grid: the package sizes in em (0.8em axes = 11.2 px, 0.25em gaps =
+   4.2 px at 14 px); here axes, marks and notes are 12 px, labels 14 px, gaps 4/8/12/16 px. */
+.ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-axis, .ov-mark-label) { font-size: 12px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-events, .ov-key) { margin-top: 8px; gap: 4px 16px; font-size: 12px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbars { gap: 4px 12px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbars li > :is(a, div) { row-gap: 4px; padding: 4px 8px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) .ov-hbar-label { font-size: 14px; }
+.ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-hbar-note, .ov-hbars-more) { font-size: 12px; padding: 4px 8px; }
