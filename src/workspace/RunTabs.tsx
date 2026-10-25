@@ -19,7 +19,7 @@ export const RUN_TABS: readonly { id: RunTab; label: string; parts: readonly (re
 export const tabOf = (section: RunSection | null): RunTab => RUN_TABS.find((tab) => tab.parts.some(([part]) => part === section))?.id ?? 'now'
 
 /** Sections that draw from the selected agent's record part (every node, that agent's events). */
-export const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'spend', 'assessments', 'coverage'])
+export const AGENT_PART_SECTIONS = new Set<RunSection>(['agents', 'assessments', 'coverage'])
 
 /** The section a URL asks for, or null for Now; links from before the tabs (`section`, `view`, `tab`, `node`) still land on
  * the part they named. `progress` lives in Now. */

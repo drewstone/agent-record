@@ -45,6 +45,7 @@ import type { RunReceipt } from './workspace/run-receipt.js'
 import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunHow } from './workspace/RunHow.js'
+import { detailsOf, RunDetails } from './workspace/RunDetails.js'
 import { Coverage } from './workspace/Coverage.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
@@ -742,6 +743,32 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
   const counts = overviewCounts(doc, index)
   const tabs = <RunTabBar section={section} counts={counts} onOpen={(next) => (next ? open(next, { tab: undefined }) : update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined }))} />
+  const openFinding = (sha: string) => {
+    setFinding(sha)
+    open('findings')
+  }
+  const selectAgent = (node: string) => update({ section: 'agents', node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })
+  const grading = { api, runId: summary.id, onSaved: () => setRevision((value) => value + 1) }
+  const loadingAgent = (
+    <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>
+      {agent.fetchError || agent.error
+        ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}`
+        : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
+    </p>
+  )
+  // How it ran reads the run document and the nodes part's per-agent stats; it needs no agent's record part.
+  const how = <RunHow doc={doc} runUrl={runUrl} agents={index ? index.actors.filter((item) => item.kind !== 'finding') : []} stats={nodes.stats} onAgent={(node) => `?section=agents&node=${encodeURIComponent(node)}`} wasteLabel={(dimension) => wasteLabel(dimension, catalogue)} />
+  const versionsPanel = (
+    <RunVersions
+      runUrl={runUrl}
+      poll={doc.live.polling ? 15_000 : undefined}
+      selected={params.get('commit')}
+      onSelect={(commit) => update({ section: section ?? undefined, commit })}
+      onClose={() => update({ commit: undefined })}
+      onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
+    />
+  )
+  const details = detailsOf(params)
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
@@ -757,25 +784,17 @@ function RunPage({ api, id }: { api: string; id: string }) {
               )
             }
           />
-          {tabs}
+          <RunDetails tab={details} counts={counts} onTab={(next) => update({ details: next === 'built' ? undefined : next, commit: undefined }, true)}>
+            {details === 'built' && versionsPanel}
+            {details === 'agents' && (index ? <div className="agent-rail details-agents"><AgentTable index={index} stats={nodes.stats} doc={doc} assessments={assessments.data?.rows ?? []} dimensions={catalogue} selected={null} onSelect={selectAgent} /></div> : <p className="ws-status" role="status">Loading the agents…</p>)}
+            {details === 'findings' && (doc.findings?.total ? <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} /> : <p className="ws-status">No knowledge pages were recorded for this run.</p>)}
+            {details === 'how' && how}
+          </RunDetails>
           <RunWhy doc={doc} play={play.data} />
           <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
         </Suspense>
       </div>
     )
-  const openFinding = (sha: string) => {
-    setFinding(sha)
-    open('findings')
-  }
-  const selectAgent = (node: string) => update({ section: 'agents', node, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })
-  const grading = { api, runId: summary.id, onSaved: () => setRevision((value) => value + 1) }
-  const loadingAgent = (
-    <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>
-      {agent.fetchError || agent.error
-        ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}`
-        : `Loading ${(actor && index?.nodes.get(actor)?.label) ?? 'the agent'}'s record…`}
-    </p>
-  )
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
       <RunStatusLine doc={doc} play={play.data} />
@@ -816,16 +835,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
           )}
         </>
       )}
-      {section === 'versions' && (
-        <RunVersions
-          runUrl={runUrl}
-          poll={doc.live.polling ? 15_000 : undefined}
-          selected={params.get('commit')}
-          onSelect={(commit) => update({ section: 'versions', commit })}
-          onClose={() => update({ section: 'versions', commit: undefined })}
-          onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
-        />
-      )}
+      {section === 'versions' && versionsPanel}
       {section === 'profiles' && (
         <RunProfiles
           api={api}
@@ -884,7 +894,8 @@ function RunPage({ api, id }: { api: string; id: string }) {
           </section>
         </div>
       )}
-      {index && (section === 'spend' || section === 'assessments' || section === 'coverage') && actor && (
+      {section === 'spend' && <section className="run-panel" aria-label="Time and cost">{how}</section>}
+      {index && (section === 'assessments' || section === 'coverage') && actor && (
         <section className="run-panel" aria-label={section}>
           {agent.index ? (
             <RunPanels
@@ -899,7 +910,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
               gaps={nodes.record?.coverage.gaps ?? []}
               stats={nodes.stats}
               onSelectAgent={selectAgent}
-              runUrl={runUrl}
             />
           ) : (
             loadingAgent
@@ -1211,9 +1221,8 @@ function RunPanels({
   gaps,
   stats,
   onSelectAgent,
-  runUrl,
 }: {
-  section: 'spend' | 'assessments' | 'coverage'
+  section: 'assessments' | 'coverage'
   doc: RunDocument
   index: RecordIndex
   actor: string
@@ -1224,9 +1233,7 @@ function RunPanels({
   gaps: RecordGap[]
   stats: Record<string, NodeStats>
   onSelectAgent: (id: string) => void
-  runUrl: string
 }) {
-  const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
   // A cited event of another agent is in that agent's part: open the agent it names (event ids start with the node id).
   const cite = (eventId: string) => {
     const event = index.byEvent.get(eventId)
@@ -1236,17 +1243,7 @@ function RunPanels({
   }
   if (section === 'assessments')
     return <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => update({ dim: dimension }, true)} onCite={cite} />
-  if (section === 'coverage') return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
-  return (
-    <RunHow
-      doc={doc}
-      runUrl={runUrl}
-      agents={index.actors.filter((item) => item.kind !== 'finding')}
-      stats={stats}
-      onAgent={(id) => `?section=agents&node=${encodeURIComponent(id)}`}
-      wasteLabel={(dimension) => wasteLabel(dimension, catalogue)}
-    />
-  )
+  return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
 }
 
 /** An agent with no recorded event: say what is missing instead of an empty pane, and lead to its agents. */
