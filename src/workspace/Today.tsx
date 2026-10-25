@@ -169,12 +169,13 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
         {blind.length > 0 && (
           <>
             {/* One row per reason, its plays named (REVIEW-5 #7: four rows said the same sentence, seven the same link). */}
-            <h2 className="tj-finding"><b>{blind.length} {blind.length === 1 ? 'play has' : 'plays have'} no check that counts steps</b></h2>
+            {/* Neutral and plain: amber under "Nothing needs you." read as a contradiction (REVIEW-6 #4). */}
+            <h2 className="tj-finding"><b>{blind.length} {blind.length === 1 ? "play can't" : "plays can't"} show progress yet</b></h2>
             <ul className="tj-rows tj-blind">
               {groups(blind).map(([reason, plays]) => (
                 <li key={reason ?? ''}>
-                  <span className="tj-state"><b>{reason ?? 'Needs a check that counts steps'}</b></span>
-                  <span className="tj-names">{plays.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, reason ? undefined : 'setup')}>{p.title}</a></span>)}</span>
+                  <span className="tj-state"><b>{reason ?? 'No check counts their steps'}</b></span>
+                  <span className="tj-names">{plays.map((p) => <a key={p.play} href={playHref(p.play, reason ? undefined : 'setup')}>{p.title}</a>)}</span>
                 </li>
               ))}
             </ul>

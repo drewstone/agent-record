@@ -1,11 +1,11 @@
-import { AsOfStamp } from './AnswerStrip.js'
+import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { PlayAgainstBar, PlayClimb } from './PlayClimb.js'
 import { PlayFindings } from './PlayFindings.js'
 import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import { PlayLedger } from './PlayLedger.js'
 import { type Play, playAsOf } from './answers.js'
 import { StatusPill } from './data.js'
-import { plainSummary } from './plain-words.js'
+import { plainSummary, stepWord } from './plain-words.js'
 import { usePhone } from './use-phone.js'
 import { type HostView, viewChip, type ViewTrend } from './view.js'
 
@@ -128,7 +128,8 @@ function StepStrip({ m }: { m: Model }) {
   if (!m.steps.length) return null
   return (
     <ol className="pj-strip" aria-label={`Steps under check ${m.view.progress?.checker ?? ''}`}>
-      {m.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><i />{s.label}</li>)}
+      {/* Each step says its state on hover and focus (REVIEW-6 #9: the strip read as dead). */}
+      {m.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><Tip text={`Step ${i + 1} of ${m.steps.length}, ${s.label}: ${stepWord(s.state)}`}><i />{s.label}</Tip></li>)}
     </ol>
   )
 }

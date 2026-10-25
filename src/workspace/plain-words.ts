@@ -6,6 +6,9 @@ const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'sho
 const clock = (t: number) => new Date(t).toISOString().slice(11, 16)
 
 /** Agent text as a reader's line: markdown stripped, its first sentence, at most `words` words (the raw text sits behind "full"). */
+/** A ladder step's state in words, for its tooltip. */
+export const stepWord = (state: string) => ({ pass: 'passed', fail: 'failed', unrun: 'not run yet', undecided: 'undecided' } as Record<string, string>)[state] ?? state
+
 export function plainSummary(text: string | null | undefined, words = 20) {
   const plain = (text ?? '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/(\*\*|__|`)(.+?)\1/g, '$2').replace(/^[#>\s]+/, '').replace(/\s+/g, ' ').trim()
   const first = plain.split(/(?<=[.!?])\s/)[0] ?? plain

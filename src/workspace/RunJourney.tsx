@@ -2,12 +2,12 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
-import { AsOfStamp } from './AnswerStrip.js'
+import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
-import { goalText, plainSummary } from './plain-words.js'
+import { goalText, plainSummary, stepWord } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 import { useSearch } from './navigation.js'
@@ -122,7 +122,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       {/* One line, like the play page's strip (review 2 #10: six 100 px tiles above the timeline). */}
       {m.best?.steps && m.best.steps.length > 1 && (
         <ol className="pj-strip" aria-label={`Steps ${m.best.release} passed`}>
-          {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><i />{s.label}</li>)}
+          {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><Tip text={`Step ${i + 1} of ${m.best!.steps!.length}, ${s.label}: ${stepWord(s.state)} on ${m.best!.release}`}><i />{s.label}</Tip></li>)}
         </ol>
       )}
       <p className="rj-stuck">
@@ -146,7 +146,10 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
-          : m.releases.map((r) => <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>)}
+          // A release checked from a commit it never tagged has no code to open (21c rc116 opened a 404 pane): a label, not a button.
+          : m.releases.map((r) => r.tagged
+            ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
+            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.sentence ?? r.release}. Checked from commit ${r.commit ?? 'not recorded'}, never tagged, so its code was not kept.`}>{r.release} {r.passed}/{r.total}</Tip>)}
       </p>}
     </section>
   )
@@ -240,8 +243,9 @@ function runUsage(m: Model) {
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
 function Stats({ m }: { m: Model }) {
   const { listUsd, complete } = runUsage(m)
-  // Every agent that shipped, the lead included, as the timeline's legend counts them (22a read 1 here and 2 there).
-  const shipped = m.commits.size
+  // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
+  // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
+  const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
