@@ -11,7 +11,7 @@ export function RunFilesPane({ api, doc, code, codeUnavailable }: { api: string;
   const [picked, setSource] = useState<'code' | 'artifacts'>('code')
   const [file, setFile] = useState<string | null>(null)
   const source = codeUnavailable ? 'artifacts' : picked
-  return <div className="run-files-pane" data-run-files-pane>
+  return <div className="run-files-pane" data-run-files-pane data-primary-content>
     {/* One source is no choice: without code the switch was a 69 px row above the answer (root 2026-10-25, phone). */}
     {!codeUnavailable && <div className="rw-file-modes run-file-sources" role="group" aria-label="File source">
       <button type="button" aria-pressed={source === 'code'} onClick={() => setSource('code')}>Code</button>
