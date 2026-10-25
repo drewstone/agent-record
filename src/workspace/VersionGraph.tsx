@@ -221,7 +221,8 @@ export function RunVersions({
   onOpenAgent: (node: string) => void
 }) {
   const fetched = useDocument<unknown>(`${runUrl}/versions`, poll, true)
-  const workspace = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, undefined, true)
+  // Polled like /versions while the run is live, so new releases reach the chart (Codex review on #190).
+  const workspace = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, poll, true)
   useEffect(() => {
     if (!selected) return
     const close = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
@@ -234,21 +235,21 @@ export function RunVersions({
     return result.success ? { doc: result.data, error: null } : { doc: null, error: result.error.issues[0]?.message ?? 'invalid version graph' }
   }, [fetched.data])
   const model = useMemo(() => (parsed?.doc?.available ? runGraphModel(parsed.doc, when) : null), [parsed])
-  if (!parsed) {
-    return (
-      <p className="ws-status run-panel" role={fetched.error ? 'alert' : 'status'}>
-        {fetched.error ? `No version graph for this run: ${fetched.error}. Runs pressed before discovery-lab#1411 keep no deliverables.git.` : 'Loading the version graph…'}
-      </p>
-    )
-  }
-  if (parsed.error || !parsed.doc) return <p className="ws-status run-panel" role="alert">The version graph is unreadable: {parsed.error}</p>
+  const releases = <CodeReleases releases={workspace.data?.releases ?? []} />
+  // Code releases and page versions are independent records: a run without deliverables.git still shows its releases.
+  const missing = !parsed ? (
+    <p className="ws-status run-panel" role={fetched.error ? 'alert' : 'status'}>
+      {fetched.error ? `No version graph for this run: ${fetched.error}. Runs pressed before discovery-lab#1411 keep no deliverables.git.` : 'Loading the version graph…'}
+    </p>
+  ) : parsed.error || !parsed.doc ? <p className="ws-status run-panel" role="alert">The version graph is unreadable: {parsed.error}</p>
+    : !parsed.doc.available || !model ? <p className="ws-status run-panel">{parsed.doc.reason ?? 'This run keeps no version graph.'}</p> : null
+  if (missing || !parsed?.doc || !model) return <div className="run-built no-inspector" data-section="versions">{releases}{missing}</div>
   const doc = parsed.doc
-  if (!doc.available || !model) return <p className="ws-status run-panel">{doc.reason ?? 'This run keeps no version graph.'}</p>
   // The inspector opens on a chosen version only: the graph is the page, the inspector its detail (REVIEW-8 Built 65).
   const commit = doc.commits.find((item) => item.id === selected) ?? null
   return (
     <div className={`run-built${commit ? '' : ' no-inspector'}`} data-section="versions">
-      <CodeReleases releases={workspace.data?.releases ?? []} />
+      {releases}
       <div className="lineage-layout run-versions">
         <section className="lineage-pane" aria-label="Version graph">
           <p className="faint lineage-key">{doc.commits.length} page versions on {doc.lanes.length} lanes{doc.builtAt ? ` · read ${when(doc.builtAt)}` : ''}</p>

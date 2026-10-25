@@ -15,7 +15,8 @@ const total = (t: { input: number; output: number; cacheRead: number; cacheWrite
  * known for only some of them. A row shows only when it has a number.
  */
 export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { doc: RunDocument; runUrl: string; agents: readonly RecordNode[]; stats: Record<string, NodeStats>; onAgent: (id: string) => string; wasteLabel: (dimension: string) => string }) {
-  const ws = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, undefined, true)
+  // Polled while the run is live, as RunJourney reads it, so release marks keep up (Codex review on #190).
+  const ws = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, doc.execution?.alive ? 15_000 : undefined, true)
   const spend = doc.spend
   const start = Date.parse(doc.run.startedAt ?? '')
   const end = Date.parse((doc as { lineage?: { settledAt?: string | null }[] }).lineage?.[0]?.settledAt ?? doc.run.settledAt ?? '') || Date.now()
