@@ -21,6 +21,7 @@ import { useSearch } from './navigation.js'
 type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null; steps?: Step[] }
 /** One stretch of an agent's time from its OpenCode store (epoch ms): a model call, a tool, or waiting between calls. */
 type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
+/** Start, end (null while live) and status come from the run's spawn journal (tangle-tools run_journal). */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean }
 
@@ -29,7 +30,6 @@ const hours = (a: number, b: number) => (b - a) / 3_600_000
 const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
-/** An agent whose last words report a crash, or whose status is failed (v6-battery: "CRASH_timeout_2700s"). */
 /** "4 m ago", "3 h ago" from now. */
 const ago = (iso: string) => { const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60_000); return m < 90 ? `${Math.round(m)} m ago` : `${Math.round(m / 60)} h ago` }
 /**
@@ -45,7 +45,8 @@ function costText(u: Usage | null | undefined): { text: string; title: string } 
   const price = u.priceSource?.repository ? `; list price from ${u.priceSource.repository} ${u.priceSource.commit?.slice(0, 8) ?? ''}` : ''
   return { text: parts.join(' · ') || '—', title: `Read from ${from}${u.at ? `, updated ${ago(u.at)}` : ''}${price}` }
 }
-const crashed = (n: Node) => n.status === 'failed' || /\bCRASH|\bOOM\b|panicked|SIGKILL/.test(n.turn ?? '')
+/** Crashed is the journal's failed settle only: a settled agent whose last words mention a crash it handled is not one (lead 2026-10-25). */
+const crashed = (n: Node) => n.status === 'failed'
 
 function useJourney(api: string, doc: RunDocument) {
   const runUrl = `${api}/runs/${encodeURIComponent(doc.run.id)}`
@@ -58,10 +59,12 @@ function useJourney(api: string, doc: RunDocument) {
     // checked" over a release that passed (root 10478 23:12Z, test-disposable-smoke rc2).
     const releases = (data.releases as Release[]).map((r) => ({ ...r, tagged: Boolean(r.taggedAt), taggedAt: r.taggedAt ?? r.at ?? null })).filter((r) => r.taggedAt)
     const t0 = Math.min(...nodes.map((n) => ms(n.start)).filter(Number.isFinite))
-    const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)))
+    const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)), data.live ? Date.now() : -Infinity)
     const best = releases.find((r) => r.release === data.best) ?? releases.at(-1) ?? null
     const commits = new Map<string, number>()
-    for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
+    // What each agent shipped is its commits in the run's deliverables; a host without them falls back to release attribution.
+    if (nodes.some((n) => typeof n.shipped === 'number')) for (const n of nodes) commits.set(n.id, n.shipped ?? 0)
+    else for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
     const root = nodes.find((n) => n.role === 'root' || n.role === 'lead')?.id ?? doc.run.id
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
@@ -171,7 +174,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
     const spans: FlowSpan[] = m.nodes.filter((n) => Number.isFinite(ms(n.start))).map((n) => {
-      const end = ms(n.end ?? n.lastAt)
+      // A live agent's bar runs to now; its end is the journal's settle or cancel.
+      const end = running(n) ? Date.now() : ms(n.end ?? n.lastAt)
       const from = parent.get(n.id)
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
@@ -188,6 +192,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
           { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
+          ...(n.turns != null ? [{ label: 'Turns', value: String(n.turns) }] : []),
           ...(n.harness ? [{ label: 'Harness', value: n.harness }] : []),
           ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
           ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
