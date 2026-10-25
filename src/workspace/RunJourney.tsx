@@ -225,8 +225,13 @@ function before(m: Model, release: { release: string }) {
   return m.releases.slice(0, m.releases.findIndex((r) => r.release === release.release)).reverse().find((r) => r.tagged)?.release ?? null
 }
 
-/** Tokens and list cost summed over the agents with a usage source; null when no agent has one (never a zero). */
+/**
+ * The run's tokens and list cost: the host's whole-run usage (every store on its host, attributed or not), the figure /play
+ * prints (REVIEW-5 #1); else summed over the agents with a usage source; null when none has one (never a zero).
+ */
 function runUsage(m: Model) {
+  const whole = (m.data as { runUsage?: Usage | null }).runUsage
+  if (whole) return { tokens: whole.tokens, listUsd: whole.listUsd, complete: whole.listComplete }
   const usage = m.nodes.map((n) => n.usage).filter((u): u is Usage => Boolean(u))
   const sum = (pick: (u: Usage) => number | null) => (usage.some((u) => pick(u) != null) ? usage.reduce((a, u) => a + (pick(u) ?? 0), 0) : null)
   return { tokens: sum((u) => u.tokens), listUsd: sum((u) => u.listUsd), complete: usage.length === m.nodes.length && usage.every((u) => u.listComplete) }
@@ -235,7 +240,8 @@ function runUsage(m: Model) {
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
 function Stats({ m }: { m: Model }) {
   const { listUsd, complete } = runUsage(m)
-  const shipped = [...m.commits.keys()].filter((id) => id !== m.root).length
+  // Every agent that shipped, the lead included, as the timeline's legend counts them (22a read 1 here and 2 there).
+  const shipped = m.commits.size
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
@@ -259,10 +265,12 @@ function Full({ short, raw, what }: { short: string; raw: string; what: string }
   )
 }
 
-/** The opening prompt under its own name: a "full" after the agent line read as dead (review 4 #11). */
+/**
+ * The opening prompt as its own labelled disclosure: a "full" after the agent line read as dead (review 4 #11), and a lone
+ * "prompt" after it as a stray word (REVIEW-5 #15).
+ */
 function Prompt({ text }: { text: string }) {
-  const [open, setOpen] = useState(false)
-  return <> <button type="button" className="rj-full-toggle" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} the opening prompt`} onClick={() => setOpen(!open)}>{open ? 'hide prompt' : 'prompt'}</button>{open && <span className="rj-full-text rj-prompt">{text}</span>}</>
+  return <details className="rj-prompt"><summary>Opening prompt</summary><p className="rj-full-text">{text}</p></details>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -297,7 +305,8 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const source = input.source?.path?.split('/').pop()
   return (
     <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
-      <p>{root ? who(root) : 'root agent'}{input.instruction && <Prompt text={input.instruction} />}</p>
+      <p>{root ? who(root) : 'root agent'}</p>
+      {input.instruction && <Prompt text={input.instruction} />}
       {input.objective && <p><Full what="goal" short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )

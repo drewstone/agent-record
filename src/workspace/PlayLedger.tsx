@@ -83,7 +83,8 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
       </span>
     )
   }
-  const stage = best.reached !== null && best.reached !== undefined && best.of ? `${best.reached}/${best.of}` : null
+  // The stage the check stopped at, by name: "6/6" for rc2 read as six of six passed beside the run page's 5 of 6 (REVIEW-5 #1).
+  const stage = best.reached !== null && best.reached !== undefined && best.of ? `reached ${best.stage ?? `stage ${best.reached} of ${best.of}`}` : null
   const workloads = best.workloads?.total ? `${best.workloads.passed}/${best.workloads.total}` : null
   const current = play.checkers?.find((item) => item.current)?.label ?? null
   const label = best.checker ? checkerLabel(play.checkers, best.checker) : null
@@ -105,8 +106,8 @@ function Cost({ row }: { row: PlayLedgerRow }) {
   if (!cost || cost.provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
   if (cost.apiUsd === null || cost.apiUsd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
-    <span title={`API-equivalent${cost.provenance ? ` (${cost.provenance})` : ''}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
-      {cost.provenance === 'estimated' ? '≈' : ''}{money(cost.apiUsd)}
+    <span title={`API-equivalent at list price, ${cost.provenance?.startsWith('per call') ? `${cost.provenance} from the run's OpenCode stores, the run page's figure` : cost.provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : cost.provenance ?? 'unknown source'}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
+      {cost.provenance === 'per call, partly priced' ? '≥' : cost.provenance === 'estimated' || cost.provenance === 'per call' ? '≈' : ''}{money(cost.apiUsd)}
     </span>
   )
 }

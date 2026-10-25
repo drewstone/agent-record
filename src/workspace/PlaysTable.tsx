@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { PlaysDocument } from '../workspace-model.js'
 import { plainSummary } from './plain-words.js'
 import { endingStatus, go, money, StandingText, StatusPill, statusOf } from './data.js'
+import { Tip } from './AnswerStrip.js'
 import { shortTag, verdictWord } from './play-standing.js'
 import { viewChip } from './view.js'
 
@@ -75,10 +76,12 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
               </td>
               <td className="plays-standing">
                 {view ? (
-                  <span className="plays-status" title={[view.sentence, holding(view)?.why].filter(Boolean).join('\n')}>
+                  // The pill alone, who holds it and why in its tooltip; only a decision for Drew keeps its words (REVIEW-5 #9:
+                  // two-line cells made the rows uneven).
+                  <Tip className="plays-status" text={[holding(view) && `${holding(view)!.text}: ${holding(view)!.why}`, view.sentence].filter(Boolean).join(' · ')}>
                     <StatusPill status={viewChip(view.status)} />
-                    {holding(view) && <span data-holding={holding(view)!.tone}>{holding(view)!.text}</span>}
-                  </span>
+                    {holding(view)?.tone === 'needs' && <span data-holding="needs">{holding(view)!.text}</span>}
+                  </Tip>
                 ) : standing?.sentence ? (
                   <span className="clamp-1" title={standing.sentence}><StandingText text={standing.sentence} /></span>
                 ) : (

@@ -1,5 +1,5 @@
 import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
-import { AsOfStamp } from './AnswerStrip.js'
+import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { hm } from './answers.js'
 import { useDocument } from './data.js'
 import { plainSummary, sinceLabel } from './plain-words.js'
@@ -117,6 +117,13 @@ function holdLine(view: HostView) {
   return `${blocker.owner === 'Drew' ? 'You' : blocker.owner ?? 'Its owner'} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.`
 }
 
+/** Plays grouped by what holds them, the largest group first; plays nothing holds group under null (they need a check). */
+function groups(plays: Play[]): [string | null, Play[]][] {
+  const by = new Map<string | null, Play[]>()
+  for (const p of plays) by.set(holdLine(p.view), [...(by.get(holdLine(p.view)) ?? []), p])
+  return [...by.entries()].sort((a, b) => b[1].length - a[1].length)
+}
+
 function TodayView({ doc }: { doc: OverviewDocument }) {
   const now = Date.parse(doc.composedAt) || Date.now()
   const { mine, held } = split(doc.attention ?? [])
@@ -146,11 +153,11 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             {measured.map(({ play, title, view }) => (
               <li key={play}>
                 <a className="tj-row-title" href={playHref(play)}>{title}</a>
-                <span className="tj-ladder" title={`${view.trend.best} of ${view.trend.total} steps passed${view.progress?.steps.length ? `: ${view.progress.steps.map((step) => `${step.label} ${step.state}`).join(', ')}` : ''}`}>
+                <Tip className="tj-ladder" text={`${view.trend.best} of ${view.trend.total} steps passed${view.progress?.steps.length ? `: ${view.progress.steps.map((step) => `${step.label} ${step.state}`).join(', ')}` : ''}`}>
                   <span className="tj-steps">{view.progress?.steps.map((step, i) => <i key={i} data-step={step.state} title={step.label} />)}</span>
                   <span className="tj-num">{view.trend.best}/{view.trend.total}</span>
-                </span>
-                <span title={`Steps passed at the end of each day: ${view.trend.passed.map((v, i) => `${view.trend.days[i] ?? ''} ${v ?? '—'}`).join(', ')} of ${view.trend.total}`}><Spark trend={view.trend} now={now} /></span>
+                </Tip>
+                <Tip text={`Steps passed at the end of each day: ${view.trend.passed.map((v, i) => `${view.trend.days[i] ?? ''} ${v ?? '—'}`).join(', ')} of ${view.trend.total}`}><Spark trend={view.trend} now={now} /></Tip>
                 <span className="tj-state">
                   <b className={`tj-word tj-${view.trend.movement}`}>{WORD[view.trend.movement]}</b> {moveLine(view.trend, now)}
                   {holdLine(view) && <span className="tj-muted tj-hold">{holdLine(view)}</span>}
@@ -161,13 +168,13 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
         )}
         {blind.length > 0 && (
           <>
-            {/* One row per active play, each with what holds it (review 4 #8: the page's lower half was empty). */}
-            <h2 className="tj-finding"><b>{blind.length} of {active} active plays have no check that counts steps</b></h2>
+            {/* One row per reason, its plays named (REVIEW-5 #7: four rows said the same sentence, seven the same link). */}
+            <h2 className="tj-finding"><b>{blind.length} {blind.length === 1 ? 'play has' : 'plays have'} no check that counts steps</b></h2>
             <ul className="tj-rows tj-blind">
-              {blind.map(({ play, title, view }) => (
-                <li key={play}>
-                  <a className="tj-row-title" href={playHref(play)}>{title}</a>
-                  <span className="tj-state">{holdLine(view) ?? <a href={playHref(play, 'setup')}>Set up a check that counts steps</a>}</span>
+              {groups(blind).map(([reason, plays]) => (
+                <li key={reason ?? ''}>
+                  <span className="tj-state"><b>{reason ?? 'Needs a check that counts steps'}</b></span>
+                  <span className="tj-names">{plays.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, reason ? undefined : 'setup')}>{p.title}</a></span>)}</span>
                 </li>
               ))}
             </ul>
