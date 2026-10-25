@@ -40,8 +40,9 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         })
         if (!alive) return
         stale = response.headers.get('X-Workspace-Stale') === '1'
-        // A fresh answer (200 or 304) ends the stale episode: the next one gets its quick retries again (root review of #180).
-        if (!stale) retries = 0
+        // A fresh answer, a 200 or 304 without the stale mark, ends the stale episode: the next one gets its quick retries again
+        // (root review of #180). An error answer is not fresh and leaves the budget as it is.
+        if (!stale && (response.ok || response.status === 304)) retries = 0
         if (response.status === 304) {
           setState((current) => (current.stale === stale ? current : { ...current, stale }))
           return
