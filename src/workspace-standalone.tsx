@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Workspace } from './Workspace.js'
+import { isLazyMode, type LazyMode } from './workspace/lazy-pages.js'
 
 /** Mounts on `<div id="agent-workspace" data-api data-mode="plays|play|report|run|overview|theatre|explore" data-id>` in a host shell. */
 function themeOf(element: HTMLElement): 'light' | 'dark' | 'auto' {
@@ -16,7 +17,7 @@ function themeOf(element: HTMLElement): 'light' | 'dark' | 'auto' {
 
 const element = document.getElementById('agent-workspace')
 if (element) {
-  const mode = element.dataset.mode === 'receipt' ? 'receipt' : element.dataset.mode === 'explore' ? 'explore' : element.dataset.mode === 'overview' ? 'today' : element.dataset.mode === 'today' ? 'today' : element.dataset.mode === 'theatre' ? 'theatre' : element.dataset.mode === 'plays' ? 'plays' : element.dataset.mode === 'play' ? 'play' : element.dataset.mode === 'report' ? 'play' : 'run'
+  const mode = element.dataset.mode === 'receipt' ? 'receipt' : element.dataset.mode === 'explore' ? 'explore' : element.dataset.mode === 'overview' ? 'today' : isLazyMode(element.dataset.mode ?? '') ? element.dataset.mode as LazyMode : element.dataset.mode === 'theatre' ? 'theatre' : element.dataset.mode === 'plays' ? 'plays' : element.dataset.mode === 'play' ? 'play' : element.dataset.mode === 'report' ? 'play' : 'run'
   createRoot(element).render(
     <StrictMode>
       <Workspace api={element.dataset.api ?? '/api/discovery'} mode={mode} id={element.dataset.id ?? ''} theme={themeOf(element)} />
