@@ -3858,7 +3858,7 @@
 .ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; }
 .ar-ws .wp-hosts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 .ar-ws .wp-host { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 16px; border-radius: 8px; background: var(--ar-surface); box-shadow: inset 0 0 0 1px var(--ar-line); }
-.ar-ws .wp-host[data-state="breach"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-fail, #ef4444) 50%, transparent); }
+.ar-ws .wp-host[data-up="no"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-warn, #f5a524) 50%, transparent); }
 .ar-ws .wp-host-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .ar-ws .wp-host-head b { font-size: 18px; font-weight: 600; }
 .ar-ws .wp-host-head > span:last-child { margin-left: auto; }
@@ -3903,7 +3903,6 @@
   .ar-ws .wp .tj-hero { font-size: 18px; }
 }
 .ar-ws .wp-over { grid-column: 1 / -1; font-size: 12px; color: var(--ar-c-fail, #ef4444); }
-.ar-ws .wp-host[data-state="warn"] .wp-over { color: var(--ar-c-warn, #f5a524); }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
 @media (max-width: 760px) {
   .ar-ws .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -3967,3 +3966,18 @@
 .ar-ws .wp-agents-meter .ov-meter-key { display: none; }
 .ar-ws .wp-groups .wp-idle { line-height: 20px; }
 .ar-ws .wp-group > summary { line-height: 20px; }
+/* charts' live.css sizes in em (11.2/12.6/13.3 px and 2-6 px gaps here); on these pages the 12/14 px scale and 4 px grid hold. */
+.ar-ws .wp .ov-hbar-label, .ar-ws .wp .ov-hbar-value { font-size: 14px; font-weight: 400; }
+.ar-ws .wp .ov-meter-key b { font-weight: 600; }
+.ar-ws .wp .ov-axis { font-size: 12px; }
+.ar-ws .wp .ov-empty { font-size: 14px; }
+.ar-ws .wp .ov-meter { gap: 4px; }
+.ar-ws .wp .ov-meter-key { margin: 4px 0 0; gap: 4px 16px; }
+.ar-ws .wp .ov-meter-key li { gap: 4px; }
+.ar-ws .wp .ov-hbars { gap: 4px 12px; }
+.ar-ws .wp .ov-hbars li > a, .ar-ws .wp .ov-hbars li > div { padding: 4px 8px; row-gap: 4px; }
+.ar-ws .wp .ov-hbars-more { padding: 0 8px; }
+.ar-ws .wp-foot { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 24px; font-size: 14px; }
+.ar-ws .wp-idea ol .wp-group > summary { font-weight: 600; }
+.ar-ws .wp-idea ol .wp-group p { margin: 4px 0 0; color: var(--ar-fg-muted); }
+.ar-ws .wp h2 .as-of { font-size: 12px; font-weight: 400; }
