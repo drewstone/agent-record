@@ -3757,7 +3757,8 @@
 .ar-ws .run-file-empty { padding: 24px; color: var(--text-secondary, var(--ar-fg-muted)); line-height: 1.65; }
 @media (max-width: 600px) {
   .ar-ws .run-file { min-height: 340px; }
-  .ar-ws .run-file-content { padding: 16px; }
+  .ar-ws .run-file-content { padding: 8px; }
+  .ar-ws .rj { gap: 24px; }
 }
 
 .ar-ws .run-file-proof details > span, .ar-ws .run-file-proof details > code { display: block; margin-top: 8px; }
