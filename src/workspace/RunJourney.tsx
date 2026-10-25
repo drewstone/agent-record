@@ -169,14 +169,6 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
   const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
-  const outcome = (n: Node) => {
-    if (crashed(n)) return 'crashed'
-    const commits = m.commits.get(n.id)
-    if (!commits) return n.id === m.root ? null : running(n) ? 'running' : 'nothing shipped'
-    const into = m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release)
-    // Short enough not to clip in the row (review 4 #2: 13 of 17 clipped); the harness is in the card.
-    return `${commits} ${commits === 1 ? 'commit' : 'commits'}${into.length ? ` → ${into.length > 2 ? `${into[0]}…${into.at(-1)}` : into.join(', ')}` : ''}`
-  }
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
@@ -186,8 +178,9 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.id === m.root ? 'lead' : n.role ?? n.label,
-        // Its outcome first (review 2 #2: the tooltip said only "1 commits"): shipped into which releases, crashed, or idle.
-        detail: outcome(n) ?? undefined,
+        // The lane label is name plus short model, four words at most (REVIEW-8 gate 1, as the reference frames); what it
+        // shipped is the outcome pill and the card's Releases and Commits cells.
+        detail: n.model?.split('/').pop() ?? undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running(n) ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
@@ -198,7 +191,6 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
           { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
           ...(n.harness ? [{ label: 'Harness', value: n.harness }] : []),
-          ...(n.model ? [{ label: 'Model', value: n.model.split('/').pop()! }] : []),
           ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
           ...(n.usage?.tokens != null ? [{ label: 'Tokens', value: tokens(n.usage.tokens) }] : []),
         ],
@@ -245,15 +237,17 @@ function runUsage(m: Model) {
 }
 
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
-function Stats({ m }: { m: Model }) {
-  const { listUsd, complete } = runUsage(m)
+function Stats({ m, receiptUsd }: { m: Model; receiptUsd: number | null }) {
+  // Without the run's stores (deleted with ~/.cache/disco on 10-25) the receipt's Runtime estimate, the figure /play prints.
+  const own = runUsage(m)
+  const { listUsd, complete } = own.listUsd != null ? own : { listUsd: receiptUsd, complete: true }
   // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
   // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
   const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
-    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, 'API-equivalent at list price; each agent\'s billed amount is in its card'] as [string, string, string]] : []),
+    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, own.listUsd != null ? 'API-equivalent at list price; each agent\'s billed amount is in its card' : "Runtime's estimate from the receipt, the figure /play prints; the run's per-call stores are gone"] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
     ['Crashed', String(m.nodes.filter(crashed).length)],
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
@@ -413,7 +407,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
-              <Stats m={m} />
+              <Stats m={m} receiptUsd={doc.run.spend?.apiEquivalentUsd ?? null} />
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
               <RunActivity doc={doc} />
             </section>
