@@ -3635,11 +3635,8 @@
 /* The diff renderer fills its parent's height, as it did in the old file pane. */
 .ar-ws .rj-diff { height: 60vh; min-height: 360px; overflow: auto; border-radius: 8px; }
 .ar-ws .rj-transcript > summary { cursor: pointer; font-size: 15px; font-weight: 600; }
-/* The transcript opens on the work: the harness's caller-declared resources prompt is boilerplate. */
-.ar-ws .rj-transcript .assignment-message:first-of-type { display: none; }
 .ar-ws .rj-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; }
-.ar-ws .rj-link { padding: 0; border: 0; background: none; color: var(--ar-c-action); cursor: pointer; font: inherit; }
-.ar-ws .rj-tree { height: 70vh; min-height: 420px; }
+.ar-ws .rj-work > .run-files-pane { height: 70vh; min-height: 420px; }
 /* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,
    conversations, outputs): its "Now" tab, "Why it stopped" and the Now section repeat the ladder and sentence above. */
 .ar-ws .ws-run:has(> .rj) > .run-why, .ar-ws .ws-run:has(> .rj) > .rr-page { display: none; }
@@ -3730,4 +3727,72 @@
   .ar-ws .pj-sentence { font-size: 15px; }
   .ar-ws .pj-hero { font-size: 26px; }
   .ar-ws .pj-hero small { font-size: 15px; }
+}
+
+/* The run's trigger on the landing (RunJourney Trigger): who asked whom what. */
+.ar-ws .rj-trigger { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 6px 0 0; font-size: 15px; max-width: 110ch; }
+.ar-ws .rj-trigger dt { color: var(--ar-fg-muted); font-size: 13px; padding-top: 2px; }
+.ar-ws .rj-trigger dd { margin: 0; }
+.ar-ws .rj-trigger q { font-style: normal; }
+
+/* Run files pane: code or retained artifacts (RunFilesPane, RunArtifacts, RetainedFile). */
+/* Composition only. Shared UI and Brand own file rendering, controls, type and color roles. */
+.ar-ws .run-artifacts-wrap { min-width: 0; }
+.ar-ws .run-file-selection { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; padding: 0 0 14px; }
+.ar-ws .run-file-selection label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .run-file-selection select { max-width: 100%; min-height: 36px; padding: 6px 10px; color: var(--ar-fg); background: var(--ar-bg); border: 1px solid var(--ar-border); border-radius: var(--ar-radius, 6px); font: inherit; }
+.ar-ws .run-file-notice { margin: 0 0 12px; padding: 12px 16px; border-left: 2px solid var(--ar-c-run); background: var(--ar-bg-alt); font-size: 13px; line-height: 1.6; }
+.ar-ws .run-file-provenance { display: inline-block; margin-top: 14px; font-size: 13px; }
+.ar-ws .run-file { min-width: 0; }
+.ar-ws .run-file { display: flex; flex-direction: column; min-height: 320px; }
+.ar-ws .run-file-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border-default, var(--ar-border)); }
+.ar-ws .run-file-header > div { flex: 1; min-width: 0; }
+.ar-ws .run-file-header h3 { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.ar-ws .run-file-path { margin: 5px 0 0; font: 12px/1.5 var(--ar-font-mono); color: var(--text-muted, var(--ar-fg-muted)); overflow-wrap: anywhere; }
+.ar-ws .run-file-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border-default, var(--ar-border)); font-size: 12px; }
+.ar-ws .run-file-modes { display: flex; gap: 4px; }
+.ar-ws .run-file-modes button { padding: 5px 9px; border: 0; background: transparent; color: var(--text-muted, var(--ar-fg-muted)); font: inherit; cursor: pointer; }
+.ar-ws .run-file-modes button[aria-pressed=true] { background: var(--accent-surface-soft, var(--ar-bg-alt)); color: var(--accent-text, var(--ar-c-action)); }
+.ar-ws .run-file-content { flex: 1; min-width: 0; padding: 20px; line-height: 1.65; background: var(--bg-base, var(--ar-bg)); }
+.ar-ws .run-file-content > [role] { margin: 0; }
+.ar-ws .run-file-content :where(pre, table, img, video) { max-width: 100%; }
+.ar-ws .run-file-content pre { overflow: auto; }
+.ar-ws .run-file-proof { display: flex; flex-direction: column; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--border-default, var(--ar-border)); color: var(--text-muted, var(--ar-fg-muted)); font-size: 11px; }
+.ar-ws .run-file-proof code { font-size: 11px; overflow-wrap: anywhere; }
+.ar-ws .run-file-versions { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px; font-size: 12px; }
+.ar-ws .run-file-empty { padding: 24px; color: var(--text-secondary, var(--ar-fg-muted)); line-height: 1.65; }
+@media (max-width: 600px) {
+  .ar-ws .run-file { min-height: 340px; }
+  .ar-ws .run-file-content { padding: 16px; }
+}
+
+.ar-ws .run-file-proof details > span, .ar-ws .run-file-proof details > code { display: block; margin-top: 8px; }
+.ar-ws .run-file-proof summary { cursor: pointer; }
+.ar-ws .run-file-modes button:disabled { opacity: .5; cursor: default; }
+
+@media (max-width: 600px) {
+  .ar-ws .run-file-selection label { max-width: 100%; width: 100%; }
+  .ar-ws .run-file-selection select { font-size: 16px; }
+}
+
+/* The shared DiffView fills its box: give the diff view a real height (the editor is 0 px without one). */
+.ar-ws .run-file-content[data-file-view=diff] { height: min(65svh, 700px); min-height: 320px; padding: 0; overflow: auto; }
+@media (max-width: 600px) {
+  .ar-ws .run-file-selection select, .ar-ws .run-file-modes button { min-height: 44px; }
+  .ar-ws .run-file-versions select { min-height: 44px; max-width: 100%; font-size: 16px; }
+}
+
+.ar-ws .run-files-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.ar-ws .run-file-sources { flex: none; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .run-files-pane > .run-artifacts-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; padding: 12px; }
+.ar-ws .run-file-browser { flex: 1; min-height: 320px; height: 100%; }
+.ar-ws .run-file-scope { flex: none; padding: 10px 0; font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .run-file-selection { flex: none; }
+.ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection { gap: 10px; }
+.ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection label { flex: 1; min-width: 0; }
+@media (max-width: 600px) { .ar-ws .run-file-sources button { min-height: 44px; } }
+
+.ar-ws .rj-one { margin: 0; font-size: 15px; }
+.ar-ws .rj-work { display: grid; gap: 10px; }
+
 }

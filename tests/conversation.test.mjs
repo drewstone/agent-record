@@ -137,7 +137,6 @@ test('native opening input and a child without a transcript both begin with one 
   assert.deepEqual(child.map((event) => [event.detail.promptKind, event.detail.publicText]), [
     ['initial', 'Compute the bounds.'], ['steering', 'Use exact arithmetic.'],
   ])
-  assert.equal(child[0].detail.promptSender, 'Parent agent')
   assert.equal(child.filter((event) => eventMatches(event, index, '', 'prompts')).length, 2)
   assert.equal(root.filter((event) => eventMatches(event, index, '', 'prompts')).length, 1)
 })

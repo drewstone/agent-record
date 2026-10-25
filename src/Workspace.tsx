@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordEvent, RecordGap } from './record.js'
@@ -32,10 +32,9 @@ import type { RecordIndex } from './viewer/model.js'
 import { advancePlayback } from './viewer/playback.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when, writeSearch } from './workspace/data.js'
+import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
-import { OutputsView } from './workspace/Outputs.js'
 import { ReliabilityPanel } from './workspace/Reliability.js'
 import { Searches } from './workspace/SearchView.js'
 import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/plays-filter.js'
@@ -49,7 +48,9 @@ import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
 import { AgentConversation, useRecordPart } from './workspace/record-part.js'
-import { LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
+import { readSource } from './workspace/source-reader.js'
+import { artifactNavigation, useSearch } from './workspace/navigation.js'
+import { LazyOutputsView, LazyRunWorkspace, LazyTodayPage } from './workspace/lazy-pages.js'
 import { newestAgent } from './workspace/run-answers.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
 import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
@@ -75,20 +76,6 @@ export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
       {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : mode === 'today' ? <Suspense fallback={null}><LazyTodayPage api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
     </div>
   )
-}
-
-function useSearch() {
-  const [search, setSearch] = useState(() => window.location.search)
-  useEffect(() => {
-    const changed = () => setSearch(window.location.search)
-    window.addEventListener('popstate', changed)
-    return () => window.removeEventListener('popstate', changed)
-  }, [])
-  const update = useCallback((patch: Record<string, string | undefined | null>, replace = false) => {
-    writeSearch(patch, replace)
-    setSearch(window.location.search)
-  }, [])
-  return [useMemo(() => new URLSearchParams(search), [search]), update] as const
 }
 
 function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs: readonly (readonly [T, string])[]; value: T; onChange: (tab: T) => void; label: string }) {
@@ -855,7 +842,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       )}
       {section === 'outputs' && (
         <section className="run-panel" aria-label="Outputs" data-drawer="outputs">
-          <OutputsView doc={doc} grading={grading} selected={params.get('file')} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} />
+          <Suspense fallback={null}><LazyOutputsView doc={doc} grading={grading} selected={params.get('file')} navigation={artifactNavigation(params, update)} onSelect={(file) => update({ section: 'outputs', file: file ?? undefined })} onClose={() => open('findings')} /></Suspense>
         </section>
       )}
       {section === 'input' && (
@@ -1060,14 +1047,7 @@ function RunBody({
     if (source) setDetail({ event })
     select({ node: index.canonical(event.node), event: event.id, ...(ms(event.at) > cutoff ? { t: undefined } : {}) })
   }
-  const loadSource = useCallback(
-    async (sha: string) => {
-      const response = await fetch(`${api}/runs/${encodeURIComponent(runId)}/source/${sha}`, { credentials: 'same-origin' })
-      if (!response.ok) throw new Error(response.status === 409 ? 'The source no longer matches its recorded hash.' : `Source unavailable (HTTP ${response.status})`)
-      return response.text()
-    },
-    [api, runId],
-  )
+  const loadSource = useMemo(() => readSource(`${api}/runs/${encodeURIComponent(runId)}`), [api, runId])
   const showTooltip: ShowTooltip = (target, title, lines) => {
     const box = target.currentTarget.getBoundingClientRect()
     const x = Math.max(8, Math.min(box.left + box.width / 2, window.innerWidth - 361))

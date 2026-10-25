@@ -1,4 +1,3 @@
-import { DiffView } from '@tangle-network/sandbox-ui/workbench'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp } from './AnswerStrip.js'
@@ -7,6 +6,8 @@ import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
 import { plainSummary, sinceLabel } from './plain-words.js'
+import { RefDiff } from './ref-file.js'
+import { RunFilesPane } from './RunFilesPane.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
@@ -34,7 +35,9 @@ function useJourney(api: string, doc: RunDocument) {
     const data = ws.data
     if (!data) return null
     const nodes = data.nodes as Node[]
-    const releases = (data.releases as Release[]).filter((r) => r.taggedAt)
+    // A release checked but never tagged still counts (its check time stands in): dropping it printed "No release was
+    // checked" over a release that passed (root 10478 23:12Z, test-disposable-smoke rc2).
+    const releases = (data.releases as Release[]).map((r) => ({ ...r, taggedAt: r.taggedAt ?? r.at ?? null })).filter((r) => r.taggedAt)
     const t0 = Math.min(...nodes.map((n) => ms(n.start)).filter(Number.isFinite))
     const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)))
     const best = releases.find((r) => r.release === data.best) ?? releases.at(-1) ?? null
@@ -44,7 +47,8 @@ function useJourney(api: string, doc: RunDocument) {
     const plateau = best ? releases.find((r) => r.passed === best.passed) ?? best : null
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
-    return { data, nodes, releases, t0, t1, best, commits, root, plateau, open, same }
+    const attributed = releases.some((r) => Object.keys(r.by ?? {}).length > 0)
+    return { data, nodes, releases, t0, t1, best, commits, root, plateau, open, same, attributed }
   }, [ws.data, doc.run.id])
   return { runUrl, model, error: ws.error }
 }
@@ -105,6 +109,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
       )}
       <p className="rj-stuck">
         {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under check {m.best.checker ?? 'an earlier version'}, an earlier check; the current check has not run on it.</span>}
       </p>
       {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       <p className="rj-releases">
@@ -176,6 +181,41 @@ function Full({ short, raw }: { short: string; raw: string }) {
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
+/** The agent as recorded: role, harness and model; a value the record lacks is left out, never guessed. */
+const who = (node: Node) => [node.role ?? node.label, node.harness, node.model].filter(Boolean).join(' · ')
+
+/**
+ * The agent's place in the run: the agent that spawned it (the workspace's spawn edge), or, for the root, the play press
+ * that submitted the run (run-input.json). A spawn is a relationship, not proof of who sent a message: each message's own
+ * sender shows on it in the conversation (promptSenderNodeId or coordination.fromNode, else "Sender not captured").
+ */
+function spawnedBy(m: Model, node: Node) {
+  const edge = m.data.edges.find((e) => e.kind === 'spawn' && e.to === node.id)
+  const parent = edge ? m.nodes.find((n) => n.id === edge.from) : null
+  if (parent) return `${parent.role ?? parent.label} (${parent.label})`
+  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not recorded'
+}
+
+/**
+ * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input is submission provenance: the
+ * prompt the root was given and the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
+ */
+function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
+  const input = doc.input
+  const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
+  if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
+  const source = input.source?.path?.split('/').pop()
+  return (
+    <dl className="rj-trigger">
+      <dt>Submitted</dt>
+      <dd>The play press for {doc.run.play} submitted this run to the {root ? who(root) : 'root agent'}, with the prompt {input.instruction ? <q>{input.instruction}</q> : <span className="rj-muted">(not recorded)</span>}</dd>
+      <dt>Goal</dt>
+      <dd>{input.objective ? <Full short={plainSummary(input.objective, 24)} raw={input.objective} /> : <span className="rj-muted">not recorded</span>}
+        {source && <span className="rj-muted" title={input.source?.sha256 ?? undefined}> · from {source}</span>}</dd>
+    </dl>
+  )
+}
+
 function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Model; node: Node; transcript: (node: string, select: (node: string) => void) => ReactNode; onPick: (id: string) => void }) {
   const landed = m.releases.filter((r) => r.files?.[node.id]?.length)
   const changes = new Map<string, Release>()
@@ -187,21 +227,13 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
   useEffect(() => setFile(null), [node.id])
   const release = file ? changes.get(file)! : null
   const prev = release ? m.releases[m.releases.indexOf(release) - 1]?.release ?? null : null
-  // Both sides of the picked file, as the file pane reads them; a side the release lacks is empty (an added or deleted file).
-  const [texts, setTexts] = useState<{ path: string; base: string; head: string } | { path: string; error: string } | null>(null)
-  useEffect(() => {
-    setTexts(null)
-    if (!file || !release) return
-    const controller = new AbortController()
-    const read = (ref: string | null) => (ref ? fetch(`${runUrl}/blob?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(file)}`, { signal: controller.signal }).then((r) => (r.ok ? r.text() : r.status === 404 ? '' : Promise.reject(new Error(`HTTP ${r.status}`)))) : Promise.resolve(''))
-    Promise.all([read(prev), read(release.release)]).then(([base, head]) => setTexts({ path: file, base, head }), (error: Error) => controller.signal.aborted || setTexts({ path: file, error: error.message }))
-    return () => controller.abort()
-  }, [runUrl, file, release, prev])
   const role = node.id === m.root ? 'lead' : node.role ?? node.label
   return (
     <section className="rj-drill" aria-label={`${role}: what it did`}>
       <h2>{role}</h2>
       <dl className="rj-summary">
+        <dt>Who</dt><dd>{who(node)}</dd>
+        <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
         <dt>Task</dt><dd>{node.assignment ? <Full short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{crashed(node) ? 'Crashed. ' : ''}{node.turn ? <Full short={plainSummary(node.turn)} raw={node.turn} /> : 'no last words recorded'}</dd>
         <dt>Changed</dt><dd>{paths.length ? `${code.length} code ${code.length === 1 ? 'file' : 'files'}${artefacts.length ? `, ${artefacts.length} logs and outputs` : ''}, in ${landed.map((r) => r.release).join(', ')}` : 'nothing that landed in a release'}</dd>
@@ -211,7 +243,7 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
           <h3>What changed</h3>
           <ul>{code.map((p) => <li key={p}><button type="button" aria-pressed={file === p} onClick={() => setFile(file === p ? null : p)} className="mono">{p}</button><span className="rj-muted"> {changes.get(p)!.release}</span></li>)}</ul>
           {artefacts.length > 0 && <details><summary>{artefacts.length} logs and outputs</summary><ul>{artefacts.map((p) => <li key={p}><button type="button" onClick={() => setFile(p)} className="mono">{p}</button></li>)}</ul></details>}
-          {file && (texts?.path === file && 'base' in texts ? <div className="rj-diff"><DiffView filename={file} baseline={texts.base} current={texts.head} defaultWrap /></div> : <p className="rj-muted">{texts?.path === file && 'error' in texts ? `This file does not read: ${texts.error}` : `Reading ${file}…`}</p>)}
+          {file && release && <RefDiff key={`${release.release}:${file}`} runUrl={runUrl} base={prev} head={release.release} path={file} />}
         </div>
       )}
       <details className="rj-transcript">
@@ -224,9 +256,19 @@ function Drill({ runUrl, m, node, transcript, onPick }: { runUrl: string; m: Mod
 
 export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode; phone: boolean }) {
   const { runUrl, model: m, error } = useJourney(api, doc)
-  const [picked, setPicked] = useState<string | null>(null)
-  const [tree, setTree] = useState(false)
+  const [chosen, setPicked] = useState<string | null>(null)
+  // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
+  const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
   const view = doc.view
+  const single = m?.nodes.length === 1
+  // The work: one files pane for the best release's code or the retained artifacts (the answer opens first).
+  const work = m && (
+    <section className="rj-work" aria-label="The work">
+      <RunFilesPane api={api} doc={doc}
+        codeUnavailable={!m.data.code.available ? (m.data.code.reason ?? 'not available on this host') : !m.best ? 'no release was checked, so there is no release code to show' : null}
+        code={m.best && <CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} />} />
+    </section>
+  )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
   const receipt = doc.receipt
   return (
@@ -239,20 +281,24 @@ export function RunJourney({ api, doc, transcript, phone }: { api: string; doc: 
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
         {m && <p className="rj-sentence">{view?.status.label ?? 'Ended'} after {hours(m.t0, m.t1).toFixed(1)} h{m.best ? `; best ${m.best.release} passes ${m.best.passed} of ${m.best.total} steps` : ''}.</p>}
+        {m && <Trigger doc={doc} m={m} />}
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
           <Ladder doc={doc} m={m} />
-          <section aria-label="What the agents did">
-            <h2 className="rj-label">What the agents did · {m.nodes.length} {m.nodes.length === 1 ? 'agent' : 'agents'}, {[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work · select one</h2>
-            <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
-          </section>
+          {single ? (
+            // One agent: its identity in a line, and the work itself gets the room a one-lane timeline would waste.
+            <p className="rj-one"><span className="rj-muted">1 agent ·</span> {who(m.nodes[0]!)} · {m.nodes[0]!.status}</p>
+          ) : (
+            <section aria-label="What the agents did">
+              <h2 className="rj-label">What the agents did · {m.nodes.length} agents{m.attributed ? `, ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''} · select one</h2>
+              <Lanes m={m} phone={phone} picked={picked} onPick={setPicked} />
+            </section>
+          )}
+          {single && work}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
-          <footer className="rj-foot">
-            {m.best && m.data.code.available && <button type="button" className="rj-link" onClick={() => setTree(!tree)}>{tree ? 'Hide' : 'Browse'} every file in {m.best.release}</button>}
-            {receipt && <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt{/^rc\d+$/.test(receipt.tag) ? ` (${receipt.tag})` : ''}</a>}
-          </footer>
-          {tree && m.best && <div className="rj-tree"><CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} /></div>}
+          {!single && work}
+          {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>Published receipt{/^rc\d+$/.test(receipt.tag) ? ` (${receipt.tag})` : ''}</a></footer>}
         </>
       )}
     </section>

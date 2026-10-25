@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import type { PlayDocument, ProfileGraphDocument, ProfileNode, RunDocument } from '../workspace-model.js'
 import { ValueControls, ValueScope } from './CollapsibleValue.js'
 import { duration, money, StatusPill, statusOf, useDocument, when } from './data.js'
 import { authoredTree, changeSummary, compareProfiles, judgeShort, judgesOf, sameNamed } from './profile-compare.js'
 import type { Comparison, Version } from './profile-compare.js'
-import { OutputChanges } from './Outputs.js'
+import { LazyOutputChanges } from './lazy-pages.js'
 import { GradeControl, ScoresTable } from './Scores.js'
 import { headlineScore, latestNumericGrade, scoreRows } from './scores-model.js'
 import { ComparisonView, ProfileDetail } from './ProfileVersions.js'
@@ -242,13 +242,15 @@ function VersionInspector({ api, play, version }: { api: string; play: PlayDocum
       <section data-inspector-outputs>
         <h3>{version.previous ? `What the output changed from ${shortRun(play.id, version.previous.run.id)}` : 'What the output changed'}</h3>
         {version.previous ? (
-          <OutputChanges
-            api={api}
-            beforeRunId={version.previous.run.id}
-            after={doc.data?.run.id === run.id ? doc.data : null}
-            beforeLabel={shortRun(play.id, version.previous.run.id)}
-            afterLabel={shortRun(play.id, run.id)}
-          />
+          <Suspense fallback={<p className="faint">Loading the output changes…</p>}>
+            <LazyOutputChanges
+              api={api}
+              beforeRunId={version.previous.run.id}
+              after={doc.data?.run.id === run.id ? doc.data : null}
+              beforeLabel={shortRun(play.id, version.previous.run.id)}
+              afterLabel={shortRun(play.id, run.id)}
+            />
+          </Suspense>
         ) : (
           <p className="faint">The first version of this play on this host: nothing to compare.</p>
         )}
