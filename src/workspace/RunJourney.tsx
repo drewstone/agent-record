@@ -2,12 +2,12 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
-import { AsOfStamp } from './AnswerStrip.js'
+import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { viewAsOf, viewChip } from './view.js'
-import { goalText, plainSummary } from './plain-words.js'
+import { goalText, plainSummary, stepWord } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
 import { useSearch } from './navigation.js'
@@ -122,7 +122,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       {/* One line, like the play page's strip (review 2 #10: six 100 px tiles above the timeline). */}
       {m.best?.steps && m.best.steps.length > 1 && (
         <ol className="pj-strip" aria-label={`Steps ${m.best.release} passed`}>
-          {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><i />{s.label}</li>)}
+          {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><Tip text={`Step ${i + 1} of ${m.best!.steps!.length}, ${s.label}: ${stepWord(s.state)} on ${m.best!.release}`}><i />{s.label}</Tip></li>)}
         </ol>
       )}
       <p className="rj-stuck">
@@ -146,7 +146,11 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
-          : m.releases.map((r) => <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>)}
+          // A release with no tag recorded has no name the code reader resolves (21c rc116 opened a 404 pane): a label, not a
+          // button. Its tooltip says what was recorded; whether its commit's code was kept is not known (root review of #179).
+          : m.releases.map((r) => r.tagged
+            ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
+            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.sentence ?? r.release}. No release tag recorded. Recorded commit: ${r.commit ?? 'none'}.`}>{r.release} {r.passed}/{r.total}</Tip>)}
       </p>}
     </section>
   )
@@ -240,8 +244,9 @@ function runUsage(m: Model) {
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
 function Stats({ m }: { m: Model }) {
   const { listUsd, complete } = runUsage(m)
-  // Every agent that shipped, the lead included, as the timeline's legend counts them (22a read 1 here and 2 there).
-  const shipped = m.commits.size
+  // As the timeline's legend counts them: every agent that shipped, the lead included, and a crash counts as Crashed even
+  // when it shipped first (REVIEW-6 #2: 21c read Shipped 14 + Crashed 2 + 2 others for 17 agents).
+  const shipped = m.nodes.filter((n) => m.commits.get(n.id) && !crashed(n)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
@@ -298,16 +303,25 @@ function spawnedBy(m: Model, node: Node) {
  * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input is submission provenance: the
  * prompt the root was given and the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
  */
+/** A text's first sentence, whole; a run-on longer than 40 words is cut to 30. */
+const firstSentence = (text: string) => {
+  const first = text.split(/(?<=[.!?])\s+/)[0] ?? text
+  return first.split(/\s+/).length <= 40 ? first : plainSummary(first, 30)
+}
+
 function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const input = doc.input
   const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
   if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
   const source = input.source?.path?.split('/').pop()
   return (
-    <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
-      <p>{root ? who(root) : 'root agent'}</p>
+    <div className="rj-trigger">
+      {/* The goal's whole first sentence: a 14-word cut ended at "retain the…" and dropped the teardown this smoke is about
+          (root 2026-10-25 15:44Z). */}
+      {input.objective && <p><Full what="goal" short={firstSentence(goalText(input.objective))} raw={goalText(input.objective)} /></p>}
+      {/* Who ran it is not who started it (root 2026-10-25): the input records no initiator, only the press's source file. */}
+      <p className="rj-muted">Run by {root ? who(root) : 'the root agent'} · <span title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>started by: not recorded</span></p>
       {input.instruction && <Prompt text={input.instruction} />}
-      {input.objective && <p><Full what="goal" short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )
 }
@@ -400,10 +414,12 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
-          {/* The agent and what it was asked come before its files: an 11-byte answer filled the first screen and pushed
-              the agent and its transcript below the fold (root 2026-10-25, 1072 px window). */}
+          {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
+              answer sits in a phone's first screen (root 2026-10-25 15:44Z: ANSWER at 761 px of 844, under a collapsed
+              Transcript). With many agents the picked agent leads, then its files. */}
+          {single && work}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
-          {work}
+          {!single && work}
           {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></footer>}
         </>
       )}
