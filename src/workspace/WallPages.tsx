@@ -280,17 +280,14 @@ const claim = (text: string): [string, string] => {
   return title.length < text.length ? [`${title}…`, text] : [text, '']
 }
 
-/** An idea: its title, where it goes and since when, the summary's first sentence (the rest opens), each problem as a
- * titled line that opens to its statement, and the link to decide it. */
+/** An idea: its title, where it goes and since when, its summary behind one line, each problem as a titled line that
+ * opens to its statement, and the link to decide it. */
 function IdeaDetail({ idea, decideUrl }: { idea: Idea; decideUrl: string | null }) {
-  const first = idea.summary.match(/^.*?[.!?](\s|$)/)?.[0]?.trim() ?? idea.summary
-  const rest = idea.summary.slice(first.length).trim()
   return (
     <article className="wp-idea">
       <h2>#{idea.id} {idea.title}</h2>
       <p className="wp-muted">{idea.destination} · {idea.stage}{idea.created ? ` · ${age(idea.created)} ago` : ''}</p>
-      <p>{first}</p>
-      {rest && <details className="wp-group"><summary>More</summary><p>{rest}</p></details>}
+      <details className="wp-group"><summary>Summary</summary><p>{idea.summary}</p></details>
       {idea.problemStatements.length > 0 && (
         <ol>
           {idea.problemStatements.map((statement) => {
@@ -331,8 +328,8 @@ function IdeasView({ doc }: { doc: IdeasDoc }) {
         <HBars limit={counted.length} max={max} format={(v) => String(v)} rows={counted.map((s) => ({ label: s.stage, value: s.count!, note: s.of !== null ? `of ${s.of} approved for Discovery` : undefined }))} />
         {counted.length < doc.stages.length && <p className="wp-muted wp-line">Not reported: {doc.stages.filter((s) => s.count === null).map((s) => s.stage).join(', ')}</p>}
       </section>
-      <section aria-label="Decided">
-        <h2>Decided</h2>
+      <details className="wp-group" aria-label="Decided" open={decided.some((r) => r.id === picked)}>
+        <summary>{decided.length} decided</summary>
         <ul className="wp-rows wp-ideas">
           {decided.map((r) => (
             <li key={r.id} aria-current={r.id === picked || undefined}>
@@ -344,7 +341,7 @@ function IdeasView({ doc }: { doc: IdeasDoc }) {
             </li>
           ))}
         </ul>
-      </section>
+      </details>
     </>
   )
 }
