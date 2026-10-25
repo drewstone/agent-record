@@ -29,7 +29,7 @@ test('retained Discovery capture reaches the shared waterfall without cumulative
   assert.match(html, /aria-label="Playback speed"/)
   for (const speed of ['0.5', '1', '1.5', '2', '4']) assert.match(html, new RegExp(`<option value="${speed}"[^>]*>${speed}x</option>`))
   assert.match(html, />Collapse all</)
-  assert.match(html, /Slowest step:/)
+  assert.match(html, /data-slowest="true"/)
 })
 
 test('existing OTLP public adapter preserves nested span identities and exact measured intervals in the shared renderer', async () => {
