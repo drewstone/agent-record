@@ -283,8 +283,8 @@ function Full({ short, raw, what }: { short: string; raw: string; what: string }
  * The opening prompt as its own labelled disclosure: a "full" after the agent line read as dead (review 4 #11), and a lone
  * "prompt" after it as a stray word (REVIEW-5 #15).
  */
-function Prompt({ text }: { text: string }) {
-  return <details className="rj-prompt"><summary>Opening prompt</summary><p className="rj-full-text">{text}</p></details>
+function Prompt({ text, provenance }: { text: string; provenance: ReactNode }) {
+  return <details className="rj-prompt"><summary>Opening prompt</summary><p className="rj-full-text">{text}</p><p className="rj-muted">{provenance}</p></details>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -312,12 +312,6 @@ function spawnedBy(m: Model, node: Node) {
  * Who asked whom what, on the landing (root 10478, 23:10Z): the run's recorded input is submission provenance: the
  * prompt the root was given and the goal it carries, with the file and hash it came from; a value the input lacks is said to be missing, never filled.
  */
-/** A text's first sentence, whole; a run-on longer than 40 words is cut to 30. */
-const firstSentence = (text: string) => {
-  const first = text.split(/(?<=[.!?])\s+/)[0] ?? text
-  return first.split(/\s+/).length <= 40 ? first : plainSummary(first, 30)
-}
-
 function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const input = doc.input
   const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
@@ -325,12 +319,11 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const source = input.source?.path?.split('/').pop()
   return (
     <div className="rj-trigger">
-      {/* The goal's whole first sentence: a 14-word cut ended at "retain the…" and dropped the teardown this smoke is about
-          (root 2026-10-25 15:44Z). */}
-      {input.objective && <p><Full what="goal" short={firstSentence(goalText(input.objective))} raw={goalText(input.objective)} /></p>}
+      {/* What was asked, in the first view beside the status (root 2026-10-25 20:3xZ), short enough for Drew's compact header;
+          the whole goal is one "full" away and the cleanup outcome is the header's teardown pill. */}
+      {input.objective && <p><Full what="goal" short={plainSummary(goalText(input.objective), 16)} raw={goalText(input.objective)} /></p>}
       {/* Who ran it is not who started it (root 2026-10-25): the input records no initiator, only the press's source file. */}
-      <p className="rj-muted">Run by {root ? who(root) : 'the root agent'} · <span title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>started by: not recorded</span></p>
-      {input.instruction && <Prompt text={input.instruction} />}
+      {input.instruction && <Prompt text={input.instruction} provenance={<>Role user · run by {root ? who(root) : 'the root agent'} · sent by: not recorded (the play press{source ? `, ${source}${input.source?.sha256 ? ` sha256 ${input.source.sha256.slice(0, 12)}` : ''}` : ''})</>} />}
     </div>
   )
 }
@@ -415,12 +408,12 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
         <Stats m={m} />
         {view && <AsOfStamp asOf={viewAsOf(view)} />}
       </header>
+      <Trigger doc={doc} m={m} />
       <Lanes m={m} live={Boolean(doc.execution?.alive)} runUrl={runUrl} files={files} selected={selected} onSelect={setSelected} onTime={setCursor} />
       {/* Everything else, one collapsed disclosure (lead 2026-10-25 gate 4): what started it, the steps, the releases, the
           selected agent's record and the receipt. */}
       <details className="rj-details">
         <summary>Details</summary>
-        <Trigger doc={doc} m={m} />
         <Ladder doc={doc} m={m} onRelease={(release) => { setChip(release); setSelected(undefined) }} />
         {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={(id) => setSelected(id)} />}
         {receipt && <p className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Last published receipt: ${receipt.tag}` : 'Published receipt'}</a></p>}
