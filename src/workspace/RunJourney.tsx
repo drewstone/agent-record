@@ -126,17 +126,16 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       <p className="rj-stuck">
         {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : lifecycle && lifecycle.state !== 'done' ? 'every check step passes; the requested teardown is not confirmed' : 'every step passes'}</> : 'No release was checked.'}
-        {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
+        {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
+            teardown; this line says only what the release reached. */}
+        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
       {lifecycle && lifecycle.state !== 'done' && (
         <p className="rj-life-line">
-          {lifecycle.sentence}{' '}
-          {/* The receipt's own records, so the reader sees what is known and what is not (root 2026-10-25 08:42Z). */}
-          <span className="rj-muted">
-            {lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ')}
-            {lifecycle.source ? ` · from RECEIPT.json (${lifecycle.source})` : ' · from RECEIPT.json'}
-          </span>
+          {/* The header pill names it; the line gives the counts, and the receipt's own records stay one toggle away
+              (root 2026-10-25 08:42Z: resource ids and source reachable). */}
+          <Full short={lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, '').replace(/^./, (c) => c.toUpperCase())}
+            raw={`${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`} />
         </p>
       )}
       {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
@@ -250,7 +249,7 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   return (
     <div className="rj-trigger" title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>
       <p>{root ? (input.instruction ? <Full short={who(root)} raw={input.instruction} /> : who(root)) : 'root agent'}</p>
-      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 24)} raw={goalText(input.objective)} /></p>}
+      {input.objective && <p><Full short={plainSummary(goalText(input.objective), 14)} raw={goalText(input.objective)} /></p>}
     </div>
   )
 }

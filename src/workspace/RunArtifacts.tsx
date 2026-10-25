@@ -67,10 +67,10 @@ export function RunArtifacts({ api, doc, selected, onSelect, navigation, theme, 
         : <div className="run-file-empty" role={selected ? 'alert' : undefined}><h3>{!inventory && !error ? 'Loading the retained work…' : selected ? 'This file is not in the retained inventory' : 'No artifact to preview'}</h3>{(inventory || error) && <p>{selected ?? 'No file content is available from this inventory.'}</p>}</div>
   return <section className="run-artifacts-wrap" aria-label="Files and artifacts" data-run-artifacts data-embedded={embedded || undefined}>
     {/* Versions fold into one control until one is chosen: the file itself takes the first screen. */}
-    <details className="run-file-selection" open={Boolean(nav.version || nav.compare) || undefined}><summary>Versions</summary>
+    {(versions.length > 1 || nav.version || nav.compare) && <details className="run-file-selection" open={Boolean(nav.version || nav.compare) || undefined}><summary>Versions</summary>
       <label>Version <select value={nav.version ?? ''} onChange={(event) => nav.onVersion(event.target.value || null)}><option value="">Current retained files</option>{unknownVersion && <option value={nav.version!}>Requested version · {nav.version!.slice(0, 8)}</option>}{versions.map((item) => <option key={item.commit} value={item.commit}>{item.label} · {item.commit.slice(0, 8)}</option>)}</select></label>
       <label>Compare with <select value={nav.compare ?? ''} onChange={(event) => { nav.onCompare(event.target.value || null); if (event.target.value) nav.onView('diff') }}><option value="">Choose a recorded version</option>{unknownCompare && <option value={nav.compare!}>Requested version · {nav.compare!.slice(0, 8)}</option>}{versions.map((item) => <option key={item.commit} value={item.commit}>{item.label} · {item.commit.slice(0, 8)}</option>)}</select></label>
-    </details>
+    </details>}
     {error && <p className="run-file-notice" role="alert">Files are unavailable: {error}</p>}
     {inventory?.reason && <p className="run-file-notice" role="status">{inventory.reason}</p>}
     {currentView.data?.history.complete === false && <p className="run-file-notice">The retained version list is incomplete.{typeof currentView.data.history.omittedVersions === 'number' ? ` ${currentView.data.history.omittedVersions} additional versions are omitted.` : ' The number of omitted versions is unknown.'}</p>}
