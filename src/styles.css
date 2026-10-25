@@ -2291,13 +2291,21 @@
   .ar-ws .output-image-pair { grid-template-columns: 1fr; }
 }
 /* ---- The plays page's Runs tab: failure causes still happening. */
-.ar-ws .reliability { display: grid; gap: 12px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
-.ar-ws .reliability > p { margin: 0; }
-.ar-ws .reliability-causes { display: grid; gap: 4px; min-width: 0; }
-.ar-ws .reliability-causes ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
-.ar-ws .reliability-causes li { display: grid; gap: 1px; }
-.ar-ws .reliability-causes li .faint { font-size: var(--ar-text-s); }
-.ar-ws .reliability-definition { margin: 0; font-size: var(--ar-text-s); }
+.ar-ws .reliability { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 32px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
+.ar-ws .reliability-days, .ar-ws .reliability-causes { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.ar-ws .reliability-days > p, .ar-ws .reliability-causes > p { margin: 0; }
+.ar-ws .reliability-rate { font: 600 var(--ar-text-l)/1.2 var(--ar-font-body); }
+.ar-ws .reliability-causes .ov-hbars { gap: 4px 12px; }
+.ar-ws .reliability-causes .ov-hbars li > div { padding: 4px 0; }
+.ar-ws .reliability-causes .ov-hbar-label, .ar-ws .reliability-causes .ov-hbar-value { font-size: var(--ar-text-s); }
+.ar-ws .reliability-causes .ov-hbar-note, .ar-ws .reliability .ov-axis { font-size: 12px; }
+.ar-ws .runs-table caption { caption-side: top; text-align: left; padding: 0 0 8px; }
+@media (max-width: 1100px) { .ar-ws .reliability { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  .ar-ws .reliability { padding: 12px; }
+  .ar-ws .reliability-causes .ov-hbars { grid-template-columns: minmax(0, 1fr) max-content; }
+  .ar-ws .reliability-causes .ov-hbar-label { grid-column: 1 / -1; white-space: normal; }
+}
 .ar-ws .nowrap { white-space: nowrap; }
 /* ---- Scores side by side, a writer's grade, and the readout's charts. */
 .ar-ws .scores-table { font-variant-numeric: tabular-nums; }

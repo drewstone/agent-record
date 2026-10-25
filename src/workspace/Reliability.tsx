@@ -1,9 +1,10 @@
-import { useDocument, when } from './data.js'
+import { DayBars, HBars } from '@tangle-network/charts/react'
+import { useDocument } from './data.js'
 import { LIVE_HOURS, liveCauses, percent, type ReliabilityDocument } from './reliability-model.js'
 
 /**
- * The run failure causes still happening, on the plays page's Runs tab, each with its owner; the clean-run share and its
- * daily chart live on Today.
+ * Is the fleet getting more reliable, and what still kills runs: the clean-run share and its days as bars beside the
+ * failure causes seen in the last LIVE_HOURS, each with its owner (plays page, Runs tab).
  */
 export function ReliabilityPanel({ api }: { api: string }) {
   const doc = useDocument<ReliabilityDocument>(`${api}/reliability`)
@@ -18,32 +19,25 @@ export function ReliabilityPanel({ api }: { api: string }) {
   const live = liveCauses(data)
   const runs = data.runs
   return (
-    <section className="reliability" aria-label="Failure causes still happening" data-reliability={data.rate ?? 'unknown'}>
-      {/* The clean-run share and its daily chart are Today's (one chart of one measure); this panel keeps what only it says:
-          the causes still happening and who owns each (re-audit 2026-10-24: the two charts disagreed on Oct 17). */}
-      <p className="faint">{percent(data.rate)} of {runs.settled} settled runs ran clean in the last {data.window.days} days; <a href="/today">the daily chart is on Today</a>.</p>
+    <section className="reliability" aria-label="Run reliability" data-reliability={data.rate ?? 'unknown'}>
+      <div className="reliability-days">
+        <p title={data.definition || 'Clean: a settled run with no infra, harness or quota failure on any agent. Operator cancellations and running runs are outside the count.'}>
+          <b className="reliability-rate">{percent(data.rate)}</b> of {runs.settled} settled runs ran clean in {data.window.days} days
+        </p>
+        <div data-primary-content><DayBars rows={9} days={data.daily.map((day) => day.day)} series={[{ name: 'clean', color: 'var(--ar-c-ok)', values: data.daily.map((day) => day.clean) }, { name: 'hit by a failure', color: 'var(--ar-c-run)', values: data.daily.map((day) => day.hit) }, { name: 'failed', color: 'var(--ar-c-fail)', values: data.daily.map((day) => day.failed) }]} /></div>
+      </div>
       <div className="reliability-causes">
-        <span className="answer-label">Top causes still happening (seen in the last {LIVE_HOURS} h)</span>
+        <span className="answer-label">Still failing runs ({LIVE_HOURS} h)</span>
         {live.length ? (
-          <ol>
-            {live.map((cause) => (
-              <li key={cause.id} data-cause={cause.id}>
-                <b>{cause.title}</b>
-                <span className="faint">
-                  {cause.runsLost} {cause.runsLost === 1 ? 'run' : 'runs'} lost{cause.runsHit ? `, ${cause.runsHit} hit` : ''}
-                  {cause.lostAgentHours !== null ? ` · ${Math.round(cause.lostAgentHours)} agent-hours` : ''} · {cause.layer ?? 'unclassified'} ·{' '}
-                  {cause.owner ?? 'no owner named'} · last seen {when(cause.lastSeen)}
-                </span>
-              </li>
-            ))}
-          </ol>
+          <div data-primary-content><HBars
+            color="var(--ar-c-fail)"
+            format={(value) => `${value} lost`}
+            rows={live.map((cause) => ({ label: cause.title, value: cause.runsLost, note: (cause.owner ?? 'no owner named').split(' (')[0] }))}
+          /></div>
         ) : (
-          <p className="faint">No failure cause was seen in the last {LIVE_HOURS} hours.</p>
+          <p className="faint">None in {LIVE_HOURS} h.</p>
         )}
       </div>
-      <p className="faint reliability-definition">
-        Clean: a settled run with no infra, harness or quota failure on any agent. Operator cancellations and running runs are outside the count.
-      </p>
     </section>
   )
 }

@@ -228,21 +228,21 @@ function PlaysPage({ api }: { api: string }) {
     const all = plays.data?.runs ?? []
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
-    // An unknown is one line (design-system section 2): a missing reading prints a dash, and the line counts them.
-    const cash = (usd: number | null | undefined) => (usd === null || usd === undefined ? '—' : money(usd)), clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
-    const unrecorded = shown.filter((run) => [run.subscriptionUsd, run.apiUsd, run.sandboxUsd].every((usd) => usd === null || usd === undefined)).length
+    const clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
+    // One spend cell: each part the run has a reading for, named in its tooltip; a dash when it has none (no per-run meter).
+    const spend = (run: (typeof all)[number]) => (([['subscription at API prices', run.subscriptionUsd], ['billed API', run.apiUsd], ['billed sandbox', run.sandboxUsd]] as const).filter(([, usd]) => usd !== null && usd !== undefined)
+      .map(([name, usd], index) => <span key={name} title={name}>{index ? ' + ' : ''}{money(usd!)}</span>))
     return <div className="ws-page ws-plays" data-plays-home="runs">
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
       <ReliabilityPanel api={api} />
-      <p className="faint">{shown.length} catalog runs: started in the last 30 days or running now. One row per root run; versions are on the run page.{unrecorded ? ` No spend reading for ${unrecorded} of them (subscription, API and sandbox; no per-run meter).` : ''}</p>
-      <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
-        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome / stop cause</th>
-          <th className="num">Subscription at API prices</th><th className="num">Billed API</th><th className="num">Billed sandbox</th></tr></thead>
+      <div className="table-scroll" data-primary-content><table className="data-table runs-table" data-run-ledger>
+        <caption className="faint">{shown.length} runs, last 30 days</caption>
+        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th><th className="num">Spend</th></tr></thead>
         <tbody>{shown.slice(0, shownRows).map((run) => <tr key={run.id}>
           <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono" title={run.id}> {/\d{6}(\d\d[a-z])$/.exec(run.id)?.[1] ?? run.id}</small></td>
           <td><StatusPill status={runStatus(run, newerStarted(run, all))} /></td>
           <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
-          <td className="num">{cash(run.subscriptionUsd)}</td><td className="num">{cash(run.apiUsd)}</td><td className="num">{cash(run.sandboxUsd)}</td>
+          <td className="num">{spend(run).length ? spend(run) : '—'}</td>
         </tr>)}</tbody>
       </table></div>
       {!shown.length && <p className="chat-empty">No runs match.</p>}{shown.length > shownRows && <button type="button" className="plays-more" onClick={() => setShownRows(shown.length)}>Show all {shown.length} runs</button>}
