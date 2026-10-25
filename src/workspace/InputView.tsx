@@ -239,7 +239,7 @@ function InputBody({ input, api, changed, compact = false, more }: { input: Play
         <>
           {objective}
           <details className="input-details input-more">
-            <summary>Full input</summary>
+            <summary>Input</summary>
             {body}
             {more}
           </details>

@@ -46,7 +46,7 @@ export function PlayBarTable({ play }: { play: Play }) {
       </div>
       {(bar.condition || bar.checkCondition) && (
         <details className="input-details">
-          <summary>How it is measured</summary>
+          <summary>Method</summary>
           {bar.condition && <p>The bar: {bar.condition}.</p>}
           {bar.checkCondition && <p>The check: {bar.checkCondition}.</p>}
           {bar.path && <p className="faint mono">{bar.path}</p>}

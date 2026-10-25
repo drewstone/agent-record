@@ -75,6 +75,7 @@ export function PlayReleases({ play }: { play: Play }) {
             label: label(key),
             value: stops.filter((stop) => stop.key === key).length,
             color: color(key),
+            title: `${stops.filter((stop) => stop.key === key).length} releases · ${label(key)}${checkersOf(key).length ? ` · checked under ${checkersOf(key).join(', ')}` : ''}`,
             href: `?tab=releases&stop=${key}`,
           }))} />
       </div>
