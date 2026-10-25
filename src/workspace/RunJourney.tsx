@@ -399,7 +399,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single ? null : (
             <section aria-label="What the agents did">
               <Stats m={m} receiptUsd={doc.run.spend?.apiEquivalentUsd ?? null} />
-              <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
+              <Lanes m={m} live={m.data.live} onPick={setPicked} />
             </section>
           )}
           {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
