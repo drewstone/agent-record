@@ -177,9 +177,8 @@ function Lanes({ m, live, runUrl, files, selected, onSelect, onTime }: { m: Mode
     if (crashed(n)) return 'crashed'
     const commits = m.commits.get(n.id)
     if (!commits) return n.id === m.root ? null : running(n) ? 'running' : 'nothing shipped'
-    const into = m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release)
-    // Short enough not to clip in the row (review 4 #2: 13 of 17 clipped); the harness is in the card.
-    return `${commits} ${commits === 1 ? 'commit' : 'commits'}${into.length ? ` → ${into.length > 2 ? `${into[0]}…${into.at(-1)}` : into.join(', ')}` : ''}`
+    // A lane label is four words at most (REVIEW-8 gate 1); the releases it shipped into are in its card.
+    return `${commits} ${commits === 1 ? 'commit' : 'commits'}`
   }
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
