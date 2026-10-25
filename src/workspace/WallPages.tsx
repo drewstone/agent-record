@@ -109,7 +109,7 @@ function AgentGroup({ state, rows, count }: { state: Agent['state']; rows: Agent
   if (!count) return null
   return (
     <details className="wp-group">
-      <summary><i className="wp-dot" style={{ background: AGENT_TONE[state], borderColor: AGENT_TONE[state] }} />{count} {state}</summary>
+      <summary><i className="wp-dot" style={{ background: AGENT_TONE[state], borderColor: AGENT_TONE[state] }} />{count} {count === 1 && state === 'asks' ? 'ask' : state}</summary>
       <ul className="wp-rows">
         {rows.map((a) => (
           <li key={a.lane}>
@@ -267,10 +267,14 @@ export function SandboxesPage({ api }: { api: string }) {
 
 const STAGE_ORDER: Record<string, number> = { awaiting: 0, approved: 1, routed: 2, launched: 3, discarded: 4 }
 
-/** A problem statement's title (its text before the first colon, when short) and the rest. */
+/** A problem statement's title and the rest: its text before the first colon when short, else its first clause (up to a
+ * comma, parenthesis or 8 words); the whole statement opens under it. */
 const claim = (text: string): [string, string] => {
   const at = text.indexOf(':')
-  return at > 0 && at < 80 ? [text.slice(0, at), text.slice(at + 1).trim()] : [text, '']
+  if (at > 0 && at < 80) return [text.slice(0, at), text.slice(at + 1).trim()]
+  const clause = text.split(/[,(;]/)[0]!.split(/\s+/)
+  const title = clause.slice(0, 8).join(' ')
+  return title.length < text.length ? [`${title}…`, text] : [text, '']
 }
 
 /** An idea: its title, where it goes and since when, the summary's first sentence (the rest opens), each problem as a
