@@ -108,9 +108,9 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
         <text className="pj-tick" x={x(t1)} y={h - 8} textAnchor="end">now</text>
         {gap.need && lastMiss && <text className="pj-count" x={lastMiss.x + 10} y={lastMiss.y - 8}>×{gap.need.count}</text>}
       </svg>
+      {/* Below a point in the upper half, above one in the lower half: either way it stays inside the plot (REVIEW-6 #7
+          covered the step legend, REVIEW-7 #12 the tabs). */}
       {picked && (
-        {/* Below a point in the upper half, above one in the lower half: either way it stays inside the plot (REVIEW-6 #7
-            covered the step legend, REVIEW-7 #12 the tabs). */}
         <div className={`pj-tip${picked.y > h / 2 ? ' pj-tip-above' : ''}`} role="tooltip" style={{ left: `${(picked.x / w) * 100}%`, top: `${(picked.y / h) * 100}%` }}>
           <p className="pj-tip-title"><b>{picked.title}</b> <span className={`pj-pill pj-${picked.kind}`}>{picked.pill}</span></p>
           <dl>{picked.rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
