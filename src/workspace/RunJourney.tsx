@@ -13,9 +13,9 @@ import { RunFilesPane } from './RunFilesPane.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
- * ladder, one sentence, the action that clears the blocker), then what the agents did across the run's hours (one lane
- * per agent, coloured by outcome, releases on top, the plateau shaded and the span that produced the best release
- * outlined), then, for the lane picked, its summary, what it changed (code first) and its transcript.
+ * ladder, one sentence, the action that clears the blocker), then what the agents did across the run's hours (the shared
+ * agent timeline, releases as markers), then, for the agent picked, its summary, what it changed (code first) and its
+ * transcript.
  */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]> }
