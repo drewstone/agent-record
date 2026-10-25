@@ -164,6 +164,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
+        // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
+        ...(typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
         // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
