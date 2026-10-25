@@ -2293,6 +2293,8 @@
 /* ---- The plays page's Runs tab: failure causes still happening. */
 .ar-ws .reliability { display: grid; gap: 12px; padding: 16px 20px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; }
 .ar-ws .reliability > p { margin: 0; }
+.ar-ws .release-list > div > h3 { margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
+.ar-ws .release-list ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
 .ar-ws .reliability-causes { display: grid; gap: 4px; min-width: 0; }
 .ar-ws .reliability-causes ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
 .ar-ws .reliability-causes li { display: grid; gap: 1px; }
@@ -3280,15 +3282,9 @@
 .ar-ws .commit-chip { padding: 0 8px; border-radius: 4px; font: 12px/1.7 var(--ar-font-body); background: var(--ws-raised); color: var(--ar-fg-muted); }
 /* The chip's release tag is the id; its verdict, score and checker read in the body face. */
 .ar-ws .commit-chip b { font-family: var(--ar-font-mono); font-weight: 600; }
-.ar-ws .release-grid { overflow-x: auto; font-size: var(--ar-text-s); }
-.ar-ws .release-row { display: grid; grid-template-columns: var(--release-columns); gap: 8px; align-items: center; min-width: 980px; padding: 4px 4px; border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 60%, transparent); }
-.ar-ws .release-header { color: var(--ar-fg-muted); font-size: 12px; border-bottom: 1px solid var(--ar-border); }
 .ar-ws .checker-head { display: inline-flex; align-items: center; gap: 4px; }
 .ar-ws .checker-head::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--checker); }
-.ar-ws .release-scroll { max-height: 70vh; overflow: auto; min-width: 980px; }
-.ar-ws .release-group-head { padding: 12px 4px 4px; font-size: var(--ar-text-s); min-width: 980px; }
 .ar-ws .verdict-cell { font-family: var(--ar-font-body); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ar-ws .release-row > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .play-judged-link { margin: 0; }
 @media (max-width: 700px) {
   .ar-ws .play-head { gap: 8px; }
