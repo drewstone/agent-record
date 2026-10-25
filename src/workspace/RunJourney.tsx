@@ -126,6 +126,8 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
 function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
+  // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, crashed.
+  const tone = (n: Node): FlowSpan['outcome'] => (crashed(n) ? { tone: 'failed', label: 'Crashed' } : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
   const outcome = (n: Node) => {
     if (crashed(n)) return 'crashed'
     const commits = m.commits.get(n.id)
@@ -147,6 +149,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         detail: [outcome(n), n.harness, n.model?.split('/').pop()].filter(Boolean).join(' · ') || undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running ? 'running' as const : crashed(n) ? 'failed' as const : 'done' as const,
+        ...(tone(n) ? { outcome: tone(n) } : {}),
       }
     })
     return { spans, totalMs: m.t1 - m.t0, promptTokens: 0, completionTokens: 0, toolCalls: 0 }
@@ -158,8 +161,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
-  // Room for about 20 agents before the rows scroll (review 2 #2: 3 of 17 sat below a 640 px inner scroll).
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} maxHeight={Math.min(m.nodes.length, 20) * 36 + 16} onSelect={(span) => span.id && onPick(span.id)} />
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => span.id && onPick(span.id)} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
