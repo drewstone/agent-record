@@ -127,14 +127,9 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
   if (!hidden) return null
   return (
     <div className="hidden-summary" data-hidden-summary>
-      <span>
-        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}:{' '}
-        {HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason, i) => (
-          <span key={reason}>
-            {i > 0 && ' · '}
-            {counts[reason]} {reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}
-          </span>
-        ))}
+      {/* The count alone; the reasons are its tooltip (the line was 20 words above the table). */}
+      <span title={HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason) => `${counts[reason]} ${reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}`).join(' · ')}>
+        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}
       </span>
       <label className="toggle hidden-filter">
         <input type="checkbox" checked={showHidden} onChange={(event) => onChange(event.target.checked)} data-show-hidden />
@@ -162,7 +157,8 @@ function PlaysPage({ api }: { api: string }) {
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    const spent = (spend: PlaysDocument['plays'][number]['spend']) => (spend.apiUsd ?? 0) + (spend.sandboxUsd ?? 0)
+    // Each order reads the column it sorts: API-equivalent, and the runs the filter shows.
+    const spent = (play: PlaysDocument['plays'][number]) => play.standing?.cost?.apiEquivalentUsd ?? -1, runsShown = (play: PlaysDocument['plays'][number]) => (!showHidden && play.counts ? play.counts.shown : play.runCount) ?? 0
     const matching = (plays.data?.plays ?? []).filter(
       (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
     )
@@ -173,9 +169,9 @@ function PlaysPage({ api }: { api: string }) {
         sort === 'name'
           ? a.title.localeCompare(b.title)
           : sort === 'spend'
-            ? spent(b.spend) - spent(a.spend)
+            ? spent(b) - spent(a)
             : sort === 'runs'
-              ? b.runCount - a.runCount
+              ? runsShown(b) - runsShown(a)
               : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
       )
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
@@ -184,7 +180,7 @@ function PlaysPage({ api }: { api: string }) {
   const order = home !== 'plays' ? null : (
     <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
       <option value="latest">Latest run first</option>
-      <option value="spend">Most spend first</option>
+      <option value="spend">Most API-equivalent first</option>
       <option value="runs">Most runs first</option>
       <option value="name">By name</option>
     </select>
@@ -254,8 +250,8 @@ function PlaysPage({ api }: { api: string }) {
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
-          <div className="table-scroll">
-            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} />
+          <div className="table-scroll" data-primary-content>
+            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} />
           </div>
           {rows.length > shownRows && (
             <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>

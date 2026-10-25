@@ -3570,11 +3570,10 @@
   .ar-ws .plays-table thead, .ar-ws .plays-table td.num { display: none; }
   .ar-ws .plays-table, .ar-ws .plays-table tbody { display: block; }
   /* Only the pill sizes the right column: the last run's words sat in it and squeezed names to 93 px (REVIEW-7 #11). */
-  .ar-ws .plays-table tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
-  .ar-ws .plays-table .plays-name { grid-column: 1 / 3; }
-  .ar-ws .plays-table .plays-standing { grid-column: 3; }
-  .ar-ws .plays-table .plays-best { grid-column: 1; }
-  .ar-ws .plays-table .plays-last { grid-column: 2 / 4; justify-self: end; }
+  .ar-ws .plays-table tr { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
+  /* The name across the whole first line; pill, best release and last run on the second (REVIEW-7 #11). */
+  .ar-ws .plays-table .plays-name { grid-column: 1 / -1; }
+  .ar-ws .plays-table .plays-last { justify-self: end; }
   .ar-ws .plays-table td { display: block; padding: 0; border: 0; white-space: normal; }
   .ar-ws .plays-table .plays-standing { max-width: none; }
 }
