@@ -133,10 +133,12 @@ function FleetView({ doc }: { doc: FleetDoc }) {
   const back = doc.seats.rows.filter((s) => s.state === 'empty' && s.back).map((s) => s.back!).sort()[0]
   return (
     <>
-      {/* The page's one primary region (disco-ui-review gate 1): the host capacity strip. Agents and seats are counts that open. */}
+      {/* The page's one primary region (disco-ui-review gate 1): the host capacity strip. Agents and seats are counts that open,
+          in a column beside the hosts so the first screen holds the whole page. */}
+      <div className="wp-fleet">
       <section aria-label="Hosts"><h2>Hosts<StaleStamp at={doc.hostsAt} source="fleet now" /></h2>
         <ul className="wp-hosts" data-primary-content>{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul></section>
-      <div className="wp-split">
+      <div className="wp-side">
         <section aria-label="Agents">
           <h2>Agents<StaleStamp at={doc.agentsAt} source="agent panes" /></h2>
           <Tip className="wp-agents-meter" text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
@@ -155,6 +157,7 @@ function FleetView({ doc }: { doc: FleetDoc }) {
             {unread.length > 0 && <p className="wp-muted wp-line">Not reported: {unread.map((s) => `${s.provider.toLowerCase()} ${s.name}${s.long.why ? ` (${s.long.why})` : ''}`).join(', ')}</p>}
           </details>
         </section>
+      </div>
       </div>
     </>
   )
