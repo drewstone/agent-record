@@ -7,8 +7,10 @@ import { parseRecord, RecordFlowWaterfall } from '../dist/index.js'
 import { fromTraceSpans } from '../dist/trace-spans.js'
 
 const fixture = (name) => readFile(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8').then(JSON.parse)
-const render = (record, live = false) => renderToStaticMarkup(createElement(RecordFlowWaterfall, { record, live, defaultCollapsed: false }))
+const render = (record, live = false) => renderToStaticMarkup(createElement(RecordFlowWaterfall, { record, live, defaultCollapsed: false, view: 'spans' }))
 const field = (html, name) => html.match(new RegExp(`<dt[^>]*>${name}</dt><dd[^>]*>(.*?)</dd>`))?.[1]
+// The exact count is the value's title; the cell shows it rounded (754.4k).
+const exact = (html, name) => html.match(new RegExp(`<dt[^>]*>${name}</dt><dd[^>]*title="([^"]*)"`))?.[1]
 
 test('retained Discovery capture reaches the shared waterfall without cumulative-meter token duplication', async () => {
   const record = parseRecord(await fixture('waterfall-discovery-record'))
@@ -16,7 +18,7 @@ test('retained Discovery capture reaches the shared waterfall without cumulative
   assert.match(html, /data-flow-waterfall/)
   // Native per-response usage is 98,722 fresh + 649,984 cached + 5,742 output.
   // Lifecycle metered snapshots in these same retained bytes are cumulative, not extra responses.
-  assert.equal(field(html, 'Tokens'), '754,448')
+  assert.equal(exact(html, 'Tokens'), '754,448 tokens')
   assert.equal(field(html, 'Cost'), 'Unknown')
   assert.equal(field(html, 'Tool calls'), String(record.events.reduce((sum, event) => sum + (event.detail.publicToolCalls?.length ?? 0), 0)))
   assert.match(html, /data-span-kind="handoff"/)

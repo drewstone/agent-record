@@ -81,7 +81,8 @@ export function CodePane({ runUrl, refName, previous, label }: { runUrl: string;
     <WorkspaceFilesPane
       paths={tree.data.paths}
       selectedPath={path ?? undefined}
-      onSelect={(next) => update({ codeFile: next })}
+      // The pane reports folder clicks too (trailing `/`, it expands them itself); only a listed file is opened.
+      onSelect={(next) => { if (tree.data!.paths.includes(next)) update({ codeFile: next }) }}
       onBack={() => update({ codeFile: null, codeView: null })}
       preview={path ? { path, actions, content } : undefined}
       search
