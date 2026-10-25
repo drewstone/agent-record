@@ -3828,3 +3828,7 @@
 .ar-ws :where(a, button, summary, [role=button], [tabindex="0"]):focus-visible { outline: 2px solid var(--ar-c-action); outline-offset: 2px; border-radius: 4px; }
 .ar-ws :where(.tj, .pj, .rj) a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .ar-ws :where(.tj, .pj, .rj) summary:hover, .ar-ws :where(.tj, .pj, .rj) button:hover { color: var(--ar-fg); }
+.ar-ws .rj-life { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ar-c-warn, #f5a524); background: color-mix(in srgb, var(--ar-c-warn, #f5a524) 14%, transparent); }
+.ar-ws .rj-life-line { margin: 0; font-size: 14px; color: var(--ar-c-warn, #f5a524); }
+/* A short file takes the height it needs, up to the panel's; it never fills the first screen alone. */
+.ar-ws .rj-work > .run-files-pane { height: auto; max-height: calc(100svh - 160px); min-height: 0; }

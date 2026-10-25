@@ -93,6 +93,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
 
 /** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
 function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: (release: string) => void }) {
+  const lifecycle = (doc.view as { lifecycle?: { state: string; sentence: string } | null } | null | undefined)?.lifecycle ?? null
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
@@ -108,6 +109,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
         {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : 'every step passes'}</> : 'No release was checked.'}
         {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
+      {lifecycle && lifecycle.state !== 'done' && <p className="rj-life-line">{lifecycle.sentence}</p>}
       {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
       {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
@@ -248,6 +250,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
   // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
   const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
   const view = doc.view
+  const lifecycle = (view as { lifecycle?: { state: string; sentence: string } | null } | null | undefined)?.lifecycle ?? null
   const single = m?.nodes.length === 1
   // The release the code pane shows: the one a release chip picked (`codeRef`), else the best (review 1 #13).
   const [params, update] = useSearch()
@@ -273,6 +276,9 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
         <div className="rj-title">
           <h1 title={m ? `${hours(m.t0, m.t1).toFixed(1)} h` : undefined}>Run {shortRun(doc.run.play, doc.run.id)}</h1>
           {view && <StatusPill status={viewChip(view.status)} />}
+          {/* The check's verdict is not the requested lifecycle: a disposable run says whether its teardown is confirmed
+              (root 2026-10-25; the host's run_view lifecycle, from the receipt's retention records). */}
+          {lifecycle && lifecycle.state !== 'done' && <span className="rj-life" title={lifecycle.sentence}>Teardown not confirmed</span>}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
         {m && <Trigger doc={doc} m={m} />}
@@ -286,9 +292,10 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               <Lanes m={m} live={Boolean(doc.execution?.alive)} onPick={setPicked} />
             </section>
           )}
-          {single && work}
+          {/* The agent and what it was asked come before its files: an 11-byte answer filled the first screen and pushed
+              the agent and its transcript below the fold (root 2026-10-25, 1072 px window). */}
           {node && <Drill runUrl={runUrl} m={m} node={node} transcript={transcript} onPick={setPicked} />}
-          {!single && work}
+          {work}
           {receipt && <footer className="rj-foot"><a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>{/^rc\d+$/.test(receipt.tag) ? `Receipt of the published release, ${receipt.tag}` : 'Published receipt'}</a></footer>}
         </>
       )}
