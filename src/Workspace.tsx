@@ -430,26 +430,22 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             {tab === 'setup' && (
               <div className="play-setup" data-section="setup">
                 <PlayBarTable play={doc} />
-                <section className="ws-section">
-                  <h3>Input</h3>
+                <section className="ws-section play-input" data-section="input">
                   <div className="input-run-picker">
-                    <label className="ui-field">
-                      <span className="ui-label">Run</span>
-                      <select value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
-                        {doc.runs.map((run) => (
-                          <option key={run.id} value={run.id}>
-                            {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <select aria-label="Run" value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
+                      {doc.runs.map((run) => (
+                        <option key={run.id} value={run.id}>
+                          {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <Status loading={runDoc.loading} error={runDoc.error}>
-                    <InputView input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} />
+                    <InputView compact input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} />
                   </Status>
                 </section>
-                <section className="ws-section" data-section="versions">
-                  <h3>Profile versions</h3>
+                <details className="ws-section" data-section="versions">
+                  <summary><b>Profile versions</b></summary>
                   <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
                   <div className="lineage-layout">
                     <section className="lineage-pane" aria-label="Version graph">
@@ -461,11 +457,11 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                     </aside>
                   </div>
                   <Searches graph={graph} runId={selection?.runId ?? shownVersions.at(-1)?.run.id ?? null} />
-                </section>
+                </details>
                 {graph && (
                   <details className="ws-section" data-section="profiles">
                     <summary>
-                      <b>Profiles</b> <span className="faint">every profile the play&rsquo;s runs registered or wrote</span>
+                      <b>Profiles</b>
                     </summary>
                     <ProfileCanvas api={api} doc={graph} scope={playScope} selected={params.get('profile')} onSelect={(short) => update({ profile: short ?? undefined })} />
                   </details>

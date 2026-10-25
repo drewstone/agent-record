@@ -1,7 +1,9 @@
-import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
+import { ENDING_COLORS, OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
+import { Gantt } from '@tangle-network/charts/react'
 import { useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
-import { money, StatusPill, statusOf, tokens } from './data.js'
+import { money, StatusPill, statusOf } from './data.js'
+import { useSearch } from './navigation.js'
 import { viewChip } from './view.js'
 import { checkerLabel, checksByRun, type PlayHead, type PlayLedgerRow, type RunChecks, seatWords, shortRun, shortTag, stageWords, utc, verdictWord } from './play-standing.js'
 
@@ -32,9 +34,9 @@ export function OutcomeBar({ row, max }: { row: OutcomeRow; max: number }) {
     <span className="outcome-bar" title={title} data-outcome-basis={row.outcomeBasis ?? 'none'}>
       <span className="outcome-track" style={{ width: `${Math.max(2, ((total + open) / max) * 100)}%` }}>
         {parts.map((outcome) => (
-          <i key={outcome} data-outcome={outcome} style={{ flexGrow: by![outcome]!, background: OUTCOME_COLORS[outcome] }} />
+          <i key={outcome} data-outcome={outcome} title={`${OUTCOME_WORD[outcome]}: ${by![outcome]!.toFixed(1)} h${row.triesByOutcome?.[outcome] !== undefined ? `, ${row.triesByOutcome[outcome]} tries` : ''}`} style={{ flexGrow: by![outcome]!, background: OUTCOME_COLORS[outcome] }} />
         ))}
-        {open > 0 && <i className="outcome-open" style={{ flexGrow: open }} />}
+        {open > 0 && <i className="outcome-open" title={`open turn: ${open.toFixed(1)} h${row.open?.since ? ` since ${utc(row.open.since)}` : ''}`} style={{ flexGrow: open }} />}
       </span>
       <span className="outcome-total num">{(total + open).toFixed(1)} h</span>
     </span>
@@ -115,17 +117,58 @@ function Cost({ row }: { row: PlayLedgerRow }) {
   )
 }
 
+/**
+ * The release lineage (REVIEW-8 chart 5, Drew: "what is rc2?"): every run that did work on one time axis, nested under
+ * the run it forked from, coloured by how it ended; hovering a run names the release it built on. 22a reads as the
+ * newest step of one line from 20b, and 18b's four restarts from rc18 read as one fan.
+ */
+function LineageTree({ play, rows, now }: { play: Play; rows: PlayLedgerRow[]; now: number }) {
+  const runs = rows.filter((row) => row.startedAt)
+  const parentOf = (row: PlayLedgerRow) => (row.lineage?.kind === 'fork' && row.lineage.parentRun && runs.some((r) => r.runId === row.lineage!.parentRun) ? row.lineage.parentRun : null)
+  if (!runs.some(parentOf)) return null
+  const byStart = (a: PlayLedgerRow, b: PlayLedgerRow) => a.startedAt!.localeCompare(b.startedAt!)
+  // Each run under the run it forked from (depth first), so a line of forks reads top to bottom.
+  const ordered: PlayLedgerRow[] = []
+  const walk = (row: PlayLedgerRow) => {
+    ordered.push(row)
+    for (const child of runs.filter((r) => parentOf(r) === row.runId).sort(byStart)) walk(child)
+  }
+  for (const root of runs.filter((row) => !parentOf(row)).sort(byStart)) walk(root)
+  const word = (row: PlayLedgerRow) => row.ending?.status?.label ?? row.ending?.word ?? 'unknown'
+  const colors: Record<string, string> = {}
+  for (const row of ordered) {
+    const key = row.ending?.status?.key ?? ''
+    colors[word(row)] = ENDING_COLORS[(key === 'unscored' ? 'not solved' : key) as keyof typeof ENDING_COLORS] ?? ENDING_COLORS['not solved']
+  }
+  const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return (
+    <div className="ledger-lineage" data-primary-content aria-label="Release lineage">
+      <Gantt colors={colors} now={now} axis={day} span={(a, b) => `${utc(new Date(a).toISOString())} – ${utc(new Date(b).toISOString())}`}
+        rows={ordered.map((row) => ({
+          // Labels are right-aligned, so an indent cannot show nesting; each fork names its parent release instead.
+          label: `${shortRun(play.id, row.runId)}${parentOf(row) ? ` ← ${shortRun(play.id, row.lineage!.parentRun!)}/${shortTag(row.lineage!.parentTag) ?? '?'}` : ''}`,
+          start: Date.parse(row.startedAt!),
+          end: row.settledAt ? Date.parse(row.settledAt) : now,
+          state: word(row),
+          note: parentOf(row) ? `built on ${shortRun(play.id, row.lineage!.parentRun!)}/${shortTag(row.lineage!.parentTag) ?? '?'}${row.lineage?.commit ? `, commit ${row.lineage.commit}` : ''}` : 'started fresh',
+        }))} />
+    </div>
+  )
+}
+
 const lineageGlyph = (play: Play, row: PlayLedgerRow) =>
   row.lineage?.kind === 'fork' && row.lineage.parentRun ? `⑂ ${shortRun(play.id, row.lineage.parentRun)}${row.lineage.parentTag ? `@${shortTag(row.lineage.parentTag)}` : ''}` : row.lineage?.kind === 'wrong-base' ? 'wrong base' : null
 
 /**
  * The run ledger (charts c and e): for each run its ending, wall time with idle time hatched, agent-hours stacked by
  * attempt outcome on one shared axis, completed share, tries, best score, API-equivalent cost and seat. `full` adds
- * tokens, team size, model, harness and how its input differs.
+ * the release lineage above it and how each run's input differs.
  */
-export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: boolean; onOpen?: (runId: string) => void }) {
+export function PlayLedger({ play, full = false, onOpen, now = Date.now() }: { play: Play; full?: boolean; onOpen?: (runId: string) => void; now?: number }) {
   const ledger = play.ledger ?? null
-  const [sort, setSort] = useState<SortKey>('newest')
+  const [params, update] = useSearch()
+  const sort: SortKey = (['wall', 'agent', 'cost', 'score'] as const).find((key) => key === params.get('sort')) ?? 'newest'
+  const setSort = (next: SortKey) => update({ sort: next === 'newest' ? undefined : next })
   const [idleShown, setIdleShown] = useState(false)
   const checks = useMemo(() => checksByRun(play.climb), [play.climb])
   const rows = useMemo(() => {
@@ -158,9 +201,6 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
     best: ledger.rows.some((row) => row.best || checks.get(row.runId)?.rows),
     cost: ledger.rows.some((row) => row.cost?.apiUsd !== null && row.cost?.apiUsd !== undefined),
     seat: ledger.rows.some((row) => row.seat),
-    tokens: ledger.rows.some((row) => row.tokens && (row.tokens.in || row.tokens.out)),
-    agents: ledger.rows.some((row) => row.agents !== null && row.agents !== undefined),
-    model: ledger.rows.some((row) => row.model || row.harness),
   }
   const head = (key: SortKey, label: string, title?: string, className?: string) => (
     <th className={className} aria-sort={sort === key ? 'descending' : undefined} title={title}>
@@ -171,6 +211,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
   )
   return (
     <section className={`ws-section play-ledger ${full ? 'is-full' : ''}`} data-play-ledger aria-label="Runs">
+      {full && <LineageTree play={play} rows={shownRows} now={now} />}
       <header className="section-head">
         <h3>Runs</h3>
         {cost?.apiEquivalentUsd ? (
@@ -195,7 +236,7 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
         </ul>
       </header>
       <div className="table-scroll">
-        <table className="data-table ledger-table">
+        <table className="data-table ledger-table" data-primary-content={full ? '' : undefined}>
           <thead>
             <tr>
               <th>Run</th>
@@ -207,15 +248,13 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
               {has.best && head('score', 'Best check')}
               {has.cost && head('cost', 'API-equiv.', undefined, 'ledger-cost')}
               {has.seat && <th>Seat</th>}
-              {full && has.tokens && <th className="num">Tokens in / out</th>}
-              {full && has.agents && <th className="num">Agents</th>}
-              {full && has.model && <th>Model · harness</th>}
             </tr>
           </thead>
           <tbody>
             {shownRows.map((row) => {
               const tries = Object.values(row.triesByOutcome ?? {}).reduce((sum, value) => sum + value, 0)
-              const fork = lineageGlyph(play, row)
+              // The Runs tab draws the lineage as a tree above the table; the standing ledger keeps it as words.
+              const fork = full ? null : lineageGlyph(play, row)
               return (
                 <tr key={row.runId} data-run={row.runId} className={onOpen ? 'clickable' : undefined} onClick={onOpen ? () => onOpen(row.runId) : undefined}>
                   <td className="mono ledger-run">
@@ -264,18 +303,6 @@ export function PlayLedger({ play, full = false, onOpen }: { play: Play; full?: 
                     )}
                   </td>
                   )}
-                  {full && has.tokens && (
-                    <td className="num" title={row.tokens?.known !== null && row.tokens?.known !== undefined ? `${row.tokens.known} agents with known usage` : undefined}>
-                      {row.tokens ? `${tokens(row.tokens.in)} / ${tokens(row.tokens.out)}` : '—'}
-                    </td>
-                  )}
-                  {full && has.agents && (
-                    <td className="num">
-                      {row.agents ?? '—'}
-                      {row.depth !== null && row.depth !== undefined && row.agents ? <small className="faint"> d{row.depth}</small> : null}
-                    </td>
-                  )}
-                  {full && has.model && <td className="faint">{[row.model, row.harness].filter(Boolean).join(' · ') || '—'}</td>}
                 </tr>
               )
             })}
