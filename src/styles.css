@@ -3241,7 +3241,7 @@
 :is(.ar-ws, .research-report) .outcome-legend i { width: 10px; height: 10px; border-radius: 2px; }
 .ar-ws .outcome-open { background: var(--ws-hatch) !important; box-shadow: inset 0 0 0 1px var(--ar-border-strong); }
 .ar-ws .ledger-table td, .ar-ws .ledger-table th { padding-top: 4px; padding-bottom: 4px; white-space: nowrap; vertical-align: middle; }
-.ar-ws .ledger-table .ledger-bar { width: 22%; min-width: 150px; }
+.ar-ws .ledger-table .ledger-bar { width: 16%; min-width: 120px; } /* fits 1512 px with the seat column whole (REVIEW-7 #4) */
 :is(.ar-ws, .research-report) .outcome-bar, .ar-ws .wall-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
 :is(.ar-ws, .research-report) .outcome-track, .ar-ws .wall-track { display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--ws-raised, var(--ar-bg-alt)); }
 :is(.ar-ws, .research-report) .outcome-track i, .ar-ws .wall-track i { display: block; height: 100%; min-width: 1px; }
@@ -3556,8 +3556,12 @@
 @media (max-width: 640px) {
   .ar-ws .plays-table thead, .ar-ws .plays-table td.num { display: none; }
   .ar-ws .plays-table, .ar-ws .plays-table tbody { display: block; }
-  .ar-ws .plays-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
-  .ar-ws .plays-table .plays-last { justify-self: end; }
+  /* Only the pill sizes the right column: the last run's words sat in it and squeezed names to 93 px (REVIEW-7 #11). */
+  .ar-ws .plays-table tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--ar-border); }
+  .ar-ws .plays-table .plays-name { grid-column: 1 / 3; }
+  .ar-ws .plays-table .plays-standing { grid-column: 3; }
+  .ar-ws .plays-table .plays-best { grid-column: 1; }
+  .ar-ws .plays-table .plays-last { grid-column: 2 / 4; justify-self: end; }
   .ar-ws .plays-table td { display: block; padding: 0; border: 0; white-space: normal; }
   .ar-ws .plays-table .plays-standing { max-width: none; }
 }
@@ -3673,7 +3677,11 @@
 .ar-ws .tj-stuck { color: var(--ar-c-warn, #f5a524); }
 .ar-ws .tj-regressed { color: var(--ar-c-fail, #ef4444); }
 .ar-ws .tj-word { font-weight: 600; }
-.ar-ws .tj-blind li { grid-template-columns: minmax(240px, 1fr) minmax(240px, 2fr); padding: 16px 0; }
+.ar-ws .tj-blind { display: grid; gap: 8px; }
+.ar-ws .tj-blind details { padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
+.ar-ws .tj-blind summary { cursor: pointer; font-size: 14px; }
+.ar-ws .tj-blind details > p { margin: 8px 0; }
+.ar-ws .tj-blind .tj-names { margin-top: 8px; }
 .ar-ws .tj-blind b { font-weight: 600; }
 .ar-ws .tj-names { display: grid; gap: 4px; color: var(--ar-fg-muted); }
 .ar-ws .ar-tip-anchor { position: relative; display: inline-flex; align-items: center; gap: 8px; outline-offset: 2px; }
@@ -3803,6 +3811,7 @@
 .ar-ws .pj-bound path { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 1.5; }
 .ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
 .ar-ws .pj-tip { position: absolute; transform: translate(-50%, 14px); min-width: 200px; max-width: 280px; padding: 8px 12px; border: 1px solid var(--ar-border, #333); border-radius: 8px; background: var(--ar-bg-alt); font-size: 12px; pointer-events: none; z-index: 2; }
+.ar-ws .pj-tip.pj-tip-above { transform: translate(-50%, calc(-100% - 14px)); }
 .ar-ws .pj-tip p { margin: 0; }
 .ar-ws .pj-tip dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; }
 .ar-ws .pj-tip dl div { display: contents; }

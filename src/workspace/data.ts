@@ -62,12 +62,12 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         if (alive && !controller.signal.aborted)
           setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
       } finally {
-        // A document served as last composed while the server recomposes it is asked for again, a few times at most.
-        if (alive && poll) timer = window.setTimeout(load, poll)
-        else if (alive && stale && retries < STALE_RETRIES) {
+        // A document served as last composed while the server recomposes it is asked for again soon, a few times at most,
+        // before the page's own poll: a polled page waited a whole interval and /today showed a 2 h old copy (REVIEW-7 #2).
+        if (alive && stale && retries < STALE_RETRIES) {
           timer = window.setTimeout(load, STALE_RETRY_MS * 1.5 ** retries)
           retries += 1
-        }
+        } else if (alive && poll) timer = window.setTimeout(load, poll)
       }
     }
     void load()

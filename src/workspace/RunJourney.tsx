@@ -96,7 +96,9 @@ export function RulingButtons({ runId, dispute }: { runId: string; dispute: stri
 }
 
 
-function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker; paused: boolean }) {
+/** `said`: the line above already names the failing step, so the blocker gives only who acts (REVIEW-7 #6: 22a said the
+ * hidden test set twice, once as the release's failure and once as the check's disk). */
+function NextStep({ runId, blocker, paused, said = false }: { runId: string; blocker: Blocker; paused: boolean; said?: boolean }) {
   // While research is paused only Drew lifts it: point at Today's decision, never "nothing for you" beside it.
   const pause = paused && <p className="rj-next"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>
   if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
@@ -104,7 +106,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
       <p className="rj-next"><b>Your decision:</b> {blocker.action} <RulingButtons runId={runId} dispute={blocker.dispute} /></p>
     )
   }
-  const why = blocker.why ? `${blocker.why}; ` : ''
+  const why = blocker.why && !said ? `${blocker.why}; ` : ''
   return (
     <>
       {pause}
@@ -130,7 +132,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
         {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
             teardown; this line says only what the release reached. */}
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
       {lifecycle && lifecycle.state !== 'done' && (
         <p className="rj-life-line">
@@ -142,7 +144,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
       )}
       {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
-      {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
+      {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} said={Boolean(m.open)} />}
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
@@ -150,7 +152,8 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
           // button. Its tooltip says what was recorded; whether its commit's code was kept is not known (root review of #179).
           : m.releases.map((r) => r.tagged
             ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
-            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.sentence ?? r.release}. No release tag recorded. Recorded commit: ${r.commit ?? 'none'}.`}>{r.release} {r.passed}/{r.total}</Tip>)}
+            // One plain sentence (REVIEW-7 #5: the check's raw text leaked into it and contradicted the count).
+            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.release} passed ${r.passed ?? '?'} of ${r.total ?? '?'} steps. No release tag recorded; recorded commit ${r.commit ?? 'none'}.`}>{r.release} {r.passed}/{r.total}</Tip>)}
       </p>}
     </section>
   )
