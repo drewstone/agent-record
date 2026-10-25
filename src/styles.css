@@ -3832,3 +3832,11 @@
 .ar-ws .rj-life-line { margin: 0; font-size: 14px; color: var(--ar-c-warn, #f5a524); }
 /* A short file takes the height it needs, up to the panel's; it never fills the first screen alone. */
 .ar-ws .rj-work > .run-files-pane { height: auto; max-height: calc(100svh - 160px); min-height: 0; }
+
+/* The attention amber, one token per theme (review 3 #3: the dark #f5a524 fell to 1.76:1 on the light page). */
+.agent-record { --ar-c-warn: #7a4f00; }
+.agent-record[data-theme='dark'] { --ar-c-warn: #f5a524; }
+@media (prefers-color-scheme: dark) { .agent-record[data-theme='auto'] { --ar-c-warn: #f5a524; } }
+.ar-ws .rj-foot { margin-top: 0; padding-top: 0; }
+.ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
+.ar-ws .tj-rest { font-size: 14px; line-height: 1.6; }
