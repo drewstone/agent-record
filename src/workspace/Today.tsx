@@ -87,7 +87,6 @@ function Spark({ trend, now, w = 280, h = 56 }: { trend: ViewTrend; now: number;
   const from = x(n - 1 - flatDays)
   return (
     <svg className={`tj-spark tj-${trend.movement}`} width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`steps passed at the end of each of the last ${n} days: ${trend.passed.map((v) => v ?? 'none').join(', ')} of ${trend.total}`}>
-      <title>{`Steps passed at the end of each day: ${trend.passed.map((v, i) => `${trend.days[i] ?? ''} ${v ?? '—'}`).join(', ')} of ${trend.total}`}</title>
       {flatDays > 0 && (
         <g className="tj-plateau">
           <rect x={from} y={12} width={x(n - 1) - from} height={h - 14} />
@@ -136,7 +135,6 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
     .sort((a, b) => ORDER[a.view.trend.movement] - ORDER[b.view.trend.movement])
   const solved = plays.filter((p) => p.view.status.key === 'solved')
   const blind = plays.filter((p) => !p.view.trend && p.view.status.key !== 'solved')
-  const active = measured.length + blind.length
   const count = (m: Movement) => measured.filter((p) => p.view.trend.movement === m).length
   return (
     <div className="ws-page td tj" data-mode="today">
