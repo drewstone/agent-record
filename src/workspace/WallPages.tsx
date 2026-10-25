@@ -47,7 +47,8 @@ function Page({ mode, title, at, source, doc, children }: { mode: string; title:
   return (
     <div className="ws-page td wp" data-mode={mode}>
       <header className="td-head"><h1>{title}</h1><AsOfStamp asOf={asOf(at ?? null, source)} /></header>
-      {doc.data ? children() : <p className="ws-status" role={doc.error ? 'alert' : 'status'}>{doc.error ? `${title} is unavailable: ${doc.error}` : `Reading ${source}…`}</p>}
+      {/* One primary region per view (disco-ui-review gate 1, 22:08Z): the page's data surface; the title and as-of stay outside. */}
+      {doc.data ? <div className="wp-body" data-primary-content>{children()}</div> : <p className="ws-status" role={doc.error ? 'alert' : 'status'}>{doc.error ? `${title} is unavailable: ${doc.error}` : `Reading ${source}…`}</p>}
     </div>
   )
 }
@@ -102,12 +103,12 @@ function FleetView({ doc }: { doc: FleetDoc }) {
   const unread = doc.seats.rows.filter((s) => s.long.used === null)
   return (
     <>
-      <section aria-label="Hosts"><h2>Hosts<AsOfStamp asOf={asOf(doc.hostsAt, 'fleet now')} /></h2><ul className="wp-hosts" data-primary-content>{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul></section>
+      <section aria-label="Hosts"><h2>Hosts<AsOfStamp asOf={asOf(doc.hostsAt, 'fleet now')} /></h2><ul className="wp-hosts">{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul></section>
       <div className="wp-split">
         <section aria-label="Agents">
           <h2>Agents <span className="wp-muted">{doc.agents.total ?? '—'}</span><AsOfStamp asOf={asOf(doc.agentsAt, 'agent panes')} /></h2>
           <Tip text={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => `${counts[s] ?? '—'} ${s}`).join(', ')}><Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} /></Tip>
-          <ul className="wp-rows" data-primary-content>
+          <ul className="wp-rows">
             {doc.agents.rows.map((a) => (
               <li key={a.lane}>
                 <i className="wp-dot" style={{ background: AGENT_TONE[a.state], borderColor: AGENT_TONE[a.state] }} />
@@ -121,7 +122,7 @@ function FleetView({ doc }: { doc: FleetDoc }) {
         </section>
         <section aria-label="Seats">
           <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit</span><AsOfStamp asOf={asOf(doc.seatsAt, 'subscription quotas')} /></h2>
-          <div data-primary-content><HBars limit={read.length} max={1} format={pct}
+          <div><HBars limit={read.length} max={1} format={pct}
             rows={read.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, color: s.state === 'empty' ? TONE.warn : undefined,
               note: [s.long.label, s.state === 'empty' ? `back ${s.back ? hm(s.back) : '—'}` : s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} />
             {unread.length > 0 && <p className="wp-muted wp-line">Not reported: {unread.map((s) => `${s.provider.toLowerCase()} ${s.name}${s.long.why ? ` (${s.long.why})` : ''}`).join(', ')}</p>}</div>
@@ -189,7 +190,7 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
         <Stat label="Fleet key left" value={usd(key.leftUsd, 2)}><Tip text={`${key.name ?? 'Discovery fleet key'}: ${usd(key.spentUsd, 2)} spent of a ${usd(key.capUsd, 2)} cap`}><Meter used={key.spentUsd} total={key.capUsd} tone={key.leftUsd !== null && key.capUsd ? (key.leftUsd / key.capUsd < 0.1 ? TONE.warn : 'var(--ar-accent)') : undefined} text={`${usd(key.spentUsd)} of ${usd(key.capUsd)}`} /></Tip></Stat>
       </div>
       <section aria-label="Hosts">
-        <table className="wp-table" data-primary-content>
+        <table className="wp-table">
           <thead><tr><th>Host</th><th>State</th><th>Slots used</th><th>CPU</th><th className="wp-r">Per month</th>{writer && <th />}</tr></thead>
           <tbody>
             {doc.hosts.map((h) => (
@@ -208,14 +209,14 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
       </section>
       <div className="wp-split">
         <section aria-label="Hosts over time"><h2><Tip text={`Autoscaler decision ${doc.scaler.decision}: ${doc.scaler.current} counted, target ${doc.scaler.target}, max ${doc.scaler.max}; birth breaker ${doc.scaler.breaker}; ${doc.scaler.pendingRetirement ?? 0} pending retirement; last error ${doc.scaler.error ?? 'none'}`}>Autoscaled hosts, 7 days</Tip></h2>
-          <div data-primary-content><Lines series={[{ name: 'hosts', color: 'var(--ar-accent)', points: doc.hostsOverTime.filter(([at]) => at >= week).map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
+          <div><Lines series={[{ name: 'hosts', color: 'var(--ar-accent)', points: doc.hostsOverTime.filter(([at]) => at >= week).map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
         <section aria-label="Spend by kind"><h2>{spendTitle}</h2>
-          <div data-primary-content><DayBars days={days} format={(v) => usd(v)} missing="not recorded" tick={(day) => day.slice(5)}
+          <div><DayBars days={days} format={(v) => usd(v)} missing="not recorded" tick={(day) => day.slice(5)}
             series={[{ name: 'subscription at API prices', color: 'var(--ar-accent)', values: daily('subscription') }, { name: 'billed API', color: TONE.warn, values: daily('api') }, { name: 'billed sandbox', color: TONE.ok, values: daily('sandbox') }]} /></div>
         </section>
       </div>
       <section aria-label="Why parked sandboxes stay"><h2>Why parked sandboxes stay</h2>
-        <div data-primary-content><HBars limit={doc.parked.length} format={(v) => String(v)} color={TONE.warn}
+        <div><HBars limit={doc.parked.length} format={(v) => String(v)} color={TONE.warn}
           rows={doc.parked.map((c) => ({ label: c.label, value: c.boxes, note: `${c.discovery} Discovery's${c.hours === null ? '' : ` · ${num(c.hours, 1)} h`}` }))} /></div>
       </section>
       {/* The harness latency matrix is still the wall's drawer (tangle-tools fleet/README.md "Harness lifecycle latency"). */}
@@ -238,7 +239,7 @@ function IdeaDetail({ idea, decideUrl }: { idea: Idea; decideUrl: string | null 
   const [all, setAll] = useState(false)
   const shown = all ? idea.problemStatements : idea.problemStatements.slice(0, 3)
   return (
-    <article className="wp-idea" data-primary-content>
+    <article className="wp-idea">
       <h2>#{idea.id} {idea.title}</h2>
       <p className="wp-muted">{idea.destination} · {idea.stage}{idea.created ? ` · ${age(idea.created)} ago` : ''}</p>
       <p>{idea.summary}</p>
@@ -268,7 +269,7 @@ function IdeasView({ doc }: { doc: IdeasDoc }) {
       <HBars limit={counted.length} max={max} format={(v) => String(v)} rows={counted.map((s) => ({ label: s.stage, value: s.count!, note: s.of !== null ? `of ${s.of} approved for Discovery` : undefined }))} />
       {counted.length < doc.stages.length && <p className="wp-muted wp-line">Not reported: {doc.stages.filter((s) => s.count === null).map((s) => s.stage).join(', ')}</p>}
       <div className="wp-split">
-        <ul className="wp-rows wp-ideas" aria-label="Ideas" data-primary-content>
+        <ul className="wp-rows wp-ideas" aria-label="Ideas">
           {rows.map((r) => (
             <li key={r.id} aria-current={r.id === selected?.id || undefined}>
               <button type="button" onClick={() => pick(r.id)}>

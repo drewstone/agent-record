@@ -3923,3 +3923,5 @@
 .ar-ws .wp section > .ar-tip-anchor, .ar-ws .wp-stat > .ar-tip-anchor, .ar-ws .wp-table td > .ar-tip-anchor:has(.ov-meter) { display: block; }
 .ar-ws .wp-host { align-content: start; }
 @media (max-width: 760px) { .ar-ws .wp-table td > .wp-muted { display: none; } }
+.ar-ws .wp-body { display: grid; gap: 28px; min-width: 0; }
+@media (max-width: 760px) { .ar-ws .wp-body { gap: 20px; } }
