@@ -68,17 +68,18 @@ function RetainedFileContent({ file, files, chosen, baseline, baselineInventory,
     if (view === 'diff' && canCompare) return !knownAbsent && prior.text === undefined ? <p role="status">Loading the comparison…</p> : <DiffView filename={filename} baseline={knownAbsent ? '' : prior.text ?? ''} current={content.text ?? ''} themeType={mode} defaultWrap />
     return <FilePreview className="run-retained-preview" filename={view === 'source' && hasRichPreview ? `${filename}.txt` : filename} content={content.text} blobUrl={isBinary ? href : undefined} size={chosen.bytes ?? undefined} urlTransform={transform} onDownload={() => downloadLink.current?.click()} hideHeader />
   }
-  return <article className="run-file" data-file={file.path}>
+  // A short text file takes its natural height (root 23:24Z: an 11-byte answer sat in a tall empty frame); a long one or a diff keeps the frame.
+  const fit = !isBinary && view !== 'diff' && (content.text ?? '').split('\n').length <= 40
+  return <article className="run-file" data-file={file.path} data-fit={fit ? 'content' : undefined}>
     <div className="run-file-toolbar"><div className="run-file-modes" role="group" aria-label="File view">
       <button type="button" aria-pressed={view === 'preview' || (view === 'source' && !hasRichPreview)} onClick={() => setView('preview')}>{missingAfter ? 'Baseline preview' : 'Preview'}</button>
       {hasRichPreview && <button type="button" aria-pressed={view === 'source'} onClick={() => setView('source')}>{missingAfter ? 'Baseline source' : 'Source'}</button>}
       {!isBinary && (canCompare || comparisonSelected) && <button type="button" disabled={!canCompare} aria-pressed={view === 'diff'} onClick={() => setView('diff')}>Diff{beforeLabel ? ` against ${beforeLabel}` : ''}</button>}
-    </div><span className="faint" title={`${chosen.source} · ${byteSize(chosen.bytes)}`}>{href && <a ref={downloadLink} href={href} download={filename}>Download</a>}</span></div>
+    </div><span className="faint run-file-links" title={`${chosen.source} · ${byteSize(chosen.bytes)}`}>{href && <a ref={downloadLink} href={href} download={filename}>Download</a>}<a href={fileLink(file.path, fileIdentity(chosen))}>{fileVersion ? 'Link to this version' : 'Link'}</a><details className="run-file-proof"><summary>Provenance</summary>{chosen.sha256 || chosen.objectId ? <><span>{chosen.sha256 ? 'Recorded SHA-256' : 'Recorded Git blob identity'}</span><code>{chosen.sha256 ?? chosen.objectId}</code></> : <span>Content hash is not recorded.</span>}</details></span></div>
     {missingAfter && <p className="run-file-notice">{absenceVerified ? 'Removed from the selected version’s complete retained page tree. This preview is the comparison version’s file.' : 'Only the comparison inventory lists this file. Its absence from the selected inventory is unverified.'}</p>}
     {comparisonSelected && !canCompare && <p className="run-file-notice">{isBinary ? 'This binary file has no text diff.' : tooLarge ? 'This file exceeds the inline comparison limit.' : 'This file’s baseline is unavailable or not in a complete comparable inventory.'}</p>}
     {knownAbsent && <p className="run-file-notice">This page is absent from the comparison version’s complete retained page tree. The diff compares it with an empty file.</p>}
     {(file.alternates?.length ?? 0) > 0 && <label className="run-file-versions">Retained version <select value={fileIdentity(chosen)} onChange={(event) => navigation.onIdentity(event.target.value)}>{[file, ...(file.alternates ?? [])].map((item) => <option key={item.href} value={fileIdentity(item)}>{item.source} · {item.sha256?.slice(0, 12) ?? 'hash unavailable'}</option>)}</select><span>Different retained versions share this path.</span></label>}
     <div className="run-file-content" data-file-view={view}>{body(theme ?? pageTheme())}</div>
-    <footer className="run-file-proof"><a href={fileLink(file.path, fileIdentity(chosen))}>{fileVersion ? 'Link to this version' : 'Link to this file'}</a><details><summary>File provenance</summary>{chosen.sha256 || chosen.objectId ? <><span>{chosen.sha256 ? 'Recorded SHA-256' : 'Recorded Git blob identity'}</span><code>{chosen.sha256 ?? chosen.objectId}</code></> : <span>Content hash is not recorded.</span>}</details></footer>
   </article>
 }
