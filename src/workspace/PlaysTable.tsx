@@ -16,8 +16,12 @@ const runOf = (run: string) => /\d{6}(\d\d[a-z])$/.exec(run)?.[1] ?? run
  * text (a stopped run's blocker carries the operator's whole reason); the full text stays in the row's title.
  */
 const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) => {
-  const need = view.needsYou?.[0] as { text: string; action?: string | null } | undefined
-  if (need) return { tone: 'needs', text: `Needs you: ${plainSummary(need.action ?? need.text, 10)}` }
+  // "Needs you" only for Drew's own items, as Today counts them; an item its owner holds names that owner (review 1 #2).
+  const needs = (view.needsYou ?? []) as { text: string; action?: string | null; owner?: string | null }[]
+  const mine = needs.find((n) => n.owner === 'Drew')
+  if (mine) return { tone: 'needs', text: `Needs you: ${plainSummary(mine.action ?? mine.text, 10)}` }
+  const held = needs[0]
+  if (held) return { tone: 'blocked', text: `${held.owner ?? 'Its owner'}: ${plainSummary(held.action ?? held.text, 8)}` }
   const b = view.blocker
   return b ? { tone: 'blocked', text: `${b.kind === 'stopped' ? 'Stopped' : 'Blocked'}: ${plainSummary(b.why ?? b.text, 10)}` } : null
 }

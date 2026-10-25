@@ -44,11 +44,10 @@ function useJourney(api: string, doc: RunDocument) {
     const commits = new Map<string, number>()
     for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
     const root = nodes.find((n) => n.role === 'root' || n.role === 'lead')?.id ?? doc.run.id
-    const plateau = best ? releases.find((r) => r.passed === best.passed) ?? best : null
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
     const attributed = releases.some((r) => Object.keys(r.by ?? {}).length > 0)
-    return { data, nodes, releases, t0, t1, best, commits, root, plateau, open, same, attributed }
+    return { data, nodes, releases, t0, t1, best, commits, root, open, same, attributed }
   }, [ws.data, doc.run.id])
   return { runUrl, model, error: ws.error }
 }
@@ -92,9 +91,8 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
   )
 }
 
-/** Q3 on the run: the best release's steps as the hero, how long it has been stuck, and the action that clears it. */
+/** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
 function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
-  const stuck = m.plateau ? hours(ms(m.plateau.taggedAt), m.t1) : null
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
@@ -106,13 +104,15 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
         </ol>
       )}
       <p className="rj-stuck">
-        {m.best ? <><b>{m.best.release}</b> · {m.open ? `stuck at the ${m.open.label}${stuck !== null ? ` ${stuck.toFixed(0)} h, since ${m.plateau!.release}` : ''}` : 'every step passes'}</> : 'No release was checked.'}
+        {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
+            standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
+        {m.best ? <><b>{m.best.release}</b> · {m.open ? (m.open.state === 'fail' ? `fails the ${m.open.label}` : `the ${m.open.label} has not run`) : 'every step passes'}</> : 'No release was checked.'}
         {m.best && doc.view?.status.key === 'solved-earlier' && <span className="rj-muted"> under earlier check {m.best.checker ?? ''}; not run under the current one.</span>}
       </p>
       {blocker?.action && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} />}
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
-          ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}${stuck !== null && m.plateau === m.releases[0] ? `, no step gained in ${stuck.toFixed(0)} h` : ''}`
+          ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
           : m.releases.map((r) => <span key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined}>{r.release} {r.passed}/{r.total}</span>)}
       </p>}
     </section>
