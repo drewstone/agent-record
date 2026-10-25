@@ -143,11 +143,13 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     })
     return { spans, totalMs: m.t1 - m.t0, promptTokens: 0, completionTokens: 0, toolCalls: 0 }
   }, [m, live])
-  const markers = useMemo((): FlowMarker[] => m.releases.map((r) => ({
+  // Releases that moved the score, the best and the newest: 17c tagged 205 releases, and a line for each buried the rows.
+  const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
+  const markers = useMemo((): FlowMarker[] => marked.map((r) => ({
     at: ms(r.taggedAt) - m.t0,
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
-  })), [m])
+  })), [m, marked])
   return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => span.id && onPick(span.id)} />
 }
 

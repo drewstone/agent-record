@@ -67,11 +67,11 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
         {target && <g className="pj-band"><rect x={left} width={w - left - right} y={y(Math.min(target.max, 10 ** hi))} height={Math.max(2, y(target.min) - y(Math.min(target.max, 10 ** hi)))} /><text x={w - right - 6} y={y(target.max) + 14} textAnchor="end">paper {rate(target.min)}–{rate(target.max)}</text></g>}
         {gap.need && <g className="pj-need"><line x1={left} x2={w - right} y1={y(gap.need.cycles / gap.need.capS)} y2={y(gap.need.cycles / gap.need.capS)} /><text x={w - right - 6} y={y(gap.need.cycles / gap.need.capS) - 6} textAnchor="end">needed: {cyclesWord(gap.need.cycles)} cycles in {gap.need.capS} s</text></g>}
         {shown.map((c) => <g key={c.label} className="pj-check"><line x1={x(ms(c.firstAt))} x2={x(ms(c.firstAt))} y1={top} y2={h - bottom} /><text x={x(ms(c.firstAt)) + 4} y={top + 10}>{c.label}</text></g>)}
-        {gap.passed?.lastAt && <g className="pj-pass"><line x1={x(ms(gap.passed.lastAt))} x2={x(ms(gap.passed.lastAt))} y1={top} y2={h - bottom} /><text x={x(ms(gap.passed.lastAt)) - 4} y={h - bottom - 6} textAnchor="end">{gap.passed.tag} passed {gap.passed.checker}</text></g>}
+        {gap.passed?.lastAt && <g className="pj-pass"><line x1={x(ms(gap.passed.lastAt))} x2={x(ms(gap.passed.lastAt))} y1={top} y2={h - bottom} /><text x={x(ms(gap.passed.lastAt)) + 4} y={top + 26}>{gap.passed.tag} passed {gap.passed.checker}</text></g>}
         {marks.map((m) => (
           <g key={m.key} className={`pj-mark pj-${m.kind}${on === m.key ? ' is-on' : ''}`} tabIndex={0} role="button" aria-label={`${m.title}: ${m.rows.map(([k, v]) => `${k} ${v}`).join(', ')}`}
             onMouseEnter={() => setOn(m.key)} onFocus={() => setOn(m.key)} onBlur={() => setOn(null)} onClick={() => setOn(m.key)}>
-            <circle className="pj-hit" cx={m.x} cy={m.y} r={12} />
+            <circle className="pj-hit" cx={m.x} cy={m.y} r={16} />
             {m.kind === 'measured' ? <circle cx={m.x} cy={m.y} r={5} /> : <path d={`M${m.x - 5} ${m.y - 4} h10 l-5 8z`} />}
           </g>
         ))}
