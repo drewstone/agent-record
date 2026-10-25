@@ -3952,3 +3952,10 @@
 .ar-ws .ledger-lineage { margin: 0 0 16px; }
 .ar-ws .ledger-lineage .ov-axis { font-size: 12px; }
 .ar-ws .ledger-lineage .ov-gantt-label { font-family: var(--ar-font-mono, ui-monospace, monospace); }
+.ar-ws .wp-body { display: grid; gap: 28px; min-width: 0; }
+@media (max-width: 760px) { .ar-ws .wp-body { gap: 20px; } }
+.ar-ws .wp-groups { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 16px; margin-top: 12px; font-size: 14px; }
+.ar-ws .wp-group > summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.ar-ws .wp-group[open] { flex-basis: 100%; }
+.ar-ws .wp-awaiting { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.ar-ws .wp-ideas li > .wp-idea { margin: 4px 0 12px; }
