@@ -3718,7 +3718,7 @@
 .ar-ws .run-file-notice { margin: 0 0 12px; padding: 12px 16px; border-left: 2px solid var(--ar-c-run); background: var(--ar-bg-alt); font-size: 12px; line-height: 1.6; }
 .ar-ws .run-file { min-width: 0; }
 .ar-ws .run-file { display: flex; flex-direction: column; min-height: 320px; }
-.ar-ws .run-file-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--border-default, var(--ar-border)); font-size: 12px; }
+.ar-ws .run-file-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 8px 12px; border-bottom: 1px solid var(--border-default, var(--ar-border)); font-size: 12px; }
 .ar-ws .run-file-modes { display: flex; gap: 4px; }
 .ar-ws .run-file-modes button { padding: 4px 8px; border: 0; background: transparent; color: var(--text-muted, var(--ar-fg-muted)); font: inherit; cursor: pointer; }
 .ar-ws .run-file-modes button[aria-pressed=true] { background: var(--accent-surface-soft, var(--ar-bg-alt)); color: var(--accent-text, var(--ar-c-action)); }
@@ -3726,7 +3726,7 @@
 .ar-ws .run-file-content > [role] { margin: 0; }
 .ar-ws .run-file-content :where(pre, table, img, video) { max-width: 100%; }
 .ar-ws .run-file-content pre { overflow: auto; }
-.ar-ws .run-file-links { display: inline-flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ar-ws .run-file-links { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; }
 .ar-ws .run-file-proof > span, .ar-ws .run-file-proof > code { display: block; margin-top: 4px; font-size: 12px; overflow-wrap: anywhere; }
 .ar-ws .run-file-versions { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px; font-size: 12px; }
 .ar-ws .run-file-empty { padding: 24px; color: var(--text-secondary, var(--ar-fg-muted)); line-height: 1.65; }
