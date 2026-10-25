@@ -150,7 +150,8 @@ export function AgentTable({
               <span className="clip">{nameOf(node)}</span>
             </span>
             <span role="cell">
-              <StatusPill status={agent} title={state} />
+              {/* The rail shows the shape only; the word and the agent's state are in the tooltip (REVIEW-8 gate 1). */}
+              <StatusPill status={agent} title={`${agent.word}: ${state}`}><span className="state-word">{agent.word}</span></StatusPill>
             </span>
             <span role="cell" className="lane" title={start !== null ? `${duration((end ?? start) - start)} from ${new Date(start).toISOString().slice(11, 16)} UTC` : 'no recorded time'}>
               {left !== null && width !== null && <i className="seg" style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />}
@@ -159,7 +160,7 @@ export function AgentTable({
             <span role="cell" className="num">{total !== null ? tokens(total) : '—'}</span>
             <span role="cell" className="num" title={list === null ? (total !== null ? 'Tokens are counted; this model has no API list price yet' : 'No usage metered yet') : 'API-equivalent: every token at list price, whoever paid'}>
               {/* One unit per column: dollars here, tokens in the Tokens column (it mixed $82.47 with 296.6M tok). */}
-              {list !== null && list > 0 ? money(list) : <span className="faint">{total !== null ? 'unpriced' : '—'}</span>}
+              {list !== null && list > 0 ? money(list) : <span className="faint">—</span>}
             </span>
             <span role="cell" className={`capture-text capture-${capture ?? 'unknown'}`}>
               {capture === 'complete' ? 'complete' : capture === 'lossy' ? 'partial' : capture === 'absent' ? 'not captured' : 'unknown'}
