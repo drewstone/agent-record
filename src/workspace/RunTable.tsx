@@ -22,6 +22,13 @@ export interface NodeStats {
   profileDigest?: string | null
 }
 
+/** An agent by the profile it was spawned as, as the play page's team lanes name it: `pcs-lead (s0)`, not `s0`. */
+export function agentName(doc: RunDocument, node: RecordNode) {
+  const short = node.id.startsWith(`${doc.run.id}:`) ? node.id.slice(doc.run.id.length + 1) : node.label
+  const profile = (doc.receipt?.timeline?.lanes ?? []).find((lane) => lane.id === short)?.profile ?? null
+  return node.parent && profile && profile !== node.label ? `${profile} (${node.label})` : node.label
+}
+
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
 
 interface Row {
@@ -53,12 +60,7 @@ export function AgentTable({
   onSelect: (id: string) => void
 }) {
   // An agent by the profile it was spawned as, as the play page's team lanes name it: `pcs-lead (s0)`, not `s0`.
-  const profiles = useMemo(() => new Map((doc.receipt?.timeline?.lanes ?? []).map((lane) => [lane.id, lane.profile ?? null])), [doc.receipt])
-  const nameOf = (node: RecordNode) => {
-    const short = node.id.startsWith(`${doc.run.id}:`) ? node.id.slice(doc.run.id.length + 1) : node.label
-    const profile = profiles.get(short) ?? null
-    return node.parent && profile && profile !== node.label ? `${profile} (${node.label})` : node.label
-  }
+  const nameOf = (node: RecordNode) => agentName(doc, node)
   const rows = useMemo(() => {
     const nodes = index.actors.filter((node) => node.kind !== 'finding')
     const ids = new Set(nodes.map((node) => node.id))

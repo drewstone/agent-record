@@ -97,24 +97,37 @@ export function VersionGraph({
   return (
     <div className="version-graph" data-version-graph={label}>
       <div className="vg-toolbar" role="group" aria-label={`${label}: lanes`}>
-        {/* Showing every lane already, the chip is a state, not a control (REVIEW-8 sweep: a dead click). */}
-        <button type="button" className={`vg-lane-chip ${lane === null ? 'on' : ''}`} aria-pressed={lane === null} disabled={lane === null} onClick={() => setLane(null)}>
-          all lanes
-        </button>
-        {allLanes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`vg-lane-chip ${lane === item.id ? 'on' : ''}`}
-            aria-pressed={lane === item.id}
-            data-lane={item.id}
-            title={item.detail ?? undefined}
-            onClick={() => setLane(lane === item.id ? null : item.id)}
-          >
-            <i className={`vg-swatch vg-c${colorOf.get(item.id)}`} aria-hidden="true" />
-            {item.label}
-          </button>
-        ))}
+        {/* Many lanes read as one control, not a row of chips (REVIEW-8: 17 chips were chrome words on Built). */}
+        {allLanes.length > 5 ? (
+          <label className="vg-lane-select">
+            <span className="sr-only">Lane</span>
+            <select value={lane ?? ''} onChange={(event) => setLane(event.target.value || null)}>
+              <option value="">All {allLanes.length} lanes</option>
+              {allLanes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+          </label>
+        ) : (
+          <>
+            {/* Showing every lane already, the chip is a state, not a control (REVIEW-8 sweep: a dead click). */}
+            <button type="button" className={`vg-lane-chip ${lane === null ? 'on' : ''}`} aria-pressed={lane === null} disabled={lane === null} onClick={() => setLane(null)}>
+              all lanes
+            </button>
+            {allLanes.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`vg-lane-chip ${lane === item.id ? 'on' : ''}`}
+                aria-pressed={lane === item.id}
+                data-lane={item.id}
+                title={item.detail ?? undefined}
+                onClick={() => setLane(lane === item.id ? null : item.id)}
+              >
+                <i className={`vg-swatch vg-c${colorOf.get(item.id)}`} aria-hidden="true" />
+                {item.label}
+              </button>
+            ))}
+          </>
+        )}
         {hasMerges && (
           <label className="vg-toggle">
             <input type="checkbox" checked={hideMerges} onChange={(event) => setHideMerges(event.target.checked)} /> hide merges
@@ -264,11 +277,15 @@ function CodeReleases({ releases }: { releases: RunWorkspaceDocument['releases']
   const scored = releases.filter((r) => r.at && r.passed != null && r.total).map((r) => ({ at: Date.parse(r.at!), r }))
   if (scored.length < 2) return null
   const total = Math.max(...scored.map(({ r }) => r.total!))
-  const name = (t: number) => scored.reduce((near, item) => (Math.abs(item.at - t) < Math.abs(near.at - t) ? item : near)).r.release
+  // The axis says when; each dot names its release and steps in the readout (22a: a nearest-release axis read "rc1 · 03:33").
+  const name = (t: number) => {
+    const item = scored.find((entry) => entry.at === t)
+    return item ? `${item.r.release} · ${item.r.passed} of ${item.r.total} steps` : 'steps passed'
+  }
   return (
     <section className="built-releases" aria-label="Steps passed by each release">
       <h3>Steps passed by each release</h3>
-      <Lines rows={5} axis={(t) => `${name(t)} · ${new Date(t).toISOString().slice(11, 16)}`} format={(v) => `${v} of ${total}`} series={[{ name: 'steps passed', color: 'var(--ar-accent, #8e59ff)', dots: true, points: scored.map(({ at, r }) => [at, r.passed!]) }]} />
+      <Lines rows={5} axis={(t) => new Date(t).toISOString().slice(11, 16)} format={(v) => `${v} of ${total}`} series={[{ name: 'steps passed', color: 'var(--ar-accent, #8e59ff)', dots: true, label: name, points: scored.map(({ at, r }) => [at, r.passed!]) }]} />
     </section>
   )
 }

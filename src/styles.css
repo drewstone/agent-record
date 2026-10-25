@@ -3959,3 +3959,4 @@
 .ar-ws .run-details-panel .agent-rail.details-agents { position: static; max-height: none; border: 0; border-radius: 0; }
 .ar-ws .run-details-panel > .ws-status { padding: 16px; }
 .ar-ws .vg-lane-chip:disabled { cursor: default; opacity: 1; }
+.ar-ws .vg-lane-select select { min-height: 32px; padding: 4px 8px; font: 14px var(--ar-font-body); }

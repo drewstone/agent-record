@@ -29,16 +29,16 @@ export function RunActivity({ doc, cost = false, releases = [], stacked = false 
   // A settled run's cost is read after the fact: the reading taken after it settled is what it had spent by its end.
   const final = doc.spend.apiEquivalentUsd ?? priced.at(-1)?.usd ?? null
   if (final !== null && spent.length && Number.isFinite(end) && final > spent.at(-1)![1]) spent.push([end, final])
-  const marks: ChartMark[] = releases.flatMap((r) => {
-    const at = Date.parse(r.at ?? '')
-    if (!inRun(at) || !spent.length || at < spent[0]![0] || at > spent.at(-1)![0]) return []
-    const steps = r.passed != null && r.total ? ` · ${r.passed}/${r.total} steps` : ''
-    return [{ at, label: `${r.release}${steps}`, kind: 'release' as const, verdict: r.passed != null && r.total ? (r.passed === r.total ? 'pass' as const : 'fail' as const) : 'unknown' as const }]
-  })
+  // A release is marked only where the steps it passed changed (21c: rc115 5/6, rc116 4/6, rc117 5/6, then nine more at
+  // 5/6) and at the last one, so eleven labels do not bury the line; each mark names its release and steps.
+  const marks: ChartMark[] = releases
+    .filter((r) => inRun(Date.parse(r.at ?? '')) && spent.length > 0 && Date.parse(r.at!) >= spent[0]![0] && Date.parse(r.at!) <= spent.at(-1)![0])
+    .filter((r, i, all) => i === 0 || i === all.length - 1 || r.passed !== all[i - 1]!.passed)
+    .map((r) => ({ at: Date.parse(r.at!), label: `${r.release} ${r.passed != null && r.total ? `${r.passed}/${r.total}` : ''}`.trim(), kind: 'release' as const, verdict: r.passed != null && r.total ? (r.passed === r.total ? 'pass' as const : 'fail' as const) : 'unknown' as const }))
   const charts = [
     spent.length > 1 && { caption: 'Cost to date', node: <Lines rows={6} axis={clock} format={money} marks={marks} series={[{ name: 'cost to date', color: ACCENT, points: spent }]} /> },
-    working.length > 1 && { caption: 'Agents working', node: <Lines rows={3} axis={clock} format={(v) => String(Math.round(v))} series={[{ name: 'agents working', color: ACCENT, points: working }]} /> },
-    rate.length > 1 && { caption: 'Tokens per minute', node: <Lines rows={3} axis={clock} format={tokens} series={[{ name: 'tokens per minute', color: ACCENT, points: rate }]} /> },
+    working.length > 1 && { caption: 'Agents working', node: <Lines rows={5} axis={clock} format={(v) => String(Math.round(v))} series={[{ name: 'agents working', color: ACCENT, points: working }]} /> },
+    rate.length > 1 && { caption: 'Tokens per minute', node: <Lines rows={5} axis={clock} format={tokens} series={[{ name: 'tokens per minute', color: ACCENT, points: rate }]} /> },
   ].filter((chart): chart is { caption: string; node: ReactElement } => Boolean(chart))
   if (!charts.length) return null
   return stacked ? (

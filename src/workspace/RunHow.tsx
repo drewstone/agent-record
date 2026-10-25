@@ -1,7 +1,7 @@
 import { HBars } from '@tangle-network/charts/react'
 import type { RunDocument } from '../workspace-model.js'
 import type { RecordNode } from '../record.js'
-import type { NodeStats } from './RunTable.js'
+import { agentName, type NodeStats } from './RunTable.js'
 import { duration, money, tokens, useDocument } from './data.js'
 import type { RunWorkspaceDocument } from './RunWorkspace.js'
 import { RunActivity } from './RunActivity.js'
@@ -42,14 +42,14 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
         {time.length > 0 && (
           <section aria-label="Where the time went">
             <h3>Where the time went</h3>
-            <HBars rows={time.map((row) => ({ label: row.category, value: row.ms!, note: row.tokens ? `${tokens(row.tokens)} tokens` : undefined }))} format={duration} color="var(--ar-accent, #8e59ff)" />
+            <HBars rows={time.map((row) => ({ label: row.category, value: row.ms! }))} format={duration} color="var(--ar-accent, #8e59ff)" />
             {waste.length > 0 && <HBars max={Math.max(...time.map((row) => row.ms!))} rows={waste.map((row) => ({ label: `${wasteLabel(row.dimension)} (waste)`, value: row.ms! }))} format={duration} color="var(--ar-c-neutral, #8e8e8e)" />}
           </section>
         )}
         {byAgent.length > 0 && (
           <section aria-label="Tokens by agent">
             <h3>Tokens by agent</h3>
-            <HBars rows={byAgent.map(({ node, n }) => ({ label: node.label, value: n, href: onAgent(node.id) }))} format={tokens} limit={10} />
+            <HBars rows={byAgent.map(({ node, n }) => ({ label: agentName(doc, node), value: n, href: onAgent(node.id) }))} format={tokens} limit={10} />
           </section>
         )}
       </div>
