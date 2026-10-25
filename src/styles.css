@@ -3656,7 +3656,10 @@
 .ar-ws .tj-held summary { cursor: pointer; font-size: 14px; color: var(--ar-fg-muted); }
 .ar-ws .tj-held ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; font-size: 12px; }
 .ar-ws .tj-rows { list-style: none; margin: 0; padding: 0; display: grid; }
-.ar-ws .tj-rows li { display: grid; grid-template-columns: minmax(160px, 1.2fr) auto 280px minmax(220px, 2fr); align-items: center; gap: 12px 28px; padding: 20px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); font-size: 14px; }
+.ar-ws .tj-rows > li { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); align-items: center; gap: 16px 32px; padding: 20px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); font-size: 14px; }
+.ar-ws .tj-row-head { display: grid; justify-items: start; gap: 12px; }
+.ar-ws .tj-chart { min-width: 0; }
+.ar-ws .tj-chart .ov-axis { font-size: 12px; }
 .ar-ws .tj-row-title { font-size: 18px; font-weight: 600; }
 .ar-ws .tj-ladder { display: inline-flex; align-items: center; gap: 12px; }
 .ar-ws .tj-steps { display: inline-flex; gap: 4px; }
@@ -3667,19 +3670,15 @@
 .ar-ws .tj-num { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ar-ws .tj-state { display: grid; gap: 4px; }
 .ar-ws .tj-hold { font-size: 12px; }
-.ar-ws .tj-spark { display: block; overflow: visible; }
-.ar-ws .tj-spark path { fill: none; stroke-width: 2.5; stroke: currentColor; }
-.ar-ws .tj-spark circle { fill: currentColor; }
-.ar-ws .tj-spark-top { stroke: color-mix(in srgb, var(--ar-fg-faint) 50%, transparent); stroke-dasharray: 2 3; }
-.ar-ws .tj-plateau rect { fill: color-mix(in srgb, var(--ar-c-warn, #f5a524) 14%, transparent); }
-.ar-ws .tj-plateau text { fill: var(--ar-c-warn, #f5a524); font-size: 12px; }
 .ar-ws .tj-moving { color: var(--ar-c-ok, #22c55e); }
 .ar-ws .tj-stuck { color: var(--ar-c-warn, #f5a524); }
 .ar-ws .tj-regressed { color: var(--ar-c-fail, #ef4444); }
 .ar-ws .tj-word { font-weight: 600; }
 .ar-ws .tj-blind { display: grid; gap: 8px; }
-.ar-ws .tj-blind details { padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
-.ar-ws .tj-blind summary { cursor: pointer; font-size: 14px; }
+.ar-ws .tj-blind details, .ar-ws .tj-solved { padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
+.ar-ws .tj-blind summary, .ar-ws .tj-solved summary { cursor: pointer; font-size: 14px; }
+.ar-ws .tj-solved b { font-weight: 600; }
+.ar-ws .tj-solved .tj-names { margin-top: 8px; }
 .ar-ws .tj-blind details > p { margin: 8px 0; }
 .ar-ws .tj-blind .tj-names { margin-top: 8px; }
 .ar-ws .tj-blind b { font-weight: 600; }
@@ -3692,12 +3691,10 @@
 .ar-ws .tj-finding b { font-weight: 600; }
 /* One bold weight across the pages (REVIEW-6 #12: <b> rendered at 700). */
 .ar-ws b, .ar-ws strong { font-weight: 600; }
-.ar-ws .tj-rest { margin: 0; font-size: 12px; color: var(--ar-fg-muted); }
 @media (max-width: 1023px) {
   .ar-ws .tj-hero { font-size: 18px; }
   .ar-ws .tj-second { font-size: 14px; }
-  .ar-ws .tj-rows li { grid-template-columns: 1fr auto; }
-  .ar-ws .tj-rows li > span:has(> svg), .ar-ws .tj-state { grid-column: 1 / -1; }
+  .ar-ws .tj-rows > li { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .tj-row-title, .ar-ws .tj-num { font-size: 14px; }
 }
 
@@ -3866,7 +3863,6 @@
 @media (prefers-color-scheme: dark) { .agent-record[data-theme='auto'] { --ar-c-warn: #f5a524; } }
 .ar-ws .rj-foot { margin-top: 0; padding-top: 0; }
 .ar-ws .outcome-legend li { cursor: default; pointer-events: none; }
-.ar-ws .tj-rest { font-size: 14px; line-height: 1.6; }
 .ar-ws .rj-full-toggle { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ar-c-action); cursor: pointer; white-space: nowrap; }
 .ar-ws .rj-full-text { white-space: pre-wrap; }
 /* Fleet, Sandboxes and Ideas (WallPages.tsx): the Today frame and type (12/14/18 px, hero 32), 4 px grid, color for state. */
