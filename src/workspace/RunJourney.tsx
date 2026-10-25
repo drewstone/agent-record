@@ -134,16 +134,10 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
         {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
             teardown; this line says only what the release reached. */}
+        {/* While the goal's cleanup is unconfirmed the header leads with it, and the narrower check verdict sits here by its receipt (root 23:24Z). */}
+        {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
         {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
-      {lifecycle && lifecycle.state !== 'done' && (
-        <p className="rj-life-line">
-          {/* The header pill names it; the line gives the counts, and the receipt's own records stay one toggle away
-              (root 2026-10-25 08:42Z: resource ids and source reachable). */}
-          <Full what="teardown record" short={lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, '').replace(/^./, (c) => c.toUpperCase())}
-            raw={`${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`} />
-        </p>
-      )}
       {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
       {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} said={Boolean(m.open)} />}
@@ -279,7 +273,8 @@ function Full({ short, raw, what }: { short: string; raw: string; what: string }
  * "prompt" after it as a stray word (REVIEW-5 #15).
  */
 function Prompt({ text }: { text: string }) {
-  return <details className="rj-prompt"><summary>Opening prompt</summary><p className="rj-full-text">{text}</p></details>
+  // What it is, on its own line and not behind Details (root 23:24Z): the run input's instruction, sent as the user role; no sender is recorded.
+  return <details className="rj-prompt"><summary>Opening prompt <span className="rj-muted">· user role · the run input's instruction · sender not recorded</span></summary><p className="rj-full-text">{text}</p></details>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -389,10 +384,9 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
         <a className="rj-crumb" href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a>
         <div className="rj-title">
           <h1 title={m ? `${hours(m.t0, m.t1).toFixed(1)} h` : undefined}>Run {shortRun(doc.run.play, doc.run.id)}</h1>
-          {view && <StatusPill status={viewChip(view.status)} />}
-          {/* The check's verdict is not the requested lifecycle: a disposable run says whether its teardown is confirmed
-              (root 2026-10-25; the host's run_view lifecycle, from the receipt's retention records). */}
-          {lifecycle && lifecycle.state !== 'done' && <span className="rj-life" title={lifecycle.sentence}>Teardown not confirmed</span>}
+          {/* The goal includes its own teardown: an unconfirmed cleanup is the run's state, said once with its counts and
+              receipt records (root 23:24Z); the check's verdict then sits on the hero line. */}
+          {lifecycle && lifecycle.state !== 'done' ? <span className="rj-life" title={`${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`}>{lifecycle.sentence}</span> : view && <StatusPill status={viewChip(view.status)} />}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
         {m && <Trigger doc={doc} m={m} />}
