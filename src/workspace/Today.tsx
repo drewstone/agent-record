@@ -135,7 +135,8 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
       </header>
       <section className="tj-q1" aria-label="What needs you">
         <p className="tj-hero">{mine.length ? `${mine.length} ${mine.length === 1 ? 'decision needs' : 'decisions need'} you.` : 'Nothing needs you.'}</p>
-        <p className="tj-second">{count('moving')} moving, {count('stuck')} stuck, {count('regressed')} regressed{blind.length ? `, ${blind.length} not measured` : ''} this week.</p>
+        {/* Plain words, not the trend's states (review 4 #8: "0 moving, 1 stuck" read as jargon). */}
+        <p className="tj-second">{[count('moving') && `${count('moving')} gaining steps`, count('stuck') && `${count('stuck')} not gaining`, count('regressed') && `${count('regressed')} lost steps`].filter(Boolean).join(', ') || 'No measured play changed'} this week.</p>
         {mine.length > 0 && <ul className="tj-decisions">{mine.map((item) => <Decision key={item.text} item={item} now={now} />)}</ul>}
         <Held items={held} />
       </section>
@@ -145,11 +146,11 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             {measured.map(({ play, title, view }) => (
               <li key={play}>
                 <a className="tj-row-title" href={playHref(play)}>{title}</a>
-                <span className="tj-ladder">
+                <span className="tj-ladder" title={`${view.trend.best} of ${view.trend.total} steps passed${view.progress?.steps.length ? `: ${view.progress.steps.map((step) => `${step.label} ${step.state}`).join(', ')}` : ''}`}>
                   <span className="tj-steps">{view.progress?.steps.map((step, i) => <i key={i} data-step={step.state} title={step.label} />)}</span>
                   <span className="tj-num">{view.trend.best}/{view.trend.total}</span>
                 </span>
-                <Spark trend={view.trend} now={now} />
+                <span title={`Steps passed at the end of each day: ${view.trend.passed.map((v, i) => `${view.trend.days[i] ?? ''} ${v ?? '—'}`).join(', ')} of ${view.trend.total}`}><Spark trend={view.trend} now={now} /></span>
                 <span className="tj-state">
                   <b className={`tj-word tj-${view.trend.movement}`}>{WORD[view.trend.movement]}</b> {moveLine(view.trend, now)}
                   {holdLine(view) && <span className="tj-muted tj-hold">{holdLine(view)}</span>}
@@ -159,11 +160,18 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
           </ul>
         )}
         {blind.length > 0 && (
-          <details className="tj-finding">
-            {/* The names fold behind the finding: twelve titles in a paragraph were the page's longest text (review 1 #14). */}
-            <summary><b>{blind.length} of {active} active plays have no check that counts steps.</b></summary>
-            <p>{blind.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play, 'setup')} title={`${p.title}: set up a check that counts steps`}>{p.title}</a></span>)}</p>
-          </details>
+          <>
+            {/* One row per active play, each with what holds it (review 4 #8: the page's lower half was empty). */}
+            <h2 className="tj-finding"><b>{blind.length} of {active} active plays have no check that counts steps</b></h2>
+            <ul className="tj-rows tj-blind">
+              {blind.map(({ play, title, view }) => (
+                <li key={play}>
+                  <a className="tj-row-title" href={playHref(play)}>{title}</a>
+                  <span className="tj-state">{holdLine(view) ?? <a href={playHref(play, 'setup')}>Set up a check that counts steps</a>}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         {solved.length > 0 && <p className="tj-rest">Solved: {solved.map((p, i) => <span key={p.play}>{i ? ', ' : ''}<a href={playHref(p.play)}>{p.title}</a></span>)}.</p>}
       </section>

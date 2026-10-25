@@ -13,18 +13,18 @@ const short = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${
 const runOf = (run: string) => /\d{6}(\d\d[a-z])$/.exec(run)?.[1] ?? run
 /** What the row's other columns do not say: the decision the play needs, else what blocks it. */
 /**
- * What holds the play, in at most ten plain words: the host's plain why (or action) for the blocker, never its raw
- * text (a stopped run's blocker carries the operator's whole reason); the full text stays in the row's title.
+ * What holds the play as a short label beside the pill (who holds it), the plain why in its tooltip: the sentence
+ * clipped in every row (review 4 #15).
  */
 const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) => {
   // "Needs you" only for Drew's own items, as Today counts them; an item its owner holds names that owner (review 1 #2).
   const needs = (view.needsYou ?? []) as { text: string; action?: string | null; owner?: string | null }[]
   const mine = needs.find((n) => n.owner === 'Drew')
-  if (mine) return { tone: 'needs', text: `Needs you: ${plainSummary(mine.action ?? mine.text, 10)}` }
+  if (mine) return { tone: 'needs', text: 'Needs you', why: plainSummary(mine.action ?? mine.text, 24) }
   const held = needs[0]
-  if (held) return { tone: 'blocked', text: `${held.owner ?? 'Its owner'}: ${plainSummary(held.action ?? held.text, 8)}` }
+  if (held) return { tone: 'blocked', text: `With ${held.owner ?? 'its owner'}`, why: plainSummary(held.action ?? held.text, 24) }
   const b = view.blocker
-  return b ? { tone: 'blocked', text: `${b.kind === 'stopped' ? 'Stopped' : 'Blocked'}: ${plainSummary(b.why ?? b.text, 10)}` } : null
+  return b ? { tone: 'blocked', text: b.kind === 'stopped' ? 'Stopped' : 'Blocked', why: plainSummary(b.why ?? b.text, 24) } : null
 }
 
 /**
@@ -75,9 +75,9 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
               </td>
               <td className="plays-standing">
                 {view ? (
-                  <span className="plays-status" title={view.sentence}>
+                  <span className="plays-status" title={[view.sentence, holding(view)?.why].filter(Boolean).join('\n')}>
                     <StatusPill status={viewChip(view.status)} />
-                    {holding(view) && <span className="clamp-1" data-holding={holding(view)!.tone}>{holding(view)!.text}</span>}
+                    {holding(view) && <span data-holding={holding(view)!.tone}>{holding(view)!.text}</span>}
                   </span>
                 ) : standing?.sentence ? (
                   <span className="clamp-1" title={standing.sentence}><StandingText text={standing.sentence} /></span>
