@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePhone } from './use-phone.js'
 
 /**
@@ -40,10 +40,21 @@ type Mark = { key: string; x: number; y: number; kind: 'measured' | 'bound'; tit
 export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: { label: string; firstAt: string }[]; now: number }) {
   const phone = usePhone()
   const [on, setOn] = useState<string | null>(null)
+  // Drawn at the container's measured width so its 12 px labels stay 12 px (a fixed 1000-unit viewBox stretched to
+  // 1,400 px drew them at 18 px; review 1 #6: one type scale).
+  const box = useRef<HTMLDivElement>(null)
+  const [measured, setMeasured] = useState<number | null>(null)
+  useEffect(() => {
+    const el = box.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => setMeasured(Math.round(entry!.contentRect.width)))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
   const target = gap.metric.target
   const times = [...gap.measured.map((m) => ms(m.at)), ...gap.capMisses.map((m) => ms(m.at)), ms(gap.passed?.lastAt)].filter(Number.isFinite)
   if (!times.length) return null
-  const w = phone ? 380 : 1000, h = phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
+  const w = measured ?? (phone ? 380 : 1000), h = phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
   const t0 = Math.min(...times) - 3_600_000, t1 = Math.max(now, ...times)
   const values = [...gap.measured.map((m) => m.value), ...gap.capMisses.map((m) => m.below), target?.max ?? 0].filter((v) => v > 0)
   const lo = Math.floor(Math.log10(Math.min(...values) / 2)), hi = Math.ceil(Math.log10(Math.max(...values) * 1.2))
@@ -61,7 +72,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   const shown = checkers.filter((c) => ms(c.firstAt) > t0 && ms(c.firstAt) <= t1)
   return (
-    <div className="pj-gap">
+    <div className="pj-gap" ref={box}>
       <svg className="pj-gap-chart" viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={`${gap.metric.label} per release on a log scale against the paper's ${target ? `${rate(target.min)}–${rate(target.max)}` : ''} ${gap.metric.unit}`} onMouseLeave={() => setOn(null)}>
         {ticks.map((v) => <g key={v} className="pj-grid"><line x1={left} x2={w - right} y1={y(v)} y2={y(v)} /><text x={left - 8} y={y(v) + 4} textAnchor="end">{rate(v)}</text></g>)}
         {target && <g className="pj-band"><rect x={left} width={w - left - right} y={y(Math.min(target.max, 10 ** hi))} height={Math.max(2, y(target.min) - y(Math.min(target.max, 10 ** hi)))} /><text x={w - right - 6} y={y(target.max) + 14} textAnchor="end">paper {rate(target.min)}–{rate(target.max)}</text></g>}
