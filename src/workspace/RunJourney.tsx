@@ -10,6 +10,7 @@ import { viewAsOf, viewChip } from './view.js'
 import { goalText, plainSummary, sinceLabel } from './plain-words.js'
 import { RefDiff } from './ref-file.js'
 import { RunFilesPane } from './RunFilesPane.js'
+import { useSearch } from './navigation.js'
 
 /**
  * The run page (journey spec Q5/Q6, the lead's 21:05Z pick): how close the best release is and what stops it (the step
@@ -92,7 +93,7 @@ function NextStep({ runId, blocker, paused }: { runId: string; blocker: Blocker;
 }
 
 /** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
-function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
+function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: (release: string) => void }) {
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
@@ -113,7 +114,7 @@ function Ladder({ doc, m }: { doc: RunDocument; m: Model }) {
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
-          : m.releases.map((r) => <span key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined}>{r.release} {r.passed}/{r.total}</span>)}
+          : m.releases.map((r) => <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={r.sentence ?? undefined} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>)}
       </p>}
     </section>
   )
@@ -235,12 +236,19 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
   const picked = chosen ?? (m?.nodes.length === 1 ? m.nodes[0]!.id : null)
   const view = doc.view
   const single = m?.nodes.length === 1
+  // The release the code pane shows: the one a release chip picked (`codeRef`), else the best (review 1 #13).
+  const [params, update] = useSearch()
+  const shown = m ? (m.releases.find((r) => r.release === params.get('codeRef')) ?? m.best) : null
+  const openRelease = (release: string) => {
+    update({ codeRef: release, fileSource: 'code', codeFile: null, codeView: null })
+    document.querySelector('.rj-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   // The work: one files pane for the best release's code or the retained artifacts (the answer opens first).
   const work = m && (
     <section className="rj-work" aria-label="The work">
       <RunFilesPane api={api} doc={doc}
         codeUnavailable={!m.data.code.available ? (m.data.code.reason ?? 'not available on this host') : !m.best ? 'no release was checked, so there is no release code to show' : null}
-        code={m.best && <CodePane runUrl={runUrl} refName={m.best.release} previous={m.releases[m.releases.indexOf(m.best) - 1]?.release ?? null} label={`Release ${m.best.release}`} />} />
+        code={shown && <CodePane key={shown.release} runUrl={runUrl} refName={shown.release} previous={m.releases[m.releases.indexOf(shown) - 1]?.release ?? null} label={`Release ${shown.release}`} />} />
     </section>
   )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
@@ -258,7 +266,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
-          <Ladder doc={doc} m={m} />
+          <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
               <h2 className="rj-label">{m.nodes.length} agents{m.attributed ? ` · ${[...m.commits.keys()].filter((id) => id !== m.root).length} shipped work` : ''}</h2>

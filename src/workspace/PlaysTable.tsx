@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { PlaysDocument } from '../workspace-model.js'
 import { plainSummary } from './plain-words.js'
 import { endingStatus, go, money, StandingText, StatusPill, statusOf } from './data.js'
@@ -32,6 +33,16 @@ const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) =>
  * since the view existed falls back to its standing.
  */
 export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: boolean }) {
+  // The numeric columns sort, most first; a second click restores the host's order (review 1 #13: "Runs" looked sortable).
+  const [sort, setSort] = useState<'runs' | 'cost' | null>(null)
+  const runsOf = (play: PlayRow) => (!showHidden && play.counts ? play.counts.shown : play.runCount) ?? 0
+  const costOf = (play: PlayRow) => play.standing?.cost?.apiEquivalentUsd ?? -1
+  const ordered = sort ? [...rows].sort((a, b) => (sort === 'runs' ? runsOf(b) - runsOf(a) : costOf(b) - costOf(a))) : rows
+  const head = (key: 'runs' | 'cost', label: string, title?: string) => (
+    <th className="num" aria-sort={sort === key ? 'descending' : undefined} title={title}>
+      <button type="button" className="link-button sort-button" onClick={() => setSort(sort === key ? null : key)}>{label}</button>
+    </th>
+  )
   return (
     <table className="data-table runs-table plays-table" data-play-list>
       <thead>
@@ -40,12 +51,12 @@ export function PlaysTable({ rows, showHidden }: { rows: PlayRow[]; showHidden: 
           <th>Status</th>
           <th>Best release</th>
           <th>Last run</th>
-          <th className="num">Runs</th>
-          <th className="num" title="Every token at list price, whoever paid; how many started runs were priced">API-equivalent</th>
+          {head('runs', 'Runs')}
+          {head('cost', 'API-equivalent', 'Every token at list price, whoever paid; how many started runs were priced')}
         </tr>
       </thead>
       <tbody>
-        {rows.map((play) => {
+        {ordered.map((play) => {
           const href = `/play/${encodeURIComponent(play.id)}`
           const open = () => go(href)
           const runs = !showHidden && play.counts ? play.counts.shown : play.runCount

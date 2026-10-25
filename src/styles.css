@@ -3802,3 +3802,12 @@
 @media (max-width: 700px) { .ar-ws .ws-page, .ar-ws .ws-page[data-section="overview"] { padding-inline: 16px; } }
 .ar-ws .play-ledger .ledger-spend { margin: 0 0 0 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
 .ar-ws .play-ledger .ledger-idle { margin-top: 8px; font-size: 13px; }
+.ar-ws button.rj-mini { padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.ar-ws button.rj-mini.rj-pass { color: var(--ar-c-ok, #22c55e); }
+.ar-ws button.rj-mini.rj-fail { color: var(--ar-c-fail, #ef4444); }
+/* Phone: the runs table is run, ending and cost; the rest is the run page's (review 1 #15: the table clipped sideways). */
+@media (max-width: 640px) {
+  .ar-ws .ledger-table th:not(:nth-child(-n+2)):not(.ledger-cost), .ar-ws .ledger-table td:not(:nth-child(-n+2)):not(.ledger-cost) { display: none; }
+  .ar-ws .play-ledger .table-scroll { overflow-x: visible; }
+  .ar-ws .run-tabs, .ar-ws .play-tabs { overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(to right, #000 85%, transparent); }
+}
