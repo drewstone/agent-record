@@ -50,7 +50,7 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
         {byAgent.length > 0 && (
           <section aria-label="Tokens by agent">
             <h3>Tokens by agent</h3>
-            <HBars rows={byAgent.map(({ node, n }) => ({ label: agentName(doc, node), value: n, href: onAgent(node.id) }))} format={tokens} limit={10} />
+            <HBars rows={byAgent.map(({ node, n }) => ({ label: agentName(doc, node), value: n, href: onAgent(node.id) }))} format={tokens} limit={10} color="var(--ar-accent, #8e59ff)" />
           </section>
         )}
       </div>
