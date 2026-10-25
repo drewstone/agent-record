@@ -52,6 +52,8 @@ export interface RunWorkspaceDocument {
   releases: WorkspaceRelease[]
   best: string | null
   code: { available: boolean; reason: string | null }
+  /** Stretches over 30 min with no agent turn, named by the cancellation that opened them (tangle-tools run_journal). */
+  pauses?: { from: string; to: string; reason: string }[]
   /** Where its releases sit in the play (tangle-tools run_workspace.release_lineage). */
   lineage?: ReleaseLineage | null
 }

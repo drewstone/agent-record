@@ -186,8 +186,9 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running(n) ? 'running' as const : failed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
-        // The list-price cost the record measured so far (its nodeStats); absent stays absent, never a zero.
-        ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : typeof (n as { costUsd?: number | null }).costUsd === 'number' ? { costUsd: (n as { costUsd?: number }).costUsd } : {}),
+        // Its list-price cost so far; absent stays absent, never a zero. A restart is a notch on the bar (charts 0.20.0).
+        ...(typeof n.usage?.listUsd === 'number' ? { costUsd: n.usage.listUsd } : {}),
+        marks: (n.restarts ?? []).map((at) => ({ at: ms(at) - m.t0, kind: 'restart', label: `Restarted ${at.slice(11, 16)}Z` })),
         // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
@@ -206,7 +207,9 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
       startMs: step.startMs - m.t0, endMs: step.endMs - m.t0, status: step.failed ? 'failed' as const : 'done' as const,
     })))
     spans.push(...steps)
-    return { spans, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: 0, ...(listUsd != null ? { costUsd: listUsd, costBasis: 'list' as const } : {}) }
+    // A stretch with no agent turn is a labelled band (tangle-tools run_journal pauses: 22a's 4 h 40 m after the GTR guard stop).
+    const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}: ${p.reason}` }))
+    return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: 0, ...(listUsd != null ? { costUsd: listUsd, costBasis: 'list' as const } : {}) }
   }, [m, live])
   // Releases that moved the score, the best and the newest: 17c tagged 205 releases, and a line for each buried the rows.
   const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
