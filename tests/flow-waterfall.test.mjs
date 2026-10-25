@@ -19,7 +19,8 @@ test('retained Discovery capture reaches the shared waterfall without cumulative
   // Native per-response usage is 98,722 fresh + 649,984 cached + 5,742 output.
   // Lifecycle metered snapshots in these same retained bytes are cumulative, not extra responses.
   assert.equal(exact(html, 'Tokens'), '754,448 tokens')
-  assert.equal(field(html, 'Cost'), 'Unknown')
+  // An unpriced run's cost stays unknown, never $0 (charts 0.20.0 writes an unknown as an em dash).
+  assert.equal(field(html, 'Cost'), '—')
   assert.equal(field(html, 'Tool calls'), String(record.events.reduce((sum, event) => sum + (event.detail.publicToolCalls?.length ?? 0), 0)))
   // charts 0.17.0 draws a handoff as a connector between the two rows rather than a row of its own.
   assert.match(html, /data-span-kind="handoff"|class="fw-link /)
