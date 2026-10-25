@@ -3936,3 +3936,4 @@
 .ar-ws .run-built details.vg-releases { margin: 8px 16px 16px; }
 .ar-ws .run-built details.vg-releases > summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); }
 .ar-ws .inspector-close { float: right; font-size: 12px; }
+.ar-ws .findings-primary { display: grid; gap: 16px; min-width: 0; }

@@ -242,26 +242,31 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
   return (
     <section className="run-findings" aria-label="What this run found" data-findings={findings.total}>
       <div className="findings-main">
-        {/* The tab names the question and counts the pages; the lead says only what the reader cannot see in the rows. */}
-        {groups.results.length > 0 && (
-          <div className="findings-lead" data-primary-content>
-            {groups.results.map((item) => (
-              <p key={item.sha256}>
-                <b>{short(item.agentLabel)}:</b> {item.answer ?? item.summary}
-              </p>
-            ))}
-          </div>
-        )}
+        {/* The tab names the question and counts the pages; the caution says what the rows cannot. The answers and the rows
+            are the view's one primary surface (data-primary-content: one region per view). */}
         {!groups.lead.length && <p className="findings-lead">{findings.items.length ? `No result or claim pages; ${plural(findings.items.length, 'other page')} below.` : 'No result or claim pages recorded.'}</p>}
         {notSettled && groups.lead.length > 0 && (
           <p className="findings-caution">Ended {doc.run.state.replaceAll('-', ' ')}: none of these reached the run's declared result.</p>
         )}
-        {groups.lead.length > 0 && (
-          <ol className="finding-list" data-primary-content>
-            {shown.map((item) => (
-              <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => setOpen(open === item.sha256 ? null : item.sha256)} />
-            ))}
-          </ol>
+        {(groups.results.length > 0 || groups.lead.length > 0) && (
+          <div className="findings-primary" data-primary-content>
+            {groups.results.length > 0 && (
+              <div className="findings-lead">
+                {groups.results.map((item) => (
+                  <p key={item.sha256}>
+                    <b>{short(item.agentLabel)}:</b> {item.answer ?? item.summary}
+                  </p>
+                ))}
+              </div>
+            )}
+            {groups.lead.length > 0 && (
+              <ol className="finding-list">
+                {shown.map((item) => (
+                  <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => setOpen(open === item.sha256 ? null : item.sha256)} />
+                ))}
+              </ol>
+            )}
+          </div>
         )}
         {groups.lead.length > SHOWN && (
           <button type="button" className="ui-button" onClick={() => setAll((value) => !value)}>
