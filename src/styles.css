@@ -3815,3 +3815,7 @@
 .ar-ws .rj, .ar-ws .rj-work, .ar-ws .rj-work > .run-files-pane { min-width: 0; max-width: 100%; }
 .ar-ws .rj-work > .run-files-pane { height: calc(100svh - 160px); min-height: 480px; }
 .ar-ws .rj-work .run-files-pane .flex-col.overflow-auto > .group.rounded-lg { flex: 1 1 auto; min-height: 0; overflow: auto; }
+/* The play page is one surface (review 1 #9): sections under the tabs sit on the page like the hero above them,
+   separated by spacing and a hairline, never cards inside the page. */
+.ar-ws .play-standing-tab .ws-section, #agent-workspace[data-mode="play"] .ar-ws .ws-section { background: transparent; border: 0; border-top: 1px solid var(--ar-border); border-radius: 0; padding: 24px 0 0; --chart-canvas: var(--ar-bg); }
+.ar-ws .play-standing-tab { display: grid; gap: 32px; }
