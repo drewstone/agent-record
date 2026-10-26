@@ -258,7 +258,7 @@ export function RunVersions({
       <div className="lineage-layout run-versions">
         <section className="lineage-pane" aria-label="Version graph">
           <p className="faint lineage-key">{doc.commits.length} page versions on {doc.lanes.length} lanes{doc.builtAt ? ` · read ${when(doc.builtAt)}` : ''}</p>
-          <div data-primary-content><VersionGraph model={model} selected={commit?.id ?? null} onSelect={onSelect} label="Run versions" /></div>
+          <div><VersionGraph model={model} selected={commit?.id ?? null} onSelect={onSelect} label="Run versions" /></div>
           <Releases doc={doc} selected={commit?.id ?? null} onSelect={onSelect} />
           {doc.roles && <details className="built-roles"><summary>Role scorecard</summary><RunRoles roles={doc.roles} /></details>}
         </section>
