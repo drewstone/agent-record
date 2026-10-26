@@ -196,7 +196,7 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
         ],
       }
     })
-    const { tokens: measured, listUsd } = runUsage(m)
+    const { tokens: measured } = runUsage(m)
     // Each agent's steps as its child spans, so its bar is drawn in thinking / tool / waiting / failed segments (review 4 #1).
     const steps: FlowSpan[] = m.nodes.flatMap((n) => (n.usage?.steps ?? []).map((step, i) => ({
       id: `${n.id}#${i}`, parentId: n.id, kind: step.kind, name: step.kind === 'model' ? 'thinking' : step.kind,
@@ -205,7 +205,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     spans.push(...steps)
     // A stretch with no agent turn is a labelled band (tangle-tools run_journal pauses: 22a's 4 h 40 m after the GTR guard stop).
     const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}: ${p.reason}` }))
-    return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: 0, ...(listUsd != null ? { costUsd: listUsd, costBasis: 'list' as const } : {}) }
+    // Tool calls are the record's per-agent counts; the cost is the stat row's alone (REVIEW-9: the card's ≈ beside the row's ≥).
+    return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: m.nodes.reduce((sum, n) => sum + (n.toolCalls ?? 0), 0) }
   }, [m, live])
   // Releases that moved the score, the best and the newest: 17c tagged 205 releases, and a line for each buried the rows.
   const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
