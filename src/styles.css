@@ -4003,3 +4003,9 @@
 .ar-ws .rj .fw-summary { display: none; }
 .ar-ws .built-delivered { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 12px 16px; font-size: 14px; }
 .ar-ws .built-roles { margin: 8px 16px 16px; } .ar-ws .built-roles > summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); }
+/* The kit transcript on the page's scale (REVIEW-10 Conversations: 16/13/10 px and weight 500): prose 14 px on a 24 px line,
+   meta 12 px, labels 14 px, weights 400/600, inside the message pane only. */
+.ar-ws .agent-pane { --transcript-font-size: 14px; --transcript-line-height: 24px; --font-size-xs: 12px; }
+.ar-ws .agent-pane :is(.text-sm, .text-xs) { font-size: 14px; line-height: 20px; }
+.ar-ws .agent-pane [class*="text-[10px]"], .ar-ws .agent-pane [class*="text-[11px]"] { font-size: 12px; }
+.ar-ws .agent-pane .font-medium { font-weight: 600; }
