@@ -87,7 +87,7 @@
     "@nanostores/react": "^2.0.1",
     "@tangle-network/agent-interface": "5.7.1",
     "@tangle-network/brand": "1.26.2",
-    "@tangle-network/charts": "0.21.9",
+    "@tangle-network/charts": "0.21.10",
     "@tangle-network/harness-sessions": "0.1.0",
     "@tangle-network/sandbox-ui": "0.139.0",
     "@tangle-network/ui": "11.42.0",
