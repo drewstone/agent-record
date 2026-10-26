@@ -22,7 +22,7 @@ import { useSearch } from './navigation.js'
 /** An agent's usage as the host read it (tangle-tools agent_usage), with the source it names. */
 type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null; steps?: Step[] }
 /** One stretch of an agent's time from its session store (epoch ms): a model call, a tool, or waiting between calls. */
-type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
+type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean; name?: string }
 /** Start, end (null while live) and status come from the run's spawn journal (tangle-tools run_journal). */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
 type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean; held?: string[] }
@@ -177,7 +177,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
     const { tokens: measured } = runUsage(m)
     // Each agent's steps as its child spans, so its bar is drawn in thinking / tool / waiting / failed segments (review 4 #1).
     const steps: FlowSpan[] = m.nodes.flatMap((n) => (n.usage?.steps ?? []).map((step, i) => ({
-      id: `${n.id}#${i}`, parentId: n.id, kind: step.kind, name: step.kind === 'model' ? 'thinking' : step.kind,
+      id: `${n.id}#${i}`, parentId: n.id, kind: step.kind, name: step.name ?? (step.kind === 'model' ? 'thinking' : step.kind),
       startMs: step.startMs - m.t0, endMs: step.endMs - m.t0, status: step.failed ? 'failed' as const : 'done' as const,
     })))
     spans.push(...steps)
