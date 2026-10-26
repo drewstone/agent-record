@@ -43,6 +43,8 @@ type Mark = { key: string; x: number; y: number; kind: 'measured' | 'bound'; tit
 export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: { label: string; firstAt: string }[]; now: number }) {
   const phone = usePhone()
   const [on, setOn] = useState<string | null>(null)
+  // A click (or a tap, which has no hover) pins a mark's card until the next click.
+  const [pin, setPin] = useState<string | null>(null)
   // Drawn at the container's measured width so its 12 px labels stay 12 px (a fixed 1000-unit viewBox stretched to
   // 1,400 px drew them at 18 px; review 1 #6: one type scale).
   const box = useRef<HTMLDivElement>(null)
@@ -77,7 +79,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
       rows: [['Rate', `below ${m.below.toLocaleString()} ${gap.metric.unit}`], ['Program', `${cyclesWord(m.cycles)} cycles`], ['Proves', String(m.count)], ['Gap to paper', `over ${ratio(m.below)}`], ['When', when(m.at)]],
       reason: `Every prove ran past the ${m.capS} s cap under ${m.checker ?? 'the check'}.` })),
   ]
-  const picked = marks.find((m) => m.key === on) ?? null
+  const picked = marks.find((m) => m.key === (on ?? pin)) ?? null
   const ticks = Array.from({ length: hi - lo + 1 }, (_, i) => 10 ** (lo + i))
   const day = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   const shown = checkers.filter((c) => ms(c.firstAt) > t0 && ms(c.firstAt) <= t1)
@@ -97,7 +99,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
         {gap.passed?.lastAt && <g className="pj-pass"><line x1={x(ms(gap.passed.lastAt))} x2={x(ms(gap.passed.lastAt))} y1={top} y2={h - bottom} /><text x={x(ms(gap.passed.lastAt)) + 4} y={top + 26}>{gap.passed.tag} passed {gap.passed.checker}</text></g>}
         {marks.map((m) => (
           <g key={m.key} className={`pj-mark pj-${m.kind}${on === m.key ? ' is-on' : ''}`} tabIndex={0} role="button" aria-label={`${m.title}: ${m.rows.map(([k, v]) => `${k} ${v}`).join(', ')}`}
-            onMouseEnter={() => setOn(m.key)} onFocus={() => setOn(m.key)} onBlur={() => setOn(null)} onClick={() => setOn(m.key)}>
+            data-state={pin === m.key ? 'open' : undefined} onMouseEnter={() => setOn(m.key)} onFocus={() => setOn(m.key)} onBlur={() => setOn(null)} onClick={() => setPin(pin === m.key ? null : m.key)}>
             <circle className="pj-hit" cx={m.x} cy={m.y} r={16} />
             {m.kind === 'measured' ? <circle cx={m.x} cy={m.y} r={5} /> : <path d={`M${m.x - 5} ${m.y - 4} h10 l-5 8z`} />}
             {m.kind === 'measured' && gap.measured.length <= 3 && <text className="pj-dot-label" x={m.x + 10} y={m.y + 4}>{m.title.split(' · ')[0]} · {m.rows[0]![1].replace(` ${gap.metric.unit}`, '/s')}</text>}
