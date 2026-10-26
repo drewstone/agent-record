@@ -3669,30 +3669,6 @@
 .ar-ws .pj-strip [data-step=pass] i { background: var(--ar-c-ok, #22c55e); border-color: var(--ar-c-ok, #22c55e); }
 .ar-ws .pj-strip [data-step=fail] i { background: var(--ar-c-fail, #ef4444); border-color: var(--ar-c-fail, #ef4444); }
 .ar-ws .pj-strip .is-open { color: var(--ar-c-warn, #f5a524); font-weight: 600; }
-.ar-ws .pj-gap { position: relative; }
-.ar-ws .pj-gap-chart { display: block; overflow: visible; }
-.ar-ws .pj-gap-chart text { font-size: 12px; fill: var(--ar-fg-muted); }
-.ar-ws .pj-band rect { fill: color-mix(in srgb, var(--ar-c-ok, #22c55e) 16%, transparent); }
-.ar-ws .pj-band text { fill: var(--ar-c-ok, #22c55e); }
-.ar-ws .pj-need line { stroke: var(--ar-c-warn, #f5a524); stroke-dasharray: 6 4; stroke-width: 1.5; }
-.ar-ws .pj-need text { fill: var(--ar-c-warn, #f5a524); }
-.ar-ws .pj-check line, .ar-ws .pj-pass line { stroke: color-mix(in srgb, var(--ar-fg-faint) 45%, transparent); stroke-dasharray: 2 4; }
-.ar-ws .pj-pass line { stroke: var(--ar-c-ok, #22c55e); }
-.ar-ws .pj-mark { outline: none; }
-.ar-ws .pj-hit { fill: transparent; }
-.ar-ws .pj-measured circle:not(.pj-hit) { fill: var(--ar-fg); }
-.ar-ws .pj-bound path { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 1.5; }
-.ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
-.ar-ws .pj-tip { position: absolute; transform: translate(-50%, 14px); min-width: 200px; max-width: 280px; padding: 8px 12px; border: 1px solid var(--ar-border, #333); border-radius: 8px; background: var(--ar-bg-alt); font-size: 12px; pointer-events: none; z-index: 2; }
-.ar-ws .pj-tip.pj-tip-above { transform: translate(-50%, calc(-100% - 14px)); }
-.ar-ws .pj-tip p { margin: 0; }
-.ar-ws .pj-tip dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; }
-.ar-ws .pj-tip dl div { display: contents; }
-.ar-ws .pj-tip dt { color: var(--ar-fg-muted); }
-.ar-ws .pj-tip dd { margin: 0; font-variant-numeric: tabular-nums; }
-.ar-ws .pj-tip-reason { margin-top: 8px !important; color: var(--ar-fg-muted); }
-.ar-ws .pj-pill { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ar-fg) 10%, transparent); }
-.ar-ws .pj-pill.pj-bound { color: var(--ar-c-warn, #f5a524); }
 /* One content column on every page (review 1 #8: Today 84 px, Plays 60, others 45, and six left edges on /play): one
    left edge and one gutter, 24 px, 16 px on a phone. Page bodies (Today, the run journey) fill it rather than centring
    their own narrower column. */
@@ -3719,9 +3695,6 @@
    separated by spacing and a hairline, never cards inside the page. */
 .ar-ws .play-standing-tab .ws-section, #agent-workspace[data-mode="play"] .ar-ws .ws-section { background: transparent; border: 0; border-top: 1px solid var(--ar-border); border-radius: 0; padding: 24px 0 0; --chart-canvas: var(--ar-bg); }
 .ar-ws .play-standing-tab { display: grid; gap: 32px; }
-.ar-ws .pj-hero-verdict { font-size: 32px; line-height: 1.15; }
-.ar-ws .pj-gap-chart .pj-count { fill: var(--ar-c-warn, #f5a524); font-weight: 600; }
-@media (max-width: 640px) { .ar-ws .pj-hero-verdict { font-size: 18px; } }
 .ar-ws .rj-full summary { white-space: nowrap; }
 /* Hover and keyboard focus on every control (review 2 #5: /today fell to 55% focus, 52% hover). */
 .ar-ws :where(a, button, summary, [role=button], [tabindex="0"]):focus-visible { outline: 2px solid var(--ar-c-action); outline-offset: 2px; border-radius: 4px; }
@@ -3924,14 +3897,18 @@
 .ar-ws .agent-pane :is(.text-sm, .text-xs) { font-size: 14px; line-height: 20px; }
 .ar-ws .agent-pane [class*="text-[10px]"], .ar-ws .agent-pane [class*="text-[11px]"] { font-size: 12px; }
 .ar-ws .agent-pane .font-medium { font-weight: 600; }
-/* ---- Against the bar (BarStrip): one card per paper metric; colour only for the ratio's state. */
-.ar-ws .bar-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 0 0 16px; padding: 0; list-style: none; }
-.ar-ws .bar-card { display: grid; gap: 4px; align-content: start; padding: 16px; border-radius: 8px; background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ar-border); }
-.ar-ws .bar-label, .ar-ws .bar-target, .ar-ws .bar-where, .ar-ws .bar-change { font-size: 12px; color: var(--ar-fg-muted); }
-.ar-ws .bar-value { font-size: 26px; font-weight: 600; line-height: 32px; font-variant-numeric: tabular-nums; color: var(--ar-fg); }
-.ar-ws .bar-ratio { font-style: normal; font-weight: 600; }
-.ar-ws .bar-card[data-side="short"] .bar-ratio { color: var(--ar-c-warn); }
-.ar-ws .bar-card[data-side="met"] .bar-ratio, .ar-ws .bar-card[data-side="past"] .bar-ratio { color: var(--ar-c-ok); }
+/* ---- Against the bar (BarStrip): one row per paper metric on a shared grid; colour only for the ratio's state. */
+.ar-ws .bar-strip { display: grid; grid-template-columns: max-content minmax(160px, 1fr) max-content max-content max-content; align-items: center; gap: 8px 16px; margin: 0 0 16px; padding: 0; list-style: none; }
+.ar-ws .bar-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; }
+.ar-ws .bar-label, .ar-ws .bar-change { font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .bar-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; color: var(--ar-fg); }
+.ar-ws .bar-ratio { font-size: 12px; font-weight: 600; }
+.ar-ws .bar-row[data-side="short"] .bar-ratio { color: var(--ar-c-warn); }
+.ar-ws .bar-row[data-side="met"] .bar-ratio, .ar-ws .bar-row[data-side="past"] .bar-ratio { color: var(--ar-c-ok); }
 .ar-ws .bar-change[data-improved="true"] { color: var(--ar-c-ok); }
 .ar-ws .bar-change[data-improved="false"] { color: var(--ar-c-fail); }
-@media (max-width: 700px) { .ar-ws .bar-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .ar-ws .bar-card { padding: 12px; } .ar-ws .bar-value { font-size: 18px; line-height: 24px; } }
+@media (max-width: 700px) {
+  .ar-ws .bar-strip { grid-template-columns: minmax(0, 1fr) max-content max-content; gap: 4px 12px; }
+  .ar-ws .bar-gap { grid-column: 1 / -1; grid-row: 2; }
+  .ar-ws .bar-change { display: none; }
+}

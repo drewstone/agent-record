@@ -1,6 +1,5 @@
 import { Tip } from './AnswerStrip.js'
 import { BarStrip } from './BarStrip.js'
-import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import type { Play } from './answers.js'
 import { stepWord } from './plain-words.js'
 import { usePhone } from './use-phone.js'
@@ -125,34 +124,26 @@ function StepStrip({ m }: { m: Model }) {
 }
 
 /**
- * The play's head on the standing tab. With a measured gap to the paper (the host's `gap`), the hero is that gap: the best
- * proving rate against the paper's band, what passed and what the current bar needs, and the rate chart; the ladder is a
- * strip above the chart. Without one, the steps passed over time stay the hero.
+ * The play's Standing: steps passed and how long since a step was gained, what holds it in its producer's words, every
+ * paper metric against its bar (when the host serves view.bars), then the ladder and the steps over time.
  */
 export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: number }) {
   const m = model(play, now)
   if (!m) return null
   const p = m.view.progress
-  // With the host's bars (every bar.json metric), the strip is the answer and the play-specific gap chart steps aside.
-  const bars = m.view.bars?.length ? m.view.bars : null
-  const gap = bars ? null : ((play as { gap?: PlayGapFacts | null }).gap ?? null)
-  const g = gap ? gapHeadline(gap) : null
-  const checkers = ((play as { checkers?: { label: string; firstAt: string }[] }).checkers ?? [])
+  const bars = m.view.bars ?? []
   return (
     <div className="pj">
       <section className="pj-q3" aria-label="How close is it, and what stops it">
-        {bars ? <BarStrip bars={bars} /> : g ? (
-          <p className="pj-hero pj-hero-verdict">{g.hero}</p>
-        ) : (
-          <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
-        )}
-        <p className="pj-sentence">{g ? g.sentence : headline(play, m)}</p>
-        {/* The pass under v4 and the cap misses are the chart's own markers (REVIEW-5 #11: the line repeated them). */}
+        <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
+        <p className="pj-sentence">{headline(play, m)}</p>
         <Hold view={m.view} />
       </section>
-      <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
+      {/* Every paper metric against its bar, from the host (view.bars), for any play with a bar.json. */}
+      {bars.length > 0 && <BarStrip bars={bars} />}
+      <section className="pj-q4" aria-label={`Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
-        {gap ? <GapChart gap={gap} checkers={checkers} now={now} /> : <Climb play={play} m={m} />}
+        <Climb play={play} m={m} />
       </section>
     </div>
   )
