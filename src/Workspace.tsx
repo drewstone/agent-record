@@ -863,7 +863,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
             />
             <AgentFindings doc={doc} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={openFinding} />
           </aside>
-          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent">
+          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent" data-primary-content>
             {agent.index ? (
               <RunBody
                 key={actor}
