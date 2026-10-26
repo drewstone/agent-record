@@ -692,7 +692,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       delivered={doc.finalOutput?.files} onOpenFile={(file) => update({ section: 'outputs', file, commit: undefined, details: undefined })}
     />
   )
-  const details = detailsOf(params)
+  const fallback = doc.findings?.total ? 'findings' as const : 'built' as const, details = detailsOf(params, fallback)
   if (section === null)
     return (
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
@@ -707,7 +707,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
               )
             }
           />
-          <RunDetails tab={details} counts={counts} onTab={(next) => update({ details: next === 'built' ? undefined : next, commit: undefined }, true)}>
+          <RunDetails tab={details} counts={counts} onTab={(next) => update({ details: next === fallback ? undefined : next, commit: undefined }, true)}>
             {details === 'built' && <BuiltSummary delivered={doc.finalOutput?.files} onOpenFile={(file) => update({ section: 'outputs', file, commit: undefined, details: undefined })} historyHref="?section=versions" />}
             {details === 'agents' && (index ? <div className="agent-rail details-agents"><AgentTable index={index} stats={nodes.stats} doc={doc} assessments={assessments.data?.rows ?? []} dimensions={catalogue} selected={null} onSelect={selectAgent} /></div> : <p className="ws-status" role="status">Loading the agents…</p>)}
             {details === 'findings' && (doc.findings?.total ? <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} /> : <p className="ws-status">No knowledge pages were recorded for this run.</p>)}
