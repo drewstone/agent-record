@@ -2,7 +2,7 @@ import { Tip } from './AnswerStrip.js'
 import { BarStrip } from './BarStrip.js'
 import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import type { Play } from './answers.js'
-import { plainSummary, stepWord } from './plain-words.js'
+import { stepWord } from './plain-words.js'
 import { usePhone } from './use-phone.js'
 import type { HostView, ViewTrend } from './view.js'
 
@@ -54,22 +54,16 @@ function headline(play: Play, m: Model) {
 }
 
 /**
- * Who acts on what holds it, in plain words. While research is paused only Drew can lift it, so the page points at
- * Today's decision rather than saying "nothing for you" beside Today's "1 decision needs you".
+ * What holds the play, as its producer wrote it (view.blocker.sentence: the check's own line, its release named), and who
+ * acts by role. The page compares no names and composes no sentence; whether it is the viewer's to act is Today's.
  */
-function Hold({ view, open }: { view: HostView; open: Model['open'] }) {
+function Hold({ view }: { view: HostView }) {
   const b = view.blocker
   const paused = view.paused as { since?: string | null } | null | undefined
-  const action = b ? (b.action ?? plainSummary(b.text, 16)) : null
-  const why = b?.why ? (open ? b.why.replace(/^The check/, `The ${open.label} check`) : b.why) : null
-  const owner = b?.owner ?? 'Its owner'
-  const will = action ? `${owner} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.` : null
-  const held = [why ? `${why};` : null, will].filter(Boolean).join(' ')
   return (
     <>
-      {paused && <p className="pj-hold"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>}
-      {b && b.owner === 'Drew' && <p className="pj-hold"><b>Your decision:</b> {action}.</p>}
-      {b && b.owner !== 'Drew' && <p className="pj-hold">{!paused && <b>Nothing for you. </b>}<Tip text={held || owner}><span className="pj-muted">{owner} {/ and /.test(owner) ? 'are' : 'is'} on it</span></Tip></p>}
+      {paused && <p className="pj-hold"><b>Research is paused</b> <a href="/today">→ Today</a></p>}
+      {b && <p className="pj-hold"><Tip text={b.detail ?? b.text}><span>{b.sentence ?? b.text}</span></Tip>{b.actor && <span className="pj-muted"> · {b.actor.label}</span>}</p>}
     </>
   )
 }
@@ -154,7 +148,7 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
         )}
         <p className="pj-sentence">{g ? g.sentence : headline(play, m)}</p>
         {/* The pass under v4 and the cap misses are the chart's own markers (REVIEW-5 #11: the line repeated them). */}
-        <Hold view={m.view} open={m.open} />
+        <Hold view={m.view} />
       </section>
       <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
