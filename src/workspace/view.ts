@@ -52,6 +52,7 @@ export const viewBarSchema = z.object({
   metric: z.string(),
   label: z.string(),
   unit: z.string(),
+  scale: z.enum(['log', 'linear']).nullable().optional(),
   direction: z.enum(['up', 'down']).nullable().optional(),
   target: z.object({ min: z.number().nullable().optional(), max: z.number().nullable().optional(), approx: z.number().nullable().optional() }).nullable().optional(),
   stretch: z.object({ min: z.number().nullable().optional(), max: z.number().nullable().optional(), label: z.string().nullable().optional() }).nullable().optional(),
