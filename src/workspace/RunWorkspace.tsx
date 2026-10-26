@@ -1,6 +1,6 @@
 import { FilePreview } from '@tangle-network/sandbox-ui/files'
 import { WorkspaceFilesPane } from '@tangle-network/sandbox-ui/workspace'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import type { RunDocument } from '../workspace-model.js'
 import { useDocument } from './data.js'
 import { useSearch } from './navigation.js'
@@ -61,15 +61,16 @@ export interface RunWorkspaceDocument {
   lineage?: ReleaseLineage | null
 }
 
-/** The code at a ref (an agent's branch or a release), its tree and one file, with a diff against the previous release. */
 /**
  * The code at a ref (a release or branch): its tree once, pinned, and every file read and diff at that tree's commit.
- * The selected file and view live in the URL (codeFile, codeView), like the artifacts pane's, so a link or reload keeps them.
+ * The selected file and view live in the URL (codeFile, codeView), like the artifacts pane's, so a link or reload keeps them;
+ * with none named it opens handoff.md or README.md (22a's frame opened empty), until its last tab is closed.
  */
 export function CodePane({ runUrl, refName, previous, label }: { runUrl: string; refName: string; previous: string | null; label: string }) {
   const tree = useDocument<RefTree>(`${runUrl}/tree?ref=${encodeURIComponent(refName)}`)
   const [params, update] = useSearch()
-  const path = params.get('codeFile')
+  const [closed, setClosed] = useState(false)
+  const path = params.get('codeFile') ?? (closed ? null : ['handoff.md', 'README.md'].find((p) => tree.data?.paths.includes(p)) ?? null)
   const mode = params.get('codeView') === 'diff' && previous ? 'diff' : 'file'
   const file = useRefFile(runUrl, refName, path, tree.data)
   if (tree.error) return <p className="rw-empty">{tree.status === 404 ? 'No code on this host for this run.' : tree.error}</p>
@@ -93,7 +94,7 @@ export function CodePane({ runUrl, refName, previous, label }: { runUrl: string;
       selectedPath={path ?? undefined}
       // The pane reports folder clicks too (trailing `/`, it expands them itself); only a listed file is opened.
       onSelect={(next) => { if (tree.data!.paths.includes(next)) update({ codeFile: next }) }}
-      onBack={() => update({ codeFile: null, codeView: null })}
+      onBack={() => { setClosed(true); update({ codeFile: null, codeView: null }) }}
       preview={path ? { path, actions, content } : undefined}
       search
       label={`${label} at ${tree.data.commit.slice(0, 12)} · ${tree.data.paths.length.toLocaleString()} files${tree.data.cut ? ' (first shown)' : ''}`}
