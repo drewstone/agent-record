@@ -121,7 +121,7 @@ function Ladder({ doc, m, onRelease, verdictOnly = false }: { doc: RunDocument; 
       {<p className="rj-stuck">
         {/* Only what the best release reached (the play page owns how long it has been stuck); an unconfirmed teardown keeps the header, so the verdict sits here. */}
         {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
-        {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b title={releaseName(m.best.release, m.data.lineage)}>{m.best.release}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>}
       {/* A settled run's blocker is history: only a live run, or one waiting on its owner, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
