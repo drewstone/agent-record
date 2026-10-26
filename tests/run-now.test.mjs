@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PlayClimb, RunOverview, runReceiptSchema } from '../dist/index.js'
+import { RunOverview, runReceiptSchema } from '../dist/index.js'
 
 const receipt = runReceiptSchema.parse(JSON.parse(await readFile(new URL('./fixtures/run-receipt-contract-loop.json', import.meta.url), 'utf8')))
 const passed = { solved: true, checkedAt: '2026-10-18T01:56:09.489Z', firstFailingLine: null, stage: null, tag: 'test-contract-loop-20261018c/rc3', lastStreamAt: '2026-10-18T01:54:24.901Z', minutesSinceLastStream: 2.1 }
@@ -122,16 +122,3 @@ test('a run pressed before calibration was registered names the record that woul
 
 // The same harness served the play page.
 const fixture = async (name) => JSON.parse(await readFile(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'))
-
-test('the play page shows each run\'s stage calibration under its verdicts, and names the record an unknown needs', async () => {
-  const html = renderToStaticMarkup(createElement(PlayClimb, { play: await fixture('discovery-play-codeplay') }))
-  const run = (id) => html.slice(html.indexOf(`href="/run/${id}"`), html.indexOf('</li>', html.indexOf(`href="/run/${id}"`)))
-  for (const id of ['codeplay-20261020b', 'codeplay-20261020c']) {
-    for (const [stage, state] of [['build', 'calibrated'], ['contract', 'calibrated'], ['workloads', 'uncalibrated'], ['hidden', 'uncalibrated']])
-      assert.match(run(id), new RegExp(`data-stage="${stage}" data-calibration="${state}"[^>]*>${stage} ${state}<`), `${id} ${stage}`)
-  }
-  assert.match(run('codeplay-20261020c'), /class="verdict-chip" data-status="result:check passed; held: stages workloads, hidden have no known-good fixture:neutral" data-calibration="uncalibrated"/)
-  assert.match(run('codeplay-20261020a'), /data-calibration="unknown"[^>]*>check unknown</)
-  assert.match(text(run('codeplay-20261020a')), /run-input\.json acceptance\.play\.calibration would state it/)
-  assert.doesNotMatch(html, /:fail"/, 'nothing on the climb is red')
-})

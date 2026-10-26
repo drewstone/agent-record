@@ -2,6 +2,7 @@ import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
 import { Lines } from '@tangle-network/charts/react'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { hm } from './answers.js'
+import { BarStrip } from './BarStrip.js'
 import { StatusPill, useDocument } from './data.js'
 import { type HostView, type ViewTrend, viewChip } from './view.js'
 
@@ -117,7 +118,7 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
                 </Tip>
                 <span className={`tj-move tj-${view.trend.movement}`}>{moveLine(view.trend, now)}</span>
                 </span>
-                <TrendChart trend={view.trend} />
+                {view.bars?.length ? <BarStrip bars={view.bars} /> : <TrendChart trend={view.trend} />}
                 {holdLine(view) && <p className="tj-hold" title={view.blocker?.detail ?? undefined}>{holdLine(view)}</p>}
               </li>
             ))}

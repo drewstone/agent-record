@@ -132,8 +132,8 @@ export function ApiCost({ usd, provenance, billedUsd }: { usd: number | null | u
   if (provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
   if (usd === null || usd === undefined || (usd === 0 && provenance?.endsWith('at least'))) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
-    <span title={`API-equivalent at list price, ${provenance?.startsWith('per') ? `${provenance}, the run page's figure` : provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : provenance ?? 'unknown source'}${billedUsd !== null && billedUsd !== undefined ? `; billed ${money(billedUsd)}` : ''}`}>
-      {provenance?.endsWith('at least') ? '≥' : provenance === 'estimated' || provenance === 'per call' ? '≈' : ''}{money(usd)}
+    <span title={`API-equivalent at list price, ${provenance === 'per call' ? "every call priced from the run's own stores" : provenance?.startsWith('per') ? `${provenance}: agents with no price are left out` : provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : provenance ?? 'unknown source'}${billedUsd !== null && billedUsd !== undefined ? `; billed ${money(billedUsd)}` : ''}`}>
+      {provenance?.endsWith('at least') ? '≥' : provenance === 'estimated' ? '≈' : ''}{money(usd)}
     </span>
   )
 }
@@ -239,7 +239,7 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now(), actio
         <OutcomeLegend outcomes={[...present]} open={ledger.rows.some((row) => row.open?.hours)} />
       </header>
       <div className="table-scroll">
-        <table className="data-table ledger-table" data-primary-content={full ? '' : undefined}>
+        <table className="data-table ledger-table">
           <thead>
             <tr>
               <th>Run</th>

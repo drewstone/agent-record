@@ -1644,7 +1644,7 @@
   gap: 8px;
   min-width: 0;
 }
-.ar-ws .ws-head h1, .ar-ws .ws-head .spend-split, .ar-ws .play-fact .mono { overflow-wrap: anywhere; min-width: 0; }
+.ar-ws .ws-head h1, .ar-ws .ws-head .spend-split { overflow-wrap: anywhere; min-width: 0; }
 .ar-ws .ws-kicker { font: 600 var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .ws-kicker a { color: var(--ar-fg-muted); }
 .ar-ws .ws-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; min-width: 0; }
@@ -2141,7 +2141,6 @@
 .ar-ws .answer-fact:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
 .ar-ws .answer-fact .faint { font-size: var(--ar-text-s); }
 .ar-ws .answer-label { color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
-.ar-ws .answer-value { font-weight: 600; }
 .ar-ws .answer-brief { display: flex; align-items: baseline; gap: .4em 1em; min-width: 0; padding: 8px 16px; border-top: 1px solid var(--ar-border); }
 .ar-ws .answer-brief .answer-label { white-space: nowrap; }
 .ar-ws .answer-headline { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2521,19 +2520,8 @@
 .ar-ws .run-progress { display: grid; gap: 12px; padding: 16px 16px; }
 /* The play's standing: best result and latest run as two facts, each one line, each a link. */
 .ar-ws .play-standing { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 2px; }
-.ar-ws .play-fact { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: .45em; padding: 8px 12px; border: 1px solid var(--ar-border); border-radius: 8px; color: var(--ar-fg); text-decoration: none; }
-.ar-ws .play-fact:hover, .ar-ws .play-fact:focus-visible { background: var(--ar-hover, var(--ws-raised)); }
 .ar-ws .play-results { display: grid; gap: 16px; }
 .ar-ws .play-results > h3 { margin: 8px 0 0; }
-.ar-ws .play-answer { display: grid; gap: 8px; padding: 16px 16px; border: 1px solid var(--ar-border); border-left: 3px solid var(--ar-c-ok); border-radius: 8px; min-width: 0; }
-.ar-ws .play-answer.is-none { border-left-color: var(--ar-border); }
-.ar-ws .play-answer h3 { margin: 0; }
-.ar-ws .play-answer p { margin: 0; }
-.ar-ws .play-answer-text { font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
-.ar-ws .play-answer-run { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5em; }
-.ar-ws .play-answer-run .mono { overflow-wrap: anywhere; min-width: 0; }
-.ar-ws .play-check-lines { margin: 0; padding: 12px 12px; max-height: 18em; overflow: auto; border-radius: 6px; background: var(--ws-raised, color-mix(in srgb, var(--ar-fg) 5%, transparent)); font: .82em/1.5 var(--ar-font-body); white-space: pre-wrap; overflow-wrap: anywhere; }
-.ar-ws .play-answer-links { display: flex; flex-wrap: wrap; gap: .4em 1.2em; }
 .ar-ws .run-progress-note { margin: 0; }
 .ar-ws .run-tab { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 0; border-radius: 7px; background: transparent; color: var(--ar-fg-muted); font: 600 var(--ar-text-s)/1.2 var(--ar-font-body); white-space: nowrap; }
 .agent-record.ar-ws .run-tab.on, .agent-record.ar-ws .run-tab.on:hover { background: var(--ar-selected, var(--ar-bg-alt)); color: var(--ar-fg); box-shadow: inset 0 -2px 0 var(--ws-frame); }
@@ -2744,22 +2732,12 @@
 .ar-ws .research-frontier span { line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .research-frontier small { color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
 /* A status mark on the overview is its shape in its tone, with its word beside it where there is room. */
-@media (max-width: 700px) {
-}
-@media (min-width: 1800px) {
-}
 /* The week by play: one shared column grid (subgrid), so every play's runs, finding and numbers line up. */
-@media (min-width: 761px) {
-}
-@media (max-width: 760px) {
-}
 /* Three cards a row on the wall, two on a laptop, one on a phone; a last row's cards grow to fill it, so a section of
    four never leaves one card beside two empty slots. */
 /* Title, then the legend on its own line, so every card's plot starts at the same depth. */
 /* Rows share one set of columns (subgrid), so every bar starts at the same x: the label column is as wide as the
    longest label up to what leaves the bars a third of the card. */
-@media (max-width: 700px) {
-}
 
 /* ---- The profile canvas (/run Profiles, /play Profiles): a pan-and-zoom lineage of agent profiles beside an inspector. */
 .ar-ws .pc-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, 32%); height: calc(100vh - var(--ar-sticky-top, 8px) - 40px); min-height: 620px; background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; overflow: hidden; }
@@ -3169,9 +3147,6 @@
 .ar-ws .runs-table .run-state { max-width: 24rem; white-space: normal; }
 .ar-ws .runs-table .run-state small { margin-top: 2px; overflow-wrap: anywhere; }
 /* R2: a play without a winner lists each run's last check line. */
-.ar-ws .play-check-runs { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 4px; font-size: var(--ar-text-s); }
-.ar-ws .play-check-runs li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px; align-items: baseline; }
-.ar-ws .play-check-runs .clamp-1 { color: var(--ar-fg-muted); overflow-wrap: anywhere; }
 /* M4: what blocks the run, under its status. */
 .agent-record .run-blockers { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 4px; font-size: var(--ar-text-s); }
 .agent-record .run-blockers li > :not(strong) { color: var(--ar-fg); }
@@ -3190,7 +3165,6 @@
   .ar-ws .ws-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0; }
   .ar-ws .ws-tabs::-webkit-scrollbar { display: none; }
   .ar-ws .ws-tabs button { flex: none; padding: 8px 12px; }
-  .ar-ws .play-fact { padding: 4px 8px; }
   /* B2: the run page fits 390 px: no side padding of its own, and no chart or command wider than the column. */
   .ar-ws .rr-page { padding: 12px 0; }
   .ar-ws .rr-page .rr-chart, .ar-ws .rr-page .tgc-figure, .ar-ws .rr-page svg { max-width: 100%; min-width: 0; }
@@ -3198,26 +3172,17 @@
 
 /* ---------- The focused play page (J7): header, climb, bar, ledger, teams, findings, releases ---------- */
 .ar-ws .play-head { gap: 12px; }
-.ar-ws .play-sentence { margin: 0; max-width: 132ch; font-size: var(--ar-text-m); line-height: 1.45; overflow-wrap: anywhere; }
-.ar-ws .play-verdict { font-weight: 600; }
 .ar-ws .blocker-chip { display: grid; gap: 2px; min-width: 0; }
 .ar-ws .blocker-chip p { overflow-wrap: anywhere; }
 .ar-ws .blocker-class { text-transform: uppercase; letter-spacing: .03em; font-family: var(--ar-font-body); font-weight: 600; }
 .ar-ws .blocker-age { font-family: var(--ar-font-body); font-weight: 600; }
 .ar-ws .blocker-also { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ar-ws .blocker-also b { font-family: var(--ar-font-body); text-transform: uppercase; font-size: 12px; }
-.ar-ws .play-cost { margin: 0; font-size: var(--ar-text-s); }
-.ar-ws .play-cost-usd { color: var(--ar-fg); font-family: var(--ar-font-body); }
 .ar-ws .ending-glyph { font-family: var(--ar-font-body); }
 .ar-ws .play-standing-tab, .ar-ws .play-setup { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .ar-ws .section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 8px; }
 .ar-ws .section-head h3 { margin: 0; }
 .ar-ws .section-head p { margin: 0; font-size: 12px; line-height: 1.4; max-width: 110ch; }
-.ar-ws .checker-legend { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0 0 8px; padding: 0; list-style: none; font-size: 12px; }
-.ar-ws .checker-legend > span, .ar-ws .checker-earlier { display: inline-flex; align-items: center; gap: 8px; }
-.ar-ws .checker-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--checker); }
-.ar-ws .checker-legend [data-current='yes'] b { color: var(--ws-title); }
-.ar-ws .checker-earlier { color: var(--ar-fg-muted); cursor: pointer; }
 :is(.ar-ws, .research-report) .outcome-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--ar-fg-muted); }
 :is(.ar-ws, .research-report) .outcome-legend li { display: inline-flex; align-items: center; gap: 4px; }
 :is(.ar-ws, .research-report) .outcome-legend i { width: 10px; height: 10px; border-radius: 2px; }
@@ -3241,14 +3206,8 @@
 .ar-ws .sort-button { color: inherit; text-decoration: none; font-weight: inherit; }
 .ar-ws .ledger-older { margin: 8px 0 0; font-size: 12px; }
 /* One team per row: each timeline is drawn at the section's width, its lanes and ticks at their set size. */
-.ar-ws .team-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-.ar-ws .team-panel { margin: 0; min-width: 0; }
-.ar-ws .team-panel figcaption { font-size: var(--ar-text-s); margin-bottom: 4px; }
-.ar-ws .team-agents { margin: 4px 0 0; font-size: 12px; line-height: 1.6; }
 .ar-ws .run-end-blocker { margin: 8px 0 2px; }
 /* A 27-agent team would run a page tall: the panel scrolls inside 640 px. */
-.ar-ws .team-panel .tgc-timeline-view { max-height: 640px; overflow-y: auto; overscroll-behavior: contain; }
-.ar-ws .team-single { margin: 8px 0 0; padding-left: 20px; font-size: 12px; }
 .ar-ws .finding-group { margin: 0 0 8px; }
 .ar-ws .finding-group > summary { cursor: pointer; padding: 4px 0; font-size: var(--ar-text-s); }
 .ar-ws .finding-group > summary .faint { font-size: 12px; }
@@ -3277,30 +3236,12 @@
 .ar-ws .play-judged-link { margin: 0; }
 @media (max-width: 700px) {
   .ar-ws .play-head { gap: 8px; }
-  .ar-ws .play-sentence { font-size: var(--ar-text-s); }
-  .ar-ws .play-sentence { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .ar-ws .play-cost { display: none; }
   .ar-ws .finding-row { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .finding-meta { white-space: normal; }
   .ar-ws .ledger-table .ledger-bar { min-width: 120px; }
   .ar-ws .play-standing-tab > .ws-section, .ar-ws .play-setup > .ws-section, .ar-ws .ws-content > .play-releases { padding: 12px 0; border-width: 1px 0 0; border-radius: 0; background: transparent; --chart-canvas: var(--ar-bg); }
 }
-.ar-ws .verdict-strip { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 /* What the checks said: each run's check lines grouped by reason, so a check without a score still reads. */
-.ar-ws .checks-said { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ar-border); }
-.ar-ws .checks-said h4 { margin: 0 0 8px; font: 600 var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
-.ar-ws .checks-said > ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px 24px; }
-.ar-ws .checks-said-run { margin: 0 0 4px; font-size: var(--ar-text-s); }
-.ar-ws .checks-said ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 1px; }
-.ar-ws .checks-said ul li { display: grid; grid-template-columns: 3.2em minmax(0, 1fr) auto; gap: 8px; align-items: baseline; font-size: 12px; }
-.ar-ws .checks-said ul b { font: 600 12px var(--ar-font-body); text-align: right; color: var(--ar-fg); }
-.ar-ws .checks-said-reason { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ar-fg); }
-.ar-ws .checks-said .link-button { font-size: 12px; margin-left: 3.6em; }
-.ar-ws .verdict-strip li { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 12px; align-items: baseline; }
-.ar-ws .verdict-strip-run { font-size: var(--ar-text-s); }
-.ar-ws .verdict-strip-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.ar-ws .verdict-strip .rr-now-calibration { grid-column: 2; margin: 0; }
-.ar-ws .verdict-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 4px; font: 12px/1.8 var(--ar-font-body); background: var(--ws-raised); box-shadow: inset 2px 0 0 var(--checker); }
 
 /* ---------- The fleet explorer (/explore): one canvas of runs or agents, a lens legend, the selection, computed columns ---------- */
 .ar-ws .explore-page { display: grid; gap: 12px; min-width: 0; }
@@ -3357,23 +3298,8 @@
 .ar-ws .explore-selected-actions { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; }
 
 /* ---------- The climb over time: axis toggle, run chips and the brush strip ---------- */
-.ar-ws .play-climb .section-head { position: relative; }
-.ar-ws .climb-mode { display: inline-flex; border: 1px solid var(--ar-border); border-radius: 7px; overflow: hidden; margin-top: 8px; }
-.ar-ws .climb-mode button { padding: 4px 12px; border: 0; background: transparent; color: var(--ar-fg-muted); font: inherit; font-size: var(--ar-text-s); cursor: pointer; }
-.ar-ws .climb-mode button[aria-pressed='true'] { background: var(--ws-raised); color: var(--ar-fg); }
-.ar-ws .climb-brush-wrap { display: grid; gap: 8px; margin: 4px 0 8px; }
-.ar-ws .climb-brush-runs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ar-ws .run-chip { padding: 2px 12px; border: 1px solid var(--ar-border); border-radius: 999px; background: transparent; color: var(--ar-fg-muted); font: inherit; font-size: 12px; cursor: pointer; }
-.ar-ws .run-chip.on { background: var(--ws-raised); color: var(--ar-fg); border-color: var(--ar-fg-muted); }
 .ar-ws .climb-brush-hint { font-size: 12px; }
-.ar-ws .climb-brush { position: relative; height: 30px; border: 1px solid var(--ar-border); border-radius: 6px; background: var(--ws-panel); cursor: crosshair; touch-action: none; overflow: hidden; }
-.ar-ws .climb-brush:focus-visible { outline: 2px solid var(--ar-c-info); outline-offset: 2px; }
-.ar-ws .climb-brush-run { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--ar-border); border-right: 1px solid var(--ar-border); background: color-mix(in srgb, var(--ar-fg) 6%, transparent); }
-.ar-ws .climb-brush-run b { position: absolute; left: 4px; top: 2px; font: 600 12px var(--ar-font-mono, ui-monospace, monospace); color: var(--ar-fg-muted); white-space: nowrap; }
 /* Brush ticks are history in neutral ink: a pass is filled, every other verdict an outline. */
-.ar-ws .climb-brush-tick { position: absolute; bottom: 2px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: none; box-shadow: inset 0 0 0 1px var(--ar-c-neutral); opacity: .8; }
-.ar-ws .climb-brush-tick.is-pass { background: var(--ar-c-neutral); }
-.ar-ws .climb-brush-window { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--ar-c-info) 22%, transparent); border-left: 2px solid var(--ar-c-info); border-right: 2px solid var(--ar-c-info); pointer-events: none; }
 
 
 .agent-record .assignment-source { margin-top: 0.5rem; }
@@ -3409,7 +3335,6 @@
 .ar-ws .check-works { border: 1px solid var(--ar-border); border-radius: 10px; background: var(--ws-panel); font-size: 12px; }
 .ar-ws .check-works > summary { padding: 12px 16px; cursor: pointer; font-weight: 600; }
 .ar-ws .check-works > :not(summary) { margin: 0 16px 8px; }
-.ar-ws .check-bars { padding-left: 20px; }
 /* Off the Standing tab the play's header is one 56 px sticky line, so a tab's first section starts near the top. */
 .ar-ws .play-head.is-compact { position: sticky; top: 0; z-index: 5; display: flex; flex-direction: row; align-items: center; gap: 12px; height: 56px; padding-top: 0; padding-bottom: 0; }
 .ar-ws .play-head.is-compact h1 { margin: 0; font-size: var(--ar-text-l, 18px); }
@@ -3819,9 +3744,10 @@
 .ar-ws .wp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
 .ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; }
 .ar-ws .wp-hosts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-.ar-ws .wp-host { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px 12px; padding: 16px; border-radius: 8px; background: var(--ar-surface); box-shadow: inset 0 0 0 1px var(--ar-line); }
+.ar-ws .wp-host { display: grid; align-content: start; gap: 16px; padding: 16px; border-radius: 8px; background: var(--ar-surface); box-shadow: inset 0 0 0 1px var(--ar-line); }
+.ar-ws .wp-host[data-breach] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-fail, #ef4444) 40%, transparent); }
 .ar-ws .wp-host[data-up="no"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-warn, #f5a524) 50%, transparent); }
-.ar-ws .wp-host-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.ar-ws .wp-host-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .ar-ws .wp-host-head b { font-size: 18px; font-weight: 600; }
 .ar-ws .wp-host-head > span:last-child { margin-left: auto; }
 .ar-ws .wp-bar { display: grid; gap: 4px; min-width: 0; }
@@ -3829,10 +3755,12 @@
 .ar-ws .wp-track > span { display: block; height: 100%; border-radius: 4px; }
 .ar-ws .wp-track > i { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ar-foreground); }
 .ar-ws .wp-val { font-size: 12px; color: var(--ar-fg-muted); font-variant-numeric: tabular-nums; }
+.ar-ws .wp-val b { margin-right: 4px; font-size: 18px; font-weight: 600; color: var(--ar-foreground); }
 .ar-ws .wp-rows { list-style: none; margin: 12px 0 0; padding: 0; display: grid; }
-.ar-ws .wp-rows li { display: grid; grid-template-columns: 8px minmax(0, 1.4fr) minmax(0, .8fr) minmax(0, 1.2fr) 56px; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--ar-line); font-size: 14px; }
+.ar-ws .wp-rows li { display: grid; grid-template-columns: 8px minmax(0, 176px) minmax(0, 1fr) 48px; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--ar-line); font-size: 14px; }
 .ar-ws .wp-rows li b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.ar-ws .wp-rows li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .wp-rows li > span, .ar-ws .wp-step { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ws .wp-step { color: var(--ar-fg-muted); }
 .ar-ws .wp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .ar-ws .wp-stat { display: grid; gap: 4px; align-content: start; padding: 16px; border-radius: 8px; background: var(--ar-surface); box-shadow: inset 0 0 0 1px var(--ar-line); font-size: 12px; }
 .ar-ws .wp-stat b { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -3854,21 +3782,19 @@
 .ar-ws .wp-idea h2 { margin: 0; line-height: 1.3; }
 .ar-ws .wp-idea p, .ar-ws .wp-idea ol { margin: 0; }
 .ar-ws .wp-idea ol { padding-left: 20px; display: grid; gap: 8px; }
-.ar-ws .wp .wp-link { justify-self: start; border: 0; padding: 0; background: none; color: var(--ar-accent); }
 .ar-ws .wp-go { justify-self: start; font-size: 14px; font-weight: 600; }
 @media (max-width: 760px) {
   .ar-ws .wp-split { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .ar-ws .wp-rows li { grid-template-columns: 8px minmax(0, 1fr) auto; }
-  .ar-ws .wp-rows li > span:nth-of-type(3) { display: none; }
-  .ar-ws .wp-rows li > span:nth-of-type(2) { display: none; }
+  .ar-ws .wp-rows li { grid-template-columns: 8px minmax(0, 1fr) auto; gap: 4px 12px; }
+  .ar-ws .wp-rows li > .ar-tip-anchor:nth-of-type(2) { grid-column: 2 / -1; order: 1; }
   .ar-ws .wp-table th:nth-child(4), .ar-ws .wp-table td:nth-child(4) { display: none; }
   .ar-ws .wp .tj-hero { font-size: 18px; }
 }
-.ar-ws .wp-over { grid-column: 1 / -1; font-size: 12px; color: var(--ar-c-fail, #ef4444); }
+.ar-ws .wp-over { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ar-c-fail, #ef4444); }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
 @media (max-width: 760px) {
   .ar-ws .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .ar-ws .wp-host { grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 12px; }
+  .ar-ws .wp-host { gap: 12px; padding: 12px; }
   .ar-ws .wp-host-head { flex-wrap: wrap; gap: 4px 8px; font-size: 12px; }
   .ar-ws .wp-host-head b { font-size: 14px; }
   .ar-ws .wp-host-head > span:last-child { margin-left: 0; width: 100%; }
@@ -3876,7 +3802,6 @@
   .ar-ws .wp-stat { padding: 12px; }
 }
 .ar-ws .wp section > .ar-tip-anchor, .ar-ws .wp-stat > .ar-tip-anchor, .ar-ws .wp-table td > .ar-tip-anchor:has(.ov-meter) { display: block; }
-.ar-ws .wp-host { align-content: start; }
 @media (max-width: 760px) { .ar-ws .wp-table td > .wp-muted { display: none; } }
 /* ---- /play Releases: where each release stops; a picked bar lists its releases by run. */
 .ar-ws .release-stops { max-width: 960px; }
@@ -3907,7 +3832,6 @@
 .ar-ws .ledger-lineage .ov-gantt-label { font-family: var(--ar-font-mono, ui-monospace, monospace); }
 .ar-ws .wp-body { display: grid; gap: 28px; min-width: 0; }
 @media (max-width: 760px) { .ar-ws .wp-body { gap: 20px; } }
-.ar-ws .wp-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; font-size: 14px; }
 .ar-ws .wp-group > summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
 .ar-ws .wp-group[open] { flex-basis: 100%; }
 .ar-ws .wp-awaiting { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
@@ -3984,17 +3908,10 @@
   .ar-ws .play-input .input-run-picker { position: static; margin: 0 0 12px; }
 }
 /* The per-state counts below the agents meter carry its numbers; its key would repeat them. */
-.ar-ws .wp-agents-meter .ov-meter-key { display: none; }
-.ar-ws .wp-groups .wp-idle { line-height: 20px; }
 .ar-ws .wp-group > summary { line-height: 20px; }
-.ar-ws .wp-foot { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 24px; font-size: 14px; }
 .ar-ws .wp-idea ol .wp-group > summary { font-weight: 600; }
 .ar-ws .wp-idea ol .wp-group p { margin: 4px 0 0; color: var(--ar-fg-muted); }
 .ar-ws .wp h2 .as-of { font-size: 12px; font-weight: 400; }
-.ar-ws .wp-fleet { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; }
-.ar-ws .wp-fleet .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.ar-ws .wp-side { display: grid; gap: 28px; align-content: start; }
-@media (max-width: 1100px) { .ar-ws .wp-fleet { grid-template-columns: minmax(0, 1fr); } }
 .ar-ws .built-delivered { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 12px 16px; font-size: 14px; }
 .ar-ws .built-roles { margin: 8px 16px 16px; } .ar-ws .built-roles > summary { cursor: pointer; font-size: 12px; color: var(--ar-fg-muted); }
 /* The kit transcript on the page's scale (REVIEW-10 Conversations: 16/13/10 px and weight 500): prose 14 px on a 24 px line,
@@ -4003,3 +3920,14 @@
 .ar-ws .agent-pane :is(.text-sm, .text-xs) { font-size: 14px; line-height: 20px; }
 .ar-ws .agent-pane [class*="text-[10px]"], .ar-ws .agent-pane [class*="text-[11px]"] { font-size: 12px; }
 .ar-ws .agent-pane .font-medium { font-weight: 600; }
+/* ---- Against the bar (BarStrip): one card per paper metric; colour only for the ratio's state. */
+.ar-ws .bar-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 0 0 16px; padding: 0; list-style: none; }
+.ar-ws .bar-card { display: grid; gap: 4px; align-content: start; padding: 16px; border-radius: 8px; background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ar-border); }
+.ar-ws .bar-label, .ar-ws .bar-target, .ar-ws .bar-where, .ar-ws .bar-change { font-size: 12px; color: var(--ar-fg-muted); }
+.ar-ws .bar-value { font-size: 26px; font-weight: 600; line-height: 32px; font-variant-numeric: tabular-nums; color: var(--ar-fg); }
+.ar-ws .bar-ratio { font-style: normal; font-weight: 600; }
+.ar-ws .bar-card[data-side="short"] .bar-ratio { color: var(--ar-c-warn); }
+.ar-ws .bar-card[data-side="met"] .bar-ratio, .ar-ws .bar-card[data-side="past"] .bar-ratio { color: var(--ar-c-ok); }
+.ar-ws .bar-change[data-improved="true"] { color: var(--ar-c-ok); }
+.ar-ws .bar-change[data-improved="false"] { color: var(--ar-c-fail); }
+@media (max-width: 700px) { .ar-ws .bar-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .ar-ws .bar-card { padding: 12px; } .ar-ws .bar-value { font-size: 18px; line-height: 24px; } }

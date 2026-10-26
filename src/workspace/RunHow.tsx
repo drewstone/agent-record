@@ -35,7 +35,7 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, dimensions }: { do
     .sort((a, b) => b.n - a.n)
   return (
     // The charts and their numbers are the answer to "where did time and money go": the one primary region (reviewer gate 1).
-    <div className="how" data-how data-primary-content>
+    <div className="how" data-how>
       {stat.length > 0 && <dl className="rj-stats how-stats">{stat.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}
       <RunActivity doc={doc} marked releases={ws.data?.releases ?? []} stacked />
       <div className="how-grid">

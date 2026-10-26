@@ -27,7 +27,11 @@ export const viewProgressSchema = z.object({
   sentence: z.string(),
 })
 
-export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), sentence: z.string().nullable().optional(), detail: z.string().nullable().optional(), cause: z.string().nullable().optional(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional(), why: z.string().nullable().optional() })
+/** Who acts, by role from the host's one registry (views.ROLES); a page decides "yours" from the role and the viewer, never a name. */
+const viewActorSchema = z.object({ role: z.string(), label: z.string() })
+
+/** What holds a run: the producer's sentence, its typed check cause (time-cap, not-run, infra) and release, and who acts. */
+export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), sentence: z.string().optional(), cause: z.string().nullable().optional(), release: z.string().nullable().optional(), detail: z.string().optional(), actor: viewActorSchema.optional(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional(), why: z.string().nullable().optional() })
 
 /** Is the play moving (views.play_trend): its best steps passed at the end of each of the last 7 days, and the word for it. */
 export const viewTrendSchema = z.object({
@@ -42,10 +46,28 @@ export const viewTrendSchema = z.object({
 })
 export type ViewTrend = z.infer<typeof viewTrendSchema>
 
+/** One paper metric against its bar (views bars[], from bar.json, barSeries and typed check bounds): the newest comparable value or bound, the best, how far from the target, and the change over the trend's window. */
+const barPointSchema = z.object({ value: z.number(), kind: z.enum(['measured', 'upper-bound', 'lower-bound']), release: z.string().nullable().optional(), runId: z.string().nullable().optional(), at: z.string().nullable().optional(), size: z.string().nullable().optional(), reason: z.string().nullable().optional() })
+export const viewBarSchema = z.object({
+  metric: z.string(),
+  label: z.string(),
+  unit: z.string(),
+  direction: z.enum(['up', 'down']).nullable().optional(),
+  target: z.object({ min: z.number().nullable().optional(), max: z.number().nullable().optional(), approx: z.number().nullable().optional() }).nullable().optional(),
+  stretch: z.object({ min: z.number().nullable().optional(), max: z.number().nullable().optional(), label: z.string().nullable().optional() }).nullable().optional(),
+  latest: barPointSchema.nullable(),
+  best: barPointSchema.nullable().optional(),
+  ratio: z.object({ x: z.number(), side: z.enum(['short', 'met', 'past']) }).nullable().optional(),
+  change: z.object({ from: z.number(), to: z.number(), since: z.string() }).nullable().optional(),
+})
+export type ViewBar = z.infer<typeof viewBarSchema>
+
 export const viewNeedSchema = z.object({
   runId: z.string().nullable().optional(),
   text: z.string(),
   owner: z.string().nullable().optional(),
+  actor: viewActorSchema.optional(),
+  options: z.array(z.object({ label: z.string(), command: z.string(), consequence: z.string().optional() })).optional(),
   since: z.string().nullable().optional(),
   href: z.string().nullable().optional(),
 })
@@ -60,6 +82,7 @@ export const viewSchema = z
     progress: viewProgressSchema.nullable(),
     needsYou: z.array(viewNeedSchema),
     trend: viewTrendSchema.nullable().optional(),
+    bars: z.array(viewBarSchema).optional(),
   })
   .catchall(z.unknown())
 
