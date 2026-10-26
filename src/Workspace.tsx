@@ -7,7 +7,7 @@ import { WorkGraph } from './workspace/WorkGraph.js'
 import { FindingsFeed, REVIEWS } from './workspace/FindingsFeed.js'
 import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayBarTable } from './workspace/PlayBarTable.js'
-import { PlayJourney, PlayJourneyStanding } from './workspace/PlayJourney.js'
+import { PlayJourney } from './workspace/PlayJourney.js'
 import { ExplorePage } from './workspace/Explore.js'
 import { PlayHeader } from './workspace/PlayHead.js'
 import { PlayAgainstBar, PlayClimb } from './workspace/PlayClimb.js'
@@ -352,7 +352,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     <Status loading={play.loading} error={play.error && `This play is unavailable: ${play.error}`}>
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
-          {journey ? <PlayJourney play={doc} /> : <PlayHeader play={doc} report={report.data} compact={tab !== 'standing'} fallback={<PlayStanding play={doc} />} />}
+          <PlayHeader play={doc} report={report.data} compact={journey || tab !== 'standing'} fallback={<PlayStanding play={doc} />} />
           <Tabs
             label="Play"
             value={tab}
@@ -366,7 +366,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             ] as const}
           />
           <div className="ws-content" role="tabpanel">
-            {tab === 'standing' && journey && <PlayJourneyStanding play={doc} onOpen={open} onMore={() => update({ tab: 'findings' })} />}
+            {tab === 'standing' && journey && <PlayJourney play={doc} />}
             {tab === 'standing' && !journey && (
               <div className="play-standing-tab" data-section="standing">
                 {!doc.standing && <PlayAnswer play={doc} />}
