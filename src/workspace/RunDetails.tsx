@@ -4,8 +4,8 @@ import { RUN_TABS, type RunSection, type RunTab } from './RunTabs.js'
 export type DetailsTab = Exclude<RunTab, 'now'>
 const DETAILS = RUN_TABS.filter((tab): tab is (typeof RUN_TABS)[number] & { id: DetailsTab } => tab.id !== 'now')
 
-/** The Details tab a URL asks for (`?details=`), else `fallback`: Findings when the run has any (a one-link Built panel read as the thin bottom Drew named), else Built. */
-export const detailsOf = (params: URLSearchParams, fallback: DetailsTab = 'built'): DetailsTab => DETAILS.find((tab) => tab.id === params.get('details'))?.id ?? fallback
+/** The Details tab a URL asks for (`?details=`); Built when it names none (Findings by default doubled the run page: 0.90.12). */
+export const detailsOf = (params: URLSearchParams): DetailsTab => DETAILS.find((tab) => tab.id === params.get('details'))?.id ?? 'built'
 
 /**
  * Everything under the run's code frame is one Details region (Drew, 2026-10-25: no tab bar floating over an empty panel):
