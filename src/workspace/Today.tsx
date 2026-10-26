@@ -86,7 +86,7 @@ function TrendChart({ trend }: { trend: ViewTrend }) {
   const span = [checks[0]!.t, checks.at(-1)!.t]
   return (
     <div className="tj-chart">
-      <Lines rows={8} format={(v) => `${v}`} series={[
+      <Lines rows={12} format={(v) => `${v}`} series={[
         { name: 'checked release', color: 'var(--ar-c-info)', points: checks.map((point) => [point.t, point.passed]), dots: true, label: release },
         { name: 'best so far', color: `var(--ar-c-${trend.movement === 'moving' ? 'ok' : trend.movement === 'regressed' ? 'fail' : 'run'})`, points: bestLine },
         { name: `all ${trend.total} steps`, color: 'var(--ar-fg-faint)', points: span.map((t) => [t, trend.total] as [number, number]), dash: 'dash' },
