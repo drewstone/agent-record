@@ -36,9 +36,8 @@ import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable } from './workspace/RunTable.js'
-import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
+import { outcomeOfCheck, RunOverview, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
-import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunHow } from './workspace/RunHow.js'
 import { detailsOf, RunDetails } from './workspace/RunDetails.js'
@@ -716,7 +715,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
             {details === 'how' && how}
           </RunDetails>
           <RunWhy doc={doc} play={play.data} />
-          <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
         </Suspense>
       </div>
     )
@@ -800,7 +798,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
             />
             <AgentFindings doc={doc} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={openFinding} />
           </aside>
-          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent" data-primary-content>
+          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent">
             {agent.index ? (
               <RunBody
                 key={actor}
@@ -1199,7 +1197,7 @@ function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: str
   )
 }
 
-/** The receipt is the run overview in print mode, supplied by the same Lab document. */
+/** The run overview in print mode over the run document (its check facts too); a tagged release's receipt is the receipt alone. */
 function ReceiptPage({ api, id }: { api: string; id: string }) {
   const [runId, tag] = id.split('@')
   const url = `${api}/runs/${encodeURIComponent(runId!)}/receipt${tag ? `/${encodeURIComponent(tag)}` : ''}/receipt.json`
@@ -1208,5 +1206,5 @@ function ReceiptPage({ api, id }: { api: string; id: string }) {
   // verdict the receipt's own check recorded.
   const run = useDocument<RunDocument>(`${api}/runs/${encodeURIComponent(runId!)}`)
   if (!doc.data) return <p role="status">{doc.error ?? 'Loading receipt…'}</p>
-  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} /></div>
+  return <div className="agent-record ar-ws" data-theme="light">{run.data && !tag ? <RunOverview api={api} doc={{ ...run.data, receipt: doc.data }} print /> : <RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} />}</div>
 }

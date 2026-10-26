@@ -270,7 +270,6 @@ export function Conversation({
       <div
         className="conversation-scroll"
         data-chat
-        data-primary-content
         ref={scroll}
         tabIndex={0}
         aria-label="Scrollable retained conversation"

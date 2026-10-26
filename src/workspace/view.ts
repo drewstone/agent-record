@@ -27,7 +27,11 @@ export const viewProgressSchema = z.object({
   sentence: z.string(),
 })
 
-export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional(), why: z.string().nullable().optional() })
+/** Who acts, by role from the host's one registry (views.ROLES); a page decides "yours" from the role and the viewer, never a name. */
+const viewActorSchema = z.object({ role: z.string(), label: z.string() })
+
+/** What holds a run: the producer's sentence, its typed check cause (time-cap, not-run, infra) and release, and who acts. */
+export const viewBlockerSchema = z.object({ kind: z.string(), text: z.string(), sentence: z.string().optional(), cause: z.string().nullable().optional(), release: z.string().nullable().optional(), detail: z.string().optional(), actor: viewActorSchema.optional(), owner: z.string().nullable().optional(), since: z.string().nullable().optional(), action: z.string().nullable().optional(), dispute: z.string().nullable().optional(), why: z.string().nullable().optional() })
 
 /** Is the play moving (views.play_trend): its best steps passed at the end of each of the last 7 days, and the word for it. */
 export const viewTrendSchema = z.object({
@@ -62,6 +66,8 @@ export const viewNeedSchema = z.object({
   runId: z.string().nullable().optional(),
   text: z.string(),
   owner: z.string().nullable().optional(),
+  actor: viewActorSchema.optional(),
+  options: z.array(z.object({ label: z.string(), command: z.string(), consequence: z.string().optional() })).optional(),
   since: z.string().nullable().optional(),
   href: z.string().nullable().optional(),
 })
