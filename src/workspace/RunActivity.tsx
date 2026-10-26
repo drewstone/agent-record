@@ -11,8 +11,8 @@ const ACCENT = 'var(--ar-accent, #8e59ff)'
 /**
  * Is the run working or idling, and is the spend buying steps (REVIEW-8 charts 3 and 4, Drew): agents working at each
  * of the host's progress samples and tokens per minute from the run's metered token series, on the run's own time
- * window. With `marked`, each release is marked by the steps it passed. Now draws it side by side
- * under the timeline; How it ran stacks it, captioned.
+ * window, each chart captioned. With `marked`, each release is marked by the steps it passed. Now draws them side by
+ * side under the timeline; How it ran stacks them.
  */
 export function RunActivity({ doc, marked = false, releases = [], stacked = false }: { doc: RunDocument; marked?: boolean; releases?: readonly WorkspaceRelease[]; stacked?: boolean }) {
   const lineage = (doc as { lineage?: { settledAt?: string | null; series?: [string, number][] }[] }).lineage?.[0]
@@ -36,11 +36,9 @@ export function RunActivity({ doc, marked = false, releases = [], stacked = fals
     rate.length > 1 && { caption: 'Metered tokens per minute', node: <Lines rows={5} axis={clock} format={tokens} series={[{ name: 'metered tokens per minute', color: ACCENT, points: rate }]} /> },
   ].filter((chart): chart is { caption: string; node: ReactElement } => Boolean(chart))
   if (!charts.length) return null
-  return stacked ? (
-    <section className="run-activity stacked" aria-label="Over the run">
+  return (
+    <section className={`run-activity${stacked ? ' stacked' : ''}`} aria-label="Over the run">
       {charts.map(({ caption, node }) => <figure key={caption}><figcaption>{caption}</figcaption>{node}</figure>)}
     </section>
-  ) : (
-    <div className="rj-activity" aria-label="Agents working and tokens per minute">{charts.map(({ caption, node }) => <div key={caption}>{node}</div>)}</div>
   )
 }
