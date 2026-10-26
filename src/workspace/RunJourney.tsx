@@ -160,7 +160,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * sizes from its container, truncates long names at the end with the full name in the tooltip, and zooms. Each release
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
-function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: string) => void }) {
+function Lanes({ m, live, goal, cost, picked, onPick }: { m: Model; live: boolean; goal?: string; cost: number | null; picked: string | null; onPick: (id: string | null) => void }) {
   // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, failed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
@@ -206,8 +206,10 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     // A stretch with no agent turn is a labelled band (tangle-tools run_journal pauses: 22a's 4 h 40 m after the GTR guard stop).
     const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}: ${p.reason}` }))
     // Tool calls are the record's per-agent counts; the cost is the stat row's alone (REVIEW-9: the card's ≈ beside the row's ≥).
-    return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, toolCalls: m.nodes.reduce((sum, n) => sum + (n.toolCalls ?? 0), 0) }
-  }, [m, live])
+    // The run's one cost (spend.apiEquivalentUsd) as the lower bound it is; tool calls only where the record counted them (charts 0.20.2).
+    const counted = m.nodes.filter((n) => typeof n.toolCalls === 'number')
+    return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, ...(counted.length ? { toolCalls: counted.reduce((sum, n) => sum + n.toolCalls!, 0) } : {}), ...(cost != null ? { costUsd: cost, costBound: 'lower' as const } : {}) }
+  }, [m, live, cost])
   // Releases that moved the score, the best and the newest: 17c tagged 205 releases, and a line for each buried the rows.
   const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
   const markers = useMemo((): FlowMarker[] => marked.map((r) => ({
@@ -215,7 +217,8 @@ function Lanes({ m, live, onPick }: { m: Model; live: boolean; onPick: (id: stri
     label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="What the agents did" markers={markers} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
+  // The header's stat row owns the run's numbers, so the chart's summary strip is off (sandbox-ui 03:12Z handoff).
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="Trace" description={goal} summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
@@ -240,16 +243,16 @@ function runUsage(m: Model) {
 }
 
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
-function Stats({ m, receiptUsd }: { m: Model; receiptUsd: number | null }) {
-  // Without the run's stores (deleted with ~/.cache/disco on 10-25) the receipt's Runtime estimate, the figure /play prints.
-  const own = runUsage(m)
-  const { listUsd, complete } = own.listUsd != null ? own : { listUsd: receiptUsd, complete: true }
+function Stats({ m, spend }: { m: Model; spend: { apiEquivalentUsd?: number | null; apiEquivalentProvenance?: string | null } | null | undefined }) {
+  // The host's one figure (journals.api_equivalent), the one /play and /plays print; never a sum of this page's own (index 02:45Z).
+  const listUsd = spend?.apiEquivalentUsd ?? null
+  const how = spend?.apiEquivalentProvenance ?? ''
   // As the timeline's legend counts them: every agent that committed, the lead included; Failed counts settles, not a category.
   const shipped = m.nodes.filter((n) => m.commits.get(n.id)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
-    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, own.listUsd != null ? 'API-equivalent at list price; each agent\'s billed amount is in its card' : "Runtime's estimate from the receipt, the figure /play prints; the run's per-call stores are gone"] as [string, string, string]] : []),
+    ...(listUsd != null ? [['Cost', `${how.endsWith('at least') ? '≥' : '≈'}${money(listUsd)}`, `API-equivalent at list price, ${how || 'source not recorded'}`] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
     ['Failed', String(m.nodes.filter(failed).length)],
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
@@ -396,8 +399,8 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
-              <Stats m={m} receiptUsd={doc.run.spend?.apiEquivalentUsd ?? null} />
-              <Lanes m={m} live={m.data.live} onPick={setPicked} />
+              <Stats m={m} spend={doc.run.spend} />
+              <Lanes m={m} live={m.data.live} goal={doc.input?.objective ? firstSentence(goalText(doc.input.objective)) : undefined} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
               <RunActivity doc={doc} />
             </section>
           )}
