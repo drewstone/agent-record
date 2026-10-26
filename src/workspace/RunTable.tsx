@@ -149,7 +149,7 @@ export function AgentTable({
             onClick={() => onSelect(node.id)}
           >
             <span className="agent-name" role="cell" style={{ paddingLeft: `${depth * 22}px` }} title={`${node.label}\n${roleOf(node)}\n${node.id}`}>
-              <span className="clip">{nameOf(node)}</span>
+              <span className="clip" data-lane-label>{nameOf(node)}</span>
             </span>
             <span role="cell">
               {/* The rail shows the shape only; the word and the agent's state are in the tooltip (REVIEW-8 gate 1). */}
