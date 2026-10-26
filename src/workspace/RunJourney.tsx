@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from 'react'
 import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
-import { FlowWaterfall } from '@tangle-network/charts/react'
+import { TraceWaterfall } from '@tangle-network/sandbox-ui/run'
 import type { RunDocument } from '../workspace-model.js'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
@@ -134,7 +134,7 @@ function Ladder({ doc, m, onRelease, verdictOnly = false }: { doc: RunDocument; 
 }
 
 /**
- * Q5: one row per agent across the run's hours in the shared agent timeline (charts FlowWaterfall, agents view), which
+ * Q5: one row per agent across the run's hours in the shared agent timeline (sandbox-ui TraceWaterfall: charts FlowWaterfall with brand marks), which
  * sizes from its container, truncates long names at the end with the full name in the tooltip, and zooms. Each release
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
@@ -197,7 +197,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
   // The header's stat row owns the run's numbers, so the chart's summary strip is off (sandbox-ui 03:12Z handoff).
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="Trace" summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
+  return <TraceWaterfall trace={trace} live={live} defaultView="agents" label="Trace" summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
 }
 
 /**
