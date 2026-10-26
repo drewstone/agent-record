@@ -3470,7 +3470,7 @@
 /* B: ladder first */
 /* ---- The run page (RunJourney): one focal point (the ladder), no cards inside cards, colour only for state
    (green shipped or passed, amber near or stuck, red crashed or failed), grey for everything else. */
-.ar-ws .rj { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; width: 100%; max-width: 1440px; margin: 0 auto; padding: 8px 0 48px; }
+.ar-ws .rj { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; width: 100%; max-width: 1440px; margin: 0 auto; padding: 8px 0 0; }
 .ar-ws .rj > * { min-width: 0; }
 .ar-ws .rj-head { display: grid; gap: 8px; }
 .ar-ws .rj-crumb { font-size: 12px; color: var(--ar-fg-muted); text-decoration: none; }
