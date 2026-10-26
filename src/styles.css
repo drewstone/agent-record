@@ -3522,7 +3522,6 @@
 /* Today (Today.tsx): one focal line, color only for state. */
 .ar-ws .tj { gap: 36px; }
 .ar-ws .tj-hero { margin: 0; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
-.ar-ws .tj-second { margin: 0; font-size: 18px; font-weight: 400; color: var(--ar-fg-muted); }
 .ar-ws .tj-q1, .ar-ws .tj-q2 { display: grid; gap: 16px; }
 .ar-ws .tj-muted { color: var(--ar-fg-muted); }
 .ar-ws .tj-decisions { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 12px; }
@@ -3565,7 +3564,6 @@
 .ar-ws b, .ar-ws strong { font-weight: 600; }
 @media (max-width: 1023px) {
   .ar-ws .tj-hero { font-size: 18px; }
-  .ar-ws .tj-second { font-size: 14px; }
   .ar-ws .tj-rows > li { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .tj-row-title, .ar-ws .tj-num { font-size: 14px; }
 }
