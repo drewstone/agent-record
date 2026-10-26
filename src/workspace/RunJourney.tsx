@@ -363,9 +363,9 @@ export function RunJourney({ api, doc, transcript, play = null }: { api: string;
           {/* Drew's layout: one header row of name, pill and the run's numerals; the goal is the pill's tooltip, the prompt the
               root's first message, the steps Built's chart. A one-agent run has no trace or tabs, so it keeps them up. */}
           {m && !single && <Stats m={m} spend={doc.run.spend} />}
-          {/* Against what number, on the header row (audit D5; blind A/B 14:21Z: a chip row of its own was one more band before the chart). */}
-          {m && bars.length > 0 && <BarStrip bars={bars} compact here={{ play: doc.run.play, run: doc.run.id }} href={`/play/${encodeURIComponent(doc.run.play)}`} />}
+          {/* Against what number, on the header row (audit D5; blind A/B 14:21Z); the as-of ends the numbers' row, not a line of its own (round 22). */}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
+          {m && bars.length > 0 && <BarStrip bars={bars} compact here={{ play: doc.run.play, run: doc.run.id }} href={`/play/${encodeURIComponent(doc.run.play)}`} />}
         </div>
         {m && single && <Trigger doc={doc} m={m} />}
       </header>
