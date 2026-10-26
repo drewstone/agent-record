@@ -3606,8 +3606,6 @@
 .ar-ws .tj-decision { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 14px; }
 .ar-ws .tj-decision p { margin: 0; max-width: 90ch; }
 .ar-ws .tj-go { font-size: 12px; }
-.ar-ws .tj-held summary { cursor: pointer; font-size: 14px; color: var(--ar-fg-muted); }
-.ar-ws .tj-held ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; font-size: 12px; }
 .ar-ws .tj-rows { list-style: none; margin: 0; padding: 0; display: grid; }
 .ar-ws .tj-rows > li { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); align-items: center; gap: 16px 32px; padding: 20px 0; border-top: 1px solid color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); font-size: 14px; }
 .ar-ws .tj-row-head { display: grid; justify-items: start; gap: 12px; }
