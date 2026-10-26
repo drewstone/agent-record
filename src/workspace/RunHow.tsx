@@ -22,11 +22,12 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
   const end = Date.parse((doc as { lineage?: { settledAt?: string | null }[] }).lineage?.[0]?.settledAt ?? doc.run.settledAt ?? '') || Date.now()
   // The run page's and /play's cost and tokens (REVIEW-9; spend.tokens counts child metering twice: 430.8M vs 211.1M on 21c).
   const cost = spend.apiEquivalentUsd ?? null
-  const floor = /at least/.test(spend.apiEquivalentProvenance ?? '')
+  const provenance = typeof spend.apiEquivalentProvenance === 'string' ? spend.apiEquivalentProvenance : ''
+  const floor = provenance.includes('at least')
   const metered = (ws.data as { runUsage?: { tokens?: number | null } | null } | undefined)?.runUsage?.tokens ?? null
   const billed = spend.billing?.billedUsd ?? null
   const stat: [string, string, string][] = [
-    ...(cost !== null ? [['Cost', `${floor ? '≥' : ''}${money(cost)}`, `API-equivalent: every token at list price${spend.apiEquivalentProvenance ? `, ${spend.apiEquivalentProvenance}` : ''}`] as [string, string, string]] : []),
+    ...(cost !== null ? [['Cost', `${floor ? '≥' : ''}${money(cost)}`, `API-equivalent: every token at list price${provenance ? `, ${provenance}` : ''}`] as [string, string, string]] : []),
     ...(billed !== null ? [['Billed', money(billed), spend.billing?.basis ?? ''] as [string, string, string]] : []),
     ...(metered !== null ? [['Tokens', tokens(metered), 'Metered by the spawn journal'] as [string, string, string]] : []),
     ...(Number.isFinite(start) && end > start ? [['Duration', duration(end - start), `${new Date(start).toISOString().slice(0, 16)}Z – ${new Date(end).toISOString().slice(0, 16)}Z`] as [string, string, string]] : []),
