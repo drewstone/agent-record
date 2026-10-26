@@ -27,6 +27,8 @@ export interface WorkspaceNode {
   turns?: number | null
   restarts?: string[]
   shipped?: number
+  /** Its tool calls as the record counts them (nodeStats calls). */
+  toolCalls?: number | null
   hasCode: boolean
 }
 export interface WorkspaceRelease {
