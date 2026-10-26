@@ -148,7 +148,7 @@ export function AgentTable({
             data-agent-row={node.id}
             onClick={() => onSelect(node.id)}
           >
-            <span className="agent-name" role="cell" style={{ paddingLeft: `${depth * 22}px` }} title={`${node.label}\n${roleOf(node)}\n${node.id}`}>
+            <span className="agent-name" role="cell" style={{ paddingLeft: `${depth * 24}px` }} title={`${node.label}\n${roleOf(node)}\n${node.id}`}>
               <span className="clip" data-lane-label>{nameOf(node)}</span>
             </span>
             <span role="cell">
@@ -173,7 +173,7 @@ export function AgentTable({
               {nodeFlags.length > 4 && <span className="faint">+{nodeFlags.length - 4}</span>}
             </span>
             {doing.has(node.id) && (
-              <span role="cell" className="agent-doing" style={{ paddingLeft: `${depth * 22}px` }} title={doing.get(node.id)}>
+              <span role="cell" className="agent-doing" style={{ paddingLeft: `${depth * 24}px` }} title={doing.get(node.id)}>
                 {doing.get(node.id)}
               </span>
             )}
