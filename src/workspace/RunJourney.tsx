@@ -26,13 +26,13 @@ type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: b
 type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
 /** Start, end (null while live) and status come from the run's spawn journal (tangle-tools run_journal). */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
-type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean }
+type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean; held?: string[] }
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const hours = (a: number, b: number) => (b - a) / 3_600_000
-const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
+const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total && !r.held ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** A release's score, or that no check scored it (22a rc3 read "rc3 /": tagged, never checked). */
-const score = (r: Release) => (r.passed != null && r.total ? `${r.passed}/${r.total}` : 'not checked')
+const score = (r: Release) => (r.passed != null && r.total ? `${r.passed}/${r.total}${r.held ? ' held' : ''}` : 'not checked')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
 /** "4 m ago", "3 h ago" from now. */
@@ -121,7 +121,7 @@ function Ladder({ doc, m, onRelease, verdictOnly = false }: { doc: RunDocument; 
       {<p className="rj-stuck">
         {/* Only what the best release reached (the play page owns how long it has been stuck); an unconfirmed teardown keeps the header, so the verdict sits here. */}
         {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
-        {m.best ? <><b title={releaseName(m.best.release, m.data.lineage)}>{m.best.release}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
+        {m.best ? <><b title={releaseName(m.best.release, m.data.lineage)}>{m.best.release}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : (m.best as Release).held ? `every step passes; held: ${(m.best as Release).held!.join(', ')} have no known-good fixture` : 'every step passes'}</> : 'No release was checked.'}
       </p>}
       {/* A settled run's blocker is history: only a live run, or one waiting on its owner, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
