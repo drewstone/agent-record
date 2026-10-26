@@ -65,10 +65,9 @@ function useJourney(api: string, doc: RunDocument) {
     const t0 = Math.min(...nodes.map((n) => ms(n.start)).filter(Number.isFinite))
     const t1 = Math.max(...nodes.map((n) => ms(n.end ?? n.lastAt)).filter(Number.isFinite), ...releases.map((r) => ms(r.taggedAt)), data.live ? Date.now() : -Infinity)
     const best = releases.find((r) => r.release === data.best) ?? releases.at(-1) ?? null
-    const commits = new Map<string, number>()
-    // What each agent shipped is its commits in the run's deliverables; a host without them falls back to release attribution.
-    if (nodes.some((n) => typeof n.shipped === 'number')) for (const n of nodes) commits.set(n.id, n.shipped ?? 0)
-    else for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
+    // What each agent shipped is its commits in the run's deliverables. A host that could not read them sends none, and then
+    // no outcome is drawn, never a zero (0.90.24: 21c's legend read 'Failed 9 · Nothing shipped 7' against 12 shipped).
+    const commits = nodes.some((n) => typeof n.shipped === 'number') ? new Map(nodes.map((n) => [n.id, n.shipped ?? 0])) : null
     // The root is the agent nothing spawned, by the journal's edges, not by a role word.
     const root = nodes.find((n) => !data.edges.some((e) => e.kind === 'spawn' && e.to === n.id))?.id ?? doc.run.id
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
@@ -143,7 +142,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
   // Shipped is commits, whatever the settle (disco-ui-review 23:22Z: 7 of 21c's 9 failed agents committed); status 'failed' draws the failure.
-  const tone = (n: Node): FlowSpan['outcome'] => (m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : failed(n) ? { tone: 'failed', label: 'Failed' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
+  const tone = (n: Node): FlowSpan['outcome'] => (!m.commits ? undefined : m.commits.get(n.id) ? { tone: 'ok', label: 'Shipped' } : failed(n) ? { tone: 'failed', label: 'Failed' } : running(n) ? { tone: 'warn', label: 'Running' } : n.id === m.root ? undefined : { tone: 'neutral', label: 'Nothing shipped' })
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
@@ -166,7 +165,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
         // The card's cells (charts 0.19.0 FlowSpan.facts): releases it shipped into and its commits.
         facts: [
           { label: 'Releases', value: m.releases.filter((r) => r.by?.[n.id]).map((r) => r.release).join(', ') || '—' },
-          { label: 'Commits', value: String(m.commits.get(n.id) ?? 0) },
+          { label: 'Commits', value: m.commits ? String(m.commits.get(n.id) ?? 0) : '—' },
           ...(n.turns != null ? [{ label: 'Turns', value: String(n.turns) }] : []),
           ...(n.harness ? [{ label: 'Harness', value: n.harness }] : []),
           ...(n.usage?.billedUsd != null ? [{ label: 'Billed', value: money(n.usage.billedUsd) }] : []),
