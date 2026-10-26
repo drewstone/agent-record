@@ -3640,17 +3640,7 @@
 .ar-ws .tj-finding b { font-weight: 600; }
 /* One bold weight across the pages (REVIEW-6 #12: <b> rendered at 700). */
 .ar-ws b, .ar-ws strong { font-weight: 600; }
-.ar-ws .bar-strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content minmax(96px, 1fr) repeat(3, max-content); gap: 8px 16px; align-items: center; }
-.ar-ws .bar-strip > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; }
-.ar-ws .bar-strip .num { font-variant-numeric: tabular-nums; text-align: right; }
-.ar-ws .bar-label { color: var(--ar-fg-muted); }
-.ar-ws .bar-ours { font-weight: 600; }
-.ar-ws .bar-strip .ok { color: var(--ar-c-ok, #22c55e); }
-.ar-ws .bar-strip .fail { color: var(--ar-c-fail, #ef4444); }
 @media (max-width: 1023px) {
-  .ar-ws .bar-strip { grid-template-columns: minmax(0, 1fr) max-content max-content; }
-  .ar-ws .bar-strip .ov-gap { grid-column: 1 / -1; grid-row: 2; }
-  .ar-ws .bar-change { display: none; }
   .ar-ws .tj-hero { font-size: 18px; }
   .ar-ws .tj-second { font-size: 14px; }
   .ar-ws .tj-rows > li { grid-template-columns: minmax(0, 1fr); }
