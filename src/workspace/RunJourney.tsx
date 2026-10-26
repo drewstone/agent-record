@@ -363,14 +363,14 @@ export function RunJourney({ api, doc, transcript, play = null }: { api: string;
           {/* Drew's layout: one header row of name, pill and the run's numerals; the goal is the pill's tooltip, the prompt the
               root's first message, the steps Built's chart. A one-agent run has no trace or tabs, so it keeps them up. */}
           {m && !single && <Stats m={m} spend={doc.run.spend} />}
+          {/* Against what number, on the header row (audit D5; blind A/B 14:21Z: a chip row of its own was one more band before the chart). */}
+          {m && bars.length > 0 && <BarStrip bars={bars} compact here={{ play: doc.run.play, run: doc.run.id }} href={`/play/${encodeURIComponent(doc.run.play)}`} />}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
         {m && single && <Trigger doc={doc} m={m} />}
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
-          {/* Against what number, then how far the best release got and what holds it (audit D5: the run page stated no paper metric). */}
-          {bars.length > 0 && <BarStrip bars={bars} compact here={{ play: doc.run.play, run: doc.run.id }} href={`/play/${encodeURIComponent(doc.run.play)}`} />}
           <Ladder doc={doc} m={m} onRelease={openRelease} verdictOnly={!single} />
           {single ? null : (
             <section aria-label="What the agents did">
