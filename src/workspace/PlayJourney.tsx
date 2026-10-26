@@ -45,11 +45,11 @@ const shortRun = (play: string, run: string | null | undefined) => (run ? run.re
 function headline(play: Play, m: Model) {
   const p = m.view.progress
   if (!p) return 'No release has been scored yet.'
-  if (p.solved) return `Solved: ${shortRun(play.id, p.runId)} ${p.release} passes all ${p.total} steps.`
-  const at = m.open ? `at the ${m.open.label}` : ''
+  // Stuck at an open step reads from the host's trend; otherwise the host's own progress sentence (a page-composed
+  // "6 of 6 steps; next is the last step" was wrong once every step passed under a disputed check).
+  if (m.flatHours === null || !m.open) return p.sentence
   const since = m.plateau ? `, since ${day(ms(m.plateau.at))} (run ${shortRun(play.id, m.plateau.runId)}, ${m.plateau.release})` : ''
-  if (m.flatHours !== null) return `Stuck ${at} for ${ago(m.flatHours)}${since}.`
-  return `${p.passed} of ${p.total} steps; next is the ${m.open?.label ?? 'last step'}.`
+  return `Stuck at the ${m.open.label} for ${ago(m.flatHours)}${since}.`
 }
 
 /**
