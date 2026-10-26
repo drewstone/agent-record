@@ -698,8 +698,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
         <Suspense fallback={<p className="ws-status" role="status">Loading…</p>}>
           <LazyRunWorkspace
-            api={api}
-            doc={doc}
+            api={api} doc={doc} play={play.data}
             transcript={(node, select) =>
               settledRecord && index ? (
                 <AgentConversation key={node} runUrl={runUrl} version={version} index={index} actor={index.nodes.has(index.canonical(node)) ? index.canonical(node) : root ?? node} />
