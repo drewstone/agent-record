@@ -2667,7 +2667,7 @@
 .ar-ws .vg-c4 { color: var(--vg-c4); } .ar-ws .vg-c5 { color: var(--vg-c5); } .ar-ws .vg-c6 { color: var(--vg-c6); } .ar-ws .vg-c7 { color: var(--vg-c7); }
 .ar-ws .vg-rows { list-style: none; margin: 0; padding-right: 8px; }
 .ar-ws .vg-rows > li { display: flex; }
-.ar-ws .vg-row { display: flex; flex-direction: column; justify-content: flex-start; gap: 2px; width: 100%; min-width: 0; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; }
+.ar-ws .vg-row { display: flex; flex-direction: column; justify-content: flex-start; gap: 4px; width: 100%; min-width: 0; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; }
 .ar-ws .vg-row:hover, .ar-ws .vg-row:focus-visible { background: var(--ws-raised); outline: none; }
 .ar-ws .vg-row.on { background: color-mix(in srgb, var(--ws-accent) 13%, var(--ws-panel)); box-shadow: inset 2px 0 var(--ws-frame); }
 .ar-ws .vg-row:disabled { cursor: default; opacity: .8; }
@@ -3987,7 +3987,7 @@
 .ar-ws .run-details-panel .agent-rail.details-agents { position: static; max-height: none; border: 0; border-radius: 0; }
 .ar-ws .run-details-panel > .ws-status { padding: 16px; }
 .ar-ws .vg-lane-chip:disabled { cursor: default; opacity: 1; }
-.ar-ws .vg-lane-select select { min-height: 32px; padding: 4px 8px; font: 14px var(--ar-font-body); }
+.ar-ws :is(.vg-lane-select select, .vg-toggle) { min-height: 32px; padding: 4px 8px; font: 14px var(--ar-font-body); }
 /* Charts on the run tabs on the page's type scale and 4 px grid: the package sizes in em (0.8em axes = 11.2 px, 0.25em gaps =
    4.2 px at 14 px); here axes, marks and notes are 12 px, labels 14 px, gaps 4/8/12/16 px. */
 .ar-ws :is(.how, .run-built, .run-details-panel) :is(.ov-axis, .ov-mark-label) { font-size: 12px; }

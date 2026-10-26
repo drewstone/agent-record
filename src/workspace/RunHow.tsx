@@ -17,8 +17,6 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
   // Polled while the run is live, as RunJourney reads it, so release marks keep up (Codex review on #190).
   const ws = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, doc.execution?.alive ? 15_000 : undefined, true)
   const spend = doc.spend
-  const start = Date.parse(doc.run.startedAt ?? '')
-  const end = Date.parse((doc as { lineage?: { settledAt?: string | null }[] }).lineage?.[0]?.settledAt ?? doc.run.settledAt ?? '') || Date.now()
   const cost = spend.apiEquivalentUsd ?? null
   const provenance = typeof spend.apiEquivalentProvenance === 'string' ? spend.apiEquivalentProvenance : ''
   const floor = provenance.includes('at least')
@@ -28,7 +26,6 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
     ...(cost !== null ? [['Cost', `${floor ? '≥' : ''}${money(cost)}`, `API-equivalent: every token at list price${provenance ? `, ${provenance}` : ''}`] as [string, string, string]] : []),
     ...(billed !== null ? [['Billed', money(billed), spend.billing?.basis ?? ''] as [string, string, string]] : []),
     ...(counted !== null ? [['Tokens', `≥${tokens(counted)}`, 'At least: per agent, the larger of its recorded usage and its metered turns'] as [string, string, string]] : []),
-    ...(Number.isFinite(start) && end > start ? [['Duration', duration(end - start), `${new Date(start).toISOString().slice(0, 16)}Z – ${new Date(end).toISOString().slice(0, 16)}Z`] as [string, string, string]] : []),
   ]
   const time = (spend.byCategory ?? []).filter((row) => row.ms).sort((a, b) => b.ms! - a.ms!)
   const waste = (spend.waste ?? []).filter((row) => row.ms)
