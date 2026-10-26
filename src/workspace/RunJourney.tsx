@@ -209,7 +209,6 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
   return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="Trace" summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
 }
 
-/** A plain line, with the agent's own words behind "full" when the line shortened them. */
 /**
  * The release to diff against: the nearest earlier one with a tag. A release checked from a commit it never tagged
  * (21c rc116) is no git ref, and its name answered 404 (root 2026-10-25: "The code at rc116 is unavailable").
