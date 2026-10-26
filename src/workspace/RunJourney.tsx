@@ -30,7 +30,7 @@ type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const hours = (a: number, b: number) => (b - a) / 3_600_000
-const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
+const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total && !r.held ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
 /** A release's score, or that no check scored it (22a rc3 read "rc3 /": tagged, never checked). */
 const score = (r: Release) => (r.passed != null && r.total ? `${r.passed}/${r.total}${r.held ? ' held' : ''}` : 'not checked')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
