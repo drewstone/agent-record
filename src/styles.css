@@ -3751,11 +3751,11 @@
 .ar-ws .pj-need text { fill: var(--ar-c-warn, #f5a524); }
 .ar-ws .pj-check line, .ar-ws .pj-pass line { stroke: color-mix(in srgb, var(--ar-fg-faint) 45%, transparent); stroke-dasharray: 2 4; }
 .ar-ws .pj-pass line { stroke: var(--ar-c-ok, #22c55e); }
-.ar-ws .pj-mark { cursor: pointer; outline: none; }
+.ar-ws .pj-mark { outline: none; }
 .ar-ws .pj-hit { fill: transparent; }
 .ar-ws .pj-measured circle:not(.pj-hit) { fill: var(--ar-fg); }
 .ar-ws .pj-bound path { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 1.5; }
-.ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark[data-state="open"] .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
+.ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
 .ar-ws .pj-tip { position: absolute; transform: translate(-50%, 14px); min-width: 200px; max-width: 280px; padding: 8px 12px; border: 1px solid var(--ar-border, #333); border-radius: 8px; background: var(--ar-bg-alt); font-size: 12px; pointer-events: none; z-index: 2; }
 .ar-ws .pj-tip.pj-tip-above { transform: translate(-50%, calc(-100% - 14px)); }
 .ar-ws .pj-tip p { margin: 0; }
