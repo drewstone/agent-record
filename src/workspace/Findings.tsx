@@ -199,7 +199,8 @@ function ChecksCard({ checks, pageHref }: { checks: FindingItem[]; pageHref: (it
  * sources behind them, and why the run stopped. A run whose driver failed after an agent proved something shows the
  * proof here, not "none recorded".
  */
-export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; runUrl: string; open: string | null; onOpen: (sha: string | null) => void }) {
+/** `folded`: the Details panel on Now opens the agents' last words closed (open, 22a's ran 1,248 px under the trace). */
+export function RunFindings({ doc, runUrl, open, onOpen, folded = false }: { doc: RunDocument; runUrl: string; open: string | null; onOpen: (sha: string | null) => void; folded?: boolean }) {
   const findings = doc.findings
   const [all, setAll] = useState(false)
   const [full, setFull] = useState<ReadonlySet<string>>(new Set())
@@ -259,7 +260,7 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
             {/* What each agent said last fills the tab under its findings: their own words, open (REVIEW-10), each clamped to
                 three lines with a More so six agents fit a phone (reviewer 0.88.3: 6.5 screens). */}
             {speakers.length > 0 && (
-              <details className="last-words" open>
+              <details className="last-words" open={!folded}>
                 <summary>Each agent's last words</summary>
                 {speakers.map((agent) => {
                   const key = agent.agent ?? agent.label ?? 'agent', text = agent.lastWords!.text, long = text.length > 240 || text.includes('\n'), isFull = full.has(key)
