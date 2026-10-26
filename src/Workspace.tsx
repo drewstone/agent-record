@@ -352,7 +352,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     <Status loading={play.loading} error={play.error && `This play is unavailable: ${play.error}`}>
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
-          <PlayHeader play={doc} report={report.data} compact={journey || tab !== 'standing'} fallback={<PlayStanding play={doc} />} />
+          <PlayHeader play={doc} report={report.data} compact={journey || tab !== 'standing'} linked={tab !== 'standing'} fallback={<PlayStanding play={doc} />} />
           <Tabs
             label="Play"
             value={tab}
