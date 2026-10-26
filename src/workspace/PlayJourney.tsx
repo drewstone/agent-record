@@ -68,7 +68,7 @@ function Hold({ view, open }: { view: HostView; open: Model['open'] }) {
     <>
       {paused && <p className="pj-hold"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>}
       {b && b.owner === 'Drew' && <p className="pj-hold"><b>Your decision:</b> {action}.</p>}
-      {b && b.owner !== 'Drew' && <p className="pj-hold">{!paused && <b>Nothing for you. </b>}<Tip text={held || owner}><span className="pj-muted">{owner} is on it</span></Tip></p>}
+      {b && b.owner !== 'Drew' && <p className="pj-hold">{!paused && <b>Nothing for you. </b>}<Tip text={held || owner}><span className="pj-muted">{owner} {/ and /.test(owner) ? 'are' : 'is'} on it</span></Tip></p>}
     </>
   )
 }
