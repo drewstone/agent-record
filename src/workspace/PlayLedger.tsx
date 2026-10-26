@@ -124,20 +124,20 @@ function Best({ play, row, checks }: { play: Play; row: PlayLedgerRow; checks: R
 
 function Cost({ row }: { row: PlayLedgerRow }) {
   const cost = row.cost ?? null
-  if (!cost || cost.provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
-  if (cost.apiUsd === null || cost.apiUsd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
+  return <ApiCost usd={cost?.apiUsd} provenance={cost ? cost.provenance : 'unmetered'} billedUsd={cost?.billedUsd} />
+}
+
+/** An API-equivalent figure as every page prints it: ≥ for a floor, ≈ for an estimate, a titled dash when unpriced. */
+export function ApiCost({ usd, provenance, billedUsd }: { usd: number | null | undefined; provenance?: string | null; billedUsd?: number | null }) {
+  if (provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
+  if (usd === null || usd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
-    <span title={`API-equivalent at list price, ${cost.provenance?.startsWith('per') ? `${cost.provenance}, the run page's figure` : cost.provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : cost.provenance ?? 'unknown source'}${cost.billedUsd !== null && cost.billedUsd !== undefined ? `; billed ${money(cost.billedUsd)}` : ''}`}>
-      {cost.provenance?.endsWith('at least') ? '≥' : cost.provenance === 'estimated' || cost.provenance === 'per call' ? '≈' : ''}{money(cost.apiUsd)}
+    <span title={`API-equivalent at list price, ${provenance?.startsWith('per') ? `${provenance}, the run page's figure` : provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : provenance ?? 'unknown source'}${billedUsd !== null && billedUsd !== undefined ? `; billed ${money(billedUsd)}` : ''}`}>
+      {provenance?.endsWith('at least') ? '≥' : provenance === 'estimated' || provenance === 'per call' ? '≈' : ''}{money(usd)}
     </span>
   )
 }
 
-/**
- * The release lineage (REVIEW-8 chart 5, Drew: "what is rc2?"): every run that did work on one time axis, nested under
- * the run it forked from, coloured by how it ended; hovering a run names the release it built on. 22a reads as the
- * newest step of one line from 20b, and 18b's four restarts from rc18 read as one fan.
- */
 function LineageTree({ play, rows, now }: { play: Play; rows: PlayLedgerRow[]; now: number }) {
   const runs = rows.filter((row) => row.startedAt)
   const parentOf = (row: PlayLedgerRow) => (row.lineage?.kind === 'fork' && row.lineage.parentRun && runs.some((r) => r.runId === row.lineage!.parentRun) ? row.lineage.parentRun : null)
