@@ -381,6 +381,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
     </section>
   )
   const node = m?.nodes.find((n) => n.id === picked) ?? null
+  const goalLine = doc.input?.objective ? firstSentence(goalText(doc.input.objective)) : undefined
   return (
     <section className="rj" data-run-journey>
       <header className="rj-head">
@@ -389,18 +390,20 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <h1 title={m ? `${hours(m.t0, m.t1).toFixed(1)} h` : undefined}>Run {shortRun(doc.run.play, doc.run.id)}</h1>
           {/* The goal includes its own teardown: an unconfirmed cleanup is the run's state, said once with its counts and
               receipt records (root 23:24Z); the check's verdict then sits on the hero line. */}
-          {lifecycle && lifecycle.state !== 'done' ? <span className="rj-life" title={`${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`}>{lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, 'Teardown: ').split(';')[0]}</span> : view && <StatusPill status={viewChip(view.status)} />}
+          {lifecycle && lifecycle.state !== 'done' ? <span className="rj-life" title={`${goalLine ? `${goalLine}\n` : ''}${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`}>{lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, 'Teardown: ').split(';')[0]}</span> : view && <StatusPill status={viewChip(view.status)} title={goalLine} />}
+          {/* Drew's layout (gate 1): one header row of name, pill and the run's numerals; the goal is the trace card's one line and
+              the pill's tooltip, the prompt and the steps are in Details at the foot. A one-agent run has no trace, so it keeps them up. */}
+          {m && !single && <Stats m={m} spend={doc.run.spend} />}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
-        {m && <Trigger doc={doc} m={m} />}
+        {m && single && <Trigger doc={doc} m={m} />}
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
-          <Ladder doc={doc} m={m} onRelease={openRelease} />
+          {single && <Ladder doc={doc} m={m} onRelease={openRelease} />}
           {single ? null : (
             <section aria-label="What the agents did">
-              <Stats m={m} spend={doc.run.spend} />
-              <Lanes m={m} live={m.data.live} goal={doc.input?.objective ? firstSentence(goalText(doc.input.objective)) : undefined} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
+              <Lanes m={m} live={m.data.live} goal={goalLine} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
               <RunActivity doc={doc} />
             </section>
           )}
@@ -410,6 +413,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single && work}
           {node && <Drill m={m} node={node} transcript={transcript} onOpen={(release, path) => { update({ codeRef: release, fileSource: 'code', codeFile: path, codeView: 'diff' }); document.querySelector('.rj-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} onPick={setPicked} />}
           {!single && work}
+          {!single && <details className="rj-details"><summary>Details</summary><Trigger doc={doc} m={m} /><Ladder doc={doc} m={m} onRelease={openRelease} /></details>}
         </>
       )}
     </section>
