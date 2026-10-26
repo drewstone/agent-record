@@ -270,12 +270,11 @@ function Full({ short, raw, what }: { short: string; raw: string; what: string }
 }
 
 /**
- * The opening prompt as its own labelled disclosure: a "full" after the agent line read as dead (review 4 #11), and a lone
- * "prompt" after it as a stray word (REVIEW-5 #15).
+ * The opening prompt as text, shown, with what it is (root 02:33Z): the instruction captured in the run input, sent in the
+ * user role, sender not recorded. A long one shows its first sentence with the rest one toggle away.
  */
 function Prompt({ text }: { text: string }) {
-  // What it is, on its own line and not behind Details (root 23:24Z): the run input's instruction, sent as the user role; no sender is recorded.
-  return <details className="rj-prompt"><summary title="The run input's instruction, sent in the user role; no sender is recorded">Opening prompt <span className="rj-muted">· user role · sender not recorded</span></summary><p className="rj-full-text">{text}</p></details>
+  return <p className="rj-prompt"><b>Opening prompt</b> <span className="rj-muted" title="Captured in run-input.json (task.instruction) and sent in the user role; no sender is recorded">· user role · from the run input · sender not recorded:</span> <Full what="opening prompt" short={firstSentence(text)} raw={text} /></p>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
