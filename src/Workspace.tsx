@@ -26,7 +26,7 @@ import { Conversation } from './viewer/Conversation.js'
 import type { EventFlag } from './viewer/Conversation.js'
 import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
 import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
-import { agentState, interval, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
+import { agentState, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
 import { EventDetail } from './workspace/EventDetail.js'
 import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
@@ -60,7 +60,7 @@ import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, type Selection, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
 import { ProvenanceCanvas } from './workspace/ProvenanceCanvas.js'
-import { agentSpendRows, apiEquivalent, BreakdownTable, byModel, knownSubscription, NodeSpendPanel, SeatWeeksPanel, SpendBars, spendGapLabel } from './workspace/Spend.js'
+import { apiEquivalent, knownSubscription, spendGapLabel } from './workspace/Spend.js'
 
 export interface WorkspaceProps {
   /** Same-origin API root, for example `/api/discovery`. */
@@ -625,10 +625,6 @@ function CaptureBar({ capture }: { capture: { complete: number; lossy: number; a
   )
 }
 
-/** A waste dimension by its id and name: E3 polling. */
-const wasteLabel = (dimension: string, catalogue: ReturnType<typeof dimensionMap>) =>
-  `${dimension} ${catalogue.get(dimension)?.key.replaceAll('_', ' ') ?? ''}`.trim()
-
 /** Gaps grouped by cause (X13): one line per cause with the runs it covers, instead of one line per run and gap. */
 function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
   const causes = new Map<string, { code: string; runs: string[]; detail: string; count: number }>()
@@ -741,7 +737,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
     </p>
   )
   // How it ran reads the run document and the nodes part's per-agent stats; it needs no agent's record part.
-  const how = <RunHow doc={doc} runUrl={runUrl} agents={index ? index.actors.filter((item) => item.kind !== 'finding') : []} stats={nodes.stats} onAgent={(node) => `?section=agents&node=${encodeURIComponent(node)}`} wasteLabel={(dimension) => wasteLabel(dimension, catalogue)} />
+  const how = <RunHow doc={doc} runUrl={runUrl} agents={index ? index.actors.filter((item) => item.kind !== 'finding') : []} stats={nodes.stats} onAgent={(node) => `?section=agents&node=${encodeURIComponent(node)}`} dimensions={catalogue} />
   const versionsPanel = (
     <RunVersions
       runUrl={runUrl}
@@ -750,6 +746,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
       onSelect={(commit) => update({ section: section ?? undefined, commit })}
       onClose={() => update({ commit: undefined })}
       onOpenAgent={(node) => update({ section: 'agents', node, commit: undefined, view: undefined, drawer: undefined, event: undefined, t: undefined, file: undefined })}
+      delivered={doc.finalOutput?.files} onOpenFile={(file) => update({ section: 'outputs', file, commit: undefined, details: undefined })}
     />
   )
   const details = detailsOf(params)
