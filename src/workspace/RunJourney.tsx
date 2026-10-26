@@ -7,7 +7,9 @@ import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { releaseName, shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
 import { RunActivity } from './RunActivity.js'
-import { viewAsOf, viewChip } from './view.js'
+import { type HostView, viewAsOf, viewChip } from './view.js'
+import type { Play } from './answers.js'
+import { BarStrip } from './BarStrip.js'
 import { goalText, plainSummary, stepWord } from './plain-words.js'
 import { RunFilesPane } from './RunFilesPane.js'
 import { useSearch } from './navigation.js'
@@ -117,11 +119,7 @@ function Ladder({ doc, m, onRelease, verdictOnly = false }: { doc: RunDocument; 
         </ol>
       )}
       {<p className="rj-stuck">
-        {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
-            standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
-        {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
-            teardown; this line says only what the release reached. */}
-        {/* While the goal's cleanup is unconfirmed the header leads with it, and the narrower check verdict sits here by its receipt (root 23:24Z). */}
+        {/* Only what the best release reached (the play page owns how long it has been stuck); an unconfirmed teardown keeps the header, so the verdict sits here. */}
         {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
         {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>}
@@ -333,7 +331,9 @@ function Drill({ m, node, transcript, onPick, onOpen }: { m: Model; node: Node; 
   )
 }
 
-export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode }) {
+export function RunJourney({ api, doc, transcript, play = null }: { api: string; doc: RunDocument; transcript: (node: string, select: (node: string) => void) => ReactNode; play?: Play | null }) {
+  // The play's bars (views.play_bars): each value names the release and run it came from, so the run page shows them as served.
+  const bars = (play?.view as HostView | undefined)?.bars ?? []
   const { runUrl, model: m, error } = useJourney(api, doc)
   const [chosen, setPicked] = useState<string | null>(null)
   // A one-agent run opens on its only agent: nobody should have to select it to learn what it did.
@@ -376,7 +376,8 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
       </header>
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
-          {/* How far the best release got and what holds it, first on every run (audit D5: 22a's sat in a closed Details). */}
+          {/* Against what number, then how far the best release got and what holds it (audit D5: the run page stated no paper metric). */}
+          {bars.length > 0 && <BarStrip bars={bars} />}
           <Ladder doc={doc} m={m} onRelease={openRelease} verdictOnly={!single} />
           {single ? null : (
             <section aria-label="What the agents did">
