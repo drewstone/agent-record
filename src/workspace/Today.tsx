@@ -63,7 +63,7 @@ function groups(plays: Play[], yours: Set<string | undefined>): [string, Play[]]
   return [...by.entries()].sort((a, b) => b[1].length - a[1].length)
 }
 
-function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) {
+function TodayView({ doc, writer, failing }: { doc: OverviewDocument; writer: boolean; failing?: string }) {
   const now = Date.parse(doc.composedAt) || Date.now()
   const mine = (doc.attention ?? []).filter((item) => item.needsYou)
   const plays = (doc.plays ?? []) as Play[]
@@ -75,7 +75,7 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
     <div className="ws-page td tj" data-mode="today">
       <header className="td-head">
         <h1>Today</h1>
-        <AsOfStamp asOf={{ at: doc.composedAt, meaning: `when the host composed this page (${hm(doc.composedAt)})`, source: 'the Discovery overview' }} />
+        <AsOfStamp asOf={{ at: doc.composedAt, meaning: `when the host composed this page (${hm(doc.composedAt)})`, source: 'the Discovery overview' }} failing={failing} />
       </header>
       <section className="tj-q1" aria-label="What needs you">
         <p className="tj-hero">{mine.length ? `${mine.length} ${mine.length === 1 ? 'decision needs' : 'decisions need'} you.` : 'Nothing needs you.'}</p>
@@ -137,5 +137,5 @@ export function TodayPage({ api }: { api: string }) {
   const me = useDocument<{ writer: boolean }>(`${api}/me`)
   if (doc.error && !doc.data) return <p className="ws-status" role="alert">Today is unavailable: {doc.error}</p>
   if (!doc.data) return <p className="ws-status" role="status">Reading what needs you…</p>
-  return <TodayView doc={doc.data} writer={me.data?.writer === true} />
+  return <TodayView doc={doc.data} writer={me.data?.writer === true} failing={doc.failing} />
 }
