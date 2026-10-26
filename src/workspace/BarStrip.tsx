@@ -1,5 +1,5 @@
 import { Gap } from '@tangle-network/charts/react'
-import { metricValue, type PlayBarMetric, targetWords } from './play-standing.js'
+import { metricValue, type PlayBarMetric, shortRun, targetWords } from './play-standing.js'
 import type { ViewBar } from './view.js'
 
 const BOUND = { measured: '', 'upper-bound': '≤ ', 'lower-bound': '≥ ' } as const
@@ -30,15 +30,18 @@ function facts(bar: ViewBar) {
  * Every paper metric against its bar, as the host serves it (view.bars). On /play, one row each: the metric, where its
  * newest value sits against the target (and the paper's best), the value, how far from the target, and the change over
  * the trend's window. `compact` (the run header, Today) is one line of chips that link to the play's Standing (`href`).
+ * On a run's page (`here`), a chip measured in another run names that run and release, so it never reads as this run's.
  */
-export function BarStrip({ bars, compact = false, href }: { bars: ViewBar[]; compact?: boolean; href?: string }) {
+export function BarStrip({ bars, compact = false, href, here }: { bars: ViewBar[]; compact?: boolean; href?: string; here?: { play: string; run: string } }) {
   if (compact)
     return (
       <ul className="bar-chips" aria-label="Against the bar">
         {bars.map((bar) => {
           const f = facts(bar)
           const tip = [f.where, f.target ? `target ${f.target}` : null, f.latest?.reason].filter(Boolean).join('\n')
-          const chip = <>{bar.label} <b>{f.value}</b>{!bar.change && f.latest?.at && <small> {day(f.latest.at)}</small>}{f.ratio && <em> {f.ratio}</em>}</>
+          const elsewhere = here && f.latest?.runId && f.latest.runId !== here.run ? `${shortRun(here.play, f.latest.runId)} ${f.latest.release ?? ''}`.trim() : null
+          const dated = !bar.change && f.latest?.at ? day(f.latest.at) : null
+          const chip = <>{bar.label} <b>{f.value}</b>{(elsewhere || dated) && <small> {[elsewhere, dated].filter(Boolean).join(' · ')}</small>}{f.ratio && <em> {f.ratio}</em>}</>
           return <li key={bar.metric} data-side={f.side ?? 'none'} title={tip || undefined}>{href ? <a href={href}>{chip}</a> : chip}</li>
         })}
       </ul>
