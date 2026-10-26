@@ -4,6 +4,7 @@ import { hm } from './answers.js'
 import { BarStrip } from './BarStrip.js'
 import { TrendChart } from './TrendChart.js'
 import { StatusPill, useDocument } from './data.js'
+import { shortRun } from './play-standing.js'
 import { type HostView, type ViewTrend, viewChip } from './view.js'
 
 /**
@@ -70,7 +71,6 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
     .sort((a, b) => ORDER[a.view.trend.movement] - ORDER[b.view.trend.movement])
   const solved = plays.filter((p) => p.view.status.key === 'solved')
   const blind = plays.filter((p) => !p.view.trend && p.view.status.key !== 'solved')
-  const count = (m: Movement) => measured.filter((p) => p.view.trend.movement === m).length
   return (
     <div className="ws-page td tj" data-mode="today">
       <header className="td-head">
@@ -79,8 +79,6 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
       </header>
       <section className="tj-q1" aria-label="What needs you">
         <p className="tj-hero">{mine.length ? `${mine.length} ${mine.length === 1 ? 'decision needs' : 'decisions need'} you.` : 'Nothing needs you.'}</p>
-        {/* Plain words, not the trend's states (review 4 #8: "0 moving, 1 stuck" read as jargon). */}
-        <p className="tj-second">{[count('moving') && `${count('moving')} gaining steps`, count('stuck') && `${count('stuck')} not gaining`, count('regressed') && `${count('regressed')} lost steps`].filter(Boolean).join(', ') || 'No measured play changed'}.</p>
         {mine.length > 0 && <ul className="tj-decisions">{mine.map((item) => <Decision key={item.text} item={item} writer={writer} />)}</ul>}
       </section>
       <section className="tj-q2" aria-label="Is research working">
@@ -98,6 +96,9 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
                 <span className={`tj-move tj-${view.trend.movement}`}>{moveLine(view.trend, now)}</span>
                 </span>
                 {view.bars?.length ? <BarStrip bars={view.bars} /> : <TrendChart trend={view.trend} />}
+                {(doc.now ?? []).filter((run) => run.play === play).map((run) => (
+                  <p key={run.runId} className="tj-hold"><a href={`/run/${encodeURIComponent(run.runId)}`}>{shortRun(play, run.runId)}</a> · {run.agents ?? '—'} agents{run.view?.progress?.release ? ` · ${run.view.progress.release}` : ''} · active {ago(hoursSince(run.activeAt, now))} ago</p>
+                ))}
                 {holdLine(view) && <p className="tj-hold" title={view.blocker?.detail ?? undefined}>{holdLine(view)}</p>}
               </li>
             ))}
