@@ -11,24 +11,19 @@ import { RUN_TABS, RunOverview, RunTabBar, RunWhy, sectionOf, tabOf } from '../d
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const play = fixture('decide-play-magnetar-rust-20261019.json')
-const report = fixture('decide-play-report-magnetar-rust-20261019.json')
 const run = (id) => fixture(`decide-run-magnetar-rust-202610${id}.json`)
-const COMPOSED = Date.parse('2026-10-19T23:08:30Z')
 
 const visible = (html) => html.replace(/<[^>]*>/g, ' ').replaceAll('&#x27;', "'").replaceAll('&quot;', '"').replaceAll('&amp;', '&').replace(/\s+/g, ' ').trim()
-// A body word: a whitespace token holding a letter or digit.
-const words = (text) => text.split(/\s+/).filter((token) => /[\p{L}\p{N}]/u.test(token))
-const RULER = /\bv\d\b|amendment|withheld|superseded|\bgate\b/i
 
-/** Each `[data-answer]` tile: its slot, its markup, and the drawer its button controls. */
-function tiles(html) {
-  return [...html.matchAll(/<div class="answer-tile" data-answer="([^"]+)"[^>]*>(.*?)<\/button><\/div>/g)].map(([, slot, body]) => {
-    const controls = /aria-controls="([^"]+)"/.exec(body)?.[1]
-    const drawer = new RegExp(`<div id="${controls}"[^>]*>`).exec(html)?.[0] ?? ''
-    return { slot, body, text: visible(body.replace(/<button.*$/s, '')), drawer }
-  })
+/** A run page's overview as Workspace composes it: the fold, the closed "Why it stopped", then the receipt. */
+function runPage(id) {
+  const doc = run(id)
+  // The page's clock is its as-of: the newest composition the run document carries.
+  const now = Math.max(Date.parse(doc.progress.generatedAt), Date.parse(doc.receipt.generatedAt ?? doc.progress.generatedAt))
+  const fold = ''
+  const rest = renderToStaticMarkup(createElement('div', null, createElement(RunWhy, { doc, play }), createElement(RunOverview, { api: '/api/discovery', doc, play })))
+  return { doc, fold, rest, html: fold + rest }
 }
-const field = (body, name) => visible(new RegExp(`<[^>]*data-${name}[^>]*>(.*?)</(?:b|span)>`).exec(body)?.[1] ?? '')
 
 test('a run a newer run continued offers no rerun of its check and links forward instead', () => {
   for (const [id, next] of [['17c', '18b'], ['18b', '19f']]) {
