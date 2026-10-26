@@ -42,7 +42,7 @@ export function BarStrip({ bars, compact = false, href, here }: { bars: ViewBar[
           const tip = [f.where, f.target ? `target ${f.target}` : null, f.latest?.reason].filter(Boolean).join('\n')
           const elsewhere = here && f.latest?.runId && f.latest.runId !== here.run ? `${shortRun(here.play, f.latest.runId)} ${f.latest.release ?? ''}`.trim() : null
           const dated = !bar.change && f.latest?.at ? day(f.latest.at) : null
-          const chip = <>{bar.label} <b>{f.value}</b>{(elsewhere || dated) && <small> {[elsewhere, dated].filter(Boolean).join(' · ')}</small>}{f.ratio && <em> {f.ratio}</em>}</>
+          const chip = <>{bar.label} <b>{f.value}</b>{f.ratio && <em> {f.ratio}</em>}{(elsewhere || dated) && <small> · {[elsewhere, dated].filter(Boolean).join(' · ')}</small>}</>
           return <li key={bar.metric} data-side={f.side ?? 'none'} title={tip || undefined}>{href ? <a href={href}>{chip}</a> : chip}</li>
         })}
       </ul>
