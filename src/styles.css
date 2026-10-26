@@ -3953,7 +3953,8 @@
 .ar-ws .agent-rail .agent-row > :nth-child(6) { display: none; }
 .ar-ws .agent-rail .state-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ar-ws .agent-rail .agent-row { grid-template-columns: minmax(0, 1fr) 24px; }
-.ar-ws .agent-rail .agent-row-head > :nth-child(2) { visibility: hidden; }
+/* The rail's header row repeated the tab's own agent count ('Agent · 17'); the rows are the list. */
+.ar-ws .agent-rail .agent-row-head { display: none; }
 /* Run Findings (REVIEW-8: 8 dead clicks): /play's .finding-row two-column grid (above) also matched these rows, so an open
    row's body sat beside its head and covered the head's meta. Run rows stack: head, then body. */
 .ar-ws .run-findings .finding-row { display: block; padding: 0; border-left: 0; }
