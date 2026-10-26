@@ -4,37 +4,19 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { FigureView, Meter } from '@tangle-network/charts/react'
 import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
-import type { RecordNode } from '../record.js'
 import type { RunCheck, RunDocument, RunProgress } from '../workspace-model.js'
-import type { NodeStats } from './RunTable.js'
 import { CalibrationLabels } from './Calibration.js'
 import { dataStatus, type StatusInput, StatusPill, statusOf } from './data.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
-import { type Play, plainWords } from './answers.js'
+import { plainWords } from './answers.js'
 import { lineReason } from './play-standing.js'
-import { fixedIn, successorOf } from './run-answers.js'
+import { fixedIn } from './run-answers.js'
 import { pagesVersion } from './version-graph.js'
-import { RunFlowWaterfall } from './RunFlowWaterfall.js'
 import { RunRetention } from './RunRetention.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
 const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
-
-/** All measures and decisions belong to the Lab document. This component only formats them. */
-export function RunOverview({ api, doc, play = null, open, print = false }: { api: string; doc: RunDocument; play?: Play | null; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
-  const r = doc.receipt
-  const successor = successorOf(play, doc.run?.id ?? r?.runId ?? '')
-  const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
-  // A run without a Lab receipt still has its check facts on the run document: its verdict, a held pass, its disputes and
-  // its calibration draw from them.
-  if (!r?.outcome || !r.work) return <section className="rr-page"><h2>Run receipt</h2><p className="rr-muted">No receipt recorded yet.</p>
-    <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} settled={settled} check={doc.run?.check ?? null} view={doc.view ?? null} />{!print && <RunFlowWaterfall api={api} doc={doc} />}</section>
-  // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
-  const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
-  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? null} settled={settled} billing={doc.run?.spend?.billing ?? null} successor={successor}
-    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} actNow={!settled && block?.severity === 'red' ? (block.owner ?? 'Discovery operator') : null} trace={!print && <RunFlowWaterfall api={api} doc={doc} />} />
-}
 
 /**
  * The outcome a receipt's own check states, for a page that has no progress document (the print view, B5): the check's
@@ -356,7 +338,7 @@ function TurnEndings({ causes, live, actNow }: { causes: TurnCause[]; live: bool
   })}</ul>
 }
 
-export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null, successor = null, trace }: { api?: string; receipt: RunReceipt; trace?: ReactNode; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null; successor?: { runId: string; run: string } | null }) {
+export function RunReceiptView({ api = '/api/discovery', receipt: r, print = false, open, outcome = null, settled = false, billing = null, check = null, stuck = false, actNow = null, successor = null }: { api?: string; receipt: RunReceipt; print?: boolean; open?: OpenView; outcome?: Outcome | null; settled?: boolean; billing?: RunDocument['run']['spend']['billing']; check?: RunCheck | null; stuck?: boolean; actNow?: string | null; successor?: { runId: string; run: string } | null }) {
   const [pending, setPending] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [operation, setOperation] = useState<Record<string, string>>({})
@@ -416,7 +398,6 @@ export function RunReceiptView({ api = '/api/discovery', receipt: r, print = fal
       {behavior && behaviorMeasured(behavior) && <p className="rr-summary"><a href="#rr-behavior-title">Profile behavior: {behavior.verdict}</a><span>Advisory</span></p>}
     </div>
     <RunNow receipt={r} outcome={outcome} settled={settled} check={check} />
-    {trace}
     <div className="rr-columns">
       <div className="rr-evidence">
         {r.files.length > 0 ? <section aria-labelledby="rr-files"><h2 id="rr-files">What you got</h2><ul className="rr-files">{r.files.map((file, i) => <li key={file.file}><a href={`${fileBase}/${encodeURIComponent(file.file)}`} data-field={`files.${i}.label`}>{file.label}</a><a href={`${fileBase}/${encodeURIComponent(file.file)}`} download aria-label={`Download ${file.file}`}>Download</a></li>)}</ul></section> : !hasRelease && <p className="rr-muted">No release recorded yet.</p>}

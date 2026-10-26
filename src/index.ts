@@ -42,7 +42,7 @@ export { RecordWorkGraph } from './workspace/WorkGraph.js'
 export { recordWorkGraphModel } from './workspace/work-graph-model.js'
 export type { GraphNode, GraphEdge, WorkGraphModel } from './workspace/work-graph-model.js'
 
-export { RunOverview, RunReceiptView } from './workspace/RunOverview.js'
+export { RunReceiptView } from './workspace/RunOverview.js'
 export { RecordFlowWaterfall } from './workspace/RunFlowWaterfall.js'
 export { runReceiptSchema } from './workspace/run-receipt.js'
 export type { RunReceipt } from './workspace/run-receipt.js'

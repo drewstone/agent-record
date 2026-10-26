@@ -21,22 +21,6 @@ export function newestAgent(doc: RunDocument): string | null {
   return best?.node ?? null
 }
 
-/** The run that continued this one: a newer run of the play forked from it, or that names it as predecessor. */
-export function successorOf(play: Play | null | undefined, runId: string): { runId: string; run: string } | null {
-  if (!play) return null
-  const parents = new Map<string, string>()
-  for (const run of play.runs) {
-    const parent = run.forkedFrom ?? run.predecessor ?? run.supersedes ?? null
-    if (parent) parents.set(run.id, parent)
-  }
-  for (const row of play.ledger?.rows ?? []) if (row.lineage?.parentRun) parents.set(row.runId, row.lineage.parentRun)
-  const started = (id: string) => ms(play.runs.find((run) => run.id === id)?.startedAt ?? play.ledger?.rows.find((row) => row.runId === id)?.startedAt)
-  const children = [...parents].filter(([, parent]) => parent === runId).map(([child]) => child)
-  // The newest child is where the work went on; a live one wins.
-  const next = children.sort((a, b) => (started(b) || 0) - (started(a) || 0))[0]
-  return next ? { runId: next, run: shortRun(play.id, next) } : null
-}
-
 /** The start point's commit: the gate the run inherited from its fork, which is not the run's own result. */
 export function inheritedGate(doc: RunDocument, play: Play | null | undefined): string | null {
   const gate = doc.run.check?.gate ?? null

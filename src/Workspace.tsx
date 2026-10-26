@@ -42,7 +42,6 @@ import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable } from './workspace/RunTable.js'
 import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
-import { RunOverview } from './workspace/RunOverview.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunHow } from './workspace/RunHow.js'
 import { detailsOf, RunDetails } from './workspace/RunDetails.js'
@@ -772,7 +771,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
             {details === 'how' && how}
           </RunDetails>
           <RunWhy doc={doc} play={play.data} />
-          <RunOverview api={api} doc={run.data!} play={play.data} nodes={index ? index.actors : null} stats={nodes.stats} open={(next, patch) => open(next as RunSection, patch)} />
         </Suspense>
       </div>
     )
@@ -856,7 +854,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
             />
             <AgentFindings doc={doc} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={openFinding} />
           </aside>
-          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent" data-primary-content>
+          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent">
             {agent.index ? (
               <RunBody
                 key={actor}

@@ -233,14 +233,13 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
   return (
     <section className="run-findings" aria-label="What this run found" data-findings={findings.total}>
       <div className="findings-main">
-        {/* The tab names the question and counts the pages; the caution says what the rows cannot. The answers and the rows
-            are the view's one primary surface (data-primary-content: one region per view). */}
+        {/* The tab names the question and counts the pages; the caution says what the rows cannot. */}
         {!groups.lead.length && <p className="findings-lead">{findings.items.length ? `No result or claim pages; ${plural(findings.items.length, 'other page')} below.` : 'No result or claim pages recorded.'}</p>}
         {doc.run.state !== 'winner' && doc.run.state !== 'running' && groups.lead.length > 0 && (
           <p className="findings-caution">Ended {doc.run.state.replaceAll('-', ' ')}: none of these reached the run's declared result.</p>
         )}
         {(groups.results.length > 0 || groups.lead.length > 0 || speakers.length > 0) && (
-          <div className="findings-primary" data-primary-content>
+          <div className="findings-primary">
             {groups.results.length > 0 && (
               <div className="findings-lead">
                 {groups.results.map((item) => (

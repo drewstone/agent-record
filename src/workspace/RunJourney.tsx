@@ -18,9 +18,9 @@ import { useSearch } from './navigation.js'
  * agent timeline, releases as markers), then, for the agent picked, its summary, what it changed (code first) and its
  * transcript.
  */
-/** An agent's usage as the host read it (tangle-tools agent_usage): its OpenCode store while it runs, else its record. */
+/** An agent's usage as the host read it (tangle-tools agent_usage), with the source it names. */
 type Usage = { billedUsd: number | null; listUsd: number | null; listComplete: boolean; calls: number | null; pricedCalls: number | null; tokens: number | null; at: string | null; source: string; matchedBy?: string | null; priceSource?: { repository?: string; commit?: string } | null; steps?: Step[] }
-/** One stretch of an agent's time from its OpenCode store (epoch ms): a model call, a tool, or waiting between calls. */
+/** One stretch of an agent's time from its session store (epoch ms): a model call, a tool, or waiting between calls. */
 type Step = { kind: 'model' | 'tool' | 'waiting'; startMs: number; endMs: number; failed: boolean }
 /** Start, end (null while live) and status come from the run's spawn journal (tangle-tools run_journal). */
 type Node = RunWorkspaceDocument['nodes'][number] & { start?: string | null; end?: string | null; usage?: Usage | null }
@@ -29,6 +29,8 @@ type Release = WorkspaceRelease & { by?: Record<string, number>; files?: Record<
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
 const hours = (a: number, b: number) => (b - a) / 3_600_000
 const relTone = (r: Release) => (r.passed != null && r.total ? (r.passed === r.total ? 'pass' : r.passed / r.total >= 0.8 ? 'near' : 'fail') : 'none')
+/** A release's score, or that no check scored it (22a rc3 read "rc3 /": tagged, never checked). */
+const score = (r: Release) => (r.passed != null && r.total ? `${r.passed}/${r.total}` : 'not checked')
 /** Run artefacts, not code: logs, bench outputs, proofs, generated JSON; folded under the code a reader came for. */
 const ARTEFACT = /(\.(log|bin|out|csv|jsonl|json|txt)$|(^|\/)(logs?|run|runs|results?|benches|outputs?)\/|(^|\/)\.[^/]+$|_done$|launched$)/
 /** "4 m ago", "3 h ago" from now. */
@@ -38,11 +40,11 @@ const ago = (iso: string) => { const m = Math.max(0, (Date.now() - Date.parse(is
  * complete the pricing is ("≥$4.12 list, 38 of 41 calls priced"). "—" only when the host has no source at all.
  */
 function costText(u: Usage | null | undefined): { text: string; title: string } {
-  if (!u) return { text: '—', title: 'No usage source: no OpenCode store on this host and no usage in the record' }
+  if (!u) return { text: '—', title: 'No usage recorded' }
   const list = u.listUsd == null ? null : `${u.listComplete ? '≈' : '≥'}${money(u.listUsd)} list`
   const partial = !u.listComplete && u.calls ? `, ${u.pricedCalls ?? 0} of ${u.calls} calls priced` : ''
   const parts = [list && `${list}${partial}`, u.billedUsd != null && `${money(u.billedUsd)} billed`, u.tokens != null && `${tokens(u.tokens)} tokens`].filter(Boolean)
-  const from = u.source === 'opencode store' ? `its OpenCode store${u.matchedBy ? ` (matched by ${u.matchedBy})` : ''}` : 'the run record'
+  const from = `${u.source}${u.matchedBy ? ` (matched by ${u.matchedBy})` : ''}`
   const price = u.priceSource?.repository ? `; list price from ${u.priceSource.repository} ${u.priceSource.commit?.slice(0, 8) ?? ''}` : ''
   return { text: parts.join(' · ') || '—', title: `Read from ${from}${u.at ? `, updated ${ago(u.at)}` : ''}${price}` }
 }
@@ -66,7 +68,8 @@ function useJourney(api: string, doc: RunDocument) {
     // What each agent shipped is its commits in the run's deliverables; a host without them falls back to release attribution.
     if (nodes.some((n) => typeof n.shipped === 'number')) for (const n of nodes) commits.set(n.id, n.shipped ?? 0)
     else for (const r of releases) for (const [id, n] of Object.entries(r.by ?? {})) commits.set(id, (commits.get(id) ?? 0) + n)
-    const root = nodes.find((n) => n.role === 'root' || n.role === 'lead')?.id ?? doc.run.id
+    // The root is the agent nothing spawned, by the journal's edges, not by a role word.
+    const root = nodes.find((n) => !data.edges.some((e) => e.kind === 'spawn' && e.to === n.id))?.id ?? doc.run.id
     const open = best?.steps?.find((s) => s.state !== 'pass') ?? null
     const same = releases.length > 1 && releases.every((r) => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
     const attributed = releases.some((r) => Object.keys(r.by ?? {}).length > 0)
@@ -79,40 +82,24 @@ type Model = NonNullable<ReturnType<typeof useJourney>['model']>
 /** A disposable run's requested teardown, as the host's run_view reads it from RECEIPT.json `system.retention`. */
 type Lifecycle = { state: string; sentence: string; source?: string | null; resources?: { id: string | null; removal: string | null; removedAt: string | null }[] }
 
-type Blocker = { why?: string | null; action?: string | null; owner?: string | null; text?: string; since?: string | null; kind?: string; dispute?: string | null }
+/** The host's blocker (views.run_blocker): its producer's sentence, its typed cause and release, and who acts by role. */
+type Blocker = { kind: string; sentence?: string; text: string; actor?: { role: string; label: string }; since?: string | null }
+/** A decision the host lists for the run, with the exact command each option runs (views.need_choice). */
+type Need = { actor?: { role: string; label: string }; options?: { label: string; command: string; consequence?: string }[] }
 
-/**
- * Who acts on the blocker (the lead, 21:45Z): Drew's own decision is a control, a check dispute's two rulings as the
- * exact `disco steer --ruling` commands to run; anyone else's is "nothing for you", with since when they hold it.
- */
-/** Drew's ruling on a check dispute: the Discovery host is read-only, so each button copies the exact command that rules. */
-export function RulingButtons({ runId, dispute }: { runId: string; dispute: string }) {
-  const [copied, setCopied] = useState<string | null>(null)
-  const command = (verdict: 'upheld' | 'rejected') => `disco steer ${runId} "Drew's ruling" --ruling ${dispute} --verdict ${verdict}`
-  const copy = (verdict: 'upheld' | 'rejected') => void navigator.clipboard?.writeText(command(verdict)).then(() => setCopied(verdict))
-  return (
-    <span className="rj-decide">
-      <button type="button" onClick={() => copy('upheld')} title={command('upheld')}>{copied === 'upheld' ? 'Copied' : 'Uphold the agents'}</button>
-      <button type="button" onClick={() => copy('rejected')} title={command('rejected')}>{copied === 'rejected' ? 'Copied' : 'The check stands'}</button>
-    </span>
-  )
+/** One option's command, copied: the Discovery host is read-only, so a decision is a command its owner runs. */
+function CopyCommand({ label, command }: { label: string; command: string }) {
+  const [copied, setCopied] = useState(false)
+  return <button type="button" title={command} onClick={() => void navigator.clipboard?.writeText(command).then(() => setCopied(true))}>{copied ? 'Copied' : label}</button>
 }
 
-
-/** `said`: the line above names the failing step, so the blocker says only who acts (REVIEW-7 #6: 22a said it twice). */
-function NextStep({ runId, blocker, paused, said = false }: { runId: string; blocker: Blocker; paused: boolean; said?: boolean }) {
-  // While research is paused only Drew lifts it: point at Today's decision, never "nothing for you" beside it.
-  const pause = paused && <p className="rj-next"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>
-  if (blocker.owner === 'Drew' && blocker.kind === 'check-dispute' && blocker.dispute) {
-    return (
-      <p className="rj-next"><b>Your decision:</b> {blocker.action} <RulingButtons runId={runId} dispute={blocker.dispute} /></p>
-    )
-  }
-  const why = blocker.why && !said ? `${blocker.why}; ` : ''
+/** What holds the run, as served: who acts (a role, never a name) and the producer's sentence, with the owner's options. */
+function NextStep({ blocker, need, paused }: { blocker: Blocker; need: Need | undefined; paused: boolean }) {
   return (
     <>
-      {pause}
-      <p className="rj-next">{!paused && <b>Nothing for you. </b>}<span className="rj-muted">{why}{blocker.owner ?? 'Its owner'} will {blocker.action?.charAt(0).toLowerCase()}{blocker.action?.slice(1)}.</span></p>
+      {paused && <p className="rj-next"><b>Research is paused; lifting it is the owner's decision</b> <a href="/today">→ Today</a></p>}
+      <p className="rj-next"><b>{blocker.actor?.label ?? 'Held'}:</b> <span className="rj-muted">{blocker.sentence ?? blocker.text}</span>
+        {need?.options?.length ? <span className="rj-decide">{need.options.map((o) => <CopyCommand key={o.label} {...o} />)}</span> : null}</p>
     </>
   )
 }
@@ -138,18 +125,18 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
         {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
         {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
       </p>
-      {/* A settled run's blocker is history: only a live run, or one waiting on Drew, says who acts now (review 2 #3:
+      {/* A settled run's blocker is history: only a live run, or one waiting on its owner, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
-      {blocker?.action && (doc.execution?.alive || blocker.owner === 'Drew') && <NextStep runId={doc.run.id} blocker={blocker} paused={Boolean(doc.view?.paused)} said={Boolean(m.open)} />}
+      {blocker && (doc.execution?.alive || blocker.actor?.role === 'owner') && <NextStep blocker={blocker} need={(doc.view?.needsYou as Need[] | undefined)?.[0]} paused={Boolean(doc.view?.paused)} />}
       {m.releases.length > 1 && <p className="rj-releases">
         {m.same
-          ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${m.releases[0]!.passed}/${m.releases[0]!.total}`
+          ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${score(m.releases[0]!)}`
           // A release with no tag recorded has no name the code reader resolves (21c rc116 opened a 404 pane): a label, not a
           // button. Its tooltip says what was recorded; whether its commit's code was kept is not known (root review of #179).
           : m.releases.map((r) => r.tagged
-            ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={[releaseName(r.release, m.data.lineage), r.sentence].filter(Boolean).join('\n')} onClick={() => onRelease(r.release)}>{r.release} {r.passed}/{r.total}</button>
+            ? <button type="button" key={r.release} className={`rj-mini rj-${relTone(r)}`} title={[releaseName(r.release, m.data.lineage), r.sentence].filter(Boolean).join('\n')} onClick={() => onRelease(r.release)}>{r.release} {score(r)}</button>
             // One plain sentence (REVIEW-7 #5: the check's raw text leaked into it and contradicted the count).
-            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.release} passed ${r.passed ?? '?'} of ${r.total ?? '?'} steps. No release tag recorded; recorded commit ${r.commit ?? 'none'}.`}>{r.release} {r.passed}/{r.total}</Tip>)}
+            : <Tip key={r.release} className={`rj-mini rj-${relTone(r)}`} text={`${r.release}: ${score(r)}. No release tag recorded; recorded commit ${r.commit ?? 'none'}.`}>{r.release} {score(r)}</Tip>)}
       </p>}
     </section>
   )
@@ -175,7 +162,7 @@ function Lanes({ m, live, goal, cost, picked, onPick }: { m: Model; live: boolea
       const from = parent.get(n.id)
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
-        name: n.id === m.root ? 'lead' : n.role ?? n.label,
+        name: n.role ?? n.label,
         // The lane label is name plus short model, four words at most (REVIEW-8 gate 1, as the reference frames); what it
         // shipped is the outcome pill and the card's Releases and Commits cells.
         detail: n.model?.split('/').pop() ?? undefined,
@@ -214,7 +201,7 @@ function Lanes({ m, live, goal, cost, picked, onPick }: { m: Model; live: boolea
   const marked = useMemo(() => m.releases.filter((r, i) => r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed), [m])
   const markers = useMemo((): FlowMarker[] => marked.map((r) => ({
     at: ms(r.taggedAt) - m.t0,
-    label: `${r.release}${r.passed != null && r.total ? ` ${r.passed}/${r.total}` : ''}${r === m.best ? ' best' : ''}`,
+    label: `${r.release} ${score(r)}${r === m.best ? ' best' : ''}`,
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
   // The header's stat row owns the run's numbers, so the chart's summary strip is off (sandbox-ui 03:12Z handoff).
@@ -242,20 +229,14 @@ function runUsage(m: Model) {
   return { tokens: sum((u) => u.tokens), listUsd: sum((u) => u.listUsd), complete: usage.length === m.nodes.length && usage.every((u) => u.listComplete) }
 }
 
-/** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
+/** The run's numbers as one row of large numerals above the timeline (review 4 #4); agents, shipped and failed are the trace's legend. */
 function Stats({ m, spend }: { m: Model; spend: { apiEquivalentUsd?: number | null; apiEquivalentProvenance?: string | null } | null | undefined }) {
   // The host's one figure (journals.api_equivalent), the one /play and /plays print; never a sum of this page's own (index 02:45Z).
   const listUsd = spend?.apiEquivalentUsd ?? null
   const how = spend?.apiEquivalentProvenance ?? ''
-  // As the timeline's legend counts them: every agent that committed, the lead included; Failed counts settles, not a category.
-  const shipped = m.nodes.filter((n) => m.commits.get(n.id)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
-    ['Agents', String(m.nodes.length)],
     ...(listUsd != null ? [['Cost', `${how.endsWith('at least') ? '≥' : '≈'}${money(listUsd)}`, `API-equivalent at list price, ${how || 'source not recorded'}`] as [string, string, string]] : []),
-    ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
-    ['Failed', String(m.nodes.filter(failed).length)],
-    ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
   ]
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
 }
@@ -272,12 +253,9 @@ function Full({ short, raw, what }: { short: string; raw: string; what: string }
   )
 }
 
-/**
- * The opening prompt as text, shown, with what it is (root 02:33Z): the instruction captured in the run input, sent in the
- * user role, sender not recorded. A long one shows its first sentence with the rest one toggle away.
- */
+/** The opening prompt as text, shown (root 02:33Z); a long one shows its first sentence with the rest one toggle away. */
 function Prompt({ text }: { text: string }) {
-  return <p className="rj-prompt"><b>Opening prompt</b> <span className="rj-muted" title="Captured in run-input.json (task.instruction) and sent in the user role; no sender is recorded">· user role · from the run input · sender not recorded:</span> <Full what="opening prompt" short={firstSentence(text)} raw={text} /></p>
+  return <p className="rj-prompt"><b>Opening prompt</b> <Full what="opening prompt" short={firstSentence(text)} raw={text} /></p>
 }
 
 /** Q6: the picked agent's summary, what it changed (code first, artefacts folded), then its transcript. */
@@ -285,9 +263,8 @@ function Prompt({ text }: { text: string }) {
 const who = (node: Node) => [node.role ?? node.label, node.harness, node.model?.split('/').pop()].filter(Boolean).join(' · ')
 
 /**
- * The agent's place in the run: the agent that spawned it (the workspace's spawn edge), or, for the root, the play press
- * that submitted the run (run-input.json). A spawn is a relationship, not proof of who sent a message: each message's own
- * sender shows on it in the conversation (promptSenderNodeId or coordination.fromNode, else "Sender not captured").
+ * The agent's place in the run: the agent that spawned it (the workspace's spawn edge); null for the root. A spawn is a
+ * relationship, not proof of who sent a message: each message's own sender shows on it in the conversation.
  */
 function spawnedBy(m: Model, node: Node) {
   const edge = m.data.edges.find((e) => e.kind === 'spawn' && e.to === node.id)
@@ -296,9 +273,8 @@ function spawnedBy(m: Model, node: Node) {
   // The id path names the parent when the journal's edge is missing: run:s6 is the root's child (lead 2026-10-25 10:00Z).
   const prefix = node.id.includes(':') ? node.id.slice(0, node.id.lastIndexOf(':')) : null
   const byPath = prefix ? m.nodes.find((n) => n.id === prefix) : null
-  if (byPath) return `${byPath.id === m.root ? 'the lead' : byPath.role ?? byPath.label} (${byPath.label})`
-  if (prefix && prefix === m.root) return 'the lead'
-  return node.id === m.root ? 'the play press (the run was submitted from run-input.json)' : 'not in the spawn journal'
+  if (byPath) return `${byPath.role ?? byPath.label} (${byPath.label})`
+  return node.id === m.root ? null : 'not in the spawn journal'
 }
 
 /**
@@ -314,15 +290,15 @@ const firstSentence = (text: string) => {
 function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const input = doc.input
   const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
-  if (!input) return <p className="rj-trigger rj-muted">What started this run was not recorded.</p>
-  const source = input.source?.path?.split('/').pop()
+  if (!input) return null
+  const ran = root && [root.harness, root.model].filter(Boolean).join(' · ')
   return (
     <div className="rj-trigger">
       {/* The goal's whole first sentence: a 14-word cut ended at "retain the…" and dropped the teardown this smoke is about
           (root 2026-10-25 15:44Z). */}
       {input.objective && <p><Full what="goal" short={firstSentence(goalText(input.objective))} raw={goalText(input.objective)} /></p>}
-      {/* Who ran it is not who started it (root 2026-10-25): the input records no initiator, only the press's source file. */}
-      <p className="rj-muted">Run by {root ? who(root) : 'the root agent'} · <span title={source ? `submitted by the play press from ${source}${input.source?.sha256 ? ` (sha256 ${input.source.sha256})` : ''}` : undefined}>started by: not recorded</span></p>
+      {/* What ran it, as recorded; who started it is printed only once the run input records it (audit F6). */}
+      {ran && <p className="rj-muted">Run on {ran}</p>}
       {input.instruction && <Prompt text={input.instruction} />}
     </div>
   )
@@ -335,14 +311,14 @@ function Drill({ m, node, transcript, onPick, onOpen }: { m: Model; node: Node; 
   const paths = [...changes.keys()]
   const code = paths.filter((p) => !ARTEFACT.test(p))
   const artefacts = paths.filter((p) => ARTEFACT.test(p))
-  const role = node.id === m.root ? 'lead' : node.role ?? node.label
+  const role = node.role ?? node.label
   const single = m.nodes.length === 1
   return (
     <section className="rj-drill" aria-label={`${role}: what it did`}>
       {!single && <h2>{role}</h2>}
       {!single && <dl className="rj-summary">
         <dt>Who</dt><dd>{who(node)}</dd>
-        <dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd>
+        {spawnedBy(m, node) && <><dt>Spawned by</dt><dd>{spawnedBy(m, node)}</dd></>}
         <dt>Task</dt><dd>{node.assignment ? <Full what="task" short={plainSummary(node.assignment)} raw={node.assignment} /> : 'not recorded'}</dd>
         <dt>Result</dt><dd>{failed(node) ? 'Failed. ' : ''}{node.turn ? <Full what="result" short={plainSummary(node.turn)} raw={node.turn} /> : node.status === 'running' ? `Running${node.lastAt ? `, last output ${ago(node.lastAt)}` : ''}; no turn has finished yet` : 'its last turn wrote no text'}</dd>
         <dt>Cost</dt><dd title={costText(node.usage).title}>{costText(node.usage).text}</dd>
