@@ -1,8 +1,7 @@
-import { viewAsOf, viewChip } from './view.js'
-import type { OverviewAttention, OverviewDocument, PlayDocument, RunDocument } from '../workspace-model.js'
-import type { PlayReportDocument } from '../play-report.js'
-import { newerStarted, type Status, statusOf } from './data.js'
-import { ENDING_GLYPH, hostWords, lineReason, metricValue, type PlayBest, type PlayBlocker, type PlayHead, RELEASE_STATE, shortRun, shortTag } from './play-standing.js'
+import { viewAsOf } from './view.js'
+import type { OverviewAttention, OverviewDocument, PlayDocument } from '../workspace-model.js'
+import { type Status, statusOf } from './data.js'
+import { ENDING_GLYPH, hostWords, type PlayHead } from './play-standing.js'
 
 /**
  * The one place a decision page's answers are read from served fields (design-system sections 3 and 6). Change 1's fields
@@ -44,8 +43,6 @@ export interface Answer {
 
 export const HEADLINE_WORDS = 8
 export const SUBLINE_WORDS = 12
-export const STATE_WORDS = 18
-
 /** Cut text to `n` whitespace words, marking a cut with an ellipsis. */
 export function clampWords(text: string, n: number): string {
   const words = text.trim().split(/\s+/).filter(Boolean)
@@ -92,28 +89,7 @@ export const asOfTip = (asOf: AsOf) => `${new Date(asOf.at).toISOString().slice(
 
 // ----- change 1's fields, read loosely: served by tangle-tools when it lands, absent before -----
 
-interface ServedAnswer {
-  text?: string | null
-  numbers?: Record<string, unknown> | null
-  asOf?: string | null
-  source?: string | null
-}
-type StandingAnswer = { solved?: ServedAnswer | null; producing?: ServedAnswer | null; measurement?: ServedAnswer | null; platform?: ServedAnswer | null }
-type Built = NonNullable<PlayReportDocument['built']>
-type Output = {
-  codeCommits?: number | null
-  newestCodeCommitAt?: string | null
-  codeCommitsBy30Min?: { at: string; n: number }[] | null
-  releaseTags?: { tag: string; at: string; published?: boolean | null; inherited?: boolean | null }[] | null
-  lastOutputAt?: string | null
-  lastOutputKind?: 'commit' | 'agent event' | 'page write' | string | null
-  asOf?: string | null
-}
-
-const standingAnswer = (play: Play): StandingAnswer => ((play.standing as { answer?: StandingAnswer } | null | undefined)?.answer ?? {}) as StandingAnswer
 const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
-export const runOutput = (doc: RunDocument | null | undefined): Output | null => ((doc?.progress as { output?: Output | null } | null | undefined)?.output ?? null)
-
 /** Commits per 30 minutes as a cumulative step series, for the charts Spark. */
 export function cumulative(bins: { at: string; n: number }[]): [number, number][] {
   let total = 0
@@ -122,178 +98,10 @@ export function cumulative(bins: { at: string; n: number }[]): [number, number][
 
 // ----- the play -----
 
-/** The play's best release under the current check: `standing.answer.solved` when served, else `standing.bestCurrent`. */
-function bestOf(play: Play) {
-  const current = play.standing?.bestCurrent ?? null
-  const served = standingAnswer(play).solved?.numbers?.best as { tag?: string; runId?: string; workloads?: { passed: number; total: number }; reached?: number; of?: number } | undefined
-  if (!served) return current
-  return { ...(current && current.tag === served.tag && current.runId === served.runId ? current : {}), ...served } as PlayBest
-}
-
-const workloadFigure = (best: PlayBest | null): Figure => {
-  const w = best?.workloads
-  if (w?.total) return { kind: 'num', value: String(w.passed ?? 0), unit: `/${w.total} workloads`, tip: `${w.passed ?? 0} of ${w.total} workloads${best?.reached && best.of ? `, stage ${best.reached} of ${best.of}` : ''}` }
-  if (best?.reached && best.of) return { kind: 'num', value: String(best.reached), unit: `/${best.of} stages`, tip: `stage ${best.reached} of ${best.of}` }
-  return { kind: 'num', value: '0', unit: 'checked releases', tip: 'no release has a check result yet' }
-}
-
-/** Why a release was not published, in a few words from its check line. */
-const notPublished = (line: string | null | undefined) => {
-  const reason = lineReason(line)
-  const prover = /prover for ([\w-]+)/.exec(reason)
-  if (prover) return `a prover failed (${prover[1]})`
-  return reason ? clampWords(reason, 6) : 'its public stages did not pass'
-}
-
-function didItWork(play: Play, now: number): Answer {
-  const served = standingAnswer(play).solved ?? null
-  const best = bestOf(play)
-  const runs = num(served?.numbers?.runs)
-  const passed = num(served?.numbers?.passed) ?? (play.standing?.status === 'solved' ? 1 : null)
-  const run = best?.runId ? shortRun(play.id, best.runId) : null
-  const checked = best?.count && best.count > 1 ? `checked ${best.count}×` : 'checked once'
-  const release = best?.state ?? (typeof best?.release === 'string' ? best.release : null)
-  const rows: DetailRow[] = []
-  if (play.goal?.text) rows.push({ term: 'The goal', text: play.goal.text })
-  if (served?.text) rows.push({ term: 'Answer', text: served.text })
-  if (best?.tag)
-    rows.push({
-      term: 'Best release',
-      text: [
-        `${shortTag(best.tag)}${run ? ` (run ${run})` : ''}`,
-        best.workloads?.total ? `${best.workloads.passed ?? 0} of ${best.workloads.total} workloads` : null,
-        best.reached && best.of ? `stage ${best.reached} of ${best.of}` : null,
-        best.at ? `${checked} at ${stamp(best.at, now)}` : checked,
-      ].filter(Boolean).join(', ') + (release && release !== 'published' ? `. ${RELEASE_STATE[release] === 'not published' ? `Not published: ${notPublished(best.line)}` : (RELEASE_STATE[release] ?? release)}.` : '.'),
-      href: best.runId ? `/run/${encodeURIComponent(best.runId)}` : undefined,
-    })
-  if (runs !== null) rows.push({ term: 'Runs', text: `${passed ?? 0} of ${runs} runs passed the current check.` })
-  // The headline and figure are the host's view (views.play_view), the run page's words for the same release.
-  const view = play.view
-  const progress = view?.progress ?? null
-  if (progress) rows.unshift({ term: 'Steps', text: progress.sentence, href: progress.runId ? `/run/${encodeURIComponent(progress.runId)}` : undefined })
-  return {
-    slot: 'did-it-work',
-    label: 'Solved?',
-    headline: view ? view.status.label : passed ? 'Solved' : best ? 'Not yet' : 'No check result yet',
-    figure: progress ? { kind: 'num', value: String(progress.passed), unit: `/${progress.total} steps`, tip: progress.sentence } : workloadFigure(best),
-    subline: progress ? `${progress.release ?? 'workspace'}${progress.runId ? ` of ${shortRun(play.id, progress.runId)}` : ''}` : best?.tag ? `${shortTag(best.tag)}${run ? ` of ${run}` : ''}, ${checked}` : 'no release checked yet',
-    rows,
-  }
-}
-
-/** The play's last ending as a status, with the newer-run rule a crash needs. */
-function endingStatus(play: Play, now: number): Status | null {
-  const ending = play.standing?.lastEnding ?? null
-  if (!ending) return null
-  if (ending.status) return viewChip(ending.status)
-  // A crash needs a person for its first 24 h only while no newer run started; a play that does not list the run cannot tell.
-  const listed = play.runs.find((run) => run.id === ending.runId)
-  const newer = listed ? newerStarted({ id: ending.runId, play: listed.play, startedAt: ending.startedAt ?? listed.startedAt }, play.runs) : undefined
-  return statusOf({ axis: 'run', state: ending.word, reason: ending.reason, endedAt: ending.at, newerStarted: newer, now })
-}
-
-function isItWorking(play: Play, now: number): Answer {
-  const live = play.live ?? null
-  const producing = standingAnswer(play).producing ?? null
-  const n = producing?.numbers ?? {}
-  const rows: DetailRow[] = []
-  if (!live) {
-    const ending = play.standing?.lastEnding ?? null
-    const status = endingStatus(play, now)
-    if (ending && status)
-      rows.push({ term: 'Last run', text: `${ending.run ?? shortRun(play.id, ending.runId)}${ending.at ? `, ended ${stamp(ending.at, now)}` : ''}${ending.wallHours != null ? ` after ${hoursText(ending.wallHours)}` : ''}`, status, href: `/run/${encodeURIComponent(ending.runId)}` })
-    if (ending?.reason) rows.push({ term: 'Why it ended', text: ending.reason.replaceAll('-', ' ') })
-    return {
-      slot: 'is-it-working',
-      label: 'Producing?',
-      headline: 'Nothing running',
-      figure: { kind: 'num', value: '0', unit: 'runs live', tip: 'no run of this play is live' },
-      subline: ending ? clampWords(`last run ${ending.run ?? shortRun(play.id, ending.runId)} ${status?.word.toLowerCase() ?? 'ended'}${ending.at ? ` ${stamp(ending.at, now)}` : ''}`, SUBLINE_WORDS) : 'no run recorded',
-      rows,
-    }
-  }
-  const run = live.run ?? shortRun(play.id, live.runId)
-  const elapsed = live.elapsedMs ?? (live.startedAt ? now - ms(live.startedAt) : null)
-  const liveHours = num(n.liveHours) ?? (elapsed !== null ? elapsed / 3_600_000 : null)
-  const commits = num(n.codeCommits)
-  const newestCommit = typeof n.newestCodeCommitAt === 'string' ? n.newestCodeCommitAt : null
-  const lastPublished = (n.lastPublished ?? (play.standing as { lastPublished?: unknown } | null | undefined)?.lastPublished ?? null) as { tag?: string; run?: string; at?: string } | null
-  const releasedSince = Boolean(lastPublished?.at && live.startedAt && ms(lastPublished.at) > ms(live.startedAt))
-  const bins = (n.codeCommitsBy30Min as Output['codeCommitsBy30Min']) ?? null
-  rows.push({ term: 'Live run', text: `${run}${live.startedAt ? `, started ${stamp(live.startedAt, now)}` : ''}`, status: statusOf({ axis: 'run', state: 'running', elapsedMs: elapsed ?? undefined }), href: `/run/${encodeURIComponent(live.runId)}` })
-  if (producing?.text) rows.push({ term: 'Output', text: producing.text })
-  if (lastPublished?.tag) rows.push({ term: 'Last published release', text: `${shortTag(lastPublished.tag)}${lastPublished.run ? ` of run ${lastPublished.run}` : ''}${lastPublished.at ? `, ${age(ms(lastPublished.at), now)} ago` : ''}` })
-  const checkpoint = (live.killCheckpoints ?? []).find((item) => item.due) ?? live.killCheckpoints?.[0] ?? null
-  if (checkpoint) {
-    const measured = checkpoint.measured ?? null
-    rows.push({
-      term: `Next checkpoint · ${checkpoint.label}`,
-      text: [checkpoint.clause ? clampWords(checkpoint.clause, 15) : null, checkpoint.at ? `due ${stamp(checkpoint.at, now)}` : null, `measured: ${measured ? 'yes' : 'not yet'}`].filter(Boolean).join(' · '),
-    })
-  }
-  if (live.blocker && live.blocker.severity !== 'red') rows.push({ term: 'Holding it', text: blockerWords(live.blocker), status: statusOf({ axis: 'alert', severity: live.blocker.severity, live: true }) })
-  const figure: Figure = bins?.length
-    ? { kind: 'spark', points: cumulative(bins), label: `${commits ?? 0} commits`, tip: `${commits ?? 0} code commits; per 30 min: ${bins.map((bin) => bin.n).join(', ')}` }
-    : commits !== null
-      ? { kind: 'num', value: String(commits), unit: 'commits', tip: `${commits} code commits since ${live.startedAt ? hm(live.startedAt) : 'the run started'}` }
-      : { kind: 'num', value: liveHours !== null ? liveHours.toFixed(1) : '?', unit: 'h running', tip: 'hours since the live run started' }
-  return {
-    slot: 'is-it-working',
-    label: 'Producing?',
-    headline: commits === null ? `${run} running` : commits === 0 ? 'Running, no code yet' : releasedSince ? 'Writing code and releasing' : 'Writing code, no release yet',
-    figure,
-    subline: [newestCommit ? `newest commit ${hm(newestCommit)}` : null, liveHours !== null ? `${hoursText(liveHours)} in` : null].filter(Boolean).join(' · ') || `${run} live`,
-    rows,
-  }
-}
-
-/** The report's inventory, or `play_head.built` when served: what the best release is made of. */
-function whatWasBuilt(play: Play, report: PlayReportDocument | null | undefined, now: number): Answer {
-  const built = ((play as { play_head?: { built?: Built | null } | null }).play_head?.built ?? report?.built ?? null) as Built | null
-  const crates = Array.isArray(built?.crates?.value) ? (built!.crates!.value as string[]) : []
-  if (!built || !crates.length) {
-    // No inventory: point at what exists, the best release's code one click away, never "not reported" beside a run
-    // that built it (re-audit 2026-10-24: 21c showed 2,236 files while this card read "Not reported yet · — crates").
-    const best = play.view?.progress ?? null
-    if (best?.runId && best.release)
-      return {
-        slot: 'what-was-built', label: 'Built', headline: 'Best release code',
-        figure: { kind: 'num', value: best.release, unit: '', tip: 'the best release; the play report lists no build inventory' },
-        subline: `run ${shortRun(play.id, best.runId)} · open its files`,
-        rows: [{ term: 'Best release code', text: `${best.release} in run ${shortRun(play.id, best.runId)}`, href: `/run/${encodeURIComponent(best.runId)}` }],
-      }
-    return { slot: 'what-was-built', label: 'Built', headline: 'No release yet', figure: { kind: 'num', value: '—', unit: '', tip: 'no release has been scored' }, subline: 'no release has been scored', rows: [] }
-  }
-  const commands = (built.commands?.value ?? {}) as Record<string, unknown>
-  const guests = num(built.guests?.value)
-  const parts = [commands.prover ? 'prover' : null, commands.verifier ? 'verifier' : null, guests ? `${guests} guest programs` : null].filter(Boolean) as string[]
-  const headline = parts.length ? parts.join(', ') : plural(crates.length, 'crate')
-  const external = num(built.externalCrates?.value)
-  const release = built.release ?? null
-  const rows: DetailRow[] = [
-    { term: `At ${release?.tag ?? 'the best release'}${release?.runId ? ` (run ${shortRun(play.id, release.runId)})` : ''}`, text: crates.join(', ') },
-  ]
-  if (Object.keys(commands).length) rows.push({ term: 'Commands', text: Object.keys(commands).join(' · ') })
-  if (guests) rows.push({ term: 'Guest programs', text: String(guests) })
-  if (built.docs?.length) rows.push({ term: 'Design docs', text: String(built.docs.length) })
-  if (release?.builtAt) rows.push({ term: 'Read at', text: stamp(release.builtAt, now) })
-  return {
-    slot: 'what-was-built',
-    label: 'Built',
-    headline: headline.charAt(0).toUpperCase() + headline.slice(1),
-    figure: { kind: 'num', value: String(crates.length), unit: 'crates', tip: `${crates.length} workspace crates${num(built.lockedPackages?.value) !== null ? `, ${built.lockedPackages!.value} locked packages` : ''}` },
-    subline: [release?.tag ? `at ${release.tag}` : null, external === 0 ? 'no outside crates' : external !== null ? `${plural(external, 'outside crate')}` : null].filter(Boolean).join(', '),
-    rows,
-  }
-}
-
 const BLOCKER_WORD: Record<string, string> = { 'stuck-turn': 'Hung turn', 'check-infra': 'Check infrastructure', 'quota-wall': 'Quota wall', 'gate-undecided': 'Check unverified' }
 export const blockerName = (blocker: { class: string }) => BLOCKER_WORD[blocker.class] ?? blocker.class.replaceAll('-', ' ')
 /** Host prose in the page's words, with the release check named as such: "gate" belongs to "How the check works" only. */
 export const plainWords = (text: string) => hostWords(text).replace(/\b(?:tag )?gate\b/gi, (match) => (match[0] === match[0]!.toUpperCase() ? 'Release check' : 'release check'))
-const blockerWords = (blocker: PlayBlocker) => [blockerName(blocker), blocker.evidence ? plainWords(blocker.evidence) : null].filter(Boolean).join(': ')
-
 /** An attention item's age: exact from its raise time, else a lower bound from the composition that first served it. */
 export function itemAge(raisedAt: string | null | undefined, seenSince: string | null | undefined, now: number): string {
   if (raisedAt) return `${age(ms(raisedAt), now)} old`
@@ -327,79 +135,8 @@ function needsAnswer(items: NeedsItem[], quiet: string, served = false): Answer 
   }
 }
 
-function playNeeds(play: Play, now: number): Answer {
-  // The host's list (views.play_view), the one the overview shows for this play.
-  if (play.view)
-    return needsAnswer(
-      play.view.needsYou.map((item) => ({ text: item.text, status: statusOf({ axis: 'alert', tone: 'warn', live: false }), age: item.since ? `${age(ms(item.since), now)} old` : 'age not recorded', owner: item.owner ?? null, href: item.href ?? undefined })),
-      'nothing recorded needs a person',
-      true,
-    )
-  const items: NeedsItem[] = []
-  const live = play.live ?? null
-  if (live?.blocker) {
-    const status = statusOf({ axis: 'alert', severity: live.blocker.severity, live: true })
-    items.push({ text: blockerWords(live.blocker), status, age: live.blocker.since ? `${age(ms(live.blocker.since), now)} old` : 'age not recorded', owner: live.blocker.owner ?? null, href: `/run/${encodeURIComponent(live.runId)}` })
-  }
-  const ending = play.standing?.lastEnding ?? null
-  const ended = endingStatus(play, now)
-  if (ending && ended?.tone === 'fail') items.push({ text: `${ending.run ?? shortRun(play.id, ending.runId)} ${ended.word}`, status: ended, age: ending.at ? `${age(ms(ending.at), now)} old` : 'age not recorded', owner: 'Discovery operator', href: `/run/${encodeURIComponent(ending.runId)}` })
-  if (ending?.blocker) items.push({ text: blockerWords(ending.blocker), status: statusOf({ axis: 'alert', severity: ending.blocker.severity, live: false }), age: ending.blocker.since ? `${age(ms(ending.blocker.since), now)} old` : 'age not recorded', owner: ending.blocker.owner ?? null, href: `/run/${encodeURIComponent(ending.runId)}` })
-  const quiet = ending?.blocker ? clampWords(`${blockerName(ending.blocker).toLowerCase()} on ${ending.run ?? shortRun(play.id, ending.runId)} is past`, SUBLINE_WORDS) : live ? `no blocker on ${live.run ?? shortRun(play.id, live.runId)}` : 'no blocker recorded'
-  return needsAnswer(items, quiet)
-}
-
-/** The four answers a play page opens with: Solved?, Producing?, Built, Needs you. */
-export function playAnswers(play: Play, report: PlayReportDocument | null | undefined, now = Date.now()): Answer[] {
-  return [didItWork(play, now), isItWorking(play, now), whatWasBuilt(play, report, now), playNeeds(play, now)]
-}
-
 /** The play page's one as-of: the newest time its answers record. */
-export function playAsOf(play: Play): AsOf | null {
-  if (play.view) return viewAsOf(play.view)
-  const answer = standingAnswer(play)
-  const at = newest(answer.solved?.asOf, answer.producing?.asOf, answer.measurement?.asOf, play.standing?.bestCurrent?.at, play.standing?.lastEnding?.at, play.live?.startedAt, ...play.runs.map((run) => run.startedAt))
-  return at ? { at, meaning: 'the newest time this play’s answers record', source: answer.producing?.source ?? answer.solved?.source ?? 'the play document' } : null
-}
-
-/** The current check's version line, for "How the check works": `Check v4 since 10-18 20:52Z (operator); 4 versions`. */
-export function checkVersionLine(play: Play, now: number): string | null {
-  const current = play.checkers?.find((item) => item.current) ?? null
-  if (!current) return null
-  const since = current.ruling?.at ?? current.firstAt ?? null
-  return `Check ${current.label}${since ? ` since ${stamp(since, now)}` : ''}${current.ruling?.by ? ` (${current.ruling.by})` : ''}; ${plural(play.checkers!.length, 'version')}`
-}
-
-/** The measurement noise line: `rulers[].rerunSpread` when served, else `standing.answer.measurement`; null omits it. */
-export function measurementLine(play: Play): string | null {
-  const rulers = (play as { rulers?: { current?: boolean; rerunSpread?: { min?: number; max?: number; of?: number; undecided?: number; capS?: number; owner?: string } | null }[] | null }).rulers ?? null
-  const spread = rulers?.find((ruler) => ruler.current)?.rerunSpread ?? rulers?.find((ruler) => ruler.rerunSpread)?.rerunSpread ?? null
-  if (spread && spread.min != null && spread.max != null)
-    return `check spread ${spread.min}–${spread.max} of ${spread.of ?? 15} on one commit${spread.undecided ? ` · ${spread.undecided} undecided at the ${spread.capS ?? 300} s prover cap` : ''}${spread.owner ? ` · owner ${spread.owner}` : ''}`
-  return standingAnswer(play).measurement?.text ?? null
-}
-
-/** A bar metric's ratio to the bar in words: `Proving rate 0.2 M of 7.2–8.7 M cycles/s · 36× short`. Null when unmeasured. */
-export function barRatioLine(metric: NonNullable<Play['bar']>['metrics'][number]): string | null {
-  const shown = metric.best ?? metric.nearest ?? null
-  if (!shown) return null
-  const t = metric.target ?? null
-  const low = t?.min ?? t?.approx ?? t?.max ?? null
-  const high = t?.max ?? t?.approx ?? t?.min ?? null
-  const target = low === null ? null : low === high ? `≈${metricValue(low, metric.unit)}` : `${metricValue(low, metric.unit)}–${metricValue(high!, metric.unit)}`
-  const head = `${metric.label} ${metricValue(shown.value, metric.unit)}${target ? ` of ${target}` : ''}`
-  // A value that does not count never gets a ratio to the bar: it says why instead.
-  if (!metric.best) return `${head} · ${shown.short ?? shown.why ?? 'not comparable'}`
-  if (low === null || high === null) return head
-  const value = shown.value
-  const better = metric.direction === 'down' ? value <= high : value >= low
-  if (value >= low && value <= high) return `${head} · within the bar`
-  const ratio = value < low ? low / value : value / high
-  const times = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
-  return `${head} · ${times}× ${better ? 'past' : metric.direction === 'down' ? 'over' : 'short'}`
-}
-
-// ----- the overview -----
+export const playAsOf = (play: Play): AsOf | null => (play.view ? viewAsOf(play.view) : null)
 
 /** The overview's four answers: Needs you, Running now, Clean runs, This week. */
 export function overviewAnswers(doc: OverviewDocument, reliability: { rate?: number | null; settled?: number | null; clean?: number | null; day?: string | null } | null, now = Date.now()): Answer[] {

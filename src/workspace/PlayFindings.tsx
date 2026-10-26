@@ -79,26 +79,25 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
 
 /**
  * What the play found, ranked by its check (3.7): pages whose cited commits the current check confirms, contradicts or
- * has not decided, then claims no check touched, folded. `limit` keeps the top rows for the Standing tab.
+ * has not decided, then claims no check touched.
  */
-export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: number; onMore?: () => void }) {
+export function PlayFindings({ play }: { play: Play }) {
   const items = play.findings ?? []
   if (!items.length) return null
   // Newest first within a group, so the three newest verified findings lead (review 1 #12).
   const newest = (a: FeedItem, b: FeedItem) => Date.parse(b.writtenAt ?? b.at ?? '') - Date.parse(a.writtenAt ?? a.at ?? '') || 0
   const ordered = GROUPS.flatMap(([id]) => items.filter((item) => groupOf(item) === id).sort(newest))
-  const shown = limit ? ordered.slice(0, limit) : ordered
   const counts = new Map(GROUPS.map(([id]) => [id, items.filter((item) => groupOf(item) === id).length]))
   return (
     <section className="ws-section play-findings" data-play-findings aria-label="Findings">
       {/* The answer first (REVIEW-8 #3: a status bar on top): how many findings each check verdict holds. */}
-      {!limit && <Meter total={items.length} text={`${items.length} findings`} segments={GROUPS.filter(([id]) => counts.get(id)).map(([id, label, , color]) => ({ label, value: counts.get(id)!, color }))} />}
-      <div className="finding-list" data-primary-content={limit ? undefined : ''}>
+      <Meter total={items.length} text={`${items.length} findings`} segments={GROUPS.filter(([id]) => counts.get(id)).map(([id, label, , color]) => ({ label, value: counts.get(id)!, color }))} />
+      <div className="finding-list">
       {GROUPS.map(([id, label, why]) => {
-        const rows = shown.filter((item) => groupOf(item) === id)
+        const rows = ordered.filter((item) => groupOf(item) === id)
         if (!rows.length) return null
         return (
-          <details key={id} className={`finding-group group-${id}`} open={id !== 'unchecked' || !limit}>
+          <details key={id} className={`finding-group group-${id}`} open>
             <summary title={why}>
               <b>{label}</b> <span className="num">{counts.get(id)}</span>
             </summary>
@@ -111,11 +110,6 @@ export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: numb
         )
       })}
       </div>
-      {limit && ordered.length > limit && onMore && (
-        <button type="button" className="link-button" onClick={onMore}>
-          All {ordered.length} findings →
-        </button>
-      )}
     </section>
   )
 }

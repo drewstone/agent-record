@@ -98,6 +98,9 @@ export function CodePane({ runUrl, refName, previous, label }: { runUrl: string;
       label={`${label} at ${tree.data.commit.slice(0, 12)} · ${tree.data.paths.length.toLocaleString()} files${tree.data.cut ? ' (first shown)' : ''}`}
       expansionKey={`${refName}:${tree.data.commit}`}
       surface="plain"
+      // Drew's layout gate 3: the code is a [tree | editor] frame at 70vh with tabs (sandbox-ui 0.138.0 layout='split').
+      layout="split"
+      style={{ height: '70vh' }}
     />
   )
 }

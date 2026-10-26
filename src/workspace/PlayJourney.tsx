@@ -1,7 +1,7 @@
 import { Tip } from './AnswerStrip.js'
-import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
+import { BarStrip } from './BarStrip.js'
 import type { Play } from './answers.js'
-import { plainSummary, stepWord } from './plain-words.js'
+import { stepWord } from './plain-words.js'
 import { usePhone } from './use-phone.js'
 import type { HostView, ViewTrend } from './view.js'
 
@@ -53,22 +53,16 @@ function headline(play: Play, m: Model) {
 }
 
 /**
- * Who acts on what holds it, in plain words. While research is paused only Drew can lift it, so the page points at
- * Today's decision rather than saying "nothing for you" beside Today's "1 decision needs you".
+ * What holds the play, as its producer wrote it (view.blocker.sentence: the check's own line, its release named), and who
+ * acts by role. The page compares no names and composes no sentence; whether it is the viewer's to act is Today's.
  */
-function Hold({ view, open }: { view: HostView; open: Model['open'] }) {
+function Hold({ view }: { view: HostView }) {
   const b = view.blocker
   const paused = view.paused as { since?: string | null } | null | undefined
-  const action = b ? (b.action ?? plainSummary(b.text, 16)) : null
-  const why = b?.why ? (open ? b.why.replace(/^The check/, `The ${open.label} check`) : b.why) : null
-  const owner = b?.owner ?? 'Its owner'
-  const will = action ? `${owner} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.` : null
-  const held = [why ? `${why};` : null, will].filter(Boolean).join(' ')
   return (
     <>
-      {paused && <p className="pj-hold"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>}
-      {b && b.owner === 'Drew' && <p className="pj-hold"><b>Your decision:</b> {action}.</p>}
-      {b && b.owner !== 'Drew' && <p className="pj-hold">{!paused && <b>Nothing for you. </b>}<Tip text={held || owner}><span className="pj-muted">{owner} {/ and /.test(owner) ? 'are' : 'is'} on it</span></Tip></p>}
+      {paused && <p className="pj-hold"><b>Research is paused</b> <a href="/today">→ Today</a></p>}
+      {b && <p className="pj-hold"><Tip text={b.detail ?? b.text}><span>{b.sentence ?? b.text}</span></Tip>{b.actor && <span className="pj-muted"> · {b.actor.label}</span>}</p>}
     </>
   )
 }
@@ -130,32 +124,26 @@ function StepStrip({ m }: { m: Model }) {
 }
 
 /**
- * The play's head on the standing tab. With a measured gap to the paper (the host's `gap`), the hero is that gap: the best
- * proving rate against the paper's band, what passed and what the current bar needs, and the rate chart; the ladder is a
- * strip above the chart. Without one, the steps passed over time stay the hero.
+ * The play's Standing: steps passed and how long since a step was gained, what holds it in its producer's words, every
+ * paper metric against its bar (when the host serves view.bars), then the ladder and the steps over time.
  */
 export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: number }) {
   const m = model(play, now)
   if (!m) return null
   const p = m.view.progress
-  const gap = (play as { gap?: PlayGapFacts | null }).gap ?? null
-  const g = gap ? gapHeadline(gap) : null
-  const checkers = ((play as { checkers?: { label: string; firstAt: string }[] }).checkers ?? [])
+  const bars = m.view.bars ?? []
   return (
     <div className="pj">
       <section className="pj-q3" aria-label="How close is it, and what stops it">
-        {g ? (
-          <p className="pj-hero pj-hero-verdict">{g.hero}</p>
-        ) : (
-          <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
-        )}
-        <p className="pj-sentence">{g ? g.sentence : headline(play, m)}</p>
-        {/* The pass under v4 and the cap misses are the chart's own markers (REVIEW-5 #11: the line repeated them). */}
-        <Hold view={m.view} open={m.open} />
+        <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
+        <p className="pj-sentence">{headline(play, m)}</p>
+        <Hold view={m.view} />
       </section>
-      <section className="pj-q4" data-primary-content aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
+      {/* Every paper metric against its bar, from the host (view.bars), for any play with a bar.json. */}
+      {bars.length > 0 && <BarStrip bars={bars} />}
+      <section className="pj-q4" aria-label={`Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
-        {gap ? <GapChart gap={gap} checkers={checkers} now={now} /> : <Climb play={play} m={m} />}
+        <Climb play={play} m={m} />
       </section>
     </div>
   )

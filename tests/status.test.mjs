@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { agentSpendRows, AgentTable, FinalOutputPanel, finalOutputSchema, parseRecord, PlayHeader, RunOverview, newerStarted, runReceiptSchema, SpendBars, StatusPill, statusOf } from '../dist/index.js'
+import { agentSpendRows, AgentTable, FinalOutputPanel, finalOutputSchema, parseRecord, RunOverview, newerStarted, runReceiptSchema, SpendBars, StatusPill, statusOf } from '../dist/index.js'
 import { indexRecord } from '../src/viewer/model.ts'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
@@ -28,26 +28,6 @@ const drawerOf = (html, slot) => {
   const next = html.indexOf('data-drawer-for="', start + 1)
   return html.slice(start, next < 0 ? html.indexOf('</section>', start) : next)
 }
-
-test('the play header renders no red while nothing needs a person, and red only for the needs-me item of a red blocker', () => {
-  assert.equal(play.live.blocker, null)
-  const calm = renderToStaticMarkup(createElement(PlayHeader, { play }))
-  assert.deepEqual(statuses(calm).filter((status) => status.endsWith(':fail')), [])
-  assert.ok(statuses(drawerOf(calm, 'is-it-working')).includes('run:Running 3.1 h:attention'), 'the live run is amber')
-  assert.match(visible(calm), /No pass yet/)
-  assert.doesNotMatch(visible(calm), /NOT SOLVED|withheld/)
-
-  const blocker = { class: 'check-infra', severity: 'red', since: '2026-10-20T03:00:00Z', evidence: 'the check host refused the push', owner: 'Lab operator' }
-  const red = renderToStaticMarkup(createElement(PlayHeader, { play: { ...play, live: { ...play.live, blocker } } }))
-  const needs = drawerOf(red, 'needs-me')
-  assert.deepEqual(marks(red).filter((status) => status.endsWith(':fail')), ['alert:act now:fail'])
-  assert.ok(statuses(needs).includes('alert:act now:fail'), 'the fail mark sits in the needs-me drawer')
-  assert.match(visible(needs), /act now: Lab operator/, 'the fail mark names its owner in its own text')
-
-  // The same red blocker on a run that has ended is past: neutral.
-  const ended = { ...play, live: null, standing: { ...play.standing, lastEnding: { runId: 'magnetar-rust-20261019f', run: '19f', word: 'cancelled', at: '2026-10-19T23:10:41Z', blocker } } }
-  assert.deepEqual(statuses(renderToStaticMarkup(createElement(PlayHeader, { play: ended }))).filter((status) => status.endsWith(':fail')), [])
-})
 
 test("a cancelled run's agent rows read Ended in neutral, though eight of its agents were recorded down", () => {
   const record = parseRecord(run17c.record)
@@ -161,41 +141,3 @@ function markTexts(html) {
   }
   return out
 }
-
-test('every rendered status mark carries its shape, not colour alone', () => {
-  const blocker = { class: 'check-infra', severity: 'red', since: '2026-10-20T03:00:00Z', evidence: 'the check host refused the push', owner: 'Lab operator' }
-  const record = parseRecord(run17c.record)
-  const pages = [
-    renderToStaticMarkup(createElement(PlayHeader, { play })),
-    renderToStaticMarkup(createElement(PlayHeader, { play: { ...play, live: { ...play.live, blocker } } })),
-    renderToStaticMarkup(createElement(PlayHeader, { play: { ...play, live: null } })),
-    renderToStaticMarkup(createElement(AgentTable, { index: indexRecord(record), stats: run17c.record.nodeStats, doc: run17c, assessments: [], dimensions: new Map(), selected: null, onSelect: () => {} })),
-  ]
-  const all = pages.flatMap(markTexts)
-  assert.ok(all.length > 20, `${all.length} status marks`)
-  const bare = all.filter((mark) => !SHAPES.test(mark.text))
-  assert.deepEqual(bare, [], bare.map((mark) => `${mark.status}: "${mark.text}"`).join('; '))
-})
-
-test("the play's last run, a crash an hour old, is red only while no newer run of the play has started", () => {
-  // magnetar-rust-20261019b (driver-failed) as the play's last ending, settled an hour before now; the recorded play has
-  // since pressed 19c to 20c, so its crash is past. With those newer runs removed, nothing has run since: act now.
-  const crash = play.runs.find((run) => run.id === 'magnetar-rust-20261019b')
-  assert.equal(crash.state, 'driver-failed')
-  const lastEnding = { runId: crash.id, run: '19b', word: 'died', at: new Date(Date.now() - 3_600_000).toISOString(), startedAt: crash.startedAt, reason: crash.reason ?? null, blocker: null }
-  const head = (runs) => renderToStaticMarkup(createElement(PlayHeader, { play: { ...play, live: null, runs, standing: { ...play.standing, lastEnding } } }))
-  const lastRun = (html) => drawerOf(html, 'is-it-working')
-
-  const newer = play.runs.filter((run) => Date.parse(run.startedAt) > Date.parse(crash.startedAt))
-  assert.ok(newer.length >= 5, `${newer.length} newer runs recorded`)
-  const past = lastRun(head(play.runs))
-  assert.deepEqual(statuses(past), ['run:Crashed:neutral'])
-  assert.match(visible(past), /□\s+Crashed/)
-
-  const fresh = lastRun(head(play.runs.filter((run) => Date.parse(run.startedAt) <= Date.parse(crash.startedAt))))
-  assert.deepEqual(statuses(fresh), ['run:Crashed · act now: Discovery operator:fail'])
-  assert.match(visible(fresh), /■\s+Crashed · act now: Discovery operator/)
-
-  // A placeholder play that does not list the run cannot tell, so its crash reads as past.
-  assert.deepEqual(statuses(lastRun(head([]))), ['run:Crashed:neutral'])
-})
