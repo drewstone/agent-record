@@ -11,10 +11,10 @@ const ACCENT = 'var(--ar-accent, #8e59ff)'
 /**
  * Is the run working or idling, and is the spend buying steps (REVIEW-8 charts 3 and 4, Drew): agents working at each
  * of the host's progress samples and tokens per minute from the run's metered token series, on the run's own time
- * window, each chart captioned. With `marked`, each release is marked by the steps it passed. Now draws them side by
- * side under the timeline; How it ran stacks them.
+ * window, each chart captioned, on How it ran (the Now trace already shows who worked when, on one clock: audit D12).
+ * With `marked`, each release is marked by the steps it passed.
  */
-export function RunActivity({ doc, marked = false, releases = [], stacked = false }: { doc: RunDocument; marked?: boolean; releases?: readonly WorkspaceRelease[]; stacked?: boolean }) {
+export function RunActivity({ doc, marked = false, releases = [] }: { doc: RunDocument; marked?: boolean; releases?: readonly WorkspaceRelease[] }) {
   const lineage = (doc as { lineage?: { settledAt?: string | null; series?: [string, number][] }[] }).lineage?.[0]
   const start = Date.parse(doc.run.startedAt ?? '') || -Infinity
   const end = Date.parse(lineage?.settledAt ?? doc.run.settledAt ?? '') || Infinity
@@ -37,7 +37,7 @@ export function RunActivity({ doc, marked = false, releases = [], stacked = fals
   ].filter((chart): chart is { caption: string; node: ReactElement } => Boolean(chart))
   if (!charts.length) return null
   return (
-    <section className={`run-activity${stacked ? ' stacked' : ''}`} aria-label="Over the run">
+    <section className="run-activity" aria-label="Over the run">
       {charts.map(({ caption, node }) => <figure key={caption}><figcaption>{caption}</figcaption>{node}</figure>)}
     </section>
   )

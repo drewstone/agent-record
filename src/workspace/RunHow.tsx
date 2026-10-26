@@ -37,7 +37,7 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, dimensions }: { do
     // The charts and their numbers are the answer to "where did time and money go": the one primary region (reviewer gate 1).
     <div className="how" data-how>
       {stat.length > 0 && <dl className="rj-stats how-stats">{stat.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}
-      <RunActivity doc={doc} marked releases={ws.data?.releases ?? []} stacked />
+      <RunActivity doc={doc} marked releases={ws.data?.releases ?? []} />
       <div className="how-grid">
         {time.length > 0 && (
           <section aria-label="Where the time went">

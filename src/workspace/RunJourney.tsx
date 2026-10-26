@@ -6,7 +6,6 @@ import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { duration, money, StatusPill, tokens, useDocument } from './data.js'
 import { releaseName, shortRun } from './play-standing.js'
 import { CodePane, type RunWorkspaceDocument, type WorkspaceRelease } from './RunWorkspace.js'
-import { RunActivity } from './RunActivity.js'
 import { type HostView, viewAsOf, viewChip } from './view.js'
 import type { Play } from './answers.js'
 import { BarStrip } from './BarStrip.js'
@@ -382,7 +381,6 @@ export function RunJourney({ api, doc, transcript, play = null }: { api: string;
           {single ? null : (
             <section aria-label="What the agents did">
               <Lanes m={m} live={m.data.live} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
-              <RunActivity doc={doc} />
             </section>
           )}
           {/* What it produced before how it got there: on a one-agent run the files come before its transcript and history, so the
