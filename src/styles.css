@@ -3917,9 +3917,9 @@
 /* How it ran (REVIEW-8 62): numbers, the run over time, then where time and tokens went; 4 px grid, 12/14/32 type. */
 .ar-ws .how { display: grid; gap: 24px; padding: 16px; }
 .ar-ws .how .how-stats { margin: 0; }
-.ar-ws .run-activity.stacked { display: grid; gap: 8px; }
+.ar-ws .run-activity { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; } .ar-ws .run-activity figure { margin: 0; } .ar-ws .run-activity.stacked { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .ar-ws .run-activity.stacked figure { margin: 0; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; align-items: start; }
-.ar-ws .run-activity.stacked figcaption { font: 400 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); padding-top: 4px; }
+.ar-ws .run-activity figcaption { font: 400 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); padding-top: 4px; }
 .ar-ws .how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 24px 32px; }
 .ar-ws .how-grid h3 { margin: 0 0 12px; font: 600 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .how-grid .ov-hbars + .ov-hbars { margin-top: 8px; }
