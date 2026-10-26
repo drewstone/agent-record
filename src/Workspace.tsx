@@ -40,7 +40,7 @@ import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
 import { AgentTable } from './workspace/RunTable.js'
-import { outcomeOfCheck, RunReceiptView } from './workspace/RunOverview.js'
+import { outcomeOfCheck, RunOverview, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
 import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunHow } from './workspace/RunHow.js'
@@ -1253,7 +1253,7 @@ function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: str
   )
 }
 
-/** The receipt is the run overview in print mode, supplied by the same Lab document. */
+/** The run overview in print mode over the run document (its check facts too); a tagged release's receipt is the receipt alone. */
 function ReceiptPage({ api, id }: { api: string; id: string }) {
   const [runId, tag] = id.split('@')
   const url = `${api}/runs/${encodeURIComponent(runId!)}/receipt${tag ? `/${encodeURIComponent(tag)}` : ''}/receipt.json`
@@ -1262,5 +1262,5 @@ function ReceiptPage({ api, id }: { api: string; id: string }) {
   // verdict the receipt's own check recorded.
   const run = useDocument<RunDocument>(`${api}/runs/${encodeURIComponent(runId!)}`)
   if (!doc.data) return <p role="status">{doc.error ?? 'Loading receipt…'}</p>
-  return <div className="agent-record ar-ws" data-theme="light"><RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} /></div>
+  return <div className="agent-record ar-ws" data-theme="light">{run.data && !tag ? <RunOverview api={api} doc={{ ...run.data, receipt: doc.data }} print /> : <RunReceiptView api={api} receipt={doc.data} print outcome={run.data?.progress?.outcome ?? outcomeOfCheck(doc.data)} />}</div>
 }

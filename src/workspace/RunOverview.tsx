@@ -4,19 +4,40 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { FigureView, Meter } from '@tangle-network/charts/react'
 import { OUTCOME_ORDER, type TickOutcome, timeline, timeSeries } from '@tangle-network/charts'
+import type { RecordNode } from '../record.js'
 import type { RunCheck, RunDocument, RunProgress } from '../workspace-model.js'
+import type { NodeStats } from './RunTable.js'
 import { CalibrationLabels } from './Calibration.js'
 import { dataStatus, type StatusInput, StatusPill, statusOf } from './data.js'
 import type { ContractDelivery, RunReceipt, ScorePoint } from './run-receipt.js'
 import { hoursText, tokensText, utcClock } from './run-receipt.js'
-import { plainWords } from './answers.js'
+import { type Play, plainWords } from './answers.js'
 import { lineReason } from './play-standing.js'
-import { fixedIn } from './run-answers.js'
+import { fixedIn, successorOf } from './run-answers.js'
 import { pagesVersion } from './version-graph.js'
 import { RunRetention } from './RunRetention.js'
 
 export type OpenView = (section: string, patch?: Record<string, string | undefined>) => void
 const recorded = (value: unknown) => value !== null && value !== undefined && value !== ''
+
+/**
+ * The run's receipt page (/run/<id>/receipt/): the receipt with the run document's check facts (held passes, disputes,
+ * calibration, turn endings, its successor). All measures and decisions belong to the Lab document; this only formats them.
+ * The landing draws its own status and trace, so this is not on it (audit F8: two pills, two verdicts, two waterfalls).
+ */
+export function RunOverview({ api, doc, play = null, open, print = false }: { api: string; doc: RunDocument; play?: Play | null; nodes?: RecordNode[] | null; stats?: Record<string, NodeStats>; open?: OpenView; print?: boolean }) {
+  const r = doc.receipt
+  const successor = successorOf(play, doc.run?.id ?? r?.runId ?? '')
+  const settled = doc.progress ? doc.progress.final || doc.progress.phase === 'settled' : false
+  // A run without a Lab receipt still has its check facts on the run document: its verdict, a held pass, its disputes and
+  // its calibration draw from them.
+  if (!r?.outcome || !r.work) return <section className="rr-page"><h2>Run receipt</h2><p className="rr-muted">No receipt recorded yet.</p>
+    <RunNow receipt={null} outcome={doc.progress?.outcome ?? null} settled={settled} check={doc.run?.check ?? null} view={doc.view ?? null} /></section>
+  // A turn left open (the Lab's stuck-turn blocker) is not idle time: 19b's 4 h "Idle 100%" was one turn hung after a 429.
+  const block = settled ? doc.progress?.endBlocker : doc.progress?.blocker
+  return <RunReceiptView api={api} receipt={r} print={print} open={open} outcome={doc.progress?.outcome ?? (print ? outcomeOfCheck(r) : null)} settled={settled} billing={doc.run?.spend?.billing ?? null} successor={successor}
+    check={doc.run?.check ?? null} stuck={block?.class === 'stuck-turn'} actNow={!settled && block?.severity === 'red' ? (block.owner ?? 'the operator') : null} />
+}
 
 /**
  * The outcome a receipt's own check states, for a page that has no progress document (the print view, B5): the check's
