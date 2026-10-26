@@ -2498,7 +2498,7 @@
 .ar-ws .stop-steps .mono { white-space: nowrap; }
 .ar-ws .stop-cause p { margin: 8px 0 0; font-size: 14px; color: var(--ar-fg-muted); overflow-wrap: anywhere; }
 .ar-ws .last-words, .ar-ws .other-pages { display: grid; gap: 12px; }
-.ar-ws .last-word { display: grid; gap: 4px; padding: 12px 12px; border-radius: 8px; background: var(--ar-raised, var(--ar-bg-alt)); }
+.ar-ws .last-word { display: grid; gap: 4px; padding: 12px; border-radius: 8px; background: var(--ar-raised, var(--ar-bg-alt)); } .ar-ws .last-word.clamped > :last-child { max-height: 72px; overflow: hidden; } .ar-ws .last-word .link-button { margin-left: auto; }
 @media (max-width: 1100px) {
   .ar-ws .run-findings { grid-template-columns: minmax(0, 1fr); }
   .ar-ws .finding-head { grid-template-columns: minmax(0, 1fr); gap: 8px; }
