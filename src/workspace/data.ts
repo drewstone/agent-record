@@ -15,9 +15,10 @@ const NETWORK_RETRIES = 4
  * new one arrives, so a run being written never blanks between versions. A response marked stale is refetched until it is current.
  */
 export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false) {
-  // `stale`: the server sent its last composed copy while it recomposes (X-Workspace-Stale); a page says how old it is.
+  // `stale`: the server sent its last composed copy while it recomposes (X-Workspace-Stale); a page says how old it is,
+  // and `failing` why its last compose failed when it did (X-Workspace-Compose-Error, audit F11).
   // State is tagged with its URL: a changed ref or version never shows the previous payload under the new label.
-  const [state, setState] = useState<{ url: string | null; data?: T; error?: string; status?: number; loading: boolean; stale?: boolean }>({ url, loading: !!url })
+  const [state, setState] = useState<{ url: string | null; data?: T; error?: string; status?: number; loading: boolean; stale?: boolean; failing?: string }>({ url, loading: !!url })
   const etag = useRef<string | null>(null)
   const shown = useRef<string | null | undefined>(undefined)
   useEffect(() => {
@@ -46,10 +47,11 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         if (!alive) return
         dropped = 0
         stale = response.headers.get('X-Workspace-Stale') === '1'
+        const failing = response.headers.get('X-Workspace-Compose-Error') ?? undefined
         // Only a fresh 200 or 304 ends a stale episode and restores its quick retries; an error answer is not fresh (root, #180).
         if (!stale && (response.ok || response.status === 304)) retries = 0
         if (response.status === 304) {
-          setState((current) => (current.stale === stale ? current : { ...current, stale }))
+          setState((current) => (current.stale === stale && current.failing === failing ? current : { ...current, stale, failing }))
           return
         }
         if (!response.ok) {
@@ -65,7 +67,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         }
         etag.current = response.headers.get('ETag')
         const data = (await response.json()) as T
-        if (alive) setState({ url, data, loading: false, status: response.status, stale })
+        if (alive) setState({ url, data, loading: false, status: response.status, stale, failing })
       } catch (error) {
         if (alive && !controller.signal.aborted && dropped < NETWORK_RETRIES) lost = true
         else if (alive && !controller.signal.aborted)

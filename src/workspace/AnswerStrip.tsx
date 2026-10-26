@@ -3,15 +3,16 @@ import { Spark } from '@tangle-network/charts/react'
 import { type Answer, type AsOf, asOfTip, clampWords, HEADLINE_WORDS, hm, type Slot, SUBLINE_WORDS } from './answers.js'
 import { StatusPill } from './data.js'
 
-/** The page's one as-of statement: the time on screen; its date, meaning and source in the tip. */
-export function AsOfStamp({ asOf }: { asOf: AsOf | null }) {
+/** The page's one as-of statement: the time on screen; its date, meaning and source in the tip; and, when its last compose
+ * failed, that it is failing, with the host's reason in the tip. */
+export function AsOfStamp({ asOf, failing }: { asOf: AsOf | null; failing?: string }) {
   if (!asOf) return null
   // Data over 15 minutes old says its age (REVIEW-5 #8: /today read "as of 13:10Z" at 13:56Z beside fresher pages).
   const age = Math.round((Date.now() - Date.parse(asOf.at)) / 60_000)
   const stale = Number.isFinite(age) && age > 15
   return (
-    <span className={`as-of${stale ? ' is-stale' : ''}`} data-asof title={asOfTip(asOf)}>
-      as of {hm(asOf.at)}{stale ? ` · ${age < 120 ? `${age} min` : `${Math.round(age / 60)} h`} old` : ''}
+    <span className={`as-of${stale || failing ? ' is-stale' : ''}`} data-asof title={`${asOfTip(asOf)}${failing ? `\nComposer failing: ${failing}` : ''}`}>
+      as of {hm(asOf.at)}{stale ? ` · ${age < 120 ? `${age} min` : `${Math.round(age / 60)} h`} old` : ''}{failing ? ' · composer failing' : ''}
     </span>
   )
 }
