@@ -205,6 +205,16 @@ export function VersionGraph({
 const short = (sha: string) => sha.slice(0, 10)
 
 /** The run's Versions section: its releases and their scores, the graph of every version, and the selected one. */
+/** The run's delivered files, each opening in Outputs. */
+function Delivered({ files, onOpenFile }: { files: readonly { path: string }[]; onOpenFile?: (path: string) => void }) {
+  return files.length > 0 ? <p className="built-delivered">{files.map((file) => <button key={file.path} type="button" className="link-button mono" onClick={() => onOpenFile?.(file.path)}>{file.path}</button>)}</p> : null
+}
+
+/** Now's Built panel: what the run delivered, with its releases and page history one link away (audit D12: it led with repository-sync history and repeated the steps chart). */
+export function BuiltSummary({ delivered = [], onOpenFile, historyHref }: { delivered?: readonly { path: string }[]; onOpenFile?: (path: string) => void; historyHref: string }) {
+  return <div className="run-built no-inspector"><Delivered files={delivered} onOpenFile={onOpenFile} /><p className="faint">{delivered.length ? '' : 'No deliverable recorded. '}<a href={historyHref}>Releases and page history</a></p></div>
+}
+
 export function RunVersions({
   runUrl,
   poll,
@@ -240,7 +250,7 @@ export function RunVersions({
   }, [fetched.data])
   const model = useMemo(() => (parsed?.doc?.available ? runGraphModel(parsed.doc, when) : null), [parsed])
   // What the run delivered leads Built (root 02:33Z: a stale role table of zeros came first while an artifact existed).
-  const releases = <>{delivered.length > 0 && <p className="built-delivered">{delivered.map((file) => <button key={file.path} type="button" className="link-button mono" onClick={() => onOpenFile?.(file.path)}>{file.path}</button>)}</p>}<CodeReleases releases={workspace.data?.releases ?? []} /></>
+  const releases = <><Delivered files={delivered} onOpenFile={onOpenFile} /><CodeReleases releases={workspace.data?.releases ?? []} /></>
   // Code releases and page versions are independent records: a run without deliverables.git still shows its releases.
   const missing = !parsed ? (
     <p className="ws-status run-panel" role={fetched.error ? 'alert' : 'status'}>
