@@ -42,6 +42,22 @@ export const viewTrendSchema = z.object({
 })
 export type ViewTrend = z.infer<typeof viewTrendSchema>
 
+/** One paper metric against its bar (views bars[], from bar.json, barSeries and typed check bounds): the newest comparable value or bound, the best, how far from the target, and the change over the trend's window. */
+const barPointSchema = z.object({ value: z.number(), kind: z.enum(['measured', 'upper-bound', 'lower-bound']), release: z.string().nullable().optional(), runId: z.string().nullable().optional(), at: z.string().nullable().optional(), size: z.string().nullable().optional(), reason: z.string().nullable().optional() })
+export const viewBarSchema = z.object({
+  metric: z.string(),
+  label: z.string(),
+  unit: z.string(),
+  direction: z.enum(['up', 'down']).nullable().optional(),
+  target: z.object({ min: z.number().nullable().optional(), max: z.number().nullable().optional(), approx: z.number().nullable().optional() }).nullable().optional(),
+  stretch: z.object({ min: z.number().nullable().optional(), max: z.number().nullable().optional(), label: z.string().nullable().optional() }).nullable().optional(),
+  latest: barPointSchema.nullable(),
+  best: barPointSchema.nullable().optional(),
+  ratio: z.object({ x: z.number(), side: z.enum(['short', 'met', 'past']) }).nullable().optional(),
+  change: z.object({ from: z.number(), to: z.number(), since: z.string() }).nullable().optional(),
+})
+export type ViewBar = z.infer<typeof viewBarSchema>
+
 export const viewNeedSchema = z.object({
   runId: z.string().nullable().optional(),
   text: z.string(),
@@ -60,6 +76,7 @@ export const viewSchema = z
     progress: viewProgressSchema.nullable(),
     needsYou: z.array(viewNeedSchema),
     trend: viewTrendSchema.nullable().optional(),
+    bars: z.array(viewBarSchema).optional(),
   })
   .catchall(z.unknown())
 

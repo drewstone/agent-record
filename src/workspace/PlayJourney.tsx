@@ -1,4 +1,5 @@
 import { Tip } from './AnswerStrip.js'
+import { BarStrip } from './BarStrip.js'
 import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import type { Play } from './answers.js'
 import { plainSummary, stepWord } from './plain-words.js'
@@ -138,13 +139,15 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
   const m = model(play, now)
   if (!m) return null
   const p = m.view.progress
-  const gap = (play as { gap?: PlayGapFacts | null }).gap ?? null
+  // With the host's bars (every bar.json metric), the strip is the answer and the play-specific gap chart steps aside.
+  const bars = m.view.bars?.length ? m.view.bars : null
+  const gap = bars ? null : ((play as { gap?: PlayGapFacts | null }).gap ?? null)
   const g = gap ? gapHeadline(gap) : null
   const checkers = ((play as { checkers?: { label: string; firstAt: string }[] }).checkers ?? [])
   return (
     <div className="pj">
       <section className="pj-q3" aria-label="How close is it, and what stops it">
-        {g ? (
+        {bars ? <BarStrip bars={bars} /> : g ? (
           <p className="pj-hero pj-hero-verdict">{g.hero}</p>
         ) : (
           <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
