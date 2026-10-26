@@ -7,7 +7,7 @@ import { shortRun, utc } from './play-standing.js'
 
 /** The host's outside verdict per page (tangle-tools findings.page_review), in the order the trust bars read. */
 export const REVIEWS = [
-  ['new', 'New', 'var(--ar-c-ok)'],
+  ['new', 'Novel', 'var(--ar-c-ok)'],
   ['reproduction', 'Reproduced', 'var(--ar-c-info)'],
   ['known', 'Already known', 'var(--ar-c-neutral)'],
   ['wrong', 'Wrong', 'var(--ar-c-fail)'],
@@ -65,7 +65,7 @@ export function FindingsFeed({ api, query = '', program = '', review, onReview }
     <section className="findings-feed" aria-label="What the runs found" data-findings-feed={items.length}>
       <div className="findings-trust" data-review={review ?? 'all'} onClickCapture={pick}>
         <p className="faint">
-          {shown ? `Newest ${shown.items} of ${runs.results + runs.claims}` : runs.results + runs.claims} findings from {runs.withFindings} runs
+          {shown ? `Latest ${shown.items} of ${runs.results + runs.claims}` : runs.results + runs.claims} findings from {runs.withFindings} runs, by outside review
           {runs.pending ? `; ${runs.pending} runs not read yet` : ''}.
         </p>
         {shown && (
