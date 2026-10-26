@@ -343,7 +343,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
   // The standing tab is the journey (lead pick 2026-10-24 22:20Z) wherever the host serves the play's view.
   const journey = tab === 'standing' && Boolean(doc?.view)
   const releaseCount = doc?.standing?.releases?.published ?? doc?.releases?.length ?? null
-  const withheld = doc?.standing?.releases?.withheld ?? null
   const findingCount = doc?.findings?.length ?? 0
   const runCount = doc?.ledger?.runsTotal ?? doc?.runs.length ?? 0
   if (!doc && inlined && play.loading)
@@ -359,7 +358,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             onChange={(next) => update({ tab: next === 'standing' ? undefined : next, judged: undefined })}
             tabs={[
               ['standing', 'Standing'],
-              ['releases', releaseCount ? `Releases ${releaseCount}${withheld ? ` · ${withheld} not published` : ''}` : 'Releases'],
+              ['releases', releaseCount ? `Releases ${releaseCount}` : 'Releases'],
               ['runs', `Runs ${runCount}`],
               ['findings', findingCount ? `Findings ${doc?.runs.some((run) => run.findings === null) ? '≥' : ''}${findingCount}` : 'Findings'],
               ['setup', 'Setup'],
