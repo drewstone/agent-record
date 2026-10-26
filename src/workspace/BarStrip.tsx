@@ -4,7 +4,7 @@ import type { ViewBar } from './view.js'
 
 const BOUND = { measured: '', 'upper-bound': '≤ ', 'lower-bound': '≥ ' } as const
 const day = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : null)
-const times = (x: number) => `×${new Intl.NumberFormat('en-US', { maximumSignificantDigits: 2 }).format(x)}`
+const times = (x: number) => `${new Intl.NumberFormat('en-US', { maximumSignificantDigits: 2 }).format(x)}×`
 /** A declared band as one range: a single number (≈ 599 KiB) or one open end (≤ 4.0 GiB) is a band of width zero. */
 const band = (b: { min?: number | null; max?: number | null; approx?: number | null } | null | undefined) => {
   const lo = b?.min ?? b?.approx ?? b?.max ?? null
@@ -20,7 +20,8 @@ function facts(bar: ViewBar) {
   return {
     latest, format, side,
     value: latest ? `${BOUND[latest.kind]}${format(latest.value)}` : 'not measured',
-    ratio: bar.ratio ? (side === 'short' ? `${times(bar.ratio.x)} short` : side === 'past' ? `✓ ${times(bar.ratio.x)} past` : '✓ within') : '',
+    // In plain words by the metric's direction (blind judges read '×5,000 short' as jargon): below/over, within, better.
+    ratio: bar.ratio ? (side === 'short' ? `${times(bar.ratio.x)} ${bar.direction === 'down' ? 'over' : 'below'} target` : side === 'past' ? `${times(bar.ratio.x)} better than target` : 'within target') : '',
     where: latest ? [latest.release, day(latest.at), latest.size].filter(Boolean).join(' · ') : '',
     target: targetWords({ id: bar.metric, label: bar.label, unit: bar.unit, target: bar.target ?? null } as PlayBarMetric),
   }
