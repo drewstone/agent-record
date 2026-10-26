@@ -4022,3 +4022,6 @@
 .ar-ws .wp-fleet .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ar-ws .wp-side { display: grid; gap: 28px; align-content: start; }
 @media (max-width: 1100px) { .ar-ws .wp-fleet { grid-template-columns: minmax(0, 1fr); } }
+/* The run page's stat row already gives duration, cost and tokens; the waterfall's own summary strip repeated them and
+   printed "Tool calls 0" and "LLM calls —", which the journal does not count (REVIEW-9 truth). */
+.ar-ws .rj .fw-summary { display: none; }

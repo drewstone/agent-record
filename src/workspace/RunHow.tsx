@@ -9,10 +9,9 @@ import { RunActivity } from './RunActivity.js'
 const total = (t: { input: number; output: number; cacheRead: number; cacheWrite: number } | null | undefined) => (t ? t.input + t.output + t.cacheRead + t.cacheWrite : null)
 
 /**
- * How it ran (REVIEW-8: 62; charts 3 and 4): where the time and the money went, as pictures. One cost field, the run's
- * `spend.apiEquivalentUsd`, whose burn-up is `progress.samples[].runUsd` (the same Runtime run totals; /play and the
- * receipt print it). Agents are compared by tokens, the one measure every agent has; a dollar figure per agent is
- * known for only some of them. A row shows only when it has a number.
+ * How it ran (REVIEW-8: 62; charts 3 and 4): where the time and the money went, as pictures. One cost and one token count,
+ * `spend.apiEquivalentUsd` and `spend.tokens`, both floors (per agent, the larger of recorded usage and metered turns; the
+ * journal meter alone misses unmetered turns). Agents are compared by tokens, the one measure every agent has.
  */
 export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { doc: RunDocument; runUrl: string; agents: readonly RecordNode[]; stats: Record<string, NodeStats>; onAgent: (id: string) => string; wasteLabel: (dimension: string) => string }) {
   // Polled while the run is live, as RunJourney reads it, so release marks keep up (Codex review on #190).
@@ -20,13 +19,15 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
   const spend = doc.spend
   const start = Date.parse(doc.run.startedAt ?? '')
   const end = Date.parse((doc as { lineage?: { settledAt?: string | null }[] }).lineage?.[0]?.settledAt ?? doc.run.settledAt ?? '') || Date.now()
-  const final = spend.apiEquivalentUsd ?? null
-  const tokenTotal = total(spend.tokens)
+  const cost = spend.apiEquivalentUsd ?? null
+  const provenance = typeof spend.apiEquivalentProvenance === 'string' ? spend.apiEquivalentProvenance : ''
+  const floor = provenance.includes('at least')
+  const counted = total(spend.tokens)
   const billed = spend.billing?.billedUsd ?? null
   const stat: [string, string, string][] = [
-    ...(final !== null ? [['Cost', money(final), `API-equivalent: every token at list price${spend.apiEquivalentProvenance === 'estimated' ? ', Runtime’s estimate (it prices cache reads at the input rate)' : ''}`] as [string, string, string]] : []),
+    ...(cost !== null ? [['Cost', `${floor ? '≥' : ''}${money(cost)}`, `API-equivalent: every token at list price${provenance ? `, ${provenance}` : ''}`] as [string, string, string]] : []),
     ...(billed !== null ? [['Billed', money(billed), spend.billing?.basis ?? ''] as [string, string, string]] : []),
-    ...(tokenTotal !== null ? [['Tokens', tokens(tokenTotal), `${tokens(spend.tokens!.input)} in · ${tokens(spend.tokens!.output)} out · ${tokens(spend.tokens!.cacheRead)} cache read`] as [string, string, string]] : []),
+    ...(counted !== null ? [['Tokens', `≥${tokens(counted)}`, 'At least: per agent, the larger of its recorded usage and its metered turns'] as [string, string, string]] : []),
     ...(Number.isFinite(start) && end > start ? [['Duration', duration(end - start), `${new Date(start).toISOString().slice(0, 16)}Z – ${new Date(end).toISOString().slice(0, 16)}Z`] as [string, string, string]] : []),
   ]
   const time = (spend.byCategory ?? []).filter((row) => row.ms).sort((a, b) => b.ms! - a.ms!)
@@ -39,7 +40,7 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
     // The charts and their numbers are the answer to "where did time and money go": the one primary region (reviewer gate 1).
     <div className="how" data-how data-primary-content>
       {stat.length > 0 && <dl className="rj-stats how-stats">{stat.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}
-      <RunActivity doc={doc} cost releases={ws.data?.releases ?? []} stacked />
+      <RunActivity doc={doc} marked releases={ws.data?.releases ?? []} stacked />
       <div className="how-grid">
         {time.length > 0 && (
           <section aria-label="Where the time went">

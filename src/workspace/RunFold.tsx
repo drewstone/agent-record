@@ -18,8 +18,8 @@ export function RunStatusLine({ doc }: { doc: RunDocument; play?: Play | null; n
   return (
     <p className="run-status-line" role="status" data-run-status>
       <a href={`/run/${encodeURIComponent(doc.run.id)}`}>Run {shortRun(doc.run.play, doc.run.id)}</a>
-      {doc.view && <StatusPill status={viewChip(doc.view.status)} />}
-      {doc.view && <span className="faint">{doc.view.progress?.sentence ?? doc.view.sentence}</span>}
+      {/* The tab pages carry the run's name and state; its sentence is the Now header's and sits in the pill's tooltip (gate 1). */}
+      {doc.view && <StatusPill status={viewChip(doc.view.status)} title={doc.view.progress?.sentence ?? doc.view.sentence ?? undefined} />}
     </p>
   )
 }
