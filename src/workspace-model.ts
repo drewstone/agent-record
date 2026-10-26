@@ -303,7 +303,7 @@ export const playsDocumentSchema = z
       banked: z.number(), next: z.number() })).optional(),
     runs: z.array(z.object({ id: z.string(), play: z.string(), program: z.string().nullable(), state: z.string(),
       startedAt: time.nullable(), activeAt: time.nullable(), reason: z.string().nullable(), stopCause: z.string().nullable(),
-      hidden: hiddenReason.nullable(), apiEquivalentUsd: usd.optional() })).optional(),
+      hidden: hiddenReason.nullable(), apiEquivalentUsd: usd.optional(), apiEquivalentProvenance: z.string().nullable().optional() })).optional(),
   })
   .catchall(z.unknown())
 

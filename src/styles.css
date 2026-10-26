@@ -3253,7 +3253,7 @@
 .ar-ws .finding-group > summary { cursor: pointer; padding: 4px 0; font-size: var(--ar-text-s); }
 .ar-ws .finding-group > summary .faint { font-size: 12px; }
 .ar-ws .finding-group ul { margin: 0; padding: 0; list-style: none; display: grid; }
-.ar-ws .finding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 4px 0 4px 12px; border-left: 2px solid var(--ar-border); }
+.ar-ws .finding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 4px 8px 4px 12px; border-left: 2px solid var(--ar-border); }
 .ar-ws .group-verified .finding-row { border-left-color: var(--ar-c-ok); }
 .ar-ws .group-contradicted .finding-row { border-left-color: var(--ar-c-neutral); }
 .ar-ws .group-undecided .finding-row { border-left-color: var(--ar-c-neutral); }
@@ -3562,9 +3562,7 @@
 .ar-ws .rj-stats > div { display: flex; flex-direction: column-reverse; gap: 8px; }
 .ar-ws .rj-stats dt { font: 400 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .rj-stats dd { margin: 0; font: 600 32px/32px var(--ar-font-body); font-variant-numeric: tabular-nums; }
-.ar-ws .rj-prompt { margin-top: 8px; }
-.ar-ws .rj-prompt > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
-.ar-ws .rj-prompt > p { margin: 8px 0 0; }
+.ar-ws .rj-prompt { margin: 4px 0 0; }
 .ar-ws .rj h3 { margin: 0 0 12px; font: 600 12px/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .rj-hero { display: grid; gap: 12px; }
 .ar-ws .rj-stuck, .ar-ws .rj-next, .ar-ws .rj-releases { margin: 0; font-size: 14px; }
@@ -3727,6 +3725,7 @@
 .ar-ws .run-files-pane > .run-artifacts-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; padding: 12px; }
 .ar-ws .run-file-browser { flex: 1; min-height: 320px; height: 100%; }
 .ar-ws .run-file-browser:has(.run-file[data-fit=content]) { flex: 0 0 auto; min-height: 0; height: auto; }
+.ar-ws .run-file[data-fit=content] { min-height: 0; }
 .ar-ws .run-file-selection { flex: none; }
 .ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection { gap: 12px; }
 .ar-ws .run-artifacts-wrap[data-embedded] .run-file-selection label { flex: 1; min-width: 0; }
