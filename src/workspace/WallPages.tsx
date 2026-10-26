@@ -29,7 +29,7 @@ interface SandboxesDoc {
 interface Idea { id: string; title: string; origin: string; destination: string; stage: string; summary: string; problems: number; created: string | null; problemStatements: string[] }
 interface IdeasDoc { asOf: string | null; stages: { stage: string; count: number | null; of: number | null }[]; awaiting: number | null; decideUrl: string | null; rows: Idea[] }
 
-const TONE: Record<string, string> = { ok: 'var(--ar-c-ok, #22c55e)', warn: 'var(--ar-c-warn, #f5a524)', breach: 'var(--ar-c-fail, #ef4444)', stale: 'var(--ar-fg-faint)', unknown: 'var(--ar-fg-faint)' }
+const TONE: Record<string, string> = { ok: 'var(--ar-c-ok)', warn: 'var(--ar-c-run)', breach: 'var(--ar-c-fail)', stale: 'var(--ar-fg-faint)', unknown: 'var(--ar-fg-faint)' }
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${Math.round(v * 100)}%`)
 const usd = (v: number | null | undefined, digits = 0) => (v === null || v === undefined ? '—' : `$${v.toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits })}`)
 const num = (v: number | null | undefined, digits = 0) => (v === null || v === undefined ? '—' : v.toFixed(digits))
@@ -79,7 +79,7 @@ function HostCard({ h }: { h: Host }) {
       </Tip>
       <Tip className="wp-bar" text={`load1 ${num(h.load1, 1)} on ${h.cores ?? '—'} cores; the limit is ${num(h.loadLimit)}`}>
         <span className="wp-val"><b>{num(h.loadPerCore, 1)}</b> load per core</span>
-        <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : 'var(--ar-accent)'} />
+        <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : 'var(--ws-accent)'} />
       </Tip>
       <DiskBar h={h} />
       {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label}><Tip text={`${b.text} (${b.limit})`}>{b.label}</Tip></li>)}</ul>}
@@ -177,9 +177,9 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
     <>
       <div className="wp-stats">
         <Stat label="Autoscaled hosts" value={`${t.hosts ?? '—'} · ${usd(t.monthlyUsd)}/mo`}><Tip className={t.idleHosts ? 'wp-warn' : 'wp-muted'} text={`${t.idleHosts ?? '—'} idle, ${usd(t.idleMonthlyUsd)} a month; ${usd(t.perHourUsd, 2)} an hour at list price`}>{t.idleHosts ? `${t.idleHosts} idle` : 'none idle'}</Tip></Stat>
-        <Stat label="Slots running" value={pct(t.runningShare)}><Tip text={`${t.running ?? '—'} of ${t.slots ?? '—'} slots run a sandbox; ${t.discoveryRunning ?? '—'} are Discovery's`}><Meter used={t.running} total={t.slots} tone="var(--ar-accent)" text="" /></Tip></Stat>
-        <Stat label="Parked" value={String(t.parked ?? '—')}><Tip text={`${t.discoveryParked ?? '—'} of them Discovery's`}><Meter used={t.parked} total={t.slots} tone="var(--ar-accent)" text="" /></Tip></Stat>
-        <Stat label="Fleet key left" value={usd(key.leftUsd, 2)}><Tip text={`${key.name ?? 'Discovery fleet key'}: ${usd(key.spentUsd, 2)} spent of a ${usd(key.capUsd, 2)} cap`}><Meter used={key.spentUsd} total={key.capUsd} tone="var(--ar-accent)" text="" /></Tip></Stat>
+        <Stat label="Slots running" value={pct(t.runningShare)}><Tip text={`${t.running ?? '—'} of ${t.slots ?? '—'} slots run a sandbox; ${t.discoveryRunning ?? '—'} are Discovery's`}><Meter used={t.running} total={t.slots} tone="var(--ws-accent)" text="" /></Tip></Stat>
+        <Stat label="Parked" value={String(t.parked ?? '—')}><Tip text={`${t.discoveryParked ?? '—'} of them Discovery's`}><Meter used={t.parked} total={t.slots} tone="var(--ws-accent)" text="" /></Tip></Stat>
+        <Stat label="Fleet key left" value={usd(key.leftUsd, 2)}><Tip text={`${key.name ?? 'Discovery fleet key'}: ${usd(key.spentUsd, 2)} spent of a ${usd(key.capUsd, 2)} cap`}><Meter used={key.leftUsd} total={key.capUsd} tone="var(--ws-accent)" text="" /></Tip></Stat>
       </div>
       <section aria-label="Hosts">
         <table className="wp-table">
@@ -189,8 +189,8 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
               <tr key={h.id} data-state={h.state}>
                 <td><Tip text={`${h.id} · ${h.type}${h.heldBy && h.heldBy !== '—' ? ` · parked boxes held by ${h.heldBy}` : ''}`}><b>{h.name}</b></Tip> <span className="wp-muted">{h.type}</span></td>
                 <td className={h.state === 'idle' ? 'wp-warn' : 'wp-muted'}>{h.state}</td>
-                <td><Tip text={`${h.running ?? '—'} running and ${h.parked ?? '—'} parked of ${h.slots ?? '—'} slots`}><Meter used={(h.running ?? 0) + (h.parked ?? 0)} total={h.slots} tone="var(--ar-accent)" text={`${h.running ?? '—'} running · ${h.parked ?? '—'} parked of ${h.slots ?? '—'}`} /></Tip></td>
-                <td><Tip text={`CPU ${pct(h.cpu)} at the host scan`}><Meter used={h.cpu} total={1} tone="var(--ar-accent)" text={pct(h.cpu)} /></Tip></td>
+                <td><Tip text={`${h.running ?? '—'} running and ${h.parked ?? '—'} parked of ${h.slots ?? '—'} slots`}><Meter used={(h.running ?? 0) + (h.parked ?? 0)} total={h.slots} tone="var(--ws-accent)" text={`${h.running ?? '—'} running · ${h.parked ?? '—'} parked of ${h.slots ?? '—'}`} /></Tip></td>
+                <td><Tip text={`CPU ${pct(h.cpu)} at the host scan`}><Meter used={h.cpu} total={1} tone="var(--ws-accent)" text={pct(h.cpu)} /></Tip></td>
                 <td className="wp-r wp-num">{usd(h.monthlyUsd)}</td>
                 {writer && <td>{h.retire && h.state === 'idle' && <button type="button" onClick={() => setRetiring(h.id)}>Retire</button>}</td>}
               </tr>
@@ -201,9 +201,9 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
       </section>
       <div className="wp-split">
         <section aria-label="Hosts over time"><h2><Tip text={`Autoscaler decision ${doc.scaler.decision}: ${doc.scaler.current} counted, target ${doc.scaler.target}, max ${doc.scaler.max}; birth breaker ${doc.scaler.breaker}; ${doc.scaler.pendingRetirement ?? 0} pending retirement; last error ${doc.scaler.error ?? 'none'}`}>Autoscaled hosts, {doc.hostsOverTime.days} days</Tip></h2>
-          <div><Lines series={[{ name: 'hosts', color: 'var(--ar-accent)', points: doc.hostsOverTime.points.map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
+          <div><Lines series={[{ name: 'hosts', color: 'var(--ws-accent)', points: doc.hostsOverTime.points.map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
         <section aria-label="Why parked sandboxes stay"><h2>Why {t.parked ?? '—'} stay parked</h2>
-          <HBars limit={doc.parked.length} format={(v) => String(v)} color="var(--ar-accent)"
+          <HBars limit={doc.parked.length} format={(v) => String(v)} color="var(--ws-accent)"
             rows={doc.parked.map((c) => ({ label: c.label, value: c.boxes, note: `${c.discovery} Discovery's${c.hours === null ? '' : ` · ${num(c.hours, 1)} h`}` }))} /></section>
       </div>
     </>
@@ -283,7 +283,7 @@ function IdeasView({ doc }: { doc: IdeasDoc }) {
           {decided.map((r) => (
             <li key={r.id} aria-current={r.id === picked || undefined}>
               <button type="button" aria-expanded={r.id === picked} onClick={() => pick(r.id)}>
-                <i className="wp-dot" style={{ background: r.stage === 'discarded' ? 'transparent' : 'var(--ar-accent)', borderColor: 'var(--ar-accent)' }} />
+                <i className="wp-dot" style={{ background: r.stage === 'discarded' ? 'transparent' : 'var(--ws-accent)', borderColor: 'var(--ws-accent)' }} />
                 <b>{r.title}</b><span className="wp-muted">{r.stage}</span><span className="wp-num">{r.problems}</span>
               </button>
               {r.id === picked && <IdeaDetail idea={r} decideUrl={doc.decideUrl} />}
