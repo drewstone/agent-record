@@ -248,7 +248,7 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
         {notSettled && groups.lead.length > 0 && (
           <p className="findings-caution">Ended {doc.run.state.replaceAll('-', ' ')}: none of these reached the run's declared result.</p>
         )}
-        {(groups.results.length > 0 || groups.lead.length > 0) && (
+        {(groups.results.length > 0 || groups.lead.length > 0 || findings.agents.some((agent) => agent.lastWords)) && (
           <div className="findings-primary" data-primary-content>
             {groups.results.length > 0 && (
               <div className="findings-lead">
@@ -266,28 +266,29 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
                 ))}
               </ol>
             )}
+            {/* What each agent said last fills the tab under its findings: their own words, open (REVIEW-10). */}
+            {findings.agents.some((agent) => agent.lastWords) && (
+              <details className="last-words" open>
+                <summary>Each agent's last words</summary>
+                {findings.agents
+                  .filter((agent) => agent.lastWords)
+                  .map((agent) => (
+                    <div key={agent.agent ?? agent.label ?? 'agent'} className="last-word">
+                      <div className="finding-meta">
+                        <b>{short(agent.label)}</b>
+                        <span className="mono">{clock(agent.lastWords!.at)}</span>
+                      </div>
+                      <MessageText text={agent.lastWords!.text} />
+                    </div>
+                  ))}
+              </details>
+            )}
           </div>
         )}
         {groups.lead.length > SHOWN && (
           <button type="button" className="ui-button" onClick={() => setAll((value) => !value)}>
             {all ? 'Show fewer' : `Show all ${groups.lead.length}`}
           </button>
-        )}
-        {findings.agents.some((agent) => agent.lastWords) && (
-          <details className="last-words">
-            <summary>Each agent's last words</summary>
-            {findings.agents
-              .filter((agent) => agent.lastWords)
-              .map((agent) => (
-                <div key={agent.agent ?? agent.label ?? 'agent'} className="last-word">
-                  <div className="finding-meta">
-                    <b>{short(agent.label)}</b>
-                    <span className="mono">{clock(agent.lastWords!.at)}</span>
-                  </div>
-                  <MessageText text={agent.lastWords!.text} />
-                </div>
-              ))}
-          </details>
         )}
         {groups.rest.length > 0 && (
           <details className="other-pages">

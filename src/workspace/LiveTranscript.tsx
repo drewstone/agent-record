@@ -138,7 +138,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     <div className="message-filters">
       <label>Agent <select aria-label="Agent conversation" value={node} onChange={(event) => onSelect(event.target.value)}>{nodes.map((item) => <option key={item.id} value={item.id}>{item.label}{item.parent ? ' (child)' : ' (root)'}</option>)}</select></label>
       <button type="button" className="ui-button" disabled={!state.earlier || state.loading} onClick={() => older.current?.()}>Load older</button>
-      <button type="button" className="ui-button" onClick={() => setReload((value) => value + 1)}>Latest</button>
+      <button type="button" className="ui-button" disabled={!state.history} onClick={() => setReload((value) => value + 1)}>Latest</button>
       {onRecorded && <button type="button" className="ui-button" onClick={onRecorded}>Timeline and usage</button>}
       <span className="muted">{state.history && alive ? 'Reading history, new output continues' : alive ? 'Live transcript' : 'Settled transcript'} · {state.rows.length} stream events{state.trimmed ? ' · window limited to 2,000 events' : ''}</span>
     </div>

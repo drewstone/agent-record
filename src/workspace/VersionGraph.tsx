@@ -212,6 +212,8 @@ export function RunVersions({
   onSelect,
   onClose,
   onOpenAgent,
+  delivered = [],
+  onOpenFile,
 }: {
   runUrl: string
   poll?: number
@@ -219,6 +221,8 @@ export function RunVersions({
   onSelect: (commit: string) => void
   onClose: () => void
   onOpenAgent: (node: string) => void
+  delivered?: readonly { path: string }[]
+  onOpenFile?: (path: string) => void
 }) {
   const fetched = useDocument<unknown>(`${runUrl}/versions`, poll, true)
   // Polled like /versions while the run is live, so new releases reach the chart (Codex review on #190).
@@ -235,7 +239,8 @@ export function RunVersions({
     return result.success ? { doc: result.data, error: null } : { doc: null, error: result.error.issues[0]?.message ?? 'invalid version graph' }
   }, [fetched.data])
   const model = useMemo(() => (parsed?.doc?.available ? runGraphModel(parsed.doc, when) : null), [parsed])
-  const releases = <CodeReleases releases={workspace.data?.releases ?? []} />
+  // What the run delivered leads Built (root 02:33Z: a stale role table of zeros came first while an artifact existed).
+  const releases = <>{delivered.length > 0 && <p className="built-delivered">{delivered.map((file) => <button key={file.path} type="button" className="link-button mono" onClick={() => onOpenFile?.(file.path)}>{file.path}</button>)}</p>}<CodeReleases releases={workspace.data?.releases ?? []} /></>
   // Code releases and page versions are independent records: a run without deliverables.git still shows its releases.
   const missing = !parsed ? (
     <p className="ws-status run-panel" role={fetched.error ? 'alert' : 'status'}>
@@ -255,7 +260,7 @@ export function RunVersions({
           <p className="faint lineage-key">{doc.commits.length} page versions on {doc.lanes.length} lanes{doc.builtAt ? ` · read ${when(doc.builtAt)}` : ''}</p>
           <div data-primary-content><VersionGraph model={model} selected={commit?.id ?? null} onSelect={onSelect} label="Run versions" /></div>
           <Releases doc={doc} selected={commit?.id ?? null} onSelect={onSelect} />
-          {doc.roles && <RunRoles roles={doc.roles} />}
+          {doc.roles && <details className="built-roles"><summary>Role scorecard</summary><RunRoles roles={doc.roles} /></details>}
         </section>
         {commit && (
           <aside className="inspector-pane" aria-label="Inspector">
