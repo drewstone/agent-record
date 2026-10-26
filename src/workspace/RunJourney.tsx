@@ -104,19 +104,19 @@ function NextStep({ blocker, need, paused }: { blocker: Blocker; need: Need | un
   )
 }
 
-/** Q3 on the run: the best release's steps as the hero, the step it stops at, and the action that clears it. */
-function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: (release: string) => void }) {
+/** Q3 on the run: the best release's verdict and what holds it (`part` 'verdict', first), its steps and releases (`part` 'steps', Details on a multi-agent run). */
+function Ladder({ doc, m, onRelease, part }: { doc: RunDocument; m: Model; onRelease: (release: string) => void; part?: 'verdict' | 'steps' }) {
+  const [steps, verdict] = [part !== 'verdict', part !== 'steps']
   const lifecycle = (doc.view as { lifecycle?: Lifecycle | null } | null | undefined)?.lifecycle ?? null
   const blocker = doc.view?.blocker as (Blocker | null | undefined)
   return (
     <section className="rj-hero" aria-label="How close the best release is">
-      {/* One line, like the play page's strip (review 2 #10: six 100 px tiles above the timeline). */}
-      {m.best?.steps && m.best.steps.length > 1 && (
+      {steps && m.best?.steps && m.best.steps.length > 1 && (
         <ol className="pj-strip" aria-label={`Steps ${m.best.release} passed`}>
           {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><Tip text={`Step ${i + 1} of ${m.best!.steps!.length}, ${s.label}: ${stepWord(s.state)} on ${m.best!.release}`}><i />{s.label}</Tip></li>)}
         </ol>
       )}
-      <p className="rj-stuck">
+      {verdict && <p className="rj-stuck">
         {/* What this run's best release reached, not how long the play has been stuck: that is the play page's one
             standing fact, and a per-run clock contradicted it (review 1 #2: 22a "54 h since rc1" on a 6.7 h run). */}
         {/* Said once each (root 2026-10-25): the status pill says which check, the header pill and the line below say the
@@ -124,11 +124,11 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
         {/* While the goal's cleanup is unconfirmed the header leads with it, and the narrower check verdict sits here by its receipt (root 23:24Z). */}
         {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
         {m.best ? <><b>{releaseName(m.best.release, m.data.lineage)}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : 'every step passes'}</> : 'No release was checked.'}
-      </p>
+      </p>}
       {/* A settled run's blocker is history: only a live run, or one waiting on its owner, says who acts now (review 2 #3:
           21c's Oct 23 blocker contradicted the play's current one). */}
-      {blocker && (doc.execution?.alive || blocker.actor?.role === 'owner') && <NextStep blocker={blocker} need={(doc.view?.needsYou as Need[] | undefined)?.[0]} paused={Boolean(doc.view?.paused)} />}
-      {m.releases.length > 1 && <p className="rj-releases">
+      {verdict && blocker && (doc.execution?.alive || blocker.actor?.role === 'owner') && <NextStep blocker={blocker} need={(doc.view?.needsYou as Need[] | undefined)?.[0]} paused={Boolean(doc.view?.paused)} />}
+      {steps && m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${score(m.releases[0]!)}`
           // A release with no tag recorded has no name the code reader resolves (21c rc116 opened a 404 pane): a label, not a
@@ -368,7 +368,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
               receipt records (root 23:24Z); the check's verdict then sits on the hero line. */}
           {lifecycle && lifecycle.state !== 'done' ? <span className="rj-life" title={`${goalLine ? `${goalLine}\n` : ''}${lifecycle.sentence} ${lifecycle.resources?.map((r) => `${r.id}: removal ${r.removal ?? 'unrecorded'}`).join('; ') ?? ''} · from RECEIPT.json${lifecycle.source ? ` (${lifecycle.source})` : ''}`}>{lifecycle.sentence.replace(/^Teardown not confirmed:\s*/, 'Teardown: ').split(';')[0]}</span> : view && <StatusPill status={viewChip(view.status)} title={goalLine} />}
           {/* Drew's layout (gate 1): one header row of name, pill and the run's numerals; the goal is the trace card's one line and
-              the pill's tooltip, the prompt is in Details at the foot. A one-agent run has no trace, so it keeps them up. */}
+              the pill's tooltip, the prompt and the steps are in Details at the foot. A one-agent run has no trace, so it keeps them up. */}
           {m && !single && <Stats m={m} spend={doc.run.spend} />}
           {view && <AsOfStamp asOf={viewAsOf(view)} />}
         </div>
@@ -377,7 +377,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
       {!m ? <p className="rw-empty">{error ? `The run's agents are unavailable: ${error}` : 'Reading the run…'}</p> : (
         <>
           {/* How far the best release got and what holds it, first on every run (audit D5: 22a's sat in a closed Details). */}
-          <Ladder doc={doc} m={m} onRelease={openRelease} />
+          <Ladder doc={doc} m={m} onRelease={openRelease} part={single ? undefined : 'verdict'} />
           {single ? null : (
             <section aria-label="What the agents did">
               <Lanes m={m} live={m.data.live} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
@@ -390,7 +390,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single && work}
           {node && <Drill m={m} node={node} transcript={transcript} onOpen={(release, path) => { update({ codeRef: release, fileSource: 'code', codeFile: path, codeView: 'diff' }); document.querySelector('.rj-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} onPick={setPicked} />}
           {!single && work}
-          {!single && <details className="rj-details"><summary>Details</summary><Trigger doc={doc} m={m} /></details>}
+          {!single && <details className="rj-details"><summary>Details</summary><Trigger doc={doc} m={m} /><Ladder doc={doc} m={m} onRelease={openRelease} part="steps" /></details>}
         </>
       )}
     </section>
