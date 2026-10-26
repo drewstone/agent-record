@@ -197,7 +197,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
   // The header's stat row owns the run's numbers, so the chart's summary strip is off; bars take the legend's outcome colours (blind round 21).
-  return <TraceWaterfall trace={trace} live={live} defaultView="agents" agentFill="outcome" label="Trace" summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
+  return <TraceWaterfall trace={trace} live={live} defaultView="agents" label="Trace" summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
 }
 
 /**
