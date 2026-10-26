@@ -228,7 +228,7 @@ function PlaysPage({ api }: { api: string }) {
     const clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
     return <div className="ws-page ws-plays" data-plays-home="runs">
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
-      {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer" data-primary-content><ReliabilityPanel api={api} />
+      {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer"><ReliabilityPanel api={api} />
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <caption className="faint">{shown.length} runs, last 30 days</caption>
         <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th><th className="num" title="Every token at list price, whoever paid: the run page's figure">API-equivalent</th></tr></thead>
@@ -247,7 +247,7 @@ function PlaysPage({ api }: { api: string }) {
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
-          <div className="table-scroll" data-primary-content>
+          <div className="table-scroll">
             <PlaysTable rows={rows.slice(0, shownRows)} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} />
           </div>
           {rows.length > shownRows && (

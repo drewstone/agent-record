@@ -77,7 +77,7 @@ export function FindingsFeed({ api, query = '', program = '', review, onReview }
         )}
       </div>
       {!items.length && <p className="ws-status">No findings match.</p>}
-      <div className="finding-groups" data-primary-content>
+      <div className="finding-groups">
         {(shown ? open : [{ id: null, label: null, color: null, rows: items }]).map((group) => {
           const rows = review || !shown ? group.rows.slice(0, more) : group.rows.slice(0, GROUP_ROWS)
           return (

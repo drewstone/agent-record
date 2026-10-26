@@ -2,9 +2,10 @@ import type { OverviewAttention, OverviewDocument } from '../overview-model.js'
 import { Lines } from '@tangle-network/charts/react'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { hm } from './answers.js'
-import { useDocument } from './data.js'
+import { BarStrip } from './BarStrip.js'
+import { StatusPill, useDocument } from './data.js'
 import { plainSummary } from './plain-words.js'
-import type { HostView, ViewTrend } from './view.js'
+import { type HostView, type ViewTrend, viewChip } from './view.js'
 
 /**
  * Today answers two questions (BRIEF.md amendment 2026-10-24 19:55Z; the lead's hybrid pick at 22:05Z).
@@ -16,7 +17,6 @@ type Play = { play: string; title: string; view: HostView }
 type Movement = ViewTrend['movement']
 
 const ORDER: Record<Movement, number> = { regressed: 0, stuck: 1, moving: 2, solved: 3 }
-const WORD: Record<Movement, string> = { regressed: 'Regressed', stuck: 'Stuck', moving: 'Moving', solved: 'Solved' }
 const playHref = (play: string, tab?: string) => `/play/${encodeURIComponent(play)}${tab ? `?tab=${tab}` : ''}`
 
 const hoursSince = (iso: string | null | undefined, now: number) => (iso ? Math.max(0, (now - Date.parse(iso)) / 3_600_000) : null)
@@ -71,29 +71,22 @@ function TrendChart({ trend }: { trend: ViewTrend }) {
 }
 
 function moveLine(trend: ViewTrend, now: number) {
-  if (trend.movement === 'stuck') return `${ago(hoursSince(trend.since, now))} at ${trend.best}/${trend.total}`
-  if (trend.movement === 'regressed') return `${trend.newest.release} passes ${trend.newest.passed}/${trend.total}, best ${trend.best}/${trend.total}`
-  if (trend.movement === 'moving') return `reached ${trend.best}/${trend.total} ${ago(hoursSince(trend.since, now))} ago`
-  return `all ${trend.total} steps`
+  if (trend.movement === 'stuck') return `no new step in ${ago(hoursSince(trend.since, now))}`
+  if (trend.movement === 'regressed') return `${trend.newest.release} lost a step`
+  return `new step ${ago(hoursSince(trend.since, now))} ago`
 }
 
-/** What holds the play, in plain words with who acts: the host's blocker action and owner. */
-function holdLine(view: HostView) {
-  const blocker = view.blocker
-  if (!blocker) return null
-  const action = blocker.action ?? plainSummary(blocker.text, 16)
-  // The play page's sentence, word for word (review 2 #3): "<owner> will <action>."
-  return `${view.needsYou.length ? 'You' : blocker.owner ?? 'Its owner'} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.`
-}
+/** What holds the play: its producer's one sentence, printed as served. */
+const holdLine = (view: HostView) => view.blocker ? view.blocker.sentence ?? view.blocker.text : null
 
 /** A group's short label: what holds its plays, by the blocker's kind, or that no check counts their steps. */
-const groupLabel = (play: Play, reason: string | null) =>
-  !reason ? 'No step check' : play.view.blocker?.kind === 'stopped' ? 'Stopped' : play.view.needsYou.length ? 'Waiting on you' : 'Blocked'
+const groupLabel = (play: Play) =>
+  !play.view.blocker ? 'No step check' : play.view.blocker.kind === 'stopped' ? 'Stopped' : play.view.needsYou.length ? 'Waiting on you' : 'Blocked'
 
-/** Plays grouped by what holds them, the largest group first; plays nothing holds group under null (they need a check). */
-function groups(plays: Play[]): [string | null, Play[]][] {
-  const by = new Map<string | null, Play[]>()
-  for (const p of plays) by.set(holdLine(p.view), [...(by.get(holdLine(p.view)) ?? []), p])
+/** Plays grouped by what holds them, the largest group first. */
+function groups(plays: Play[]): [string, Play[]][] {
+  const by = new Map<string, Play[]>()
+  for (const p of plays) by.set(groupLabel(p), [...(by.get(groupLabel(p)) ?? []), p])
   return [...by.entries()].sort((a, b) => b[1].length - a[1].length)
 }
 
@@ -120,21 +113,20 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
       </section>
       <section className="tj-q2" aria-label="Is research working">
         {measured.length > 0 && (
-          <ul className="tj-rows" data-primary-content>
+          <ul className="tj-rows">
             {measured.map(({ play, title, view }) => (
               <li key={play}>
                 <span className="tj-row-head">
                 <a className="tj-row-title" href={playHref(play)}>{title}</a>
+                <StatusPill status={viewChip(view.status)} />
                 <Tip className="tj-ladder" text={`${view.trend.best} of ${view.trend.total} steps passed${view.progress?.steps.length ? `: ${view.progress.steps.map((step) => `${step.label} ${step.state}`).join(', ')}` : ''}`}>
                   <span className="tj-steps">{view.progress?.steps.map((step, i) => <i key={i} data-step={step.state} title={step.label} />)}</span>
                   <span className="tj-num">{view.trend.best}/{view.trend.total}</span>
                 </Tip>
-                <span className="tj-state">
-                  <b className={`tj-word tj-${view.trend.movement}`}>{WORD[view.trend.movement]}</b> {moveLine(view.trend, now)}
-                  {holdLine(view) && <span className="tj-muted tj-hold">{holdLine(view)}</span>}
+                <span className={`tj-move tj-${view.trend.movement}`}>{moveLine(view.trend, now)}</span>
                 </span>
-                </span>
-                <TrendChart trend={view.trend} />
+                {view.bars?.length ? <BarStrip bars={view.bars} /> : <TrendChart trend={view.trend} />}
+                {holdLine(view) && <p className="tj-hold" title={view.blocker?.detail ?? undefined}>{holdLine(view)}</p>}
               </li>
             ))}
           </ul>
@@ -147,11 +139,10 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
             {/* A short label and count above each list, folded, the reason inside (REVIEW-7 #3: a 350 px gap between sentence
                 labels and their links). */}
             <div className="tj-blind">
-              {groups(blind).map(([reason, plays]) => (
-                <details key={reason ?? ''}>
-                  <summary><b>{groupLabel(plays[0]!, reason)}</b> <span className="tj-muted">{plays.length}</span></summary>
-                  {reason && <p className="tj-muted">{reason}</p>}
-                  <span className="tj-names">{plays.map((p) => <a key={p.play} href={playHref(p.play, reason ? undefined : 'setup')}>{p.title}</a>)}</span>
+              {groups(blind).map(([label, plays]) => (
+                <details key={label}>
+                  <summary><b>{label}</b> <span className="tj-muted">{plays.length}</span></summary>
+                  <span className="tj-names">{plays.map((p) => <a key={p.play} href={playHref(p.play, p.view.blocker ? undefined : 'setup')} title={holdLine(p.view) ?? undefined}>{p.title}</a>)}</span>
                 </details>
               ))}
             </div>
