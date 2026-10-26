@@ -20,7 +20,7 @@ const ORDER: Record<Movement, number> = { regressed: 0, stuck: 1, moving: 2, sol
 const playHref = (play: string, tab?: string) => `/play/${encodeURIComponent(play)}${tab ? `?tab=${tab}` : ''}`
 
 const hoursSince = (iso: string | null | undefined, now: number) => (iso ? Math.max(0, (now - Date.parse(iso)) / 3_600_000) : null)
-const ago = (h: number | null) => (h === null ? '' : h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} days`)
+const ago = (h: number | null) => (h === null ? '' : h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} days`)
 
 /** One of the owner's decisions (the host's needsYou): the host's sentence, what waiting costs, and for the writer the control that does it (a control copies its command). */
 function Decision({ item, writer }: { item: OverviewAttention; writer: boolean }) {
@@ -53,13 +53,13 @@ function moveLine(trend: ViewTrend, now: number) {
 const holdLine = (view: HostView) => view.blocker ? view.blocker.sentence ?? view.blocker.text : null
 
 /** A group's short label: what holds its plays, by the blocker's kind, or that no check counts their steps. */
-const groupLabel = (play: Play) =>
-  !play.view.blocker ? 'No step check' : play.view.blocker.kind === 'stopped' ? 'Stopped' : play.view.needsYou.length ? 'Waiting on you' : 'Blocked'
+const groupLabel = (play: Play, yours: Set<string | undefined>) =>
+  !play.view.blocker ? 'No step check' : play.view.blocker.kind === 'stopped' ? 'Stopped' : yours.has(play.play) ? 'Waiting on you' : 'Blocked'
 
 /** Plays grouped by what holds them, the largest group first. */
-function groups(plays: Play[]): [string, Play[]][] {
+function groups(plays: Play[], yours: Set<string | undefined>): [string, Play[]][] {
   const by = new Map<string, Play[]>()
-  for (const p of plays) by.set(groupLabel(p), [...(by.get(groupLabel(p)) ?? []), p])
+  for (const p of plays) by.set(groupLabel(p, yours), [...(by.get(groupLabel(p, yours)) ?? []), p])
   return [...by.entries()].sort((a, b) => b[1].length - a[1].length)
 }
 
@@ -112,7 +112,7 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
             {/* A short label and count above each list, folded, the reason inside (REVIEW-7 #3: a 350 px gap between sentence
                 labels and their links). */}
             <div className="tj-blind">
-              {groups(blind).map(([label, plays]) => (
+              {groups(blind, new Set(mine.map((item) => item.play))).map(([label, plays]) => (
                 <details key={label}>
                   <summary><b>{label}</b> <span className="tj-muted">{plays.length}</span></summary>
                   <span className="tj-names">{plays.map((p) => <a key={p.play} href={playHref(p.play, p.view.blocker ? undefined : 'setup')} title={holdLine(p.view) ?? undefined}>{p.title}</a>)}</span>
