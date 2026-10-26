@@ -7,6 +7,7 @@ import { ENDING_GLYPH, hostWords } from './play-standing.js'
  * about a minute in all, the longest a plays index takes to recompose on a loaded host. */
 const STALE_RETRY_MS = 2_500
 const STALE_RETRIES = 6
+const NETWORK_RETRIES = 4
 
 /**
  * Same-origin JSON with ETag revalidation. `poll` refetches every `poll` ms while set; turning polling on or off keeps
@@ -30,8 +31,12 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
     let timer = 0
     let stale = false
     let retries = 0
+    // A request that never reached the server (GTR Chromium under load: ERR_NETWORK_CHANGED) is retried soon, not at the next poll.
+    let dropped = 0
+    let lost = false
     const controller = new AbortController()
     const load = async () => {
+      lost = false
       try {
         const response = await fetch(url, {
           credentials: 'same-origin',
@@ -39,6 +44,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
           headers: etag.current ? { 'If-None-Match': etag.current } : {},
         })
         if (!alive) return
+        dropped = 0
         stale = response.headers.get('X-Workspace-Stale') === '1'
         // Only a fresh 200 or 304 ends a stale episode and restores its quick retries; an error answer is not fresh (root, #180).
         if (!stale && (response.ok || response.status === 304)) retries = 0
@@ -61,12 +67,16 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         const data = (await response.json()) as T
         if (alive) setState({ url, data, loading: false, status: response.status, stale })
       } catch (error) {
-        if (alive && !controller.signal.aborted)
+        if (alive && !controller.signal.aborted && dropped < NETWORK_RETRIES) lost = true
+        else if (alive && !controller.signal.aborted)
           setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
       } finally {
         // A document served as last composed while the server recomposes it is asked for again soon, a few times at most,
         // before the page's own poll: a polled page waited a whole interval and /today showed a 2 h old copy (REVIEW-7 #2).
-        if (alive && stale && retries < STALE_RETRIES) {
+        if (alive && lost) {
+          timer = window.setTimeout(load, 1000 * 2 ** dropped)
+          dropped += 1
+        } else if (alive && stale && retries < STALE_RETRIES) {
           timer = window.setTimeout(load, STALE_RETRY_MS * 1.5 ** retries)
           retries += 1
         } else if (alive && poll) timer = window.setTimeout(load, poll)
