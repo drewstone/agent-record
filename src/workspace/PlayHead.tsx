@@ -129,14 +129,14 @@ function CostLine({ play }: { play: Play }) {
  * the play serves `play_head.built`. Off the Standing tab (`compact`) the header is one sticky line: name, verdict word,
  * live run.
  */
-export function PlayHeader({ play, report, fallback, compact = false, now = Date.now() }: { play: Play; report?: PlayReportDocument | null; fallback?: ReactNode; compact?: boolean; now?: number }) {
+export function PlayHeader({ play, report, fallback, compact = false, linked = true, now = Date.now() }: { play: Play; report?: PlayReportDocument | null; fallback?: ReactNode; compact?: boolean; linked?: boolean; now?: number }) {
   const standing = play.standing ?? null
   const asOf = playAsOf(play)
   if (compact) {
     const verdict = standing?.bestCurrent ? statusOf({ axis: 'result', verdict: standing.status === 'solved' ? 'solved' : 'not-solved' }) : null
     return (
       <header className="ws-head play-head is-compact" data-play-head="compact">
-        <h1><a href={`/play/${encodeURIComponent(play.id)}`}>{play.title}</a></h1>
+        <h1>{linked ? <a href={`/play/${encodeURIComponent(play.id)}`}>{play.title}</a> : play.title}</h1>
         {verdict && <StatusPill status={verdict} />}
         {play.live && <a className="mono" href={`/run/${encodeURIComponent(play.live.runId)}`}>{play.live.run ?? shortRun(play.id, play.live.runId)} live</a>}
         <AsOfStamp asOf={asOf} />
