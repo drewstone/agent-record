@@ -5,21 +5,17 @@ import type { RecordEvent, RecordGap } from './record.js'
 import { AgentFindings, RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FindingsFeed, REVIEWS } from './workspace/FindingsFeed.js'
-import { PlayAnswer } from './workspace/PlayAnswer.js'
 import { PlayBarTable } from './workspace/PlayBarTable.js'
 import { PlayJourney } from './workspace/PlayJourney.js'
 import { ExplorePage } from './workspace/Explore.js'
 import { PlayHeader } from './workspace/PlayHead.js'
-import { PlayAgainstBar, PlayClimb } from './workspace/PlayClimb.js'
 import { ApiCost, PlayLedger } from './workspace/PlayLedger.js'
-import { PlayTeams } from './workspace/PlayTeams.js'
 import { PlayFindings } from './workspace/PlayFindings.js'
 import { PlayReleases } from './workspace/PlayReleases.js'
 import { PlaysTable } from './workspace/PlaysTable.js'
 import { inlinedPlayHead, type PlayHead } from './workspace/play-standing.js'
 import { TheatrePage } from './workspace/Theatre.js'
 import { RunVersions } from './workspace/VersionGraph.js'
-import type { PlayReportDocument } from './play-report.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
@@ -279,8 +275,6 @@ const PLAY_TAB_REDIRECTS: Record<string, { tab: PlayTab; patch?: Record<string, 
 function PlayPage({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
   const play = useDocument<Play>(`${api}/plays/${encodeURIComponent(id)}`)
-  // The report's `built` answers "Built" until the play serves `play_head.built`; fetched once.
-  const report = useDocument<PlayReportDocument>(`${api}/plays/${encodeURIComponent(id)}/report`)
   // The head the host inlined in the shell paints the first screen before the play document arrives (B3).
   const inlined = useMemo(() => inlinedPlayHead(id), [id])
   const requested = params.get('tab') ?? 'standing'
@@ -340,8 +334,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     for (const row of assessments) map.set(row.runId, [...(map.get(row.runId) ?? []), row])
     return map
   }, [assessments])
-  // The standing tab is the journey (lead pick 2026-10-24 22:20Z) wherever the host serves the play's view.
-  const journey = tab === 'standing' && Boolean(doc?.view)
   const releaseCount = doc?.standing?.releases?.published ?? doc?.releases?.length ?? null
   const findingCount = doc?.findings?.length ?? 0
   const runCount = doc?.ledger?.runsTotal ?? doc?.runs.length ?? 0
@@ -351,7 +343,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
     <Status loading={play.loading} error={play.error && `This play is unavailable: ${play.error}`}>
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
-          <PlayHeader play={doc} report={report.data} compact={journey || tab !== 'standing'} linked={tab !== 'standing'} fallback={<PlayStanding play={doc} />} />
+          <PlayHeader play={doc} linked={tab !== 'standing'} />
           <Tabs
             label="Play"
             value={tab}
@@ -365,17 +357,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
             ] as const}
           />
           <div className="ws-content" role="tabpanel">
-            {tab === 'standing' && journey && <PlayJourney play={doc} />}
-            {tab === 'standing' && !journey && (
-              <div className="play-standing-tab" data-section="standing">
-                {!doc.standing && <PlayAnswer play={doc} />}
-                <PlayClimb play={doc} />
-                <PlayAgainstBar play={doc} />
-                <PlayLedger play={doc} onOpen={open} />
-                <PlayTeams api={api} play={doc} />
-                <PlayFindings play={doc} limit={6} onMore={() => update({ tab: 'findings' })} />
-              </div>
-            )}
+            {tab === 'standing' && <PlayJourney play={doc} />}
             {tab === 'releases' && <PlayReleases play={doc} />}
             {tab === 'findings' && (doc.findings?.length ? <PlayFindings play={doc} /> : <p className="ws-status">No result or claim has been written by this play&rsquo;s runs yet.</p>)}
             {tab === 'runs' && (
@@ -460,43 +442,6 @@ function PlayPage({ api, id }: { api: string; id: string }) {
         </div>
       )}
     </Status>
-  )
-}
-
-/**
- * The play's standing as two facts: its best result (the newest run that won: its play check passed, or its root
- * submitted) and its latest run with how it is going.
- * A failed latest run never hides an earlier winner, and no winner yet is said plainly.
- */
-function PlayStanding({ play }: { play: PlayDocument }) {
-  const latest = play.runs[0] ?? null
-  const best = play.best ? (play.runs.find((run) => run.id === play.best) ?? null) : null
-  const results = play.runs.reduce((sum, run) => sum + (run.findings?.results ?? 0), 0)
-  const claims = play.runs.reduce((sum, run) => sum + (run.findings?.claims ?? 0), 0)
-  return (
-    <div className="play-standing" data-play-standing>
-      <a className="play-fact" href={best ? `/run/${encodeURIComponent(best.id)}` : '?tab=runs'} data-best={best?.id ?? 'none'}>
-        <span className="answer-label">Best result</span>
-        {best ? (
-          <>
-            <StatusPill status={statusOf({ axis: 'run', state: 'winner' })} className="answer-value" />
-            <span className="mono">{shortRun(play.id, best.id)}</span>
-            <span className="faint">{when(best.settledAt ?? best.startedAt)}</span>
-          </>
-        ) : (
-          <span className="answer-value">no winner yet</span>
-        )}
-        {results + claims > 0 && <span className="faint">· {results} results, {claims} claims across its runs</span>}
-      </a>
-      {latest && (
-        <a className="play-fact" href={`/run/${encodeURIComponent(latest.id)}`} data-latest={latest.id}>
-          <span className="answer-label">Latest run</span>
-          <StatusPill status={runStatus(latest, newerStarted(latest, play.runs))} />
-          <span className="mono">{shortRun(play.id, latest.id)}</span>
-          <span className="faint">{when(latest.startedAt)}</span>
-        </a>
-      )}
-    </div>
   )
 }
 
