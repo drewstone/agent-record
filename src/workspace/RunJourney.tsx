@@ -182,8 +182,8 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
     })))
     spans.push(...steps)
     // A stretch with no agent turn is a labelled band (tangle-tools run_journal pauses: 22a's 4 h 40 m after the GTR guard stop).
-    // The band says how long; its reason waits on a charts tooltip field (three reasons added ~20 words across 22a's rows).
-    const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}`, detail: p.reason }))
+    // charts 0.21.5 leads the band with its length, so the label is the word and the reason is the detail.
+    const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: 'Paused', detail: p.reason }))
     // Tool calls are the record's per-agent counts; the cost is the stat row's alone (REVIEW-9: the card's ≈ beside the row's ≥).
     // The run's one cost (spend.apiEquivalentUsd) as the lower bound it is; tool calls only where the record counted them (charts 0.20.2).
     const counted = m.nodes.filter((n) => typeof n.toolCalls === 'number')
