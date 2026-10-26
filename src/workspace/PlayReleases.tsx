@@ -69,7 +69,7 @@ export function PlayReleases({ play }: { play: Play }) {
   const byRun = [...new Set(shown.map((stop) => stop.release.runId))]
   return (
     <section className="ws-section play-releases" data-play-releases aria-label="Where releases stop">
-      <div className="release-stops" data-primary-content data-picked={selected ? '' : undefined} onClick={pick}>
+      <div className="release-stops" data-picked={selected ? '' : undefined} onClick={pick}>
         {selected && <style>{`.ar-ws .release-stops a[href$="stop=${selected}"] { opacity: 1; background: var(--chart-live-hover); } .ar-ws .release-stops a[href$="stop=${selected}"] .ov-hbar-label { color: var(--ar-fg); font-weight: 600; }`}</style>}
         <HBars max={Math.max(...keys.map(count))} limit={keys.length}
           rows={keys.map((key) => ({

@@ -239,7 +239,7 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now(), actio
         <OutcomeLegend outcomes={[...present]} open={ledger.rows.some((row) => row.open?.hours)} />
       </header>
       <div className="table-scroll">
-        <table className="data-table ledger-table" data-primary-content={full ? '' : undefined}>
+        <table className="data-table ledger-table">
           <thead>
             <tr>
               <th>Run</th>

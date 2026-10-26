@@ -21,7 +21,7 @@ export function PlayBarTable({ play }: { play: Play }) {
   return (
     <section className="ws-section play-bar-table" data-section="bar">
       <div className="table-scroll">
-      <table className="data-table" data-primary-content>
+      <table className="data-table">
         {bar.source && <caption title={bar.source}>Bar · {bar.source.replace(/\s*\(.*?\)/g, '').replace(/,\s*Tables?.*$/, '')}</caption>}
         <thead>
           <tr>
