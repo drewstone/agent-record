@@ -231,11 +231,11 @@ function PlaysPage({ api }: { api: string }) {
       {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer" data-primary-content><ReliabilityPanel api={api} />
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <caption className="faint">{shown.length} runs, last 30 days</caption>
-        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th></tr></thead>
+        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th><th className="num" title="Every token at list price, whoever paid: the run page's figure">API-equivalent</th></tr></thead>
         <tbody>{shown.slice(0, shownRows).map((run) => <tr key={run.id}>
           <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono" title={run.id}> {/\d{6}(\d\d[a-z])$/.exec(run.id)?.[1] ?? run.id}</small></td>
           <td><StatusPill status={runStatus(run, newerStarted(run, all))} /></td>
-          <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
+          <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td><td className="num">{run.apiEquivalentUsd === null || run.apiEquivalentUsd === undefined ? <span className="faint" title="not priced">—</span> : money(run.apiEquivalentUsd)}</td>
         </tr>)}</tbody>
       </table></div></div>
       {!shown.length && <p className="chat-empty">No runs match.</p>}{shown.length > shownRows && <button type="button" className="plays-more" onClick={() => setShownRows(shown.length)}>Show all {shown.length} runs</button>}
