@@ -119,7 +119,7 @@
   background: var(--ar-bg);
   border: 1px solid var(--ar-border);
   border-radius: var(--ar-control-radius);
-  font: 0.84rem var(--ar-font-body);
+  font: var(--ar-text-s) var(--ar-font-body);
 }
 .agent-record button {
   cursor: pointer;
@@ -995,8 +995,8 @@
 .agent-record .message-heading {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 0.35rem;
+  gap: 8px;
+  margin: 0 0 4px;
   font: var(--ar-text-s) var(--ar-font-body);
 }
 .agent-record .message-heading strong {
@@ -1026,7 +1026,7 @@
 .agent-record .message-source {
   border: 0;
   background: transparent;
-  padding: 0.15rem 0;
+  padding: 4px 0;
   font: var(--ar-text-s) var(--ar-font-mono);
   color: var(--ar-fg-muted);
   margin-left: auto;
@@ -1658,9 +1658,9 @@
 .ar-ws .ws-facts span { color: var(--ar-fg); }
 .ar-ws .ws-facts .live { color: var(--ar-c-run); }
 .ar-ws .state-pill {
-  display: inline-flex; align-items: center; gap: 8px; padding: 2px 8px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px; padding: 0 8px; border-radius: 999px;
   /* Monospace is for identifiers, hashes and paths only (disco UI brief): a status word is UI text. */
-  font: 600 var(--ar-text-s)/1.6 var(--font-sans, system-ui, sans-serif); white-space: nowrap;
+  font: 600 var(--ar-text-s)/24px var(--font-sans, system-ui, sans-serif); white-space: nowrap;
   color: var(--ar-c-neutral); border: 1px solid color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); background: none;
 }
 /* Status colour has one path: the `data-status="<axis>:<word>:<tone>"` that statusOf (src/workspace/data.ts) writes.
@@ -1785,7 +1785,7 @@
 .ar-ws .agent-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--ar-border-strong); font: 600 var(--ar-text-s) var(--ar-font-body); flex-shrink: 0; }
 .ar-ws .agent-avatar[data-status] { position: relative; border-color: currentColor; }
 .ar-ws .agent-avatar .status-shape { position: absolute; right: -6px; bottom: -6px; padding: 1px; border-radius: 50%; background: var(--ws-panel); font-size: 12px; }
-.ar-ws .agent-meta { margin: 2px 0 0; font: var(--ar-text-s) var(--ar-font-body); color: var(--ar-fg-muted); overflow-wrap: anywhere; }
+.ar-ws .agent-meta { margin: 4px 0 0; font: var(--ar-text-s) var(--ar-font-body); color: var(--ar-fg-muted); overflow-wrap: anywhere; }
 .ar-ws .agent-capture { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 12px; font-size: var(--ar-text-s); margin-left: auto; }
 .ar-ws .capture-chip { padding: 1px 8px; border-radius: 999px; font: 600 var(--ar-text-s)/1.7 var(--ar-font-body); background: var(--ws-raised); color: var(--ar-fg-muted); }
 .ar-ws .capture-complete { color: var(--ar-c-neutral); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); }
@@ -3448,9 +3448,9 @@
 /* On a run's tab pages the status block is one 32 px sticky line. */
 .ar-ws .run-status-line { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; height: 32px; margin: 0; padding: 0 4px; background: var(--ar-bg); font-size: var(--ar-text-s); white-space: nowrap; overflow: hidden; }
 .ar-ws .run-tabs { display: grid; gap: 8px; }
-.ar-ws .run-tab-strip { display: flex; gap: 2px; border-bottom: 1px solid var(--ar-border); }
+.ar-ws .run-tab-strip { display: flex; gap: 4px; border-bottom: 1px solid var(--ar-border); }
 .ar-ws .run-tab-select { display: none; }
-.ar-ws .run-tab-parts { display: flex; flex-wrap: wrap; gap: 2px; }
+.ar-ws .run-tab-parts { display: flex; flex-wrap: wrap; gap: 4px; }
 .ar-ws .run-part { padding: 4px 12px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--ar-fg-muted); cursor: pointer; }
 .ar-ws .run-part.on { border-color: var(--ar-border); color: var(--ar-fg); font-weight: 600; }
 .ar-ws .rr-head { padding: 4px 0 8px; }
@@ -3558,10 +3558,12 @@
 .ar-ws .rr-causes li > span:last-child { color:var(--ar-fg-muted); font-family:var(--ar-font-body); white-space:nowrap; }
 .ar-ws .rj-muted { color: var(--ar-fg-muted); }
 /* 32 px numerals on the type scale, 8/16/24 px gaps (REVIEW-5 #4: 26 px was a 7th size and the row broke the grid). */
-.ar-ws .rj-stats { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 0 0 24px; }
+.ar-ws .rj-stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
 .ar-ws .rj-stats > div { display: flex; flex-direction: column-reverse; gap: 8px; }
 .ar-ws .rj-stats dt { font: 400 12px/16px var(--ar-font-body); color: var(--ar-fg-muted); }
-.ar-ws .rj-stats dd { margin: 0; font: 600 32px/32px var(--ar-font-body); font-variant-numeric: tabular-nums; }
+.ar-ws .rj-stats dd { margin: 0; font: 600 24px/28px var(--ar-font-body); font-variant-numeric: tabular-nums; }
+.ar-ws .rj-details > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.ar-ws .rj-details[open] { display: grid; gap: 16px; }
 .ar-ws .rj-prompt { margin: 4px 0 0; }
 .ar-ws .rj h3 { margin: 0 0 12px; font: 600 12px/1.3 var(--ar-font-body); color: var(--ar-fg-muted); }
 .ar-ws .rj-hero { display: grid; gap: 12px; }
