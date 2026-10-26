@@ -240,16 +240,16 @@ function runUsage(m: Model) {
 }
 
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); an unmeasured value is left out. */
-function Stats({ m, receiptUsd }: { m: Model; receiptUsd: number | null }) {
-  // Without the run's stores (deleted with ~/.cache/disco on 10-25) the receipt's Runtime estimate, the figure /play prints.
-  const own = runUsage(m)
-  const { listUsd, complete } = own.listUsd != null ? own : { listUsd: receiptUsd, complete: true }
+function Stats({ m, spend }: { m: Model; spend: { apiEquivalentUsd?: number | null; apiEquivalentProvenance?: string | null } | null | undefined }) {
+  // The host's one figure (journals.api_equivalent), the one /play and /plays print; never a sum of this page's own (index 02:45Z).
+  const listUsd = spend?.apiEquivalentUsd ?? null
+  const how = spend?.apiEquivalentProvenance ?? ''
   // As the timeline's legend counts them: every agent that committed, the lead included; Failed counts settles, not a category.
   const shipped = m.nodes.filter((n) => m.commits.get(n.id)).length
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
     ['Agents', String(m.nodes.length)],
-    ...(listUsd != null ? [['Cost', `${complete ? '≈' : '≥'}${money(listUsd)}`, own.listUsd != null ? 'API-equivalent at list price; each agent\'s billed amount is in its card' : "Runtime's estimate from the receipt, the figure /play prints; the run's per-call stores are gone"] as [string, string, string]] : []),
+    ...(listUsd != null ? [['Cost', `${how.endsWith('at least') ? '≥' : '≈'}${money(listUsd)}`, `API-equivalent at list price, ${how || 'source not recorded'}`] as [string, string, string]] : []),
     ...(m.attributed ? [['Shipped', String(shipped)] as [string, string]] : []),
     ['Failed', String(m.nodes.filter(failed).length)],
     ...(m.best ? [['Best', `${m.best.release}${m.best.passed != null && m.best.total ? ` ${m.best.passed}/${m.best.total}` : ''}`, releaseName(m.best.release, m.data.lineage)] as [string, string, string]] : []),
@@ -397,7 +397,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           <Ladder doc={doc} m={m} onRelease={openRelease} />
           {single ? null : (
             <section aria-label="What the agents did">
-              <Stats m={m} receiptUsd={doc.run.spend?.apiEquivalentUsd ?? null} />
+              <Stats m={m} spend={doc.run.spend} />
               <Lanes m={m} live={m.data.live} onPick={setPicked} />
               <RunActivity doc={doc} />
             </section>
