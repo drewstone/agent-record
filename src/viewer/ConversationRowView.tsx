@@ -402,7 +402,6 @@ export function ConversationRowView({ row, context }: { row: ConversationRow; co
               kind: 'message',
               role: user ? 'user' : 'assistant',
               content: short ? `${body.slice(0, 280).trimEnd()}…` : body,
-              timestamp: new Date(event.at),
               ...(user ? { author: { id: author.senderId ?? 'prompt', name: author.reconstructed ? 'Recorded assignment' : author.senderId || author.label !== 'Sender not captured' ? author.label : 'Prompt' } } : {}),
               ...(calls.length ? { toolCalls: <ToolExecutionStack event={event} at={at} message={message} context={context} /> } : {}),
             }]}
