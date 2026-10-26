@@ -13,7 +13,7 @@ const total = (t: { input: number; output: number; cacheRead: number; cacheWrite
  * `spend.apiEquivalentUsd` and `spend.tokens`, both floors (per agent, the larger of recorded usage and metered turns; the
  * journal meter alone misses unmetered turns). Agents are compared by tokens, the one measure every agent has.
  */
-export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { doc: RunDocument; runUrl: string; agents: readonly RecordNode[]; stats: Record<string, NodeStats>; onAgent: (id: string) => string; wasteLabel: (dimension: string) => string }) {
+export function RunHow({ doc, runUrl, agents, stats, onAgent, dimensions }: { doc: RunDocument; runUrl: string; agents: readonly RecordNode[]; stats: Record<string, NodeStats>; onAgent: (id: string) => string; dimensions: ReadonlyMap<string, { key: string }> }) {
   // Polled while the run is live, as RunJourney reads it, so release marks keep up (Codex review on #190).
   const ws = useDocument<RunWorkspaceDocument>(`${runUrl}/workspace`, doc.execution?.alive ? 15_000 : undefined, true)
   const spend = doc.spend
@@ -43,7 +43,7 @@ export function RunHow({ doc, runUrl, agents, stats, onAgent, wasteLabel }: { do
           <section aria-label="Where the time went">
             <h3>Where the time went</h3>
             <HBars rows={time.map((row) => ({ label: row.category, value: row.ms! }))} format={duration} color="var(--ar-accent, #8e59ff)" />
-            {waste.length > 0 && <HBars max={Math.max(...time.map((row) => row.ms!))} rows={waste.map((row) => ({ label: `${wasteLabel(row.dimension)} (waste)`, value: row.ms! }))} format={duration} color="var(--ar-c-neutral, #8e8e8e)" />}
+            {waste.length > 0 && <HBars max={Math.max(...time.map((row) => row.ms!))} rows={waste.map((row) => ({ label: `${row.dimension} ${dimensions.get(row.dimension)?.key.replaceAll('_', ' ') ?? ''} (waste)`.replace('  ', ' '), value: row.ms! }))} format={duration} color="var(--ar-c-neutral, #8e8e8e)" />}
           </section>
         )}
         {byAgent.length > 0 && (
