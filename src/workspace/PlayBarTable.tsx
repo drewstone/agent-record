@@ -21,7 +21,7 @@ export function PlayBarTable({ play }: { play: Play }) {
   return (
     <section className="ws-section play-bar-table" data-section="bar">
       <div className="table-scroll">
-      <table className="data-table" data-primary-content>
+      <table className="data-table">
         {bar.source && <caption title={bar.source}>Bar · {bar.source.replace(/\s*\(.*?\)/g, '').replace(/,\s*Tables?.*$/, '')}</caption>}
         <thead>
           <tr>
@@ -34,7 +34,7 @@ export function PlayBarTable({ play }: { play: Play }) {
           {bar.metrics.map((metric) => (
             <tr key={metric.id}>
               <td title={metric.direction === 'up' ? 'higher is better' : metric.direction === 'down' ? 'lower is better' : undefined}>
-                {metric.label} <span className="faint">{metric.direction === 'up' ? '↑' : metric.direction === 'down' ? '↓' : ''}</span>
+                {metric.label}{'\u00a0'}<span className="faint">{metric.direction === 'up' ? '↑' : metric.direction === 'down' ? '↓' : ''}</span>
                 {metric.precondition && <span className="chip">precondition</span>}
               </td>
               <td className="num">{targetWords(metric) ?? '—'}</td>

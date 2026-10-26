@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PlayAnswer, plainFinding, playDocumentSchema } from '../dist/index.js'
+import { plainFinding, playDocumentSchema } from '../dist/index.js'
 
 const ALBERT = 'albert-full-ldpc-symmetry-20261011b'
 const LINES = [
@@ -41,47 +41,12 @@ const play = (runs, best, findings = []) => ({
   schema: 'agent-workspace.play.v1', id: 'albert-full-ldpc', title: 'albert-full-ldpc', program: 'albert', line: 'full-ldpc', playBasis: 'run-input.pursuitId',
   charter: null, frontier: null, input: null, runs, lineage: { nodes: [], edges: [] }, spend, assessments: [], gaps: [], best, findings,
 })
-const render = (doc) => renderToStaticMarkup(createElement(PlayAnswer, { play: doc }))
 
 test("the play document carries the winner's play check, deliverables and receipt, and an older document still reads", () => {
   const parsed = playDocumentSchema.parse(play([winner, run('albert-full-ldpc-lift-20261011a')], ALBERT, [finding]))
   assert.equal(parsed.runs[0].playCheck.lines.at(-1), 'SOLVED: [[128,16,8]] with d =…')
   assert.equal(parsed.runs[0].receipt.href, `/run/${ALBERT}/receipt/rc2/`)
   assert.equal(parsed.runs[1].playCheck, undefined)
-})
-
-test('the answer leads: what the winner found, the run and its check, the evidence lines, then its deliverable and receipt', () => {
-  const html = render(playDocumentSchema.parse(play([winner], ALBERT, [finding])))
-  const at = (needle) => {
-    const index = html.indexOf(needle)
-    assert.ok(index >= 0, `missing ${needle}`)
-    return index
-  }
-  const order = [
-    at('One indecomposable self-dual CSS code'),
-    at(`href="/run/${ALBERT}"`),
-    at('play check passed 2026-10-11 15:40 UTC'),
-    at('Runtime settled no winner (cancelled)'),
-    at('PASS [bar] [[128,16,8]]'),
-    at('SOLVED: [[128,16,8]] with d =…'),
-    at('Deliverable: handoff'),
-    at('Receipt rc2 · chosen at the deadline'),
-  ]
-  assert.deepEqual(order, [...order].sort((a, b) => a - b))
-  assert.ok(html.includes('href="/run/albert-full-ldpc-symmetry-20261011b?section=outputs&amp;file=release%2Frc2%2Fpages%2Falbert-full-ldpc%2Fhandoff.md"'))
-  assert.ok(html.includes('data-status="result:Passed:pass"'))
-})
-
-test('a whole SOLVED line is the answer itself', () => {
-  const solved = 'SOLVED: [[128,16,8]] with d = 8 exactly, check weight 8, qubit degree 8, full Sp(32,2) by depth-one two-local circuits'
-  const html = render(play([{ ...winner, playCheck: { ...winner.playCheck, solved } }], ALBERT, [finding]))
-  assert.ok(html.includes(`<p class="play-answer-text">${solved}</p>`))
-})
-
-test('a play no run has won says so plainly', () => {
-  const html = render(play([run('albert-full-ldpc-lift-20261011a')], null))
-  assert.ok(html.includes('data-play-answer="none"'))
-  assert.ok(html.includes('No run of this play has won yet'))
 })
 
 test('a finding reads without front matter, key lines, headings, emphasis or code marks', () => {

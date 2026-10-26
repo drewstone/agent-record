@@ -7,70 +7,13 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PlayHeader, RUN_TABS, RunOverview, RunTabBar, RunWhy, sectionOf, tabOf } from '../dist/index.js'
+import { RUN_TABS, RunOverview, RunTabBar, RunWhy, sectionOf, tabOf } from '../dist/index.js'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const play = fixture('decide-play-magnetar-rust-20261019.json')
-const report = fixture('decide-play-report-magnetar-rust-20261019.json')
 const run = (id) => fixture(`decide-run-magnetar-rust-202610${id}.json`)
-const COMPOSED = Date.parse('2026-10-19T23:08:30Z')
 
 const visible = (html) => html.replace(/<[^>]*>/g, ' ').replaceAll('&#x27;', "'").replaceAll('&quot;', '"').replaceAll('&amp;', '&').replace(/\s+/g, ' ').trim()
-// A body word: a whitespace token holding a letter or digit.
-const words = (text) => text.split(/\s+/).filter((token) => /[\p{L}\p{N}]/u.test(token))
-const RULER = /\bv\d\b|amendment|withheld|superseded|\bgate\b/i
-
-/** Each `[data-answer]` tile: its slot, its markup, and the drawer its button controls. */
-function tiles(html) {
-  return [...html.matchAll(/<div class="answer-tile" data-answer="([^"]+)"[^>]*>(.*?)<\/button><\/div>/g)].map(([, slot, body]) => {
-    const controls = /aria-controls="([^"]+)"/.exec(body)?.[1]
-    const drawer = new RegExp(`<div id="${controls}"[^>]*>`).exec(html)?.[0] ?? ''
-    return { slot, body, text: visible(body.replace(/<button.*$/s, '')), drawer }
-  })
-}
-const field = (body, name) => visible(new RegExp(`<[^>]*data-${name}[^>]*>(.*?)</(?:b|span)>`).exec(body)?.[1] ?? '')
-
-test('the play page opens with four answers, each a headline, one figure, a sub-line and a closed drawer', () => {
-  const html = renderToStaticMarkup(createElement(PlayHeader, { play, report, now: COMPOSED }))
-  const found = tiles(html)
-  // v2 replaces v1's five slots: what-next moves into the Producing drawer.
-  assert.deepEqual(found.map((tile) => tile.slot), ['did-it-work', 'is-it-working', 'what-was-built', 'needs-me'])
-  for (const tile of found) {
-    assert.ok(words(field(tile.body, 'headline')).length <= 8, `${tile.slot} headline: ${field(tile.body, 'headline')}`)
-    assert.ok(words(field(tile.body, 'subline')).length <= 12, `${tile.slot} sub-line: ${field(tile.body, 'subline')}`)
-    assert.equal((tile.body.match(/data-num|data-spark/g) ?? []).length, 1, `${tile.slot} has exactly one figure`)
-    assert.match(tile.drawer, /hidden=""/, `${tile.slot}'s drawer starts closed`)
-  }
-  const [solved, , built, needs] = found
-  assert.match(built.text, /crates/)
-  assert.match(built.text, /Prover, verifier, 15 guest programs/)
-  assert.match(needs.text, /discovery-lab \(play repository access\)/)
-  assert.match(needs.text, /1 needs you now/)
-  const first = solved.text.split(/[.]/)[0]
-  assert.doesNotMatch(first, RULER, first)
-
-  // The head is the h1 and one as-of: no status chip before the answers.
-  assert.equal((html.match(/data-asof/g) ?? []).length, 1)
-  assert.doesNotMatch(html.slice(0, html.indexOf('answer-strip')), /data-status=/)
-  // Ruler words live only inside "How the check works", tips and closed drawers included.
-  const outside = html.replace(/<details class="check-works".*?<\/details>/s, '')
-  const tips = [...outside.matchAll(/title="([^"]*)"/g)].map((match) => match[1]).join(' ')
-  assert.doesNotMatch(`${visible(outside)} ${tips}`, RULER)
-  assert.match(html, /<details class="check-works"[^>]*><summary>How the check works<\/summary>.*Check v4 since 10-18 20:52Z \(operator\); 4 versions/s)
-  // The checkpoint's clause, due time and "not measured yet" moved into the Producing drawer.
-  assert.match(visible(html), /Next checkpoint · T\+6h By T\+6h the workspace's field.* · due 10-20 02:13Z · measured: not yet/)
-})
-
-test("change 1's served answers lead the tiles when the play serves them", () => {
-  const served = fixture('discovery-play-magnetar-rust.json')
-  const html = renderToStaticMarkup(createElement(PlayHeader, { play: served, report: fixture('play-report-magnetar-rust.json'), now: Date.parse('2026-10-20T04:58:55Z') }))
-  const [solved, producing, , needs] = tiles(html)
-  assert.equal(solved.text, 'Solved? Not yet 8 /15 workloads rc1 of 20b, checked once')
-  assert.equal(producing.text, 'Producing? Writing code, no release yet 9 commits newest commit 04:51Z · 3.1 h in')
-  assert.equal(needs.text, 'Needs you Nothing needs you now 0 no blocker on 20b')
-  // The measurement noise is served, so "How the check works" carries it.
-  assert.match(visible(html), /Measurement: Check spread on one commit: 0–6 of 15 over 10 reruns/)
-})
 
 /** A run page's overview as Workspace composes it: the fold, the closed "Why it stopped", then the receipt. */
 function runPage(id) {

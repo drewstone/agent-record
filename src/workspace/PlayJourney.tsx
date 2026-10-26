@@ -1,4 +1,5 @@
 import { Tip } from './AnswerStrip.js'
+import { BarStrip } from './BarStrip.js'
 import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
 import type { Play } from './answers.js'
 import { plainSummary, stepWord } from './plain-words.js'
@@ -138,13 +139,15 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
   const m = model(play, now)
   if (!m) return null
   const p = m.view.progress
-  const gap = (play as { gap?: PlayGapFacts | null }).gap ?? null
+  // With the host's bars (every bar.json metric), the strip is the answer and the play-specific gap chart steps aside.
+  const bars = m.view.bars?.length ? m.view.bars : null
+  const gap = bars ? null : ((play as { gap?: PlayGapFacts | null }).gap ?? null)
   const g = gap ? gapHeadline(gap) : null
   const checkers = ((play as { checkers?: { label: string; firstAt: string }[] }).checkers ?? [])
   return (
     <div className="pj">
       <section className="pj-q3" aria-label="How close is it, and what stops it">
-        {g ? (
+        {bars ? <BarStrip bars={bars} /> : g ? (
           <p className="pj-hero pj-hero-verdict">{g.hero}</p>
         ) : (
           <p className="pj-hero">{p ? <>{p.passed}<small>/{p.total} steps</small></> : '—'}</p>
@@ -153,7 +156,7 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
         {/* The pass under v4 and the cap misses are the chart's own markers (REVIEW-5 #11: the line repeated them). */}
         <Hold view={m.view} open={m.open} />
       </section>
-      <section className="pj-q4" data-primary-content aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
+      <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
         {gap ? <GapChart gap={gap} checkers={checkers} now={now} /> : <Climb play={play} m={m} />}
       </section>
