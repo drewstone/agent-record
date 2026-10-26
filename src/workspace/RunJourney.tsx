@@ -147,7 +147,7 @@ function Ladder({ doc, m, onRelease }: { doc: RunDocument; m: Model; onRelease: 
  * sizes from its container, truncates long names at the end with the full name in the tooltip, and zooms. Each release
  * is a marker on the trace clock; opening a row picks that agent for the drill-down below.
  */
-function Lanes({ m, live, goal, cost, picked, onPick }: { m: Model; live: boolean; goal?: string; cost: number | null; picked: string | null; onPick: (id: string | null) => void }) {
+function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cost: number | null; picked: string | null; onPick: (id: string | null) => void }) {
   // The lane's color and the legend (charts 0.18.0 FlowSpan.outcome; review 2 #2): shipped, nothing shipped, failed.
   // A live agent that has not shipped yet is Running, not "Nothing shipped" (review 4 #6: 7 live agents on 22a read as idle).
   const running = (n: Node) => live && !n.end && ['running', 'waiting'].includes(n.status)
@@ -191,7 +191,8 @@ function Lanes({ m, live, goal, cost, picked, onPick }: { m: Model; live: boolea
     })))
     spans.push(...steps)
     // A stretch with no agent turn is a labelled band (tangle-tools run_journal pauses: 22a's 4 h 40 m after the GTR guard stop).
-    const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}: ${p.reason}` }))
+    // The band says how long; its reason waits on a charts tooltip field (three reasons added ~20 words across 22a's rows).
+    const pauses = (m.data.pauses ?? []).map((p) => ({ startMs: ms(p.from) - m.t0, endMs: ms(p.to) - m.t0, label: `Paused ${duration(ms(p.to) - ms(p.from))}` }))
     // Tool calls are the record's per-agent counts; the cost is the stat row's alone (REVIEW-9: the card's ≈ beside the row's ≥).
     // The run's one cost (spend.apiEquivalentUsd) as the lower bound it is; tool calls only where the record counted them (charts 0.20.2).
     const counted = m.nodes.filter((n) => typeof n.toolCalls === 'number')
@@ -205,7 +206,7 @@ function Lanes({ m, live, goal, cost, picked, onPick }: { m: Model; live: boolea
     tone: relTone(r) === 'pass' ? 'ok' as const : relTone(r) === 'fail' ? 'failed' as const : 'neutral' as const,
   })), [m, marked])
   // The header's stat row owns the run's numbers, so the chart's summary strip is off (sandbox-ui 03:12Z handoff).
-  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="Trace" description={goal} summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
+  return <FlowWaterfall trace={trace} live={live} defaultView="agents" label="Trace" summary={false} markers={markers} selectedId={picked ?? undefined} onDeselect={() => onPick(null)} onSelect={(span) => { const id = span.kind === 'pipeline' ? span.id : span.parentId ?? span.id; if (id) onPick(id) }} />
 }
 
 /** A plain line, with the agent's own words behind "full" when the line shortened them. */
@@ -379,7 +380,7 @@ export function RunJourney({ api, doc, transcript }: { api: string; doc: RunDocu
           {single && <Ladder doc={doc} m={m} onRelease={openRelease} />}
           {single ? null : (
             <section aria-label="What the agents did">
-              <Lanes m={m} live={m.data.live} goal={goalLine} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
+              <Lanes m={m} live={m.data.live} cost={doc.run.spend?.apiEquivalentUsd ?? null} picked={chosen} onPick={setPicked} />
               <RunActivity doc={doc} />
             </section>
           )}
