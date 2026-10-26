@@ -94,17 +94,6 @@ function CopyCommand({ label, command }: { label: string; command: string }) {
   return <button type="button" title={command} onClick={() => void navigator.clipboard?.writeText(command).then(() => setCopied(true))}>{copied ? 'Copied' : label}</button>
 }
 
-/** What holds the run, as served: who acts (a role, never a name) and the producer's sentence, with the owner's options. */
-function NextStep({ blocker, need, paused }: { blocker: Blocker; need: Need | undefined; paused: boolean }) {
-  return (
-    <>
-      {paused && <p className="rj-next"><b>Research is paused; lifting it is the owner's decision</b> <a href="/today">→ Today</a></p>}
-      <p className="rj-next"><b>{blocker.actor?.label ?? 'Held'}:</b> <span className="rj-muted">{blocker.sentence ?? blocker.text}</span>
-        {need?.options?.length ? <span className="rj-decide">{need.options.map((o) => <CopyCommand key={o.label} {...o} />)}</span> : null}</p>
-    </>
-  )
-}
-
 /** Q3 on the run: the best release's verdict and what holds it, with its steps and releases unless `verdictOnly` (a multi-agent run, whose Built tab charts them). */
 function Ladder({ doc, m, onRelease, verdictOnly = false }: { doc: RunDocument; m: Model; onRelease: (release: string) => void; verdictOnly?: boolean }) {
   const steps = !verdictOnly
@@ -117,14 +106,19 @@ function Ladder({ doc, m, onRelease, verdictOnly = false }: { doc: RunDocument; 
           {m.best.steps.map((s, i) => <li key={i} data-step={s.state} className={s === m.open ? 'is-open' : undefined}><Tip text={`Step ${i + 1} of ${m.best!.steps!.length}, ${s.label}: ${stepWord(s.state)} on ${m.best!.release}`}><i />{s.label}</Tip></li>)}
         </ol>
       )}
-      {<p className="rj-stuck">
-        {/* Only what the best release reached (the play page owns how long it has been stuck); an unconfirmed teardown keeps the header, so the verdict sits here. */}
+      {/* One line in plain words (blind A/B 13:55Z: four text bands and jargon before the chart): how far the best release got,
+          then, on a live run or one waiting on its owner, who acts and what holds it. Names and stages are in the tooltips. */}
+      <p className="rj-stuck">
         {lifecycle && lifecycle.state !== 'done' && doc.view && <><StatusPill status={viewChip(doc.view.status)} />{' '}</>}
-        {m.best ? <><b title={releaseName(m.best.release, m.data.lineage)}>{m.best.release}</b>{doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>} · {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}${m.best.checker ? ` under check ${m.best.checker}` : ''}` : `the ${m.open.label} has not run`) : doc.view?.status.key === 'solved-earlier' && m.best.checker ? `every step of check ${m.best.checker} passes` : (m.best as Release).held ? `every step passes; held: ${(m.best as Release).held!.join(', ')} have no known-good fixture` : 'every step passes'}</> : 'No release was checked.'}
-      </p>}
-      {/* A settled run's blocker is history: only a live run, or one waiting on its owner, says who acts now (review 2 #3:
-          21c's Oct 23 blocker contradicted the play's current one). */}
-      {blocker && (doc.execution?.alive || blocker.actor?.role === 'owner') && <NextStep blocker={blocker} need={(doc.view?.needsYou as Need[] | undefined)?.[0]} paused={Boolean(doc.view?.paused)} />}
+        {m.best ? <><b title={`${releaseName(m.best.release, m.data.lineage)}${m.best.checker ? `, check ${m.best.checker}` : ''}`}>Best release</b>{' '}
+          {m.open ? (m.open.state === 'fail' ? `failed the ${m.open.label}` : `has not run the ${m.open.label} yet`)
+            : (m.best as Release).held ? <span title={`No known-good answer yet for ${(m.best as Release).held!.join(', ')}`}>passed every step, unverified</span>
+            : 'passed every step'}
+          {doc.receipt && <> · <a href={`/run/${encodeURIComponent(doc.run.id)}/receipt/`}>receipt</a></>}</> : 'No release was checked yet.'}
+        {blocker && (doc.execution?.alive || blocker.actor?.role === 'owner') && <> · <b>{blocker.actor?.label ?? 'Held'}</b>: {blocker.sentence ?? blocker.text}
+          {(doc.view?.needsYou as Need[] | undefined)?.[0]?.options?.length ? <span className="rj-decide">{(doc.view!.needsYou as Need[])[0]!.options!.map((o) => <CopyCommand key={o.label} {...o} />)}</span> : null}</>}
+      </p>
+      {Boolean(doc.view?.paused) && <p className="rj-next"><b>Research is paused; lifting it is the owner's decision</b> <a href="/today">→ Today</a></p>}
       {steps && m.releases.length > 1 && <p className="rj-releases">
         {m.same
           ? `${m.releases[0]!.release}–${m.releases.at(-1)!.release}: all ${score(m.releases[0]!)}`
