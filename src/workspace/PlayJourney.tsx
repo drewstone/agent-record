@@ -1,13 +1,9 @@
-import { AsOfStamp, Tip } from './AnswerStrip.js'
-import { PlayAgainstBar, PlayClimb } from './PlayClimb.js'
-import { PlayFindings } from './PlayFindings.js'
+import { Tip } from './AnswerStrip.js'
 import { GapChart, gapHeadline, type PlayGapFacts } from './PlayGap.js'
-import { PlayLedger } from './PlayLedger.js'
-import { type Play, playAsOf } from './answers.js'
-import { StatusPill } from './data.js'
+import type { Play } from './answers.js'
 import { plainSummary, stepWord } from './plain-words.js'
 import { usePhone } from './use-phone.js'
-import { type HostView, viewChip, type ViewTrend } from './view.js'
+import type { HostView, ViewTrend } from './view.js'
 
 /**
  * The play page's standing (BRIEF.md amendment 2026-10-24 19:55Z; the lead picked layout B at 22:20Z). One graphic answers
@@ -66,14 +62,13 @@ function Hold({ view, open }: { view: HostView; open: Model['open'] }) {
   const action = b ? (b.action ?? plainSummary(b.text, 16)) : null
   const why = b?.why ? (open ? b.why.replace(/^The check/, `The ${open.label} check`) : b.why) : null
   const owner = b?.owner ?? 'Its owner'
-  const held = b && action && (why
-    ? <>{why}; {owner} will {action.charAt(0).toLowerCase()}{action.slice(1)}.</>
-    : <>{owner} will {action.charAt(0).toLowerCase()}{action.slice(1)}.</>)
+  const will = action ? `${owner} will ${action.charAt(0).toLowerCase()}${action.slice(1)}.` : null
+  const held = [why ? `${why};` : null, will].filter(Boolean).join(' ')
   return (
     <>
       {paused && <p className="pj-hold"><b>Research is paused; lifting it is your decision</b> <a href="/today">→ Today</a></p>}
       {b && b.owner === 'Drew' && <p className="pj-hold"><b>Your decision:</b> {action}.</p>}
-      {b && b.owner !== 'Drew' && <p className="pj-hold">{!paused && <b>Nothing for you. </b>}<span className="pj-muted">{held}</span></p>}
+      {b && b.owner !== 'Drew' && <p className="pj-hold">{!paused && <b>Nothing for you. </b>}<Tip text={held || owner}><span className="pj-muted">{owner} is on it</span></Tip></p>}
     </>
   )
 }
@@ -148,11 +143,6 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
   const checkers = ((play as { checkers?: { label: string; firstAt: string }[] }).checkers ?? [])
   return (
     <div className="pj">
-      <header className="pj-title">
-        <h1>{play.title}</h1>
-        <StatusPill status={viewChip(m.view.status)} />
-        <AsOfStamp asOf={playAsOf(play)} />
-      </header>
       <section className="pj-q3" aria-label="How close is it, and what stops it">
         {g ? (
           <p className="pj-hero pj-hero-verdict">{g.hero}</p>
@@ -163,25 +153,10 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
         {/* The pass under v4 and the cap misses are the chart's own markers (REVIEW-5 #11: the line repeated them). */}
         <Hold view={m.view} open={m.open} />
       </section>
-      <section className="pj-q4" aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
+      <section className="pj-q4" data-primary-content aria-label={g ? `${gap!.metric.label} against the paper` : `Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
         {gap ? <GapChart gap={gap} checkers={checkers} now={now} /> : <Climb play={play} m={m} />}
       </section>
-    </div>
-  )
-}
-
-/** Under it: every release and the bar behind one toggle, then the runs and findings. */
-export function PlayJourneyStanding({ play, onOpen, onMore }: { play: Play; onOpen: (runId: string) => void; onMore: () => void }) {
-  return (
-    <div className="play-standing-tab" data-section="standing">
-      <details className="pj-every">
-        <summary>Show every release</summary>
-        <PlayAgainstBar play={play} />
-        <PlayClimb play={play} />
-      </details>
-      <PlayLedger play={play} onOpen={onOpen} />
-      <PlayFindings play={play} limit={6} onMore={onMore} />
     </div>
   )
 }

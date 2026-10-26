@@ -1,12 +1,12 @@
 import { createContext, useContext, useId, useState, type ReactNode } from 'react'
-import { OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
+import { OUTCOME_ORDER } from '@tangle-network/charts'
 import { KnowledgeBrowser, resolveDocument, type DocumentSelection } from './viewer/KnowledgeBrowser.js'
 import { AgentRecord } from './AgentRecord.js'
 import { parseReportOptions } from './report-options.js'
 import type { RecordSelection } from './record.js'
 import { reportToLatex } from './report.js'
 import type { EvidenceReference, QuestionCoverage, ResearchMetric, ResearchPlay, ResearchReportData, ResearchDocument, ResearchRule, ResearchRun, ResearchTable, ResearchUnknown } from './report.js'
-import { OutcomeBar } from './workspace/PlayLedger.js'
+import { OutcomeBar, OutcomeLegend } from './workspace/PlayLedger.js'
 import { utcTime } from './viewer/model.js'
 import { useDownload } from './viewer/useDownload.js'
 import type { ResearchDocumentSelection, ResearchView } from './report-selection.js'
@@ -308,7 +308,7 @@ function Runs({ runs, inspect, printOnly, id }: { runs: ResearchRun[]; inspect: 
   return (
     <section className="rr-section" id={id} data-section="runs" aria-label="Runs">
       <h3>Runs</h3>
-      {present.length > 0 && <ul className="outcome-legend" aria-label="Attempt outcomes">{present.map(outcome => <li key={outcome}><i style={{ background: OUTCOME_COLORS[outcome] }} />{outcome}</li>)}</ul>}
+      {present.length > 0 && <OutcomeLegend outcomes={present} />}
       <ol className="rr-runs">{runs.map(run => <li key={run.id} className="rr-run" data-run={run.id}>
         <p className="rr-run-head">
           {run.href ? <a href={run.href}>{run.label}</a> : <strong>{run.label}</strong>}

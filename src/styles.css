@@ -3678,9 +3678,6 @@
 
 /* Play page standing (PlayJourney.tsx). */
 .ar-ws .pj { display: grid; gap: 28px; padding: 8px 0 20px; font-size: 14px; }
-.ar-ws .pj-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.ar-ws .pj-title h1 { margin: 0; font-size: 18px; font-weight: 600; }
-.ar-ws .pj-title .as-of { margin-left: auto; font-size: 12px; }
 .ar-ws .pj-q3, .ar-ws .pj-q4 { display: grid; gap: 12px; }
 .ar-ws .pj-sentence { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; }
 .ar-ws .pj-hero { margin: 0; font-size: 32px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -3784,7 +3781,7 @@
 .ar-ws .pj-hit { fill: transparent; }
 .ar-ws .pj-measured circle:not(.pj-hit) { fill: var(--ar-fg); }
 .ar-ws .pj-bound path { fill: none; stroke: var(--ar-c-warn, #f5a524); stroke-width: 1.5; }
-.ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
+.ar-ws .pj-mark.is-on .pj-hit, .ar-ws .pj-mark[data-state="open"] .pj-hit, .ar-ws .pj-mark:focus-visible .pj-hit { fill: color-mix(in srgb, var(--ar-fg) 14%, transparent); }
 .ar-ws .pj-tip { position: absolute; transform: translate(-50%, 14px); min-width: 200px; max-width: 280px; padding: 8px 12px; border: 1px solid var(--ar-border, #333); border-radius: 8px; background: var(--ar-bg-alt); font-size: 12px; pointer-events: none; z-index: 2; }
 .ar-ws .pj-tip.pj-tip-above { transform: translate(-50%, calc(-100% - 14px)); }
 .ar-ws .pj-tip p { margin: 0; }

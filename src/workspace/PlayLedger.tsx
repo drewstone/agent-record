@@ -1,4 +1,4 @@
-import { ENDING_COLORS, OUTCOME_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
+import { ENDING_COLORS, OUTCOME_ORDER } from '@tangle-network/charts'
 import { Gantt } from '@tangle-network/charts/react'
 import { type ReactNode, useMemo, useState } from 'react'
 import type { PlayDocument } from '../workspace-model.js'
@@ -11,6 +11,22 @@ type Play = PlayDocument & PlayHead
 type SortKey = 'newest' | 'wall' | 'agent' | 'cost' | 'score'
 
 const OUTCOME_WORD: Record<string, string> = { ok: 'ok', quota: 'quota', lost: 'lost', 'rate-limit': 'rate limit', oom: 'OOM', refused: 'refused', aborted: 'aborted', other: 'other' }
+/** Colour is state, not cause (REVIEW-9: nine colours): an attempt completed, failed (quota, lost, rate limit, OOM,
+ * refused) or ended otherwise; each segment's tooltip names its cause. */
+const OUTCOME_STATE: Record<string, 'ok' | 'failed' | 'other'> = { ok: 'ok', quota: 'failed', lost: 'failed', 'rate-limit': 'failed', oom: 'failed', refused: 'failed', aborted: 'other', other: 'other' }
+const STATE_COLOR = { ok: 'var(--ar-c-ok)', failed: 'var(--ar-c-fail)', other: 'var(--ar-c-neutral)' } as const
+
+/** The key for outcome bars: the states present, and the open turn when one is. */
+export function OutcomeLegend({ outcomes, open }: { outcomes: string[]; open?: boolean }) {
+  const states = (['ok', 'failed', 'other'] as const).filter((state) => outcomes.some((outcome) => OUTCOME_STATE[outcome] === state))
+  return (
+    <ul className="outcome-legend" aria-label="Attempt outcomes">
+      {states.map((state) => <li key={state}><i style={{ background: STATE_COLOR[state] }} />{state}</li>)}
+      {open && <li><i className="outcome-open" />open turn</li>}
+    </ul>
+  )
+}
+
 type OutcomeRow = Pick<PlayLedgerRow, 'hoursByOutcome' | 'triesByOutcome' | 'open' | 'outcomeBasis' | 'outcomeNotes'>
 const notes = (row: OutcomeRow) => (typeof row.outcomeNotes === 'string' ? [row.outcomeNotes] : Array.isArray(row.outcomeNotes) ? row.outcomeNotes : row.outcomeNotes ? Object.entries(row.outcomeNotes).map(([key, value]) => `${key}: ${value}`) : [])
 
@@ -34,7 +50,7 @@ export function OutcomeBar({ row, max }: { row: OutcomeRow; max: number }) {
     <span className="outcome-bar" title={title} data-outcome-basis={row.outcomeBasis ?? 'none'}>
       <span className="outcome-track" style={{ width: `${Math.max(2, ((total + open) / max) * 100)}%` }}>
         {parts.map((outcome) => (
-          <i key={outcome} data-outcome={outcome} title={`${OUTCOME_WORD[outcome]}: ${by![outcome]!.toFixed(1)} h${row.triesByOutcome?.[outcome] !== undefined ? `, ${row.triesByOutcome[outcome]} tries` : ''}`} style={{ flexGrow: by![outcome]!, background: OUTCOME_COLORS[outcome] }} />
+          <i key={outcome} data-outcome={outcome} title={`${OUTCOME_WORD[outcome]}: ${by![outcome]!.toFixed(1)} h${row.triesByOutcome?.[outcome] !== undefined ? `, ${row.triesByOutcome[outcome]} tries` : ''}`} style={{ flexGrow: by![outcome]!, background: STATE_COLOR[OUTCOME_STATE[outcome] ?? 'other'] }} />
         ))}
         {open > 0 && <i className="outcome-open" title={`open turn: ${open.toFixed(1)} h${row.open?.since ? ` since ${utc(row.open.since)}` : ''}`} style={{ flexGrow: open }} />}
       </span>
@@ -220,20 +236,7 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now(), actio
             {gained ? <span className="faint"> · {cost.provenance === 'estimated' ? '≈' : ''}{money(cost.apiEquivalentUsd / gained)} per step passed</span> : null}
           </p>
         ) : null}
-        <ul className="outcome-legend" aria-label="Attempt outcomes">
-          {OUTCOME_ORDER.filter((outcome) => present.has(outcome)).map((outcome) => (
-            <li key={outcome}>
-              <i style={{ background: OUTCOME_COLORS[outcome] }} />
-              {OUTCOME_WORD[outcome]}
-            </li>
-          ))}
-          {ledger.rows.some((row) => row.open?.hours) && (
-            <li>
-              <i className="outcome-open" />
-              open turn
-            </li>
-          )}
-        </ul>
+        <OutcomeLegend outcomes={[...present]} open={ledger.rows.some((row) => row.open?.hours)} />
       </header>
       <div className="table-scroll">
         <table className="data-table ledger-table" data-primary-content={full ? '' : undefined}>

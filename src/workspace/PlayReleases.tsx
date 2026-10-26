@@ -50,6 +50,7 @@ export function PlayReleases({ play }: { play: Play }) {
     ...steps.flatMap((_, i) => [`stop-${i + 1}`, `open-${i + 1}`]),
     'passed', 'passed-replaced', 'uncounted', 'unchecked',
   ].filter((key) => stops.some((stop) => stop.key === key))
+  const count = (key: string) => stops.filter((stop) => stop.key === key).length
   const checkersOf = (key: string) => [...new Set(stops.filter((stop) => stop.key === key).map((stop) => stop.checker).filter(Boolean))]
     .map((id) => checkerLabel(play.checkers, id))
   // With no pick, the list shows where the newest checked release stops: the play's current answer.
@@ -70,12 +71,12 @@ export function PlayReleases({ play }: { play: Play }) {
     <section className="ws-section play-releases" data-play-releases aria-label="Where releases stop">
       <div className="release-stops" data-primary-content data-picked={selected ? '' : undefined} onClick={pick}>
         {selected && <style>{`.ar-ws .release-stops a[href$="stop=${selected}"] { opacity: 1; background: var(--chart-live-hover); } .ar-ws .release-stops a[href$="stop=${selected}"] .ov-hbar-label { color: var(--ar-fg); font-weight: 600; }`}</style>}
-        <HBars max={Math.max(...keys.map((key) => stops.filter((stop) => stop.key === key).length))} limit={keys.length}
+        <HBars max={Math.max(...keys.map(count))} limit={keys.length}
           rows={keys.map((key) => ({
             label: label(key),
-            value: stops.filter((stop) => stop.key === key).length,
+            value: count(key),
             color: color(key),
-            title: `${stops.filter((stop) => stop.key === key).length} releases · ${label(key)}${checkersOf(key).length ? ` · checked under ${checkersOf(key).join(', ')}` : ''}`,
+            title: `${count(key)} ${count(key) === 1 ? 'release' : 'releases'} · ${label(key)}${checkersOf(key).length ? ` · checked under ${checkersOf(key).join(', ')}` : ''}`,
             href: `?tab=releases&stop=${key}`,
           }))} />
       </div>
