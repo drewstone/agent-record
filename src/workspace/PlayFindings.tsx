@@ -1,3 +1,4 @@
+import { Meter } from '@tangle-network/charts/react'
 import type { FeedItem, PlayDocument } from '../workspace-model.js'
 import { dataStatus, statusOf } from './data.js'
 import { plain } from './FindingsFeed.js'
@@ -7,12 +8,13 @@ import { plainSummary } from './plain-words.js'
 type Play = PlayDocument & PlayHead
 
 /** The host's groups (tangle-tools joined_findings), each with words that are true of every row in it. */
+/** Each group's colour is its state: confirmed, refuted, split, or not decided. */
 const GROUPS = [
-  ['verified', 'Verified by the current check', 'A commit it cites is solved, or its contract held, under the current checker.'],
-  ['contradicted', 'Contradicted', 'No check or gate held what it cites, and at least one contradicted it.'],
-  ['mixed', 'Checked, not settled', 'A check or the gate held what it cites under one checker; another contradicted it.'],
-  ['undecided', 'Unverified', 'Every row on the commits it cites is unverified: no check decided it.'],
-  ['unchecked', 'Unchecked agent claims', 'No check row matches anything it cites.'],
+  ['verified', 'Verified', 'A commit it cites is solved, or its contract held, under the current checker.', 'var(--ar-c-ok)'],
+  ['contradicted', 'Contradicted', 'No check or gate held what it cites, and at least one contradicted it.', 'var(--ar-c-fail)'],
+  ['mixed', 'Not settled', 'A check or the gate held what it cites under one checker; another contradicted it.', 'var(--ar-c-warn)'],
+  ['undecided', 'Unverified', 'Every row on the commits it cites is unverified: no check decided it.', 'var(--ar-c-neutral)'],
+  ['unchecked', 'Unchecked', 'No check row matches anything it cites.', 'color-mix(in srgb, var(--ar-c-neutral) 45%, var(--ar-bg))'],
 ] as const
 
 // A group this renderer does not know is shown as checked-not-settled, never as unchecked: it has evidence.
@@ -59,11 +61,7 @@ function Row({ play, item }: { play: Play; item: FeedItem }) {
           {tags.map((commit) => {
             const status = commitStatus(play, commit)
             return (
-            <span
-              key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`}
-              className="commit-chip"
-              data-status={dataStatus(status)}
-              title={[
+            <span key={`${commit.sha}:${commit.checker ?? ''}:${commit.kind ?? ''}`} className="commit-chip" data-status={dataStatus(status)} title={[
                 [commit.run ? shortRun(play.id, commit.run) : null, verdictWord(commit.verdict), typeof commit.workloads === 'object' && commit.workloads?.total ? `${commit.workloads.passed}/${commit.workloads.total}` : null, commit.checker ? checkerLabel(play.checkers, commit.checker) : null].filter(Boolean).join(' · '),
                 `commit ${commit.sha}`, commit.line, commit.at ? `at ${utc(commit.at)}` : null, commit.kind === 'gate' ? 'tag gate' : null,
               ].filter(Boolean).join('\n')}
@@ -93,9 +91,9 @@ export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: numb
   const counts = new Map(GROUPS.map(([id]) => [id, items.filter((item) => groupOf(item) === id).length]))
   return (
     <section className="ws-section play-findings" data-play-findings aria-label="Findings">
-      <header className="section-head">
-        <h3>Findings</h3>
-      </header>
+      {/* The answer first (REVIEW-8 #3: a status bar on top): how many findings each check verdict holds. */}
+      {!limit && <Meter total={items.length} text={`${items.length} findings`} segments={GROUPS.filter(([id]) => counts.get(id)).map(([id, label, , color]) => ({ label, value: counts.get(id)!, color }))} />}
+      <div className="finding-list" data-primary-content={limit ? undefined : ''}>
       {GROUPS.map(([id, label, why]) => {
         const rows = shown.filter((item) => groupOf(item) === id)
         if (!rows.length) return null
@@ -112,6 +110,7 @@ export function PlayFindings({ play, limit, onMore }: { play: Play; limit?: numb
           </details>
         )
       })}
+      </div>
       {limit && ordered.length > limit && onMore && (
         <button type="button" className="link-button" onClick={onMore}>
           All {ordered.length} findings →
