@@ -198,8 +198,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
     const counted = m.nodes.filter((n) => typeof n.toolCalls === 'number')
     return { spans, pauses, totalMs: m.t1 - m.t0, promptTokens: measured ?? 0, completionTokens: 0, ...(counted.length ? { toolCalls: counted.reduce((sum, n) => sum + n.toolCalls!, 0) } : {}), ...(cost != null ? { costUsd: cost, costBound: 'lower' as const } : {}) }
   }, [m, live, cost])
-  // Releases that moved the score, the best and the newest (17c tagged 205), tagged on this run's clock: a release inherited
-  // from an earlier run (22a's rc1, tagged two days before its first agent) has no place on it and its jump did nothing.
+  // Score-moving, best and newest releases (17c tagged 205), on this run's clock only (22a's inherited rc1 was a dead jump).
   const marked = useMemo(() => m.releases.filter((r, i) => ms(r.taggedAt) >= m.t0 && (r === m.best || i === m.releases.length - 1 || r.passed !== m.releases[i - 1]?.passed)), [m])
   const markers = useMemo((): FlowMarker[] => marked.map((r) => ({
     at: ms(r.taggedAt) - m.t0,
