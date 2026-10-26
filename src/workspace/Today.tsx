@@ -3,7 +3,6 @@ import { Lines } from '@tangle-network/charts/react'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
 import { hm } from './answers.js'
 import { StatusPill, useDocument } from './data.js'
-import { plainSummary } from './plain-words.js'
 import { type HostView, type ViewTrend, viewChip } from './view.js'
 
 /**
@@ -21,17 +20,11 @@ const playHref = (play: string, tab?: string) => `/play/${encodeURIComponent(pla
 const hoursSince = (iso: string | null | undefined, now: number) => (iso ? Math.max(0, (now - Date.parse(iso)) / 3_600_000) : null)
 const ago = (h: number | null) => (h === null ? '' : h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} days`)
 
-/** A recorded reason in plain words: its "who:" prefix, parentheses and later clauses dropped (the full text is its title). */
-const plainReason = (reason: string) => reason.replace(/^[^:]{0,80}:\s*/, '').replace(/\s*\([^)]*\)/g, '').split(/;\s*/)[0]!.replace(/^./, (c) => c.toUpperCase())
-
-/** One of the writer's decisions (the host's needsYou): the action, why, and for the writer the control that does it (a control copies its command). */
-function Decision({ item, now, writer }: { item: OverviewAttention; now: number; writer: boolean }) {
-  const why = item.kind === 'standdown'
-    ? `Research paused ${ago(hoursSince(item.since, now))}: ${plainReason(item.text.replace(/^Research is stood down:?\s*/, ''))}.`
-    : plainSummary(item.text, 24)
+/** One of the owner's decisions (the host's needsYou): the host's sentence, what waiting costs, and for the writer the control that does it (a control copies its command). */
+function Decision({ item, writer }: { item: OverviewAttention; writer: boolean }) {
   return (
     <li className="tj-decision">
-      <p><b>{item.action ?? item.text}</b> <span className="tj-muted" title={item.text}>{why}</span></p>
+      <p><b>{item.text}</b>{item.consequence && <span className="tj-muted"> {item.consequence}</span>}</p>
       <span className="rj-decide" hidden={!writer}>
         {(item.options ?? []).map((option) => <CopyButton key={option.verdict} label={option.label} command={option.command} title={option.consequence} />)}
         {!item.options?.length && item.href && <a className="tj-go" href={item.href}>Open</a>}
@@ -108,7 +101,7 @@ function TodayView({ doc, writer }: { doc: OverviewDocument; writer: boolean }) 
         <p className="tj-hero">{mine.length ? `${mine.length} ${mine.length === 1 ? 'decision needs' : 'decisions need'} you.` : 'Nothing needs you.'}</p>
         {/* Plain words, not the trend's states (review 4 #8: "0 moving, 1 stuck" read as jargon). */}
         <p className="tj-second">{[count('moving') && `${count('moving')} gaining steps`, count('stuck') && `${count('stuck')} not gaining`, count('regressed') && `${count('regressed')} lost steps`].filter(Boolean).join(', ') || 'No measured play changed'}.</p>
-        {mine.length > 0 && <ul className="tj-decisions">{mine.map((item) => <Decision key={item.text} item={item} now={now} writer={writer} />)}</ul>}
+        {mine.length > 0 && <ul className="tj-decisions">{mine.map((item) => <Decision key={item.text} item={item} writer={writer} />)}</ul>}
       </section>
       <section className="tj-q2" aria-label="Is research working">
         {measured.length > 0 && (
