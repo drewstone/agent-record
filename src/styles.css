@@ -3578,17 +3578,6 @@
 .ar-ws .pj-hero small { font-size: 18px; color: var(--ar-fg-muted); font-weight: 400; }
 .ar-ws .pj-hold { margin: 0; font-size: 14px; }
 .ar-ws .pj-muted { color: var(--ar-fg-muted); }
-.ar-ws .pj-climb { display: block; overflow: visible; }
-.ar-ws .pj-grid line { stroke: color-mix(in srgb, var(--ar-fg-faint) 30%, transparent); }
-.ar-ws .pj-grid text, .ar-ws .pj-tick { fill: var(--ar-fg-muted); font-size: 12px; }
-.ar-ws .pj-grid.is-open rect { fill: color-mix(in srgb, var(--ar-c-warn, #f5a524) 14%, transparent); }
-.ar-ws .pj-grid.is-open text { fill: var(--ar-c-warn, #f5a524); font-weight: 600; }
-.ar-ws .pj-flat { fill: var(--ar-c-warn, #f5a524); font-size: 12px; font-weight: 600; }
-.ar-ws .pj-dot { fill: var(--ar-fg-muted); } /* >= 3:1 against the page for a non-text mark (lead 22:20Z) */
-.ar-ws .pj-line { fill: none; stroke-width: 3; stroke: var(--ar-fg-muted); }
-.ar-ws .pj-stuck .pj-line { stroke: var(--ar-c-warn, #f5a524); }
-.ar-ws .pj-moving .pj-line, .ar-ws .pj-solved .pj-line { stroke: var(--ar-c-ok, #22c55e); }
-.ar-ws .pj-regressed .pj-line { stroke: var(--ar-c-fail, #ef4444); }
 .ar-ws .pj-every > summary { cursor: pointer; font-size: 14px; color: var(--ar-fg-muted); padding: 8px 0; }
 @media (max-width: 1023px) {
   .ar-ws .pj-sentence { font-size: 14px; }
@@ -3904,5 +3893,5 @@
 @media (max-width: 700px) {
   .ar-ws .bar-strip { grid-template-columns: minmax(0, 1fr) max-content max-content; gap: 4px 12px; }
   .ar-ws .bar-gap { grid-column: 1 / -1; grid-row: 2; }
-  .ar-ws .bar-change { display: none; }
+  .ar-ws .bar-change { grid-column: 1 / -1; grid-row: 3; }
 }
