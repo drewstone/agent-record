@@ -59,7 +59,7 @@ export function GapChart({ gap, checkers, now }: { gap: PlayGapFacts; checkers: 
   const target = gap.metric.target
   const times = [...gap.measured.map((m) => ms(m.at)), ...gap.capMisses.map((m) => ms(m.at)), ms(gap.passed?.lastAt)].filter(Number.isFinite)
   if (!times.length) return null
-  const w = measured ?? (phone ? 380 : 1000), h = gap.measured.length <= 1 ? 160 : phone ? 260 : 300, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
+  const w = measured ?? (phone ? 380 : 1000), h = gap.measured.length + gap.capMisses.length <= 1 ? 160 : phone ? 260 : 400, left = phone ? 44 : 64, right = 16, top = 16, bottom = 28
   const t0 = Math.min(...times) - 3_600_000, t1 = Math.max(now, ...times)
   // Fitted to our own data, a decade either side (lead 07:12Z: with the paper's band on the axis all our points sat in
   // the bottom tenth and the chart read flat); the paper, thousands of times higher, is an off-scale arrow.
