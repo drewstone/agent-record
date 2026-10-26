@@ -15,7 +15,7 @@ import { PlayReleases } from './workspace/PlayReleases.js'
 import { PlaysTable } from './workspace/PlaysTable.js'
 import { inlinedPlayHead, type PlayHead } from './workspace/play-standing.js'
 import { TheatrePage } from './workspace/Theatre.js'
-import { RunVersions } from './workspace/VersionGraph.js'
+import { BuiltSummary, RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
 import { Conversation } from './viewer/Conversation.js'
@@ -708,7 +708,7 @@ function RunPage({ api, id }: { api: string; id: string }) {
             }
           />
           <RunDetails tab={details} counts={counts} onTab={(next) => update({ details: next === 'built' ? undefined : next, commit: undefined }, true)}>
-            {details === 'built' && versionsPanel}
+            {details === 'built' && <BuiltSummary delivered={doc.finalOutput?.files} onOpenFile={(file) => update({ section: 'outputs', file, commit: undefined, details: undefined })} historyHref="?section=versions" />}
             {details === 'agents' && (index ? <div className="agent-rail details-agents"><AgentTable index={index} stats={nodes.stats} doc={doc} assessments={assessments.data?.rows ?? []} dimensions={catalogue} selected={null} onSelect={selectAgent} /></div> : <p className="ws-status" role="status">Loading the agents…</p>)}
             {details === 'findings' && (doc.findings?.total ? <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} /> : <p className="ws-status">No knowledge pages were recorded for this run.</p>)}
             {details === 'how' && how}
