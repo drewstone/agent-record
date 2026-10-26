@@ -158,8 +158,8 @@ function PlaysPage({ api }: { api: string }) {
   const programs = useMemo(() => [...new Set((plays.data?.plays ?? []).map((play) => play.program ?? '').filter(Boolean))].sort(), [plays.data])
   const { rows, hidden } = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    // Each order reads the column it sorts: API-equivalent, and the runs the filter shows.
-    const spent = (play: PlaysDocument['plays'][number]) => play.standing?.cost?.apiEquivalentUsd ?? -1, runsShown = (play: PlaysDocument['plays'][number]) => (!showHidden && play.counts ? play.counts.shown : play.runCount) ?? 0
+    // Each order reads the column it sorts.
+    const spent = (play: PlaysDocument['plays'][number]) => play.standing?.cost?.apiEquivalentUsd ?? -1
     const matching = (plays.data?.plays ?? []).filter(
       (play) => (!program || play.program === program) && (!needle || `${play.id} ${play.title} ${play.program ?? ''} ${play.line ?? ''}`.toLowerCase().includes(needle)),
     )
@@ -172,7 +172,7 @@ function PlaysPage({ api }: { api: string }) {
           : sort === 'spend'
             ? spent(b) - spent(a)
             : sort === 'runs'
-              ? runsShown(b) - runsShown(a)
+              ? b.runCount - a.runCount
               : String(b.latestRun?.startedAt ?? '').localeCompare(String(a.latestRun?.startedAt ?? '')),
       )
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
@@ -226,20 +226,16 @@ function PlaysPage({ api }: { api: string }) {
     const shown = all.filter((run) => (run.state === 'running' || (run.startedAt && Date.parse(run.startedAt) >= cutoff))
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
     const clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
-    // One spend cell: each part the run has a reading for, named in its tooltip; a dash when it has none (no per-run meter).
-    const spend = (run: (typeof all)[number]) => (([['subscription at API prices', run.subscriptionUsd], ['billed API', run.apiUsd], ['billed sandbox', run.sandboxUsd]] as const).filter(([, usd]) => usd !== null && usd !== undefined)
-      .map(([name, usd], index) => <span key={name} title={name}>{index ? ' + ' : ''}{money(usd!)}</span>))
     return <div className="ws-page ws-plays" data-plays-home="runs">
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
       {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer" data-primary-content><ReliabilityPanel api={api} />
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
         <caption className="faint">{shown.length} runs, last 30 days</caption>
-        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th><th className="num">Spend</th></tr></thead>
+        <thead><tr><th>Run</th><th>State</th><th>Started</th><th>Last activity</th><th>Outcome</th></tr></thead>
         <tbody>{shown.slice(0, shownRows).map((run) => <tr key={run.id}>
           <td><a href={`/run/${encodeURIComponent(run.id)}`}>{run.play}</a><small className="faint mono" title={run.id}> {/\d{6}(\d\d[a-z])$/.exec(run.id)?.[1] ?? run.id}</small></td>
           <td><StatusPill status={runStatus(run, newerStarted(run, all))} /></td>
           <td className="nowrap">{clock(run.startedAt)}</td><td className="nowrap">{clock(run.activeAt)}</td><td>{run.stopCause || run.reason || '—'}</td>
-          <td className="num">{spend(run).length ? spend(run) : '—'}</td>
         </tr>)}</tbody>
       </table></div></div>
       {!shown.length && <p className="chat-empty">No runs match.</p>}{shown.length > shownRows && <button type="button" className="plays-more" onClick={() => setShownRows(shown.length)}>Show all {shown.length} runs</button>}
@@ -252,7 +248,7 @@ function PlaysPage({ api }: { api: string }) {
         <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
           <div className="table-scroll" data-primary-content>
-            <PlaysTable rows={rows.slice(0, shownRows)} showHidden={showHidden} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} />
+            <PlaysTable rows={rows.slice(0, shownRows)} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} />
           </div>
           {rows.length > shownRows && (
             <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>

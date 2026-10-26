@@ -187,8 +187,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0;
+  gap: 8px;
+  padding: 8px 0;
   font-size: var(--ar-text-s);
   color: var(--ar-fg-muted);
 }

@@ -32,7 +32,7 @@ const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) =>
  * carried in `standing.view`), the words its play, run and Today pages print; a play whose page has not been composed
  * since the view existed falls back to its standing.
  */
-export function PlaysTable({ rows, showHidden, sort, onSort }: { rows: PlayRow[]; showHidden: boolean; sort: string; onSort: (sort: 'runs' | 'spend' | null) => void }) {
+export function PlaysTable({ rows, sort, onSort }: { rows: PlayRow[]; sort: string; onSort: (sort: 'runs' | 'spend' | null) => void }) {
   // The numeric headers set the page's one order (its `sort` parameter), most first; a second click restores the latest-run order.
   const head = (key: 'runs' | 'spend', label: string, title?: string) => (
     <th className="num" aria-sort={sort === key ? 'descending' : undefined} title={title}>
@@ -55,13 +55,14 @@ export function PlaysTable({ rows, showHidden, sort, onSort }: { rows: PlayRow[]
         {rows.map((play) => {
           const href = `/play/${encodeURIComponent(play.id)}`
           const open = () => go(href)
-          const runs = !showHidden && play.counts ? play.counts.shown : play.runCount
           const standing = play.standing ?? null
           const view = standing?.view ?? null
           const last = standing?.lastEnding ?? null
           const cost = standing?.cost ?? null
-          const lastId = last?.runId ?? play.latestRun?.id ?? null
+          // The newest run, with its status from the play's view; the last ended run's word only when it is that run (REVIEW-9).
+          const lastId = play.latestRun?.id ?? last?.runId ?? null
           const lastStatus = lastId ? view?.runs?.[lastId] : undefined
+          const lastWord = lastId && lastId === last?.runId ? last.word : null
           const best = view?.progress ?? null
           const legacy = (standing?.best ?? null) as { tag?: string | null; run?: string | null; checker?: string | null; verdict?: string | null } | null
           return (
@@ -107,11 +108,9 @@ export function PlaysTable({ rows, showHidden, sort, onSort }: { rows: PlayRow[]
                     {runOf(lastId)}
                   </a>
                 ) : '—'}
-                <span title={short(lastStatus?.at ?? last?.at ?? play.latestRun?.startedAt) ?? undefined}>{lastStatus ? <> <StatusPill status={viewChip(lastStatus)} className="ending-word" /></> : last?.word ? <> <StatusPill status={endingStatus(last.word)} className="ending-word" /></> : null}</span>
+                <span title={short(lastStatus?.at ?? play.latestRun?.startedAt) ?? undefined}>{lastStatus ? <> <StatusPill status={viewChip(lastStatus)} className="ending-word" /></> : lastWord ? <> <StatusPill status={endingStatus(lastWord)} className="ending-word" /></> : null}</span>
               </td>
-              <td className="num" title={runs !== play.runCount ? `${play.runCount} in all; ${play.runCount - runs} behind the filter` : undefined}>
-                {runs}
-              </td>
+              <td className="num">{play.runCount}</td>
               <td className="num" title={cost?.priced !== null && cost?.priced !== undefined ? `${cost.priced} of ${cost.started ?? '?'} started runs priced${cost.provenance ? ` (${cost.provenance})` : ''}` : undefined}>
                 {cost?.apiEquivalentUsd !== null && cost?.apiEquivalentUsd !== undefined && cost.priced ? (
                   <>
