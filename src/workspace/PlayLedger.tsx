@@ -130,7 +130,7 @@ function Cost({ row }: { row: PlayLedgerRow }) {
 /** An API-equivalent figure as every page prints it: ≥ for a floor, ≈ for an estimate, a titled dash when unpriced. */
 export function ApiCost({ usd, provenance, billedUsd }: { usd: number | null | undefined; provenance?: string | null; billedUsd?: number | null }) {
   if (provenance === 'unmetered') return <span className="faint" title="unmetered: no settled attempt to price">—</span>
-  if (usd === null || usd === undefined) return <span className="unpriced" title="API-equivalent not priced">—</span>
+  if (usd === null || usd === undefined || (usd === 0 && provenance?.endsWith('at least'))) return <span className="unpriced" title="API-equivalent not priced">—</span>
   return (
     <span title={`API-equivalent at list price, ${provenance?.startsWith('per') ? `${provenance}, the run page's figure` : provenance === 'estimated' ? "estimated from Runtime's totals in the receipt" : provenance ?? 'unknown source'}${billedUsd !== null && billedUsd !== undefined ? `; billed ${money(billedUsd)}` : ''}`}>
       {provenance?.endsWith('at least') ? '≥' : provenance === 'estimated' || provenance === 'per call' ? '≈' : ''}{money(usd)}
