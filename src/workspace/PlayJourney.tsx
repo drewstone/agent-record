@@ -98,7 +98,7 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
       {bars.length > 0 && <BarStrip bars={bars} />}
       <section className="pj-q4" aria-label={`Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
-        {m.trend && <TrendChart trend={m.trend} steps={m.steps} />}
+        {m.trend && <TrendChart trend={m.trend} />}
       </section>
     </div>
   )
