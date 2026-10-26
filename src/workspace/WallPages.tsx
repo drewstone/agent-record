@@ -271,12 +271,12 @@ export function SandboxesPage({ api }: { api: string }) {
 const STAGE_ORDER: Record<string, number> = { awaiting: 0, approved: 1, routed: 2, launched: 3, discarded: 4 }
 
 /** A problem statement's title and the rest: its text before the first colon when short, else its first clause (up to a
- * comma, parenthesis or semicolon) when that is 10 words or fewer, else its first 8 words; the whole statement opens under it. */
+ * comma, parenthesis or semicolon) when that is 12 words or fewer, else its first 8 words; the whole statement opens under it. */
 const claim = (text: string): [string, string] => {
   const at = text.indexOf(':')
   if (at > 0 && at < 80) return [text.slice(0, at), text.slice(at + 1).trim()]
   const clause = text.split(/[,(;]/)[0]!.trim().split(/\s+/)
-  const title = clause.length <= 10 ? clause.join(' ') : `${clause.slice(0, 8).join(' ')}…`
+  const title = clause.length <= 12 ? clause.join(' ') : `${clause.slice(0, 8).join(' ')}…`
   return title.length < text.length ? [title, text] : [text, '']
 }
 
