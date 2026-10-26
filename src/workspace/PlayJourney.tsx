@@ -1,8 +1,8 @@
 import { Tip } from './AnswerStrip.js'
 import { BarStrip } from './BarStrip.js'
+import { TrendChart } from './TrendChart.js'
 import type { Play } from './answers.js'
 import { stepWord } from './plain-words.js'
-import { usePhone } from './use-phone.js'
 import type { HostView, ViewTrend } from './view.js'
 
 /**
@@ -67,51 +67,6 @@ function Hold({ view }: { view: HostView }) {
   )
 }
 
-/** Best steps passed over time (step line), each release a dot at its own score; the ladder's step names are the rows. */
-function Climb({ play, m }: { play: Play; m: Model }) {
-  const phone = usePhone()
-  const series = m.trend?.series ?? []
-  if (!m.trend || series.length === 0) return <p className="pj-muted">No release has a score under the current check yet.</p>
-  const total = m.trend.total
-  // Drawn at the screen's own width so its 12-13 px labels stay 12-13 px (a 1000-wide chart on a phone shrinks them to 4).
-  const w = phone ? 380 : 1000
-  const h = 300
-  const left = phone ? 120 : 190
-  const t0 = ms(series[0]!.at)
-  const t1 = Math.max(m.now, ms(series.at(-1)!.at))
-  const x = (t: number) => left + ((t - t0) / Math.max(1, t1 - t0)) * (w - left - 16)
-  const y = (v: number) => 14 + (1 - v / Math.max(1, total)) * (h - 40)
-  let best = -1
-  let path = ''
-  for (const r of series) {
-    const t = x(ms(r.at))
-    if (r.passed > best) {
-      path += path ? ` H${t} V${y(r.passed)}` : `M${t} ${y(r.passed)}`
-      best = r.passed
-    }
-  }
-  path += ` H${x(t1)}`
-  const ticks = [t0, t0 + (t1 - t0) / 2, t1]
-  const openIndex = m.open ? m.steps.indexOf(m.open) : -1
-  const band = (h - 40) / total
-  const label = (v: number) => (phone ? `${v} ${(m.steps[v - 1]?.label ?? '').split(' ').slice(0, 2).join(' ')}` : `${v} · ${m.steps[v - 1]?.label ?? `step ${v}`}`)
-  return (
-    <svg className={`pj-climb pj-${m.trend.movement}`} viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={`Best steps passed under the current check over time; ${headline(play, m)}`}>
-      {Array.from({ length: total + 1 }, (_, v) => (
-        <g key={v} className={`pj-grid${v > 0 && v === openIndex + 1 ? ' is-open' : ''}`}>
-          {v > 0 && v === openIndex + 1 && <rect x={left} y={y(v) - band / 2} width={w - left - 16} height={band} />}
-          <line x1={left} x2={w - 16} y1={y(v)} y2={y(v)} />
-          <text x={left - 8} y={y(v) + 4} textAnchor="end">{v === 0 ? '' : label(v)}</text>
-        </g>
-      ))}
-      {series.map((r) => <circle key={`${r.runId}-${r.release}`} className="pj-dot" cx={x(ms(r.at))} cy={y(r.passed)} r={3.5}><title>{`${shortRun(play.id, r.runId)} ${r.release}: ${r.passed}/${total}, ${day(ms(r.at))}`}</title></circle>)}
-      <path className="pj-line" d={path} />
-      {m.flatHours !== null && <text className="pj-flat" x={x(t1) - 6} y={y(m.trend.best) + 18} textAnchor="end">no step gained in {ago(m.flatHours)}</text>}
-      {ticks.map((t, i) => <text key={i} className="pj-tick" x={x(t)} y={h - 6} textAnchor={i === 0 ? 'start' : i === 2 ? 'end' : 'middle'}>{i === 2 ? 'now' : day(t)}</text>)}
-    </svg>
-  )
-}
-
 /** The ladder under the current check as one strip: each step a dot and its name, the open one lit. */
 function StepStrip({ m }: { m: Model }) {
   if (!m.steps.length) return null
@@ -143,7 +98,7 @@ export function PlayJourney({ play, now = Date.now() }: { play: Play; now?: numb
       {bars.length > 0 && <BarStrip bars={bars} />}
       <section className="pj-q4" aria-label={`Best steps passed over time${p?.checker ? `, under check ${p.checker}` : ''}`}>
         <StepStrip m={m} />
-        <Climb play={play} m={m} />
+        {m.trend && <TrendChart trend={m.trend} steps={m.steps} />}
       </section>
     </div>
   )

@@ -39,7 +39,8 @@ export function BarStrip({ bars }: { bars: ViewBar[] }) {
             </span>
             <b className="bar-value" title={where || undefined}>{latest ? `${BOUND[latest.kind]}${format(latest.value)}` : 'not measured'}</b>
             <span className="bar-ratio">{bar.ratio ? (side === 'short' ? `${times(bar.ratio.x)} short` : side === 'past' ? `✓ ${times(bar.ratio.x)} past` : '✓ within') : ''}</span>
-            <span className="bar-change" data-improved={improved === null ? undefined : String(improved)}>{bar.change ? `was ${format(bar.change.from)} · ${day(bar.change.since)}` : ''}</span>
+            {/* No change in the window means the value is older than it: say its size and date beside it, never as if current. */}
+            <span className="bar-change" data-improved={improved === null ? undefined : String(improved)}>{bar.change ? `was ${format(bar.change.from)} · ${day(bar.change.since)}` : latest ? [latest.size, day(latest.at)].filter(Boolean).join(' · ') : ''}</span>
           </li>
         )
       })}
