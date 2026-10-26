@@ -6,15 +6,6 @@ import { ReviewBadges, ReviewDetails } from './ScientificReviews.js'
 
 const LEAD_KINDS = new Set(['result', 'claim'])
 const SHOWN = 10
-const KIND_LABEL: Record<string, string> = {
-  result: 'result',
-  claim: 'claim',
-  check: 'check',
-  sources: 'sources',
-  plan: 'plan',
-  evidence: 'evidence',
-  process: 'process',
-}
 
 const clock = (value: string | null | undefined) => (value ? `${value.slice(11, 16)} UTC` : 'time unknown')
 const stem = (path: string) => path.split('/').pop()?.replace(/\.md$/i, '') ?? path
@@ -59,7 +50,7 @@ function FindingRow({ item, pageHref, open, onToggle }: { item: FindingItem; pag
     <li className={`finding-row ${open ? 'open' : ''}`} data-finding={item.sha256}>
       <button type="button" className="finding-head" aria-expanded={open} onClick={onToggle}>
         <span className="finding-tags">
-          <span className={`ftag kind-${item.kind}`}>{KIND_LABEL[item.kind] ?? item.kind}</span>
+          <span className={`ftag kind-${item.kind}`}>{item.kind}</span>
           {item.class && <span className="ftag tone-neutral">{item.class.toLowerCase()}</span>}
           {LEAD_KINDS.has(item.kind) && <ReviewBadges reviews={item.reviews} />}
         </span>
@@ -211,7 +202,7 @@ function ChecksCard({ checks, pageHref }: { checks: FindingItem[]; pageHref: (it
 export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; runUrl: string; open: string | null; onOpen: (sha: string | null) => void }) {
   const findings = doc.findings
   const [all, setAll] = useState(false)
-  const setOpen = onOpen
+  const [full, setFull] = useState<ReadonlySet<string>>(new Set())
   const groups = useMemo(() => {
     const items = findings?.items ?? []
     return {
@@ -231,24 +222,24 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
   }, [open, hiddenOpen])
   useEffect(() => {
     if (!open) return
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(null) }
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') onOpen(null) }
     window.addEventListener('keydown', close)
     return () => window.removeEventListener('keydown', close)
-  }, [open, setOpen])
-  if (!findings || (!findings.total && !findings.agents.some((agent) => agent.lastWords))) return null
+  }, [open, onOpen])
+  const speakers = findings?.agents.filter((agent) => agent.lastWords) ?? []
+  if (!findings || (!findings.total && !speakers.length)) return null
   const pageHref = (item: FindingItem) => `${runUrl}/page/${item.sha256}`
   const shown = all || hiddenOpen ? groups.lead : groups.lead.slice(0, SHOWN)
-  const notSettled = doc.run.state !== 'winner' && doc.run.state !== 'running'
   return (
     <section className="run-findings" aria-label="What this run found" data-findings={findings.total}>
       <div className="findings-main">
         {/* The tab names the question and counts the pages; the caution says what the rows cannot. The answers and the rows
             are the view's one primary surface (data-primary-content: one region per view). */}
         {!groups.lead.length && <p className="findings-lead">{findings.items.length ? `No result or claim pages; ${plural(findings.items.length, 'other page')} below.` : 'No result or claim pages recorded.'}</p>}
-        {notSettled && groups.lead.length > 0 && (
+        {doc.run.state !== 'winner' && doc.run.state !== 'running' && groups.lead.length > 0 && (
           <p className="findings-caution">Ended {doc.run.state.replaceAll('-', ' ')}: none of these reached the run's declared result.</p>
         )}
-        {(groups.results.length > 0 || groups.lead.length > 0 || findings.agents.some((agent) => agent.lastWords)) && (
+        {(groups.results.length > 0 || groups.lead.length > 0 || speakers.length > 0) && (
           <div className="findings-primary" data-primary-content>
             {groups.results.length > 0 && (
               <div className="findings-lead">
@@ -262,25 +253,27 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
             {groups.lead.length > 0 && (
               <ol className="finding-list">
                 {shown.map((item) => (
-                  <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => setOpen(open === item.sha256 ? null : item.sha256)} />
+                  <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => onOpen(open === item.sha256 ? null : item.sha256)} />
                 ))}
               </ol>
             )}
-            {/* What each agent said last fills the tab under its findings: their own words, open (REVIEW-10). */}
-            {findings.agents.some((agent) => agent.lastWords) && (
+            {/* What each agent said last fills the tab under its findings: their own words, open (REVIEW-10), each clamped to
+                three lines with a More so six agents fit a phone (reviewer 0.88.3: 6.5 screens). */}
+            {speakers.length > 0 && (
               <details className="last-words" open>
                 <summary>Each agent's last words</summary>
-                {findings.agents
-                  .filter((agent) => agent.lastWords)
-                  .map((agent) => (
-                    <div key={agent.agent ?? agent.label ?? 'agent'} className="last-word">
+                {speakers.map((agent) => {
+                  const key = agent.agent ?? agent.label ?? 'agent', text = agent.lastWords!.text, long = text.length > 240 || text.includes('\n'), isFull = full.has(key)
+                  return (
+                    <div key={key} className={`last-word${long && !isFull ? ' clamped' : ''}`}>
                       <div className="finding-meta">
-                        <b>{short(agent.label)}</b>
-                        <span className="mono">{clock(agent.lastWords!.at)}</span>
+                        <b>{short(agent.label)}</b> <span className="mono">{clock(agent.lastWords!.at)}</span>
+                        {long && <button type="button" className="link-button" aria-expanded={isFull} onClick={() => setFull((keys) => isFull ? new Set([...keys].filter((k) => k !== key)) : new Set(keys).add(key))}>{isFull ? 'Less' : 'More'}</button>}
                       </div>
-                      <MessageText text={agent.lastWords!.text} />
+                      <MessageText text={text} />
                     </div>
-                  ))}
+                  )
+                })}
               </details>
             )}
           </div>
@@ -297,12 +290,12 @@ export function RunFindings({ doc, runUrl, open, onOpen }: { doc: RunDocument; r
               {Object.entries(
                 groups.rest.reduce<Record<string, number>>((counts, item) => ({ ...counts, [item.kind]: (counts[item.kind] ?? 0) + 1 }), {}),
               )
-                .map(([kind, count]) => `${count} ${KIND_LABEL[kind] ?? kind}`)
+                .map(([kind, count]) => `${count} ${kind}`)
                 .join(' · ')}
             </summary>
             <ol className="finding-list">
               {groups.rest.map((item) => (
-                <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => setOpen(open === item.sha256 ? null : item.sha256)} />
+                <FindingRow key={item.sha256} item={item} pageHref={pageHref(item)} open={open === item.sha256} onToggle={() => onOpen(open === item.sha256 ? null : item.sha256)} />
               ))}
             </ol>
           </details>
@@ -330,7 +323,7 @@ export function AgentFindings({ doc, agent, label, onOpen }: { doc: RunDocument;
           {lead.slice(0, 12).map((item) => (
             <li key={item.sha256}>
               <button type="button" className="agent-finding" onClick={() => onOpen(item.sha256)} title={item.title}>
-                <span className={`ftag kind-${item.kind}`}>{KIND_LABEL[item.kind] ?? item.kind}</span>
+                <span className={`ftag kind-${item.kind}`}>{item.kind}</span>
                 <span className="clamp-1">{item.title}</span>
                 <span className="mono faint">{clock(item.at)}</span>
               </button>
