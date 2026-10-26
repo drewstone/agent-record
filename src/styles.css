@@ -3276,7 +3276,7 @@
 .ar-ws .finding-group > summary { cursor: pointer; padding: 4px 0; font-size: var(--ar-text-s); }
 .ar-ws .finding-group > summary .faint { font-size: 12px; }
 .ar-ws .finding-group ul { margin: 0; padding: 0; list-style: none; display: grid; }
-.ar-ws .finding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 4px 0 4px 12px; border-left: 2px solid var(--ar-border); }
+.ar-ws .finding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 4px 8px 4px 12px; border-left: 2px solid var(--ar-border); }
 .ar-ws .group-verified .finding-row { border-left-color: var(--ar-c-ok); }
 .ar-ws .group-contradicted .finding-row { border-left-color: var(--ar-c-neutral); }
 .ar-ws .group-undecided .finding-row { border-left-color: var(--ar-c-neutral); }

@@ -269,7 +269,7 @@ export function PlayLedger({ play, full = false, onOpen, now = Date.now(), actio
                   </td>
                   <td className="ledger-ending" title={row.ending?.reason ?? undefined}>
                     {/* The host's status for the run (views.run_status), so a win under an earlier check never reads "Passed". */}
-                    {row.ending ? <StatusPill status={row.ending.status ? viewChip(row.ending.status) : statusOf({ axis: 'run', state: row.ending.word, reason: row.ending.reason })} className="ending-glyph" /> : '—'}
+                    {play.live?.runId === row.runId ? <StatusPill status={statusOf({ axis: 'run', state: 'live' })} className="ending-glyph" /> : row.ending ? <StatusPill status={row.ending.status ? viewChip(row.ending.status) : statusOf({ axis: 'run', state: row.ending.word, reason: row.ending.reason })} className="ending-glyph" /> : '—'}
                   </td>
                   <td className="ledger-bar">
                     <WallBar row={row} max={maxWall} />
