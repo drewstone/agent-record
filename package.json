@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "0.90.26",
+  "version": "0.90.27",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
