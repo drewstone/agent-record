@@ -84,7 +84,7 @@
     "react-dom": ">=18.3.0 <20"
   },
   "dependencies": {
-    "@nanostores/react": "^2.0.1",
+    "@nanostores/react": "^1.0.0",
     "@tangle-network/agent-interface": "5.7.1",
     "@tangle-network/brand": "^1.29.0",
     "@tangle-network/charts": "^0.21.19",
