@@ -4,9 +4,11 @@
 @import '@tangle-network/charts/figure.css';
 @import '@tangle-network/charts/react/flow-waterfall.css';
 /* The renderer's element defaults sit in a cascade layer below the kit's components and utilities, so a shared component
-   (tabs, segmented controls, prose headings, buttons) draws as the kit draws it; plain markup still gets them. */
+   (tabs, segmented controls, prose headings, tool rows) draws as the kit draws it; plain markup still gets them. A control's
+   chrome goes only to the renderer's own controls (.ui-button, a bare button, a native select or search field): a kit
+   button leans on the reset for its transparent, borderless rest. */
 @layer ar-base {
-:where(.agent-record) :where(button, select, input[type='search']) {
+:where(.agent-record) :where(.ui-button, button:not([class]), select, input[type='search']) {
   color: var(--ar-fg);
   background: var(--ar-bg);
   border: 1px solid var(--ar-border);
@@ -16,12 +18,12 @@
 :where(.agent-record) :where(button) {
   cursor: pointer;
 }
-:where(.agent-record) :where(button:disabled) {
+:where(.agent-record) :where(.ui-button, button:not([class])):disabled {
   color: var(--ar-fg-muted);
   border-style: dashed;
   cursor: default;
 }
-:where(.agent-record) :where(button:hover:not(:disabled), select[aria-expanded='true']) {
+:where(.agent-record) :where(.ui-button:hover:not(:disabled), button:not([class]):hover:not(:disabled), select[aria-expanded='true']) {
   background: var(--ix-hover-bg);
   border-color: var(--ar-border-strong);
 }
