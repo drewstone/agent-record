@@ -32,7 +32,8 @@ const holding = (view: NonNullable<NonNullable<PlayRow['standing']>['view']>) =>
  * carried in `standing.view`), the words its play, run and Today pages print; a play whose page has not been composed
  * since the view existed falls back to its standing.
  */
-export function PlaysTable({ rows, sort, onSort }: { rows: PlayRow[]; sort: string; onSort: (sort: 'runs' | 'spend' | null) => void }) {
+/** `live`: each play's running run, which the Last run column shows over a newer run that already stopped. */
+export function PlaysTable({ rows, sort, onSort, live }: { rows: PlayRow[]; sort: string; onSort: (sort: 'runs' | 'spend' | null) => void; live?: ReadonlyMap<string, string> }) {
   // The numeric headers set the page's one order (its `sort` parameter), most first; a second click restores the latest-run order.
   const head = (key: 'runs' | 'spend', label: string, title?: string) => (
     <th className="num" aria-sort={sort === key ? 'descending' : undefined} title={title}>
@@ -60,7 +61,7 @@ export function PlaysTable({ rows, sort, onSort }: { rows: PlayRow[]; sort: stri
           const last = standing?.lastEnding ?? null
           const cost = standing?.cost ?? null
           // The newest run, with its status from the play's view; the last ended run's word only when it is that run (REVIEW-9).
-          const lastId = play.latestRun?.id ?? last?.runId ?? null
+          const lastId = live?.get(play.id) ?? play.latestRun?.id ?? last?.runId ?? null
           const lastStatus = lastId ? view?.runs?.[lastId] : undefined
           const lastWord = lastId && lastId === last?.runId ? last.word : null
           const best = view?.progress ?? null
