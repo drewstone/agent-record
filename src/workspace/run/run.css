@@ -507,7 +507,7 @@
   .rp .rp-tl-chart { min-height: 520px; }
   .rp .rp-ig { grid-template-columns: minmax(0, 1fr); }
   .rp .rp-ig > div + div { box-shadow: none; border-top: 1px solid var(--rp-line); }
-  .rp .rp-files > * { flex: none; height: 80dvh; }
+  .rp .rp-files { height: 80dvh; }
   .rp .rp-doc { padding: 20px 16px 32px; overflow-wrap: anywhere; }
   .rp .rp-topo-wrap { min-height: 560px; }
   .rp .rp-trw { grid-template-columns: minmax(0, 1fr); }
