@@ -60,7 +60,8 @@
 .agent-record .rp-btn, .rp-lb .rp-btn { height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: var(--radius-md); background: transparent; color: hsl(var(--hsl-muted-foreground)); font: 500 14px/20px var(--font-sans); white-space: nowrap; cursor: pointer; }
 .agent-record .rp-btn.sm, .rp-lb .rp-btn.sm { height: 32px; }
 .agent-record .rp-btn:hover, .rp-lb .rp-btn:hover { background: var(--ix-hover-bg); color: hsl(var(--hsl-foreground)); }
-.agent-record .rp-btn.outline, .rp-lb .rp-btn.outline { box-shadow: inset 0 0 0 1px var(--rp-line, hsl(var(--hsl-border))); color: hsl(var(--hsl-foreground)); }
+/* Not `.outline`: Tailwind owns that class and draws a second, foreground-coloured ring. */
+.agent-record .rp-btn.framed, .rp-lb .rp-btn.framed { box-shadow: inset 0 0 0 1px var(--rp-line, hsl(var(--hsl-border))); color: hsl(var(--hsl-foreground)); }
 .agent-record .rp-btn.primary { background: hsl(var(--hsl-primary)); color: hsl(var(--hsl-primary-foreground)); padding: 0 14px; }
 .agent-record .rp-btn.primary:hover { background: color-mix(in oklab, hsl(var(--hsl-primary)), black 12%); color: hsl(var(--hsl-primary-foreground)); }
 /* A row of related actions: ghost buttons side by side, no frame around them (one quiet layer per toolbar). */

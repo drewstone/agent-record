@@ -440,7 +440,7 @@ function PickerList(props: AnyPicker & { anchor: HTMLElement; onClose: (focus: b
           <span>{(props.value as ReadonlySet<string>).size ? `${(props.value as ReadonlySet<string>).size} selected` : 'All'}</span>
           <span className="end">
             <button type="button" className="rp-btn sm" onClick={() => (props.onChange as (v: ReadonlySet<string>) => void)(new Set())}>Clear</button>
-            <button type="button" className="rp-btn sm outline" onClick={() => onClose(true)}>Done</button>
+            <button type="button" className="rp-btn sm framed" onClick={() => onClose(true)}>Done</button>
           </span>
         </div>
       )}

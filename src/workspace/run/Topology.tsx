@@ -223,7 +223,7 @@ function TopoInspector({ m, a, onSelect, href }: { m: RunModel; a: Agent; onSele
             <div className="rp-chips">{a.children.slice(0, 14).map((id) => { const c = m.byId.get(id)!; return <button key={id} type="button" className="rp-chip" onClick={() => onSelect(id)}><StateDot tone={c.state.tone} />{c.name}</button> })}{a.children.length > 14 && <span className="rp-chip dim">{a.children.length - 14} more</span>}</div>
           </>
         )}
-        <p><a className="rp-btn sm outline" href={href}>Conversation<Icon name="arrow" size={14} /></a></p>
+        <p><a className="rp-btn sm framed" href={href}>Conversation<Icon name="arrow" size={14} /></a></p>
       </div>
     </aside>
   )

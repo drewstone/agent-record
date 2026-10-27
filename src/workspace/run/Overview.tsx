@@ -68,7 +68,7 @@ export function Overview(props: TabProps) {
           <div className="rp-vd-act">
             {m.live ? <a className="rp-btn primary" href={route.href('timeline')}>Watch the timeline<Icon name="arrow" /></a>
               : newer ? <a className="rp-btn primary" href={`/run/${encodeURIComponent(newer.id)}`}>Open run {shortRun(doc.run.play, newer.id)}<Icon name="arrow" /></a> : null}
-            <a className="rp-btn outline" href={route.href('files')}>Files</a>
+            <a className="rp-btn framed" href={route.href('files')}>Files</a>
           </div>
         </div>
         <ol className="rp-story">
