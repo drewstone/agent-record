@@ -35,6 +35,7 @@
       "import": "./dist/research-publication.js"
     },
     "./styles.css": "./dist/styles.css",
+    "./workspace-viewer.js": "./dist/workspace-viewer.js",
     "./report": {
       "types": "./dist/report.d.ts",
       "import": "./dist/report.js"
@@ -72,7 +73,7 @@
   "scripts": {
     "dev": "vite --config examples/react/vite.config.ts",
     "typecheck": "tsc --noEmit && tsc -p examples/react/tsconfig.json --noEmit",
-    "build": "vite build && tsc --emitDeclarationOnly && node tools/copy-styles.mjs && node tools/build-standalone.mjs && node tools/export-schemas.mjs",
+    "build": "vite build && tsc --emitDeclarationOnly && node tools/build-standalone.mjs && node tools/copy-styles.mjs && node tools/export-schemas.mjs",
     "build:example": "vite build --config examples/react/vite.config.ts",
     "prepack": "pnpm build",
     "test": "pnpm build && node --test tests/*.test.mjs",
@@ -89,7 +90,7 @@
     "@tangle-network/brand": "^1.29.0",
     "@tangle-network/charts": "^0.21.19",
     "@tangle-network/harness-sessions": "0.1.0",
-    "@tangle-network/sandbox-ui": "^1.1.0",
+    "@tangle-network/sandbox-ui": "^1.1.2",
     "@tangle-network/ui": "^11.45.0",
     "@xterm/addon-fit": "~0.11.0",
     "@xterm/addon-web-links": "~0.12.0",

@@ -133,12 +133,28 @@ export function BundleGraph({ record }: { record: RunRecord }) {
 
 ## Run workspace
 
+The public `@drewstone/agent-record/workspace-viewer.js` export resolves the self-contained browser entry. Its adjacent `styles.css` includes the styles emitted by lazy graph and terminal modules. Install the maintained tarball from [GitHub Releases](https://github.com/drewstone/agent-record/releases), which also owns its artifact digest.
+
+For `agent-runtime-top` embedding, the CLI declares this renderer package and resolves its public asset internally:
+
+```ts
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { serveTopWeb } from '@tangle-network/agent-runtime/tui'
+
+const assets = dirname(fileURLToPath(import.meta.resolve('@drewstone/agent-record/workspace-viewer.js')))
+const viewer = await serveTopWeb({ roots: [runDir], assets })
+console.log(viewer.url) // Ready after initial snapshot loading and HTTP listen.
+// The caller owns shutdown, including signal and failed-run paths.
+await viewer.close()
+```
+
 `dist/workspace-viewer.js` renders a play page and a run page from a same-origin run workspace API, for example the Tangle Discovery wall:
 
 ```html
 <link rel="stylesheet" href="/assets/agent-record/styles.css">
 <div id="agent-workspace" data-api="/api/discovery" data-mode="run" data-id="research-math-20261004system3"></div>
-<script src="/assets/agent-record/workspace-viewer.js" defer></script>
+<script type="module" src="/assets/agent-record/workspace-viewer.js"></script>
 ```
 
 The play page (`data-mode="play"`) answers how close the play is to its goal and its bar, for every play, from the composer's play document (`goal`, `checkers`, `standing`, `bar`, `live`, `climb`, `barSeries`, `ledger`, `findings`, `releases`). Its first screen states the goal, the standing sentence the host composed (solved or not under the current checker, named `vN` with the ruling that made it, the best release under it and the best under an earlier checker), the current check as a stage ladder with workloads passed and published releases passing, each bar metric's best comparable value or nearest candidate (✕ failing, * not comparable, ? unknown) with its distance to the bar as words and on a log track, the live or last run with its blocker and kill checkpoints, and the API-equivalent cost with its provenance (never $0 for unmetered use). Standing then draws the climb (check progress per checked release, one colour per checker, grouped by run; **Over time** puts the same marks at the minute each check ran, each run a band, with a brush strip, run chips and ←/→ stepping), what the checks said per run, each bar metric against its target on the climb's axis, the runs ledger (agent-hours by attempt outcome, best check, cost and seat), each run's team as an agent timeline, and findings grouped as verified, contradicted, undecided and unchecked claims. Releases, Runs, Findings and Setup hold the full tables, the version graph and the play's input.

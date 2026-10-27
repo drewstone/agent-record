@@ -18,6 +18,7 @@ export const LazyRunPage = lazy(() => runPage().then((module) => ({ default: mod
 // Today and the operations pages (Fleet, Sandboxes, Ideas) are opened alone, so each is its own chunk.
 const wallPages = () => import('./WallPages.js').catch(reloadOnce)
 const PAGES = {
+  live: lazy(() => import('./LiveRun.js').catch(reloadOnce).then((module) => ({ default: module.LiveRun }))),
   today: lazy(() => import('./Today.js').catch(reloadOnce).then((module) => ({ default: module.TodayPage }))),
   fleet: lazy(() => wallPages().then((module) => ({ default: module.FleetPage }))),
   sandboxes: lazy(() => wallPages().then((module) => ({ default: module.SandboxesPage }))),
