@@ -3537,4 +3537,11 @@
 .ws-live > header h1 { margin: 0 auto 0 0; }
 .ws-live > header label { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ws-live select { max-width: min(50vw, 480px); }
+.ws-live-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; align-items: start; }
+.ws-live-split > section { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ws-live-split [aria-label="Graph layout"] { display: flex; gap: 4px; align-self: flex-end; }
+.ws-live-split [aria-label="Graph layout"] button { text-transform: capitalize; }
+.ws-live-split [aria-label="Graph layout"] button[aria-pressed="true"] { font-weight: 600; }
+.ws-live-graph { height: min(70vh, 650px); min-height: 420px; border: 1px solid var(--ar-border, currentColor); border-radius: 12px; }
+@media (max-width: 900px) { .ws-live-split { grid-template-columns: minmax(0, 1fr); } .ws-live-graph { height: 60vh; min-height: 360px; } }
 @media (max-width: 600px) { .ws-live { padding: 16px; } .ws-live > header h1 { flex-basis: 100%; } }
