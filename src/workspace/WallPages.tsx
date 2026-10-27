@@ -89,13 +89,14 @@ function HostCard({ h }: { h: Host }) {
 
 const AGENT_TONE: Record<string, string> = { asks: TONE.warn, working: TONE.ok, blocked: TONE.breach, limited: TONE.warn, idle: 'var(--ar-fg-faint)' }
 
-/** One agent: its name (harness and model as the tooltip), what it is doing or waiting on, and how long since it moved. */
+/** One agent: its name (harness and model as the tooltip), what it is doing or waiting on (a tap or Enter wraps it in place;
+ * a hover-only title never reached phones or keyboards), and how long since it moved. */
 function AgentRow({ a }: { a: Agent }) {
   return (
     <li>
       <i className="wp-dot" style={{ background: AGENT_TONE[a.state], borderColor: AGENT_TONE[a.state] }} />
       <Tip text={[a.lane, a.harness, a.model].filter(Boolean).join(' · ')}><b>{a.name}</b></Tip>
-      <Tip text={a.step ?? 'no step recorded'}><span className="wp-step">{a.state === 'limited' && a.limitUntil ? `limited until ${hm(a.limitUntil)}` : a.step ?? a.state}</span></Tip>
+      <details className="wp-step"><summary>{a.state === 'limited' && a.limitUntil ? `limited until ${hm(a.limitUntil)}` : a.step ?? a.state}</summary></details>
       <Tip className="wp-num" text={a.since ? `last activity ${hm(a.since)}` : 'no activity recorded'}>{age(a.since)}</Tip>
     </li>
   )
@@ -103,8 +104,7 @@ function AgentRow({ a }: { a: Agent }) {
 
 function FleetView({ doc }: { doc: FleetDoc }) {
   const { counts } = doc.agents
-  const waiting = doc.agents.rows.filter((a) => a.state !== 'working')
-  const working = doc.agents.rows.filter((a) => a.state === 'working')
+  const rows = (state: string) => doc.agents.rows.filter((a) => a.state === state)
   // A seat with no long-window reading is listed apart, never drawn as 0% (an unknown is not a zero).
   const read = doc.seats.rows.filter((s) => s.long.used !== null).sort((a, b) => b.long.used! - a.long.used!)
   const unread = doc.seats.rows.filter((s) => s.long.used === null)
@@ -116,8 +116,8 @@ function FleetView({ doc }: { doc: FleetDoc }) {
         <section aria-label="Agents">
           <h2>Agents <span className="wp-muted">{doc.agents.total ?? '—'}</span></h2>
           <Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} />
-          {waiting.length > 0 && <ul className="wp-rows" aria-label="Asking, blocked or limited">{waiting.map((a) => <AgentRow key={a.lane} a={a} />)}</ul>}
-          {working.length > 0 && <details className="wp-group"><summary>{working.length} working</summary><ul className="wp-rows">{working.map((a) => <AgentRow key={a.lane} a={a} />)}</ul></details>}
+          {rows('asks').length > 0 && <ul className="wp-rows" aria-label="Asking for Drew">{rows('asks').map((a) => <AgentRow key={a.lane} a={a} />)}</ul>}
+          {(['blocked', 'limited', 'working'] as const).map((state) => rows(state).length > 0 && <details key={state} className="wp-group"><summary>{rows(state).length} {state}</summary><ul className="wp-rows">{rows(state).map((a) => <AgentRow key={a.lane} a={a} />)}</ul></details>)}
         </section>
         <section aria-label="Seats">
           <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit{back ? `, first back ${hm(back)}` : ''}</span></h2>
