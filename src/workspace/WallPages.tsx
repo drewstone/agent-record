@@ -12,7 +12,7 @@ import { useDocument } from './data.js'
  * the autoscaled hosts cost and hold; Ideas which idea waits on Drew.
  */
 type State = 'ok' | 'warn' | 'breach' | 'stale' | 'unknown'
-interface Breach { family: string; label: string; text: string; limit: string }
+interface Breach { family: string; label: string; text: string; limit: string; alarm: boolean }
 interface Host { name: string; state: State; local: boolean; reportMin: number | null; up: boolean | null; load1: number | null; loadPerCore: number | null; loadLimit: number | null; cores: number | null; diskFreeGb: number | null; diskFloorGb: number | null; breaches: Breach[] }
 interface Agent { name: string; lane: string; state: 'asks' | 'working' | 'blocked' | 'limited'; harness: string | null; model: string | null; effort: string | null; since: string | null; limitUntil: string | null; step: string | null }
 interface QuotaWindow { used: number | null; reset: string | null; label: string | null; why: string | null }
@@ -66,12 +66,12 @@ function DiskBar({ h }: { h: Host }) {
 }
 
 /** One host: whether it reports (the host decides against fleet now's limit), load against its limit, disk against its
- * floor, and each breach in its producer's words. */
+ * floor, and each breach in its producer's words; only an alarm (a capacity breach with an owner item) turns it red. */
 function HostCard({ h }: { h: Host }) {
-  const loadOver = h.breaches.some((b) => b.family === 'load')
+  const loadOver = h.breaches.some((b) => b.family === 'load' && b.alarm)
   const status = h.up === null ? 'report age unknown' : h.up ? 'up' : `no report for ${ago(h.reportMin!)}`
   return (
-    <li className="wp-host" data-up={h.up === false ? 'no' : undefined} data-breach={h.breaches.length ? 'yes' : undefined}>
+    <li className="wp-host" data-up={h.up === false ? 'no' : undefined} data-breach={h.breaches.some((b) => b.alarm) ? 'yes' : undefined}>
       <Tip className="wp-host-head" text={h.reportMin === null ? 'report age unknown' : `${h.local ? 'read' : 'reported'} ${ago(h.reportMin)} ago`}>
         <i className="wp-dot" style={{ background: h.up ? TONE.ok : 'transparent', borderColor: h.up === false ? TONE.warn : h.up ? TONE.ok : TONE.unknown }} />
         <b>{h.name}</b>
@@ -82,7 +82,7 @@ function HostCard({ h }: { h: Host }) {
         <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : 'var(--ws-accent)'} />
       </Tip>
       <DiskBar h={h} />
-      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label}><Tip text={`${b.text} (${b.limit})`}>{b.label}</Tip></li>)}</ul>}
+      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label} data-alarm={b.alarm || undefined}><Tip text={`${b.text} (${b.limit})`}>{b.label}</Tip></li>)}</ul>}
     </li>
   )
 }
