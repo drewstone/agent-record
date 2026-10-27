@@ -63,7 +63,18 @@ const inputOf = (raw: string | undefined): unknown => {
     return raw
   }
 }
-const firstLine = (text: string) => compact(text.split('\n').find((line) => line.trim()) ?? '').slice(0, 200)
+/** A failure reads as its message: `{"error":"File not found: x"}` is `File not found: x`. */
+const failureText = (text: string) => {
+  let body = text
+  try {
+    const value = JSON.parse(text) as { error?: unknown; message?: unknown }
+    const said = typeof value?.error === 'string' ? value.error : typeof value?.message === 'string' ? value.message : undefined
+    if (said) body = said
+  } catch {
+    /* Plain text. */
+  }
+  return compact(body.split('\n').find((line) => line.trim()) ?? '').slice(0, 200)
+}
 
 /** One tool call as the kit's row: its verb and subject, collapsed; the input and output when opened; failures inline. */
 function toolItem(id: string, call: ToolCall, result: RecordEvent | undefined, state: CallState, durationMs: number | null, live: boolean): AgentTimelineItem {
@@ -79,7 +90,7 @@ function toolItem(id: string, call: ToolCall, result: RecordEvent | undefined, s
       status,
       input: inputOf(call.input),
       ...(output !== undefined ? { output } : {}),
-      ...(status === 'error' ? { error: firstLine(output ?? '') || 'The call failed.' } : {}),
+      ...(status === 'error' ? { error: failureText(output ?? '') || 'The call failed.' } : {}),
       ...(durationMs !== null && durationMs >= 0 ? { time: { start: 0, end: durationMs } } : {}),
       ...(note ? { metadata: { note } } : {}),
     },

@@ -83,14 +83,19 @@ export function callsOf(event: RecordEvent): ToolCall[] {
   )
 }
 
+/** A run-scoped id (`<run>:s37`) reads as its own part. */
+const local = (value: string) => value.replace(/^[a-z0-9][\w.-]*-\d{8}[a-z]?:/i, '')
+/** A tool call's subject: its command, path or question, never its JSON. */
 export function preview(call: ToolCall) {
   if (call.input === undefined) return 'args not captured'
   try {
     const value: unknown = JSON.parse(call.input)
-    if (value && typeof value === 'object') {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
       const args = value as Record<string, unknown>
-      for (const key of ['command', 'cmd', 'path', 'query', 'task'])
-        if (typeof args[key] === 'string') return compact(args[key])
+      for (const key of ['command', 'cmd', 'filePath', 'file_path', 'path', 'query', 'question', 'pattern', 'url', 'pageId', 'title', 'task', 'prompt', 'message'])
+        if (typeof args[key] === 'string' && args[key]) return compact(local(args[key]))
+      const words = Object.values(args).filter((item): item is string | number | boolean => ['string', 'number', 'boolean'].includes(typeof item))
+      if (words.length) return compact(words.map((item) => local(String(item))).join(' · '))
     }
   } catch {
     /* Tool inputs can be plain text. */

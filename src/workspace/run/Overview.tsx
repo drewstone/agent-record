@@ -140,9 +140,11 @@ function Summary({ m, doc, route }: TabProps) {
 function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, number][]; working: number; failed: number }) {
   const X = (t: number) => `${Math.max(0, Math.min(100, (t / Math.max(1, m.duration)) * 100))}%`
   const hours = m.duration > 3_600_000 ? Math.floor(m.duration / 3_600_000) : 0
-  const step = hours <= 10 ? 1 : Math.ceil(hours / 8), ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => h % step === 0 && (h + step) * 3_600_000 <= m.duration) : []
-  const restarters = m.tree.filter((a) => a.restarts.length || a.state.tone === 'ok').slice(0, 14)
   const days = new Date(m.t0).toISOString().slice(0, 10) !== new Date(m.t0 + m.duration).toISOString().slice(0, 10)
+  // Hour ticks clear the end clocks, which are wider when they name the day.
+  const clear = m.duration * (days ? 0.16 : 0.08)
+  const step = hours <= 10 ? 1 : Math.ceil(hours / 8), ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => h % step === 0 && h * 3_600_000 >= clear && (h + step) * 3_600_000 <= m.duration && h * 3_600_000 <= m.duration - clear) : []
+  const restarters = m.tree.filter((a) => a.restarts.length || a.state.tone === 'ok').slice(0, 14)
   const clock = (t: number) => (days ? stampOf(new Date(m.t0 + t).toISOString(), true).replace(' UTC', '') : clockOf(m.t0)(t))
   return (
     <section className="rp-card" aria-label="Where the time went">

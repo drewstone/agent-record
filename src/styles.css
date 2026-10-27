@@ -1709,7 +1709,6 @@
 .ar-ws .output-markdown { font-size: var(--ar-text-m); line-height: 1.6; overflow-wrap: anywhere; }
 .ar-ws .output-markdown table { display: block; overflow-x: auto; font-size: var(--ar-text-s); }
 .ar-ws .output-markdown pre { font-size: var(--ar-text-s); }
-.ar-ws .link-button { padding: 0; border: 0; background: none; color: var(--ws-accent); font: inherit; text-decoration: underline; cursor: pointer; }
 
 .ar-ws .output-image { display: block; max-width: 100%; height: auto; border: 1px solid var(--ar-border); border-radius: 6px; background: #fff; }
 .ar-ws .output-code { margin: 0; padding: 12px 0; max-height: 75vh; overflow: auto; font-size: var(--ar-text-s); line-height: 1.5; background: var(--ar-bg-sink, #0003); border-radius: 6px; }
