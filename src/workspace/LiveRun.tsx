@@ -58,7 +58,7 @@ export function LiveRun({ api }: { api: string }) {
       </header>
       {error && <p role="alert">{error}</p>}
       {active?.snapshot.completeness === 'partial' && <p role="alert">Partial capture: {active.snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>}
-      {active ? <TraceWorkspace trace={trace} label={active.run.id} live={active.run.workers.some((worker) => worker.status === 'running')} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} /> : connected && <p role="status">No recorded agents in these roots.</p>}
+      {active ? <TraceWorkspace key={active.key} trace={trace} label={active.run.id} live={active.run.workers.some((worker) => worker.status === 'running')} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} /> : connected && <p role="status">No recorded agents in these roots.</p>}
     </main>
   )
 }
