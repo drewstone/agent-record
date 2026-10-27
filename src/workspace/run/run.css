@@ -225,6 +225,8 @@
 /* Timeline: the shared waterfall over the selected agent's whole run */
 .rp .rp-tl { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 16px; }
 .rp .rp-tl-chart { min-height: 0; }
+/* The waterfall's card opens on whichever side of its row fits, so the timeline's workspace lets it pass its edge (charts C6). */
+.rp-run[data-tab='timeline'] .rp-work { overflow: visible; }
 .rp .rp-ig { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .rp .rp-ig > div { padding: 14px 16px; min-width: 0; }
 .rp .rp-ig > div + div { box-shadow: -1px 0 0 var(--rp-line); }
