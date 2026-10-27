@@ -21,6 +21,7 @@ const PATHS = {
   clock: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM8 4.5V8l2.5 1.5',
   flag: 'M3 14.5V2M3 2.5h8l-1.5 3 1.5 3H3',
   down: 'M8 2.5v11M3.5 9L8 13.5 12.5 9',
+  file: 'M9.5 1.8h-5a1.5 1.5 0 0 0-1.5 1.5v9.4a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5V5.3zM9.5 1.8v3.5H13M5.5 8.5h5M5.5 11h3.5',
 } as const
 export type IconName = keyof typeof PATHS
 export function Icon({ name, size = 16, className }: { name: IconName; size?: number; className?: string }) {

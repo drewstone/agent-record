@@ -110,7 +110,6 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
   if (!run.data) return <p className="ws-status" role="status">Loading…</p>
   const doc = run.data
   const counts: Partial<Record<RunTabId, string>> = m ? {
-    files: count(doc.findings?.items.filter((item) => item.path).length ?? 0) || undefined,
     conversations: count(m.agents.filter((a) => a.steps.length || a.turns).length),
     traces: count(m.totals.steps),
     checks: count((doc.run as unknown as { check?: { counts?: { checks?: number } } }).check?.counts?.checks ?? m.releases.length),

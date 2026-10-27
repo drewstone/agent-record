@@ -13,7 +13,7 @@
 }
 .rp-run { display: flex; flex-direction: column; height: calc(100dvh - 56px - 2rem); min-height: 0; }
 :root[data-theme='dark'] .agent-record, .agent-record[data-theme='dark'] { --rp-model: color-mix(in oklab, var(--accent-text) 62%, hsl(var(--hsl-primary))); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .agent-record[data-theme='auto'] { --rp-model: color-mix(in oklab, var(--accent-text) 62%, hsl(var(--hsl-primary))); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .agent-record:not([data-theme]) { --rp-model: color-mix(in oklab, var(--accent-text) 62%, hsl(var(--hsl-primary))); } }
 .rp a { color: inherit; text-decoration: none; }
 .rp .rp-i, .rp-hc .rp-i { flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .rp :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; border-radius: var(--radius-tag); }
@@ -224,8 +224,7 @@
 
 /* Timeline: the shared waterfall over the selected agent's whole run */
 .rp .rp-tl { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 16px; }
-.rp .rp-tl-card { min-height: 0; }
-.rp .rp-tl-chart { flex: 1; min-height: 0; overflow: hidden; padding: 4px 8px 0; }
+.rp .rp-tl-chart { min-height: 0; overflow: hidden; }
 .rp .rp-ig { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .rp .rp-ig > div { padding: 14px 16px; min-width: 0; }
 .rp .rp-ig > div + div { box-shadow: -1px 0 0 var(--rp-line); }
@@ -249,6 +248,9 @@
 .rp .rp-factions { display: flex; align-items: center; gap: 8px; }
 .rp .rp-doc { padding: 32px 40px 64px; max-width: 880px; font-size: 16px; line-height: 26px; }
 .rp .rp-doc.code { padding: 0; max-width: none; font-size: 13px; line-height: 21px; }
+/* The shared preview frames an embedded document in a card of its own (ui file-preview.tsx, change B3); inside the
+   files pane the pane is the frame, so the inner frame steps back until B3 ships. */
+.rp .rp-doc > [class*='border-border'][class*='bg-background'] { border: 0; background: transparent; padding: 0; }
 
 /* Topology */
 .rp .rp-topo { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; }
@@ -297,6 +299,7 @@
 .rp .rp-lt th { padding: 0 0 6px; font: 500 13px/18px var(--font-sans); color: hsl(var(--hsl-muted-foreground)); text-align: right; }
 .rp .rp-lt th:first-child, .rp .rp-lt td:first-child { text-align: left; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp .rp-lt td { padding: 4px 0; text-align: right; font-variant-numeric: tabular-nums; border-top: 1px solid var(--rp-line); }
+.rp .rp-lt td:first-child { font-variant-numeric: normal; }
 .rp .rp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
 .rp .rp-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: var(--radius-tag); background: var(--rp-raised); color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); cursor: pointer; }
 
@@ -364,7 +367,7 @@
 .rp .rp-hm-wrap { flex: 1; min-height: 0; overflow: auto; margin: 0 -16px; padding: 0 16px; }
 .rp .rp-hm { display: grid; align-items: center; }
 .rp .rp-hm .ch { position: sticky; top: 0; z-index: 2; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 2px 6px; background: hsl(var(--hsl-card)); color: hsl(var(--hsl-muted-foreground)); text-align: center; font-size: 13px; line-height: 16px; overflow: hidden; }
-.rp .rp-hm .ch span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.rp .rp-hm .ch span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; }
 .rp .rp-hm .ch.c0 { left: 0; z-index: 3; }
 .rp .rp-hm .ch.tot { text-align: left; padding-left: 8px; }
 .rp .rp-hm .gap { grid-column: 1 / -1; }
@@ -388,7 +391,8 @@
 .rp .rp-cpm g:hover .hit, .rp .rp-cpm g:focus .hit { fill: var(--ix-hover-bg); }
 .rp .rp-cpm .xf { fill: var(--surface-danger-text); font-weight: 600; }
 .rp .rp-at-wrap { flex: 1; min-height: 0; overflow: auto; }
-.rp .rp-at { display: grid; grid-template-columns: minmax(96px, 1.4fr) minmax(120px, 1.6fr) repeat(6, minmax(44px, 0.7fr)); align-items: center; height: 28px; padding: 0 16px; font-variant-numeric: tabular-nums; }
+.rp .rp-at { display: grid; grid-template-columns: minmax(104px, 1fr) 128px 52px 44px 52px 64px 56px 56px; align-items: center; height: 28px; padding: 0 12px 0 16px; }
+.rp .rp-at .r, .rp .rp-at .tk { font-variant-numeric: tabular-nums; }
 .rp .rp-at > span { padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rp .rp-at .r { text-align: right; }
 .rp .rp-at.th { position: sticky; top: 0; z-index: 1; height: 36px; background: hsl(var(--hsl-card)); box-shadow: inset 0 -1px 0 var(--rp-line); }
@@ -396,6 +400,7 @@
 .rp .rp-at.th [aria-sort] button { color: hsl(var(--hsl-foreground)); }
 .rp .rp-at:not(.th):hover { background: var(--ix-hover-bg); }
 .rp .rp-at .tk { display: flex; align-items: center; gap: 8px; }
+.rp .rp-at .tk span { margin-left: auto; }
 .rp .rp-at .tk b { display: block; height: 6px; flex: none; border-radius: 0 var(--radius-tag) var(--radius-tag) 0; background: hsl(var(--hsl-muted-foreground)); }
 .rp .rp-lat { display: grid; gap: 2px; }
 .rp .rp-lat .row { position: relative; display: grid; grid-template-columns: 128px minmax(0, 1fr) 150px; gap: 0 10px; align-items: center; height: 24px; border-radius: var(--radius-tag); }

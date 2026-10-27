@@ -86,8 +86,7 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
   const selected = agent ? m.byId.get(agent) ?? null : null
   return (
     <div className="rp-tl">
-      <section className="rp-card rp-tl-card" aria-label="Agents over time">
-        <div className="rp-tl-chart" ref={box}>
+      <section className="rp-tl-chart" aria-label="Agents over time" ref={box}>
           <FlowWaterfall
             trace={trace}
             live={m.live}
@@ -95,13 +94,12 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
             defaultView="agents"
             summary={false}
             markers={markers}
-            maxHeight={Math.max(240, height - 150)}
+            maxHeight={Math.max(200, height - 230)}
             selectedId={agent ?? undefined}
             onDeselect={() => selectAgent(null)}
             onSelect={(s) => { const id = s.kind === 'pipeline' ? s.id : s.parentId; if (id && m.byId.has(id)) selectAgent(id) }}
             agentFill="muted"
           />
-        </div>
       </section>
       {selected && <AgentInspector m={m} a={selected} href={(tab) => route.href(tab, { agent: agentParam(doc.run.id, selected.id) })} />}
     </div>

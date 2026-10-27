@@ -125,7 +125,7 @@ function Summary({ m, doc, route }: TabProps) {
         <div className="v">{count(pages.length)} pages · {count(branches)} branches</div>
         <div className="files">
           {pages.slice(0, 3).map((item) => (
-            <a key={item.path} href={route.href('files', { file: `page:${item.path}` })} title={item.path}><Icon name="info" size={14} /><span>{item.path!.split('/').pop()}</span></a>
+            <a key={item.path} href={route.href('files', { file: `page:${item.path}` })} title={item.path}><Icon name="file" size={14} /><span>{item.path!.split('/').pop()}</span></a>
           ))}
           {pages.length > 3 && <a href={route.href('files')}><span>{pages.length - 3} more</span></a>}
         </div>

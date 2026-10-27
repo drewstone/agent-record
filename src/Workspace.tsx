@@ -58,7 +58,7 @@ export interface WorkspaceProps {
 /** Play and run pages of a run workspace. Reads only the same-origin API; navigation stays in the host tab. */
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
-    <div className="agent-record ar-ws" data-theme={theme}>
+    <div className="agent-record ar-ws" data-theme={theme === 'auto' ? undefined : theme}>
       {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <Suspense fallback={null}><LazyRunPage api={api} id={id} legacy={() => <LegacyRunSection api={api} id={id} />} /></Suspense>}
     </div>
   )

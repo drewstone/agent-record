@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { LiveTranscript } from '../LiveTranscript.js'
 import { AgentConversation, useRecordPart } from '../record-part.js'
 import type { TabProps } from './RunPage.js'
@@ -39,6 +39,8 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent }: TabProps) 
   const live = Boolean(doc.execution?.alive)
   const shown = rows.filter((r) => r.kind === 'agent').length
   const recorded = selected && index && index.nodes.has(index.canonical(selected.id))
+  const [emptyStream, setEmptyStream] = useState<ReadonlySet<string>>(new Set())
+  useEffect(() => setEmptyStream(new Set()), [doc.run.id])
   return (
     <div className="rp-conv">
       <aside className="rp-card" aria-label="Agents">
@@ -68,14 +70,15 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent }: TabProps) 
             {selected.toolFailures > 0 && <span className="rp-pill danger">{selected.toolFailures} tool errors</span>}
           </div>
           <div className="rp-scroll rp-tx">
-            {live ? (
-              <LiveTranscript runUrl={runUrl} runId={doc.run.id} alive selected={selected.id} onSelect={(id) => selectAgent(id)} />
-            ) : recorded ? (
+            {!live && recorded ? (
               <AgentConversation key={selected.id} runUrl={runUrl} version={version} index={index!} actor={index!.canonical(selected.id)} />
-            ) : nodes.loading || nodes.pending ? (
+            ) : !live && (nodes.loading || nodes.pending) ? (
               <p className="ws-status" role="status">Loading the conversation…</p>
-            ) : (
+            ) : emptyStream.has(selected.id) ? (
               <StepLog m={m} a={selected} />
+            ) : (
+              <LiveTranscript key={selected.id} runUrl={runUrl} runId={doc.run.id} alive={live} selected={selected.id} onSelect={(id) => selectAgent(id)}
+                onEmpty={() => setEmptyStream((s) => new Set([...s, selected.id]))} />
             )}
           </div>
         </article>

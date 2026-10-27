@@ -74,7 +74,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls))
   const shade = (n: number) => (n ? `color-mix(in oklab, var(--rp-tool) ${Math.round(14 + 86 * Math.sqrt(n / max))}%, hsl(var(--hsl-card)))` : undefined)
   const ink = (n: number) => (n && Math.sqrt(n / max) > 0.55 ? 'on' : '')
-  const grid = { gridTemplateColumns: `minmax(120px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(52px, 1fr)) 96px` }
+  const grid = { gridTemplateColumns: `minmax(120px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(64px, 1fr)) 88px` }
   const cell = (a: Agent, t: { name: string; calls: number; failures: number; p50: number | null; p90: number | null; p99: number | null; ms: number } | null, label: string, target: Element) =>
     card.show({ rect: target.getBoundingClientRect(), wide: false, content: (
       <>
@@ -155,7 +155,7 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const y = (v: number) => H - B - (v / peak) * (H - B - T)
   const nice = niceMax(peak)
   const clock = clockOf(m.t0)
-  const label = bin >= 3_600_000 ? `${bin / 3_600_000} h` : `${bin / 60_000} min`
+  const label = bin === 60_000 ? 'minute' : bin >= 3_600_000 ? `${bin / 3_600_000} h` : `${bin / 60_000} min`
   const ticks = Math.max(1, Math.ceil(n / 6))
   return (
     <section className="rp-card w5" aria-label={measure === 'calls' ? 'Calls over time' : 'Tokens over time'}>
@@ -221,7 +221,7 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
             onPointerEnter={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onPointerLeave={() => card.hide()}
             onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onBlur={() => card.hide()}>
             <span className="nm" role="cell" title={a.name}>{a.name}</span>
-            <span className="tk" role="cell"><b style={{ width: `${((a.tokens ?? 0) / maxTok) * 72}px` }} /><span>{abbr(a.tokens)}</span></span>
+            <span className="tk" role="cell"><b style={{ width: `${((a.tokens ?? 0) / maxTok) * 60}px` }} /><span>{abbr(a.tokens)}</span></span>
             <span className="r" role="cell">{count(a.modelCalls)}</span>
             <span className="r" role="cell">{count(a.toolCalls)}</span>
             <span className="r" role="cell">{a.failedSteps || ''}</span>
