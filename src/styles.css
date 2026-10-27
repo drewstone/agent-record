@@ -3308,9 +3308,8 @@
 /* One content column on every page (review 1 #8: Today 84 px, Plays 60, others 45, and six left edges on /play): one
    left edge and one gutter, 24 px, 16 px on a phone. Page bodies (Today, the run journey) fill it rather than centring
    their own narrower column. */
-.ar-ws .ws-page { width: 100%; max-width: 1440px; margin-inline: auto; padding-inline: 24px; box-sizing: border-box; }
+.ar-ws .ws-page { width: 100%; box-sizing: border-box; }
 .ar-ws .td { max-width: none; margin: 0; }
-@media (max-width: 700px) { .ar-ws .ws-page, .ar-ws .ws-page[data-section="overview"] { padding-inline: 16px; } }
 .ar-ws .play-ledger .ledger-spend { margin: 0 0 0 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
 .ar-ws .play-ledger .ledger-idle { margin-top: 8px; font-size: 12px; }
 

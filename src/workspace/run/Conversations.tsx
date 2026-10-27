@@ -77,7 +77,7 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent }: TabProps) 
             ) : emptyStream.has(selected.id) ? (
               <StepLog m={m} a={selected} />
             ) : (
-              <LiveTranscript key={selected.id} runUrl={runUrl} runId={doc.run.id} alive={live} selected={selected.id} onSelect={(id) => selectAgent(id)}
+              <LiveTranscript key={selected.id} runUrl={runUrl} runId={doc.run.id} alive={live} selected={selected.id} onSelect={(id) => selectAgent(id)} chooser={false}
                 onEmpty={() => setEmptyStream((s) => new Set([...s, selected.id]))} />
             )}
           </div>

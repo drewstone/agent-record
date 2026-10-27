@@ -84,7 +84,9 @@ function moves(doc: OverviewDocument, plays: Play[], mark: number): Move[] {
   for (const r of doc.now ?? []) if (after(r.startedAt)) out.push({ at: r.startedAt!, play: r.play, title: r.title, text: <>Run <a href={runHref(r.runId)}><b>{shortRun(r.play, r.runId)}</b></a> started{r.agents ? ` · ${r.agents} agents` : ''}</>, badge: { text: 'started', tone: 'neutral' } })
   return out.sort((a, b) => (a.at < b.at ? 1 : -1))
 }
-const clip = (text: string, words = 14) => { const w = text.replace(/\/(home|mnt|Users)\/\S+/g, '').split(/\s+/); return w.length > words ? `${w.slice(0, words).join(' ')}…` : text }
+/** Page text: a host's sentence cut to its words, without host paths or key identifiers. */
+const scrub = (text: string) => text.replace(/\/(home|mnt|Users)\/\S+/g, '').replace(/\bkey_[A-Za-z0-9]+\b\s*·?\s*/g, '').replace(/\s{2,}/g, ' ').trim()
+const clip = (text: string, words = 14) => { const w = scrub(text).split(/\s+/); return w.length > words ? `${w.slice(0, words).join(' ')}…` : w.join(' ') }
 
 export function TodayPage({ api }: { api: string }) {
   const doc = useDocument<OverviewDocument>(`${api}/overview`, 60_000, true)
@@ -139,7 +141,7 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
 }
 
 function Need({ item }: { item: OverviewAttention }) {
-  const body = <><Icon name="alert" className={item.tone === 'crit' ? 'f' : 'warn'} /><span><b>{item.text}</b>{(item.next || item.detail) && <span className="sub">{[item.next, item.detail].filter(Boolean).join(' · ')}</span>}</span>{item.href && <Icon name="chevron" className="go" />}</>
+  const body = <><Icon name="alert" className={item.tone === 'crit' ? 'f' : 'warn'} /><span><b>{item.text}</b>{(item.next || item.detail) && <span className="sub">{scrub([item.next, item.detail].filter(Boolean).join(' · '))}</span>}</span>{item.href && <Icon name="chevron" className="go" />}</>
   return <li>{item.href ? <a href={item.href.startsWith('#') ? `/${item.href}` : item.href}>{body}</a> : <div>{body}</div>}</li>
 }
 
