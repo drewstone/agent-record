@@ -146,6 +146,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
   const trace = useMemo((): FlowTrace => {
     const parent = new Map(m.data.edges.filter((e) => e.kind === 'spawn').map((e) => [e.to, e.from]))
     const ids = new Set(m.nodes.map((n) => n.id))
+    const rootModel = m.nodes.find((n) => n.id === m.root)?.model
     const spans: FlowSpan[] = m.nodes.filter((n) => Number.isFinite(ms(n.start))).map((n) => {
       // A live agent's bar runs to now; its end is the journal's settle or cancel.
       const end = running(n) ? Date.now() : ms(n.end ?? n.lastAt)
@@ -153,9 +154,8 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.role ?? n.label,
-        // The lane label is name plus short model, four words at most (REVIEW-8 gate 1, as the reference frames); what it
-        // shipped is the outcome pill and the card's Releases and Commits cells.
-        detail: n.model?.split('/').pop() ?? undefined,
+        // Name, plus the model only where it differs from the root's that the trigger names (round 27: 22a's 18 rows repeated it).
+        detail: n.model && n.model !== rootModel ? n.model.split('/').pop() : undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running(n) ? 'running' as const : failed(n) ? 'failed' as const : 'done' as const,
         ...(tone(n) ? { outcome: tone(n) } : {}),
