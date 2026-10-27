@@ -378,5 +378,5 @@ export function offset(ms: number): string {
 }
 export const count = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n.toLocaleString('en-US'))
 export const abbr = (n: number | null | undefined) =>
-  n === null || n === undefined ? '—' : new Intl.NumberFormat('en-US', { notation: 'abbr', maximumFractionDigits: n >= 1e6 ? 2 : 1 }).format(n)
+  n === null || n === undefined ? '—' : new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: n >= 1e6 ? 2 : 1 }).format(n)
 export const usd = (v: number | null | undefined) => (v === null || v === undefined ? '—' : v >= 100 ? `$${v.toFixed(0)}` : `$${v.toFixed(2)}`)
