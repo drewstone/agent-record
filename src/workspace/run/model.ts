@@ -166,7 +166,7 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
   const starts = nodes.map((n) => time(n.start)).filter(Number.isFinite)
   const t0 = Number.isFinite(time(run.startedAt)) ? time(run.startedAt) : starts.length ? Math.min(...starts) : Date.now()
   const ends = nodes.map((n) => time(n.end ?? n.lastAt)).filter(Number.isFinite)
-  const duration = run.durationMs ?? Math.max(0, (ws.live ? Date.now() : ends.length ? Math.max(...ends) : t0) - t0)
+  const duration = ws.live ? Math.max(0, Date.now() - t0) : run.durationMs ?? Math.max(0, (ends.length ? Math.max(...ends) : t0) - t0)
   const parentOf = (n: Node) => {
     const from = spawned.get(n.id)
     if (from && ids.has(from)) return from
