@@ -156,7 +156,7 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
                   onPointerLeave={() => card.hide()}
                   onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 })}
                   onBlur={() => card.hide()}>
-                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{middle(p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name, p.sm ? 20 : 30)}</span><span className="dim">{p.sm ? abbr(a.tokens) : a.state.label}</span></span>
+                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{middle(p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name.length <= (p.sm ? 20 : 30) ? a.name : a.short, p.sm ? 20 : 30)}</span><span className="dim">{p.sm ? abbr(a.tokens) : a.state.label}</span></span>
                   {!p.sm && <span className="r2">{a.tokens === null ? 'no usage recorded' : `${abbr(a.tokens)} tokens · ${count(a.steps.length)} steps${a.failedSteps ? ` · ${a.failedSteps} failed` : ''}`}</span>}
                 </button>
               )
@@ -223,7 +223,7 @@ function TopoInspector({ m, a, onSelect, href }: { m: RunModel; a: Agent; onSele
             <div className="rp-chips">{a.children.slice(0, 14).map((id) => { const c = m.byId.get(id)!; return <button key={id} type="button" className="rp-chip" onClick={() => onSelect(id)}><StateDot tone={c.state.tone} />{c.name}</button> })}{a.children.length > 14 && <span className="rp-chip dim">{a.children.length - 14} more</span>}</div>
           </>
         )}
-        <p><a className="rp-btn sm outline" href={href}>Conversation<Icon name="arrow" size={14} /></a></p>
+        <p><a className="rp-btn sm framed" href={href}>Conversation<Icon name="arrow" size={14} /></a></p>
       </div>
     </aside>
   )
