@@ -219,7 +219,7 @@ function AgentsCard({ m, route, doc }: TabProps) {
   return (
     <section className="rp-card" aria-label="Agents">
       <div className="rp-hd sm"><h2>Agents<span className="ct">{m.agents.length}</span></h2><span className="end"><a className="rp-btn sm" href={route.href('topology')}>Topology<Icon name="arrow" size={14} /></a></span></div>
-      <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide">Active over {elapsed(end)}</span><span>Steps</span><span>Tokens</span></div>
+      <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide" title={`When each agent worked, over the run's ${elapsed(end)}`}>Activity · {elapsed(end).split(' ')[0]}</span><span>Steps</span><span>Tokens</span></div>
       <div className="rp-scroll" ref={scroller}>
         <div style={{ height: win.before }} />
         {rows.slice(win.first, win.last).map((a) => <AgentRow key={a.id} m={m} a={a} bins={bins} end={end} peak={peak} href={route.href('timeline', { agent: agentParam(doc.run.id, a.id) })} />)}

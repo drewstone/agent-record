@@ -1222,12 +1222,12 @@
   display: inline-flex; align-items: center; gap: 8px; padding: 0 8px; border-radius: 999px;
   /* Monospace is for identifiers, hashes and paths only (disco UI brief): a status word is UI text. */
   font: 600 var(--ar-text-s)/24px var(--font-sans, system-ui, sans-serif); white-space: nowrap;
-  color: var(--ar-c-neutral); border: 1px solid color-mix(in srgb, var(--ar-c-neutral) 55%, transparent); background: none;
+  color: var(--ar-c-neutral); border: 1px solid transparent; background: color-mix(in srgb, var(--ar-c-neutral) 11%, transparent);
 }
 /* Status colour has one path: the `data-status="<axis>:<word>:<tone>"` that statusOf (src/workspace/data.ts) writes.
    No class or component picks a status hue, so --ar-c-fail is reachable only from a fail status, which statusOf
-   returns only for a crit attention item or a live run's red blocker. Neutral is outlined with no tint, so its text
-   keeps 4.5:1; `.tone-neutral` is the same ink for labels that are not statuses. */
+   returns only for a crit attention item or a live run's red blocker. Every pill is a tint of its own ink, neutral too,
+   so no state outweighs another by its frame; `.tone-neutral` is the same ink for labels that are not statuses. */
 .ar-ws [data-status$=':pass'] { color: var(--ar-c-ok); }
 .ar-ws [data-status$=':attention'] { color: var(--ar-c-run); }
 .ar-ws [data-status$=':fail'] { color: var(--ar-c-fail); }
@@ -1696,7 +1696,8 @@
 .ar-ws .output-note { margin: 0; color: var(--ar-fg-muted); font-size: var(--ar-text-s); border-left: 3px solid var(--ar-border-strong); padding-left: 12px; max-width: 78ch; }
 .ar-ws .output-files { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
 .ar-ws .output-file { display: grid; grid-template-columns: minmax(0, 1fr) auto 72px; gap: 12px; align-items: baseline; width: 100%; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; }
-.ar-ws .output-file:hover, .ar-ws .output-file:focus-visible { background: var(--ws-raised); outline: none; }
+.ar-ws .output-file:hover, .ar-ws .output-file:focus-visible { background: var(--ws-raised); }
+.ar-ws .output-file:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
 .ar-ws .output-file .num { text-align: right; font-variant-numeric: tabular-nums; }
 .ar-ws .output-more { justify-self: start; }
 .ar-ws .output-reader { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px 16px 20px; min-width: 0; }
@@ -1815,7 +1816,8 @@
 .ar-ws .search-table { display: grid; min-width: 0; border: 1px solid var(--ar-border); border-radius: 8px; overflow-x: auto; }
 .ar-ws .search-row { display: grid; grid-template-columns: minmax(260px, 2.4fr) 110px 84px minmax(150px, 1fr) 84px; align-items: center; column-gap: 12px; min-height: 42px; padding: 4px 16px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--ar-border) 70%, transparent); background: transparent; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; width: 100%; }
 .ar-ws .search-row > * { min-width: 0; }
-.ar-ws .search-row:hover, .ar-ws .search-row:focus-visible { background: var(--ws-raised); outline: none; }
+.ar-ws .search-row:hover, .ar-ws .search-row:focus-visible { background: var(--ws-raised); }
+.ar-ws .search-row:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
 .ar-ws .search-row.on { background: color-mix(in srgb, var(--ws-accent) 14%, transparent); box-shadow: inset 3px 0 0 var(--ws-frame); }
 .ar-ws .search-row.later { opacity: 0.28; }
 .ar-ws .search-row-head { cursor: default; color: var(--ar-fg-muted); font-size: var(--ar-text-s); background: var(--ws-panel); }
@@ -2055,7 +2057,7 @@
 }
 .ar-ws .vg-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ar-ws .vg-lane-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 1.8rem; padding: 2px 8px; border: 1px solid var(--ar-border); border-radius: 999px; background: var(--ws-panel); color: var(--ar-fg-muted); font: var(--ar-text-s)/1.4 var(--ar-font-body); cursor: pointer; }
-.ar-ws .vg-lane-chip:hover, .ar-ws .vg-lane-chip:focus-visible { border-color: var(--ws-accent); outline: none; }
+.ar-ws .vg-lane-chip:hover, .ar-ws .vg-lane-chip:focus-visible { border-color: var(--ws-accent); }
 .ar-ws .vg-lane-chip.on { color: var(--ws-title); border-color: var(--ws-frame); background: color-mix(in srgb, var(--ws-accent) 10%, var(--ws-panel)); }
 .ar-ws .vg-swatch { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
 .ar-ws .vg-toggle { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
@@ -2072,7 +2074,8 @@
 .ar-ws .vg-rows { list-style: none; margin: 0; padding-right: 8px; }
 .ar-ws .vg-rows > li { display: flex; }
 .ar-ws .vg-row { display: flex; flex-direction: column; justify-content: flex-start; gap: 4px; width: 100%; min-width: 0; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--ar-fg); font: inherit; text-align: left; cursor: pointer; }
-.ar-ws .vg-row:hover, .ar-ws .vg-row:focus-visible { background: var(--ws-raised); outline: none; }
+.ar-ws .vg-row:hover, .ar-ws .vg-row:focus-visible { background: var(--ws-raised); }
+.ar-ws .vg-row:focus-visible { outline: 2px solid var(--ws-accent); outline-offset: -2px; }
 .ar-ws .vg-row.on { background: color-mix(in srgb, var(--ws-accent) 13%, var(--ws-panel)); box-shadow: inset 2px 0 var(--ws-frame); }
 .ar-ws .vg-row:disabled { cursor: default; opacity: .8; }
 .ar-ws .vg-line { display: flex; align-items: center; gap: 8px; min-width: 0; height: 30px; flex: none; }
@@ -2784,7 +2787,12 @@
 
 .ar-ws .plays-bar .plays-filters { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .ar-ws .plays-bar input[type="search"] { flex: 1; min-width: 160px; }
-.ar-ws .ws-plays .hidden-summary { margin: 0 0 12px; font-size: var(--ar-text-s); }
+/* Plays sits on the same page grid as Today and Fleet: no gutter of its own, the title where theirs is. */
+.ar-ws .ws-page.ws-plays { padding: 8px 0 48px; }
+.ar-ws .ws-plays .hidden-summary { margin: 0 0 12px; padding: 0; background: none; color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
+.ar-ws .ws-plays .hidden-summary b { color: var(--ar-fg); }
+.ar-ws .plays-table .plays-name a { color: var(--ar-fg); font-weight: 500; }
+.ar-ws .plays-table tr:hover .plays-name a { color: var(--accent-text); }
 .ar-ws .plays-table td { padding-top: 8px; padding-bottom: 8px; }
 .ar-ws .plays-more { display: block; margin: 12px auto 0; padding: 8px 16px; border: 1px solid var(--ar-border); border-radius: 8px; background: none; color: var(--ar-fg); font: inherit; font-size: 14px; cursor: pointer; transition: background-color 150ms; }
 .ar-ws .plays-more:hover { background: var(--ws-panel); }
@@ -2961,7 +2969,9 @@
 .ar-ws .wp-num { font-variant-numeric: tabular-nums; color: var(--ar-fg-muted); text-align: right; }
 .ar-ws .wp-k { font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
 .ar-ws .wp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
-.ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; }
+.ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start; }
+.ar-ws .wp-split > section { padding: 16px 20px 20px; border-radius: 8px; background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ar-border); min-width: 0; }
+.ar-ws .wp-split > section > h2 { margin-top: 0; }
 .ar-ws .wp-back { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; font-size: 14px; } .ar-ws .wp-back li { display: contents; }
 .ar-ws .wp-split .ov-hbar-label { white-space: normal; }
 .ar-ws .wp-hosts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
@@ -3012,7 +3022,10 @@
   .ar-ws .wp-table th:nth-child(4), .ar-ws .wp-table td:nth-child(4) { display: none; }
   
 }
-.ar-ws .wp-over { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); } .ar-ws .wp-over [data-alarm] { color: var(--ar-c-fail); }
+/* A host's open issues are chips: a quiet tint each, an alarm in the danger tint. */
+.ar-ws .wp-over { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
+.ar-ws .wp-over > li { padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ar-c-neutral) 11%, transparent); }
+.ar-ws .wp-over > li[data-alarm] { color: var(--ar-c-fail); background: color-mix(in srgb, var(--ar-c-fail) 12%, transparent); }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
 @media (max-width: 760px) {
   .ar-ws .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

@@ -84,6 +84,16 @@ function moves(doc: OverviewDocument, plays: Play[], mark: number): Move[] {
   for (const r of doc.now ?? []) if (after(r.startedAt)) out.push({ at: r.startedAt!, play: r.play, title: r.title, text: <>Run <a href={runHref(r.runId)}><b>{shortRun(r.play, r.runId)}</b></a> started{r.agents ? ` · ${r.agents} agents` : ''}</>, badge: { text: 'started', tone: 'neutral' } })
   return out.sort((a, b) => (a.at < b.at ? 1 : -1))
 }
+/** Moves under their play, plays in the order of their newest move. */
+function byPlay(list: Move[]) {
+  const groups = new Map<string, { play: string; title: string; moves: Move[] }>()
+  for (const m of list) {
+    const g = groups.get(m.play) ?? { play: m.play, title: m.title, moves: [] }
+    g.moves.push(m)
+    groups.set(m.play, g)
+  }
+  return [...groups.values()]
+}
 /** Page text: a host's sentence cut to its words, without host paths or key identifiers. */
 const scrub = (text: string) => text.replace(/\/(home|mnt|Users)\/\S+/g, '').replace(/\bkey_[A-Za-z0-9]+\b\s*·?\s*/g, '').replace(/\s{2,}/g, ' ').trim()
 const clip = (text: string, words = 14) => { const w = scrub(text).split(/\s+/); return w.length > words ? `${w.slice(0, words).join(' ')}…` : w.join(' ') }
@@ -117,7 +127,7 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             <span className="dim">Since </span>{markWords}
           </Picker>
         }
-        actions={<ul className="rp-stats"><li><b>{mine.length}</b> need you</li><li><b>{moved.length}</b> changes</li><li><b>{running}</b> {running === 1 ? 'play' : 'plays'} running</li><li><b>{(doc.now ?? []).length}</b> runs · <b>{agentsLive}</b> agents live</li></ul>} />
+        actions={<ul className="rp-stats"><li><b>{running}</b> {running === 1 ? 'play' : 'plays'} running</li><li><b>{agentsLive}</b> {agentsLive === 1 ? 'agent' : 'agents'} live</li></ul>} />
       <div className="td2-top">
         <section className="rp-card" aria-label="Needs you">
           <div className="rp-hd"><h2>Needs you<span className="ct">{mine.length}</span></h2></div>
@@ -128,11 +138,15 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
         </section>
         <section className="rp-card" aria-label={`Moved since ${markWords}`}>
           <div className="rp-hd"><h2>Moved since {mark.choice === 'visit' ? `${hhmm(new Date(mark.at).toISOString())} UTC` : markWords}<span className="ct">{moved.length}</span></h2></div>
-          <ol className="td2-moves rp-scroll">
-            {moved.length ? moved.slice(0, 60).map((m, i) => (
-              <li key={i}><time>{hhmm(m.at)}</time><a className="pl" href={playHref(m.play)}>{m.title}</a><span className="tx">{m.text}</span>{m.badge && <span className={`td2-badge ${m.badge.tone}`}>{m.badge.text}</span>}</li>
-            )) : <li className="td2-none">Nothing moved since {markWords}.</li>}
-          </ol>
+          {/* Grouped by play: the play is named once, its changes under it on one shared grid (time, change, delta). */}
+          <div className="td2-moves rp-scroll">
+            {moved.length ? byPlay(moved.slice(0, 60)).map((g) => (
+              <section key={g.play}>
+                <h3><a href={playHref(g.play)}>{g.title}</a><span className="ct">{g.moves.length}</span></h3>
+                <ol>{g.moves.map((m, i) => <li key={i}><time>{hhmm(m.at)}</time><span className="tx">{m.text}</span><span>{m.badge && <span className={`td2-badge ${m.badge.tone}`}>{m.badge.text}</span>}</span></li>)}</ol>
+              </section>
+            )) : <p className="td2-none">Nothing moved since {markWords}.</p>}
+          </div>
         </section>
       </div>
       <Board plays={plays} live={live} week={week} now={now} />
@@ -199,7 +213,8 @@ function PlayRow({ p, group, runs, week, now }: { p: Play; group: Group; runs: O
     <div className={`td2-row ${group}`}>
       <div className="nm">
         <a href={playHref(p.play)}>{p.title}</a>
-        <span className="sub">{week ? `${week.runCount ?? week.runs.length} runs this week${week.lostHours >= 0.1 ? ` · ${week.lostHours.toFixed(week.lostHours < 10 ? 1 : 0)} h lost` : ''}` : <StatusPill status={viewChip(p.view.status)} />}</span>
+        <span className="sub">{group === 'stopped' && p.view.blocker && bars.length ? <span title={scrub(p.view.blocker.sentence ?? p.view.blocker.text)}>Stopped {hhmm(p.view.blocker.since)}</span>
+          : week ? `${week.runCount ?? week.runs.length} ${(week.runCount ?? week.runs.length) === 1 ? 'run' : 'runs'} this week${week.lostHours >= 0.1 ? ` · ${week.lostHours.toFixed(week.lostHours < 10 ? 1 : 0)} h lost` : ''}` : <StatusPill status={viewChip(p.view.status)} />}</span>
       </div>
       <div className="steps">
         {trend && newest ? (
@@ -210,7 +225,7 @@ function PlayRow({ p, group, runs, week, now }: { p: Play; group: Group; runs: O
         ) : <span className="dim">—</span>}
       </div>
       <div className="metrics">
-        {group === 'stopped' && p.view.blocker ? <p className="hold"><b>Stopped {hhmm(p.view.blocker.since)}:</b> {clip((p.view.blocker.sentence ?? p.view.blocker.text).replace(/^Stopped by [\w ]+: /, ''), 22)}</p>
+        {group === 'stopped' && p.view.blocker && !bars.length ? <p className="hold"><b>Stopped {hhmm(p.view.blocker.since)}:</b> {clip((p.view.blocker.sentence ?? p.view.blocker.text).replace(/^Stopped by [\w ]+: /, ''), 22)}</p>
           : bars.length ? bars.map((b) => <MetricRow key={b.metric} bar={b} />)
           : group === 'running' && p.view.blocker ? <p className="hold"><b>Held:</b> {clip(p.view.blocker.sentence ?? p.view.blocker.text, 18)}</p> : null}
       </div>

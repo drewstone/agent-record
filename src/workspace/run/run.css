@@ -9,6 +9,8 @@
   --rp-line: hsl(var(--hsl-border));
   --rp-card: hsl(var(--hsl-card));
   --rp-raised: hsl(var(--hsl-secondary));
+  /* One depth ladder in both themes: page, then a well between the page and the card, then the card (the paper). */
+  --rp-well: color-mix(in oklab, var(--rp-card) 55%, hsl(var(--hsl-background)));
   font: 400 14px/20px var(--font-sans); color: hsl(var(--hsl-foreground));
 }
 .rp-run { display: flex; flex-direction: column; height: calc(100dvh - 56px - 2rem); min-height: 0; }
@@ -146,7 +148,8 @@
 .rp-lb .rp-lb-l { position: relative; overflow: auto; outline: 0; }
 .rp-lb .rp-lb-r { position: absolute; left: 4px; right: 4px; height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--radius-md); white-space: nowrap; cursor: pointer; }
 .rp-lb .rp-lb-r.grp { color: hsl(var(--hsl-muted-foreground)); font-weight: 600; }
-.rp-lb .rp-lb-r.active { background: var(--ix-hover-bg); }
+/* The keyboard-active option carries a bar as well as the tint, which alone is about 1.2:1 on the popover. */
+.rp-lb .rp-lb-r.active { background: var(--ix-hover-bg); box-shadow: inset 2px 0 0 var(--accent-text); }
 .rp-lb .rp-lb-r .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rp-lb .rp-lb-r .mt { color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .rp-lb .rp-lb-r .ck { width: 16px; display: flex; justify-content: center; color: var(--accent-text); flex: none; }
@@ -178,7 +181,7 @@
 .rp .rp-verdict { margin: 0; font: 600 24px/32px var(--font-sans); letter-spacing: -0.01em; color: hsl(var(--hsl-foreground)); }
 .rp .rp-lede { margin: 4px 0 0; font-size: 16px; line-height: 24px; color: hsl(var(--hsl-muted-foreground)); max-width: 84ch; }
 .rp .rp-vd-act { display: flex; gap: 8px; align-items: center; padding-top: 2px; }
-.rp .rp-story { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; margin: 20px -24px 0; padding: 4px 0; background: var(--well-card); }
+.rp .rp-story { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; margin: 20px -24px 0; padding: 4px 0; background: var(--rp-well); }
 .rp .rp-story li { position: relative; padding: 12px 24px 13px 44px; min-width: 0; }
 .rp .rp-story .sd { position: absolute; left: 24px; top: 17px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); }
 .rp .rp-story .sd.warn { background: var(--surface-warning-text); }
@@ -257,7 +260,7 @@
 .rp .rp-factions { display: flex; align-items: center; gap: 8px; }
 .rp .rp-factions .rp-btn { height: 32px; }
 /* The tree is a recessed well and the open document the card's paper, so the editor stands apart from its frame. */
-.rp .rp-files [aria-label='Workspace files'] { background: var(--well-card); }
+.rp .rp-files [aria-label='Workspace files'] { background: var(--rp-well); }
 .rp .rp-doc { font-size: 16px; line-height: 26px; }
 .rp .rp-doc.code { font-size: 14px; line-height: 21px; }
 /* The shared preview frames an embedded document in a card of its own (ui file-preview.tsx, change B3); inside the
@@ -270,7 +273,7 @@
 /* Topology */
 .rp .rp-topo { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; }
 .rp .rp-topo-wrap { position: relative; flex: 1; min-height: 0; }
-.rp .rp-topo-canvas { position: absolute; inset: 0; overflow: auto; background: var(--well-card); }
+.rp .rp-topo-canvas { position: absolute; inset: 0; overflow: auto; background: var(--rp-well); }
 .rp .rp-topo-canvas svg.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .rp .rp-topo-canvas svg.edges path { fill: none; stroke: var(--border-strong); stroke-width: 1.25; }
 .rp .rp-topo-canvas svg.edges path.hot { stroke: var(--accent-text); stroke-width: 1.75; }
@@ -285,7 +288,7 @@
 .rp .rp-node.fade { opacity: 0.42; }
 .rp .rp-node:not(.sel):hover { border-color: var(--border-strong); }
 .rp .rp-node.ghost { background: transparent; border-style: dashed; border-color: var(--border-strong); box-shadow: none; color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-team { position: absolute; border-radius: var(--radius-xl); background: color-mix(in oklab, hsl(var(--hsl-card)) 55%, var(--well-card)); box-shadow: inset 0 0 0 1px var(--rp-line); transition: opacity 0.12s; }
+.rp .rp-team { position: absolute; border-radius: var(--radius-xl); background: color-mix(in oklab, hsl(var(--hsl-card)) 55%, var(--rp-well)); box-shadow: inset 0 0 0 1px var(--rp-line); transition: opacity 0.12s; }
 .rp .rp-team.fade { opacity: 0.5; }
 .rp .rp-team-h { position: absolute; left: 0; right: 0; top: 0; height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 10px; border: 0; border-radius: var(--radius-xl); background: transparent; text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); }
 .rp .rp-team-h:hover { background: var(--ix-hover-bg); }
@@ -498,10 +501,12 @@
   .rp-run { height: auto; }
   .agent-record .rp-head { padding: 16px 0 12px; }
   .agent-record .rp-head h1 { font-size: 24px; line-height: 30px; }
-  .agent-record .rp-stats { width: 100%; gap: 2px 16px; }
+  .agent-record .rp-stats { width: 100%; gap: 2px 16px; flex-wrap: nowrap; overflow: hidden; }
   .agent-record .rp-stats li { padding: 0; }
+  /* A phone's header is one line of facts: time, agents and steps; tokens and cost are on Overview and Analytics. */
+  .agent-record .rp-run .rp-stats li:nth-child(n + 4) { display: none; }
   .agent-record .rp-stats li + li { box-shadow: none; }
-  .rp .rp-tabs { position: sticky; top: 44px; z-index: 5; margin: 0 -16px; padding: 0 4px; background: hsl(var(--hsl-background)); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .rp .rp-tabs { position: sticky; top: 44px; z-index: 5; margin: 0 -16px; padding: 0 4px; background: hsl(var(--hsl-background)); mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); }
   .rp .rp-work { overflow: visible; padding-top: 12px; }
   .rp .rp-work > * { height: auto; }
   .rp .ph-hide { display: none !important; }
@@ -561,7 +566,8 @@
 /* Today (Today.tsx): what needs you and what moved since your mark, then every play's distance to its target */
 .rp.td2 { display: flex; flex-direction: column; gap: 16px; padding-bottom: 8px; }
 .rp.td2 > .rp-head { padding-bottom: 0; }
-.rp .td2-top { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; height: 340px; }
+.rp .td2-top { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
+.rp .td2-top > .rp-card { max-height: 360px; }
 .rp .td2-needs, .rp .td2-moves { list-style: none; margin: 0; padding: 4px 0; }
 .rp .td2-needs li > a, .rp .td2-needs li > div { display: grid; grid-template-columns: 20px minmax(0, 1fr) 16px; gap: 12px; align-items: start; padding: 10px 16px; }
 .rp .td2-needs li > a:hover { background: var(--ix-hover-bg); }
@@ -573,9 +579,13 @@
 .rp .td2-none { display: flex; align-items: center; gap: 8px; padding: 16px; color: hsl(var(--hsl-muted-foreground)); }
 .rp .td2-foot { flex: none; display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 16px; border-top: 1px solid var(--rp-line); color: hsl(var(--hsl-muted-foreground)); }
 .rp .td2-foot .rp-link { margin: 0; display: inline-flex; align-items: center; gap: 4px; }
-.rp .td2-moves li { display: grid; grid-template-columns: 52px minmax(120px, 0.6fr) minmax(0, 2fr) auto; gap: 12px; align-items: baseline; padding: 9px 16px; border-bottom: 1px solid var(--rp-line); }
-.rp .td2-moves time { font: 14px/20px var(--font-mono); color: var(--text-dim); }
-.rp .td2-moves .pl { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp .td2-moves section + section { border-top: 1px solid var(--rp-line); }
+.rp .td2-moves h3 { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 10px 16px 2px; font: 600 14px/20px var(--font-sans); }
+.rp .td2-moves h3 a:hover { color: var(--accent-text); }
+.rp .td2-moves ol { list-style: none; margin: 0; padding: 0 0 8px; }
+.rp .td2-moves li { display: grid; grid-template-columns: 48px minmax(0, 1fr) 132px; gap: 12px; align-items: baseline; padding: 4px 16px; }
+.rp .td2-moves li > span:last-child { justify-self: end; }
+.rp .td2-moves time { font: 14px/20px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text-dim); }
 .rp .td2-moves .tx b { font-weight: 600; }
 .rp .td2-moves .tx a { color: var(--accent-text); }
 .rp .td2-badge { justify-self: start; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--radius-pill); font: 500 14px/20px var(--font-sans); white-space: nowrap; background: var(--rp-raised); color: hsl(var(--hsl-muted-foreground)); }
@@ -632,7 +642,7 @@
   .rp .td2-top { display: flex; flex-direction: column; height: auto; }
   .rp .td2-top .rp-scroll { max-height: 360px; }
   .rp .td2-moves li { grid-template-columns: 44px minmax(0, 1fr); }
-  .rp .td2-moves .tx, .rp .td2-moves .td2-badge { grid-column: 2; }
+  .rp .td2-moves li > span:last-child { grid-column: 2; justify-self: start; }
   .rp .td2-find { width: 100%; }
   .rp .td2-board .rp-hd { height: auto; flex-wrap: wrap; padding: 8px 12px; }
   .rp .td2-row .live { grid-column: 1 / -1; text-align: left; }
