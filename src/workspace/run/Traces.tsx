@@ -2,7 +2,7 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { SegmentedControl } from '@tangle-network/ui/primitives'
 import { agentParam, type TabProps } from './RunPage.js'
 import { clockSecondsOf, abbr, count, lat, offset } from './model.js'
-import { agentGroups, agentOptions, agentCost, middle, Picker, useRows } from './ui.js'
+import { agentGroups, agentOptions, agentCost, nameFit, Picker, useRows } from './ui.js'
 
 type Kind = 'all' | 'model' | 'tool' | 'failed'
 const ROW = 34
@@ -57,7 +57,7 @@ export function Traces({ m, doc, agent, route }: TabProps) {
               <div key={i} data-i={i} className="rp-tr" role="row" aria-selected={i === at} tabIndex={i === at ? 0 : -1} onClick={() => pick(i)}>
                 <span className="m">{clock(s.t)}</span>
                 <span className="m muted">{offset(s.t)}</span>
-                <span title={a.name}>{middle(a.name, 30)}</span>
+                <span title={a.name}>{nameFit(a, 30)}</span>
                 <span className="kind"><i className={s.kind} />{s.kind}</span>
                 <span className="m nm" title={s.kind === 'tool' ? `${s.tool}${s.target ? ` ${s.target}` : ''}` : undefined}>{s.kind === 'model' ? (s.model?.split('/').pop() ?? a.model ?? 'model') : s.kind === 'tool' ? <>{s.tool}{s.target && <span className="muted"> {s.target}</span>}</> : <span className="muted">waiting on a spawned agent</span>}</span>
                 <span className="m r dur"><b style={{ width: Math.max(2, (Math.log10(Math.max(s.d, 1)) / longest) * 56) }} />{lat(s.d)}</span>

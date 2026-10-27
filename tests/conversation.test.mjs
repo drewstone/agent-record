@@ -121,6 +121,9 @@ test('the rendered conversation shows the collapsed polls, absent captures and w
   assert.match(html, /2 thinking blocks redacted \(encrypted\)/)
   // Thinking text stays collapsed until asked for.
   assert.doesNotMatch(html, /<details[^>]*class="reasoning-body"[^>]*open/)
+  // A tool row names its subject, never its JSON arguments.
+  assert.match(html, /knowledge read/)
+  assert.doesNotMatch(html, /\{&quot;pageId&quot;/)
 })
 
 test('native opening input and a child without a transcript both begin with one prompt', () => {

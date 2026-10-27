@@ -3,7 +3,6 @@ import type { RecordEvent, RunRecord } from '../record.js'
 import { Conversation } from '../viewer/Conversation.js'
 import { indexRecord } from '../viewer/model.js'
 import { projectPartEvents } from '../adapters/part-events.js'
-import { EventDetail } from './EventDetail.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
 type StreamNode = { id: string; label: string; parent: string | null }
@@ -66,7 +65,6 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
   const node = selected ?? runId
   const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
   const [reload, setReload] = useState(0)
-  const [detail, setDetail] = useState<RecordEvent | null>(null)
   const older = useRef<(() => void) | null>(null)
   const wasAlive = useRef(alive)
   const windowState = useRef({ node, rows: [] as StreamRow[], earlier: false, generation: undefined as string | undefined, first: null as number | null, last: null as number | null })
@@ -87,7 +85,6 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     let forwardPending = false
     let olderPending = false
     setState((prior) => ({ ...prior, rows, earlier, loading: true, error: null, trimmed: retain && prior.trimmed, history: false, emptyTail: false }))
-    setDetail(null)
     const load = async (direction: 'tail' | 'after' | 'before') => {
       if (cancelled || (direction === 'before' ? olderPending : forwardPending)) return
       if (direction === 'before') olderPending = true
@@ -136,18 +133,19 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
   const nodes = state.nodes.some((item) => item.id === node) ? state.nodes : [...state.nodes, { id: node, label: node === runId ? 'Root' : node, parent: null }]
   const index = useMemo(() => indexRecord(streamRecord(runId, node, nodes, state.rows)), [runId, node, state.nodes, state.rows])
   return <section className="run-panel live-transcript" aria-label="Conversations">
-    <div className="message-filters">
+    {(chooser || onRecorded) && <div className="message-filters">
       {chooser && <label>Agent <select aria-label="Agent conversation" value={node} onChange={(event) => onSelect(event.target.value)}>{nodes.map((item) => <option key={item.id} value={item.id}>{item.label}{item.parent ? ' (child)' : ' (root)'}</option>)}</select></label>}
-      <button type="button" className="ui-button" disabled={!state.earlier || state.loading} onClick={() => older.current?.()}>Load older</button>
-      <button type="button" className="ui-button" disabled={!state.history} onClick={() => setReload((value) => value + 1)}>Latest</button>
       {onRecorded && <button type="button" className="ui-button" onClick={onRecorded}>Timeline and usage</button>}
-      <span className="muted">{state.history && alive ? 'Reading history, new output continues' : alive ? 'Live transcript' : 'Settled transcript'} · {state.rows.length} stream events{state.trimmed ? ' · window limited to 2,000 events' : ''}</span>
-    </div>
+    </div>}
+    {/* Only the window's edges speak: older messages exist, or the reader left the live tail. */}
+    {(state.earlier || state.history) && <p className="transcript-edge">
+      {state.earlier && <button type="button" className="link-button" disabled={state.loading} onClick={() => older.current?.()}>Load older</button>}
+      {state.history && <button type="button" className="link-button" onClick={() => setReload((value) => value + 1)}>Latest</button>}
+    </p>}
     {state.loading && <p role="status">Loading transcript…</p>}
     {state.error && <p role="alert">{state.error}</p>}
     {state.rows.filter((row) => row.event?.kind === 'capture_gap' && (!row.at || !Number.isFinite(Date.parse(row.at)))).map((row) => <p className="faint" key={row.seq}>{row.event?.text ?? 'A stream record could not be displayed.'}</p>)}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
-    {(!state.loading || state.rows.length > 0) && <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" inspect={setDetail} lifecycle live={alive} />}
-    {detail && <EventDetail key={detail.id} event={detail} index={index} onClose={() => setDetail(null)} load={async () => { throw new Error('Original bytes are available in the captured record.') }} />}
+    {(!state.loading || state.rows.length > 0) && <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive} />}
   </section>
 }

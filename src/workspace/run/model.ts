@@ -76,6 +76,8 @@ export interface Agent {
   id: string
   /** The name people use: its role, else its label. */
   name: string
+  /** The name without the run's shared prefix (`peer-director-3-battery3-poll2` → `3-battery3-poll2`): what tells it apart. */
+  short: string
   node: Node
   parent: string | null
   children: string[]
@@ -212,6 +214,7 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
     return {
       id: node.id,
       name: node.role ?? node.label,
+      short: node.role ?? node.label,
       node,
       parent: parentOf(node),
       children: [],
@@ -259,6 +262,12 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
   }
   for (const a of agents.filter((x) => !x.parent).sort((x, y) => (x.start ?? 0) - (y.start ?? 0))) walk(a, 0)
   for (const a of agents) if (!seen.has(a.id)) walk(a, 0)
+  // The longest name prefix (ending at a '-') that half the agents share and at least three: a cut label keeps what
+  // tells the agents apart, not the prefix they share.
+  const prefixes = new Map<string, number>()
+  for (const a of agents) for (let i = a.name.indexOf('-'); i > 0; i = a.name.indexOf('-', i + 1)) prefixes.set(a.name.slice(0, i + 1), (prefixes.get(a.name.slice(0, i + 1)) ?? 0) + 1)
+  const shared = [...prefixes].filter(([, n]) => n >= 3 && n * 2 >= agents.length).sort((x, y) => y[0].length - x[0].length)[0]?.[0] ?? ''
+  for (const a of agents) a.short = shared && a.name.startsWith(shared) && a.name.length > shared.length ? a.name.slice(shared.length) : a.name
   // A lead with more than eight spawned agents is a team: every agent-scaled view groups its members.
   const teams = agents.filter((a) => a.children.length > 8).map((a) => ({ id: a.id, label: `${a.name} team`, members: a.children }))
   for (const t of teams) for (const m of t.members) byId.get(m)!.team = t.id
@@ -347,26 +356,37 @@ export const clockSecondsOf = (t0: number) => (ms: number) => {
   const d = new Date(t0 + ms)
   return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`
 }
+/** `1 step`, `201 steps`. */
+export const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`
+/** A span on the run's clock: `09:09–09:31` within one UTC day, else its start and length (`02:38, 23h 55m`), so an end
+ * never reads earlier than its start. */
+export const spanOf = (t0: number, from: number, to: number | 'now') => {
+  const clock = clockOf(t0)
+  if (to === 'now') return `${clock(from)}–now`
+  return new Date(t0 + from).toISOString().slice(0, 10) === new Date(t0 + to).toISOString().slice(0, 10) ? `${clock(from)}–${clock(to)}` : `${clock(from)}, ${elapsed(to - from)}`
+}
+/** A UTC time with its day when the run spans more than one: `02:37 UTC` or `Oct 26 02:37 UTC`. */
+export const stampOf = (iso: string, days: boolean) => `${days ? `${new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} ` : ''}${iso.slice(11, 16)} UTC`
 /** A run length: `8h 58m`, `26 min`, `4m 05s`, `12 s`. */
 export function elapsed(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return '—'
   if (ms < 1000) return `${Math.round(ms)} ms`
-  if (ms < 60_000) return `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)} s`
+  if (ms < 59_500) return `${(ms / 1000).toFixed(ms < 9_950 ? 1 : 0)} s`
+  // Round the whole length first, then split it, so 23h 59m 40s reads 24h 00m and never 23h 60m.
   if (ms < 3_600_000) {
-    const m = Math.floor(ms / 60_000)
-    const s = Math.round((ms % 60_000) / 1000)
-    return s ? `${m}m ${pad(s)}s` : `${m} min`
+    const total = Math.round(ms / 1000)
+    if (total < 3600) return total % 60 ? `${Math.floor(total / 60)}m ${pad(total % 60)}s` : `${total / 60} min`
   }
-  const h = Math.floor(ms / 3_600_000)
-  const m = Math.round((ms % 3_600_000) / 60_000)
-  return `${h}h ${pad(m)}m`
+  const minutes = Math.round(ms / 60_000)
+  return `${Math.floor(minutes / 60)}h ${pad(minutes % 60)}m`
 }
 /** A call length, abbr for tables: `796ms`, `9.3s`, `2m00s`. */
 export function lat(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return '—'
   if (ms < 1000) return `${Math.round(ms)}ms`
-  if (ms < 60_000) return `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m${pad(Math.round((ms % 60_000) / 1000))}s`
+  if (ms < 59_500) return `${(ms / 1000).toFixed(ms < 9_950 ? 1 : 0)}s`
+  const seconds = Math.round(ms / 1000)
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m${pad(seconds % 60)}s`
   return elapsed(ms)
 }
 /** An offset into the run: `+0:26:04`. */

@@ -27,7 +27,6 @@ interface ConversationProps {
   query: string
   category: string
   selected?: string
-  inspect: (event: RecordEvent, source?: boolean) => void
   /** Open the full text of a clipped body by its source hash. */
   openSource?: (sha256: string, event: RecordEvent) => void
   /** Assessment labels that cite an event, drawn in the message gutter. */
@@ -46,7 +45,6 @@ export function Conversation({
   query,
   category,
   selected,
-  inspect,
   openSource,
   flags,
   onFlag,
@@ -219,17 +217,6 @@ export function Conversation({
     setOpened((current) => new Set([...current, ...keys.filter(Boolean)]))
   }, [selected, index]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sourceButton = (event: RecordEvent) => (
-    <button
-      className="message-source"
-      type="button"
-      data-source-event={event.id}
-      aria-label={`Inspect source of ${event.label}`}
-      onClick={() => inspect(event, true)}
-    >
-      Details
-    </button>
-  )
   const flagMarks = (event: RecordEvent) => {
     const marks = flags?.get(event.id)
     if (!marks?.length) return null
@@ -260,11 +247,11 @@ export function Conversation({
           : isLifecycle(row.event)
             ? 26
             : !textOf(row.event) && callsOf(row.event).length
-              ? 4 + 26 * callsOf(row.event).length
-              : 120,
+              ? 16 + 36 * callsOf(row.event).length
+              : 96,
     [],
   )
-  const render = (row: ConversationRow) => <ConversationRowView row={row} context={{ index, cutoff, selected, opened, anchor, opener, setOpen, sourceButton, flagMarks, paired, thinkingSpan, flags, live }} />
+  const render = (row: ConversationRow) => <ConversationRowView row={row} context={{ index, cutoff, selected, opened, anchor, opener, setOpen, flagMarks, paired, thinkingSpan, flags, live }} />
   return (
     <>
       <div

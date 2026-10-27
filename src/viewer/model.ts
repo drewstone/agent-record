@@ -16,6 +16,30 @@ export function utcTime(value: string, includeDate = false) {
   return `${includeDate ? iso.slice(0, 19).replace('T', ' ') : iso.slice(11, 19)} UTC`
 }
 export const compact = (value: string) => value.replace(/\s+/g, ' ').trim()
+/**
+ * Recorded text names the host folders an agent ran in (`/home/<user>/.cache/disco/host/<run>/sessions/<session>/inputs/x.md`).
+ * The reader needs the path inside the run, and a page must not publish the host's: a session or run folder reads as the
+ * path under it (`inputs/x.md`, or `./` for the folder itself), any other home folder as `~/`.
+ */
+const HOST_PATH = /\/(?:home|Users)\/[^/\s"'`]+(?:\/\.cache\/disco\/host\/[^/\s"'`]+(?:\/sessions\/[^/\s"'`]+)?)?(\/?)/g
+export function hostless(text: string): string
+export function hostless(text: string | undefined): string | undefined
+export function hostless(text: string | undefined) {
+  if (!text || !(text.includes('/home/') || text.includes('/Users/'))) return text
+  return text.replace(HOST_PATH, (match: string, slash: string, at: number, all: string) => {
+    if (!match.includes('/.cache/disco/host/')) return slash ? '~/' : '~'
+    const next = all[at + match.length]
+    return slash && next !== undefined && !/[\s"'`)]/.test(next) ? '' : './'
+  })
+}
+/** An event with every recorded text read through `hostless`; an event without a host path is returned as it is. */
+function withoutHostPaths(event: RecordEvent): RecordEvent {
+  const d = event.detail
+  const text = hostless(d.publicText), reasoning = hostless(d.reasoning)
+  const calls = d.publicToolCalls?.map((call) => (call.input && hostless(call.input) !== call.input ? { ...call, input: hostless(call.input) } : call))
+  if (text === d.publicText && reasoning === d.reasoning && calls?.every((call, i) => call === d.publicToolCalls![i]) !== false) return event
+  return { ...event, detail: { ...d, ...(text !== undefined ? { publicText: text } : {}), ...(reasoning !== undefined ? { reasoning } : {}), ...(calls ? { publicToolCalls: calls } : {}) } }
+}
 export const fmt = (value: number) =>
   new Intl.NumberFormat('en-US', {
     notation: 'compact',
@@ -59,14 +83,19 @@ export function callsOf(event: RecordEvent): ToolCall[] {
   )
 }
 
+/** A run-scoped id (`<run>:s37`) reads as its own part. */
+const local = (value: string) => value.replace(/^[a-z0-9][\w.-]*-\d{8}[a-z]?:/i, '')
+/** A tool call's subject: its command, path or question, never its JSON. */
 export function preview(call: ToolCall) {
   if (call.input === undefined) return 'args not captured'
   try {
     const value: unknown = JSON.parse(call.input)
-    if (value && typeof value === 'object') {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
       const args = value as Record<string, unknown>
-      for (const key of ['command', 'cmd', 'path', 'query', 'task'])
-        if (typeof args[key] === 'string') return compact(args[key])
+      for (const key of ['command', 'cmd', 'filePath', 'file_path', 'path', 'query', 'question', 'pattern', 'url', 'pageId', 'title', 'task', 'prompt', 'message'])
+        if (typeof args[key] === 'string' && args[key]) return compact(local(args[key]))
+      const words = Object.values(args).filter((item): item is string | number | boolean => ['string', 'number', 'boolean'].includes(typeof item))
+      if (words.length) return compact(words.map((item) => local(String(item))).join(' · '))
     }
   } catch {
     /* Tool inputs can be plain text. */
@@ -81,7 +110,7 @@ export function indexRecord(record: RunRecord) {
   const actors = record.nodes.filter(
     (node) => node.kind !== 'session' || !node.agentId,
   )
-  const events = [...record.events].sort((a, b) => ms(a.at) - ms(b.at))
+  const events = record.events.map(withoutHostPaths).sort((a, b) => ms(a.at) - ms(b.at))
   const byEvent = new Map(events.map((event) => [event.id, event]))
   const recordedOrder = new Map(record.events.map((event, i) => [event.id, i]))
   const byActor = new Map<string, RecordEvent[]>()

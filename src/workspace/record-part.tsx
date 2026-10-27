@@ -31,14 +31,13 @@ export function AgentConversation({ runUrl, version, index, actor }: { runUrl: s
   return <ConversationWithDetail runUrl={runUrl} index={agent.index} actor={actor} />
 }
 
-/** The conversation with working Details: a row's source, or a clipped body in full, opens in the shared EventDetail. */
+/** The conversation; a clipped body opens in full in the shared EventDetail. */
 function ConversationWithDetail({ runUrl, index, actor }: { runUrl: string; index: RecordIndex; actor: string }) {
   const [detail, setDetail] = useState<{ event: RecordEvent; sha?: string } | null>(null)
   const load = useMemo(() => readSource(runUrl), [runUrl])
   return (
     <>
       <Conversation index={index} actor={actor} cutoff={index.end} query="" category="all" lifecycle={false}
-        inspect={(event, source) => { if (source) setDetail({ event }) }}
         openSource={(sha, event) => setDetail({ event, sha })} />
       {detail && <EventDetail key={`${detail.event.id}:${detail.sha ?? ''}`} event={detail.event} full={detail.sha} index={index} onClose={() => setDetail(null)} load={load} />}
     </>

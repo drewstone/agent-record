@@ -27,7 +27,8 @@ export function flowTrace(m: RunModel): FlowTrace {
       endMs: end,
       status: running ? 'running' : a.status === 'failed' ? 'failed' : 'done',
       ...(a.commits === null ? {} : { outcome: a.commits ? { tone: 'ok', label: 'Shipped' } : a.status === 'failed' ? { tone: 'failed', label: 'Failed' } : running ? { tone: 'warn', label: 'Running' } : { tone: 'neutral', label: 'Nothing shipped' } }),
-      ...(a.listUsd !== null ? { costUsd: a.listUsd } : a.billedUsd !== null ? { costUsd: a.billedUsd } : {}),
+      // A free seat's $0.00 says nothing on every lane; only a measured cost is printed.
+      ...(a.listUsd ? { costUsd: a.listUsd } : a.billedUsd ? { costUsd: a.billedUsd } : {}),
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
       marks: a.restarts.map((at) => ({ at, kind: 'restart', label: `Restarted ${clockOf(m.t0)(at)} UTC` })),
       facts: [
@@ -48,7 +49,7 @@ export function flowTrace(m: RunModel): FlowTrace {
         endMs: Math.max(0, s.t + s.d),
         status: s.failed ? 'failed' : 'done',
         ...(s.tokens ? { promptTokens: s.tokens.input + s.tokens.cacheRead, completionTokens: s.tokens.output, cachedTokens: s.tokens.cacheRead } : {}),
-        ...(s.usd !== null ? { costUsd: s.usd } : {}),
+        ...(s.usd ? { costUsd: s.usd } : {}),
       })
     })
   }
