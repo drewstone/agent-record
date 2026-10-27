@@ -8,7 +8,8 @@ for (const specifier of ['@tangle-network/sandbox-ui/styles', '@tangle-network/c
   if (!distributedCss.includes(directive)) throw new Error(`Missing shared CSS import: ${specifier}`)
   distributedCss = distributedCss.replace(directive, css)
 }
-await writeFile('dist/styles.css', distributedCss)
+// The shared page system (run page, Today, the wall pages' controls) is its own file beside the component that owns it.
+await writeFile('dist/styles.css', `${distributedCss}\n${await readFile('src/workspace/run/run.css', 'utf8')}`)
 // Bundlers may discard the entry directive. Keep the distributed React entry explicit for RSC hosts.
 const entry = await readFile('dist/index.js', 'utf8')
 await writeFile('dist/index.js', `'use client'\n${entry}`)
