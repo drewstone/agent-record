@@ -67,6 +67,8 @@ export function Files({ api, runUrl, doc, m, route }: TabProps) {
     return out
   }, [pages, shown, diffs, main.data, scope, doc.run.id])
   const byTree = useMemo(() => new Map(entries.map((e) => [e.tree, e])), [entries])
+  // Each branch file's mark against main: A added, M modified (sandbox-ui 1.1.0 draws them in the tree).
+  const status = useMemo(() => Object.fromEntries(entries.filter((e) => e.kind === 'code').map((e) => [e.tree, e.kind === 'code' && e.status === 'A' ? 'added' as const : 'modified' as const])), [entries])
   const asked = route.params.get('file')
   const open = entries.find((e) => e.key === asked) ?? (asked ? null : entries[0] ?? null)
   const loading = !pages && !inventory.error ? 'Reading the retained files…' : shown.some((a) => !diffs.has(a.id)) && !entries.length ? 'Reading the agent branches…' : null
@@ -81,6 +83,7 @@ export function Files({ api, runUrl, doc, m, route }: TabProps) {
     <div className="rp-files">
       <WorkspaceFilesPane
         paths={entries.map((e) => e.tree)}
+        status={status}
         selectedPath={open?.tree}
         onSelect={(path) => { const hit = byTree.get(path); if (hit) route.go('files', { file: hit.key }) }}
         onBack={() => route.go('files', { file: null })}
