@@ -26,6 +26,7 @@ export function LiveRun({ api }: { api: string }) {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
+  const [ended, setEnded] = useState(false)
   const [selected, setSelected] = useState('')
   const [rendered, setRendered] = useState(0)
   const [agent, setAgent] = useState<string>()
@@ -45,6 +46,8 @@ export function LiveRun({ api }: { api: string }) {
       } catch (cause) { setError(String(cause)) }
     })
     source.addEventListener('unavailable', () => setError('The run snapshot is unavailable'))
+    // Runtime ends the stream when its server closes; the run is then final, not reconnecting.
+    source.addEventListener('end', () => { source.close(); setEnded(true) })
     source.onerror = () => setConnected(false)
     return () => source.close()
   }, [api])
@@ -81,7 +84,7 @@ export function LiveRun({ api }: { api: string }) {
       <header>
         <h1>Live agents</h1>
         <label>Run<select aria-label="Run" value={active?.key ?? ''} onChange={(event) => { setSelected(event.target.value); setAgent(undefined) }}>{runs.map((item) => <option key={item.key} value={item.key}>{item.run.id}</option>)}</select></label>
-        <span role="status">{connected ? '● Connected' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
+        <span role="status">{ended ? 'Finished · viewer closed' : connected ? '● Connected' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
       </header>
       {active?.run.task && active.run.task !== active.run.id && <p>{active.run.task}</p>}
       {error && <p role="alert">{error}</p>}
