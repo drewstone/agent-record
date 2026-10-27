@@ -149,13 +149,13 @@ const targetOf = (step: RawStep) => {
   return cut >= 0 ? name.slice(cut + 3) : null
 }
 
-/** An agent's state word and tone, from the spawn journal's settle. */
+/** An agent's state word and tone, from the spawn journal's settle; one with commits shipped, whatever the settle (21c: memscale-5 committed, then failed). */
 function stateOf(node: Node, live: boolean, steps: number): Agent['state'] {
   if (node.status === 'running' || (live && node.status === 'waiting')) return { label: node.status === 'waiting' ? 'Waiting' : 'Running', tone: 'live' }
+  if (node.shipped) return { label: 'Shipped', tone: 'ok' }
   if (node.status === 'succeeded') return { label: 'Done', tone: 'ok' }
   if (node.status === 'failed') return { label: 'Failed', tone: 'fail' }
-  if (!steps && !node.start) return { label: 'Never ran', tone: 'none' }
-  if (!steps && !node.usage) return { label: 'Never ran', tone: 'none' }
+  if (!steps && (!node.start || !node.usage)) return { label: 'Never ran', tone: 'none' }
   return { label: node.status === 'idle' ? 'Idle' : 'Stopped', tone: '' }
 }
 
