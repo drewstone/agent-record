@@ -400,3 +400,31 @@ export const count = (n: number | null | undefined) => (n === null || n === unde
 export const abbr = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: n >= 1e8 ? 0 : n >= 1e6 ? 2 : 1 }).format(n)
 export const usd = (v: number | null | undefined) => (v === null || v === undefined ? '—' : v >= 100 ? `$${v.toFixed(0)}` : `$${v.toFixed(2)}`)
+
+/** The play check as the run document carries it (`run.check`). */
+export type CheckDoc = {
+  latest?: { at?: string | null; line?: string | null; verdict?: string | null; known?: boolean; solved?: boolean; tag?: string | null } | null
+  held?: { tag?: string | null } | null
+  counts?: { checks?: number; known?: number; solved?: number }
+  checkerNames?: { label: string; ruling?: string | null; current?: boolean }[]
+  calibration?: { state?: string; stages?: { name: string; state: string }[]; uncalibrated?: string[] } | null
+}
+export type CheckVerdict = { word: 'Passed' | 'Held' | 'Not solved' | 'No verdict' | 'Not checked'; tone: Tone | 'held'; note: string | null }
+
+const list = (names: readonly string[]) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
+
+/**
+ * One verdict for the run's check, the same on every tab. A release that passed a checker whose stages have no
+ * known-good fixture is held, not failed: it passed, and it counts once those stages are calibrated.
+ */
+export function checkVerdict(check: CheckDoc | null | undefined): CheckVerdict {
+  const latest = check?.latest
+  if (!latest) return { word: 'Not checked', tone: 'none', note: null }
+  if (latest.solved) return { word: 'Passed', tone: 'ok', note: latest.tag ? `${latest.tag} passed the check` : null }
+  if (check?.held && (!check.held.tag || check.held.tag === latest.tag)) {
+    const waiting = check.calibration?.uncalibrated ?? check.calibration?.stages?.filter((stage) => stage.state !== 'calibrated').map((stage) => stage.name) ?? []
+    return { word: 'Held', tone: 'held', note: `${latest.tag ? `${latest.tag} passed; it` : 'It'} counts once ${waiting.length ? `${list(waiting)} ${waiting.length === 1 ? 'has' : 'have'} a known-good fixture` : 'its checker is calibrated'}` }
+  }
+  if (latest.known) return { word: 'Not solved', tone: 'fail', note: null }
+  return { word: 'No verdict', tone: 'none', note: null }
+}

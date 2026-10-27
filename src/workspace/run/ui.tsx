@@ -32,7 +32,7 @@ export function Icon({ name, size = 16, className }: { name: IconName; size?: nu
   )
 }
 
-export const StateDot = ({ tone }: { tone: Agent['state']['tone'] }) => <span className={`rp-dot${tone ? ` ${tone}` : ''}`} aria-hidden="true" />
+export const StateDot = ({ tone }: { tone: Agent['state']['tone'] | 'held' }) => <span className={`rp-dot${tone ? ` ${tone}` : ''}`} aria-hidden="true" />
 
 /** Long names keep their start and their end: `records-grap…20261026a.md`. */
 export function middle(text: string, max: number) {

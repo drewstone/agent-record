@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AgentTimeline, UserMessage, type AgentTimelineItem } from '@tangle-network/ui/chat'
+import { AgentTimelineStep, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat'
 import { InlineThinkingItem, RunRowShell, type ToolCallType } from '@tangle-network/ui/run'
 import type { ToolPart } from '@tangle-network/ui/types'
 import { getToolDisplayMetadata } from '@tangle-network/ui/utils'
@@ -14,9 +14,11 @@ import { promptText } from './prompt-text.js'
 /**
  * Every transcript is the kit's chat (Drew 2026-10-27: "make it look like a chat, like how agent-apps look"): the
  * prompts an agent received are the reader's right-aligned bubbles, the agent's words read as prose on the left, and its
- * reasoning and tool calls are the kit's one-line rows (InlineThinkingItem, InlineToolItem through AgentTimeline),
- * collapsed until opened, a failure shown on its row. Time is the row's hover title; no row carries an author line,
- * a timestamp row or a Details link.
+ * reasoning and tool calls are the kit's one-line rows (InlineThinkingItem, InlineToolItem), collapsed until opened, a
+ * failure marked on its row's glyph. A transcript is windowed, so each record row renders its items as the kit's
+ * `AgentTimelineStep`s inside the one `AgentTimelineColumn` the Conversation draws: rows keep the chat's rhythm (tight
+ * tool runs, a wide gap at each prompt) and one edge. Time is the row's hover title; no row carries an author line, a
+ * timestamp row or a Details link.
  */
 
 /** A run-lifecycle event (start, stop, restart), drawn as a thin marker row. */
@@ -110,9 +112,6 @@ const toolNote = (part: ToolPart) => {
   const note = (part.state.metadata as { note?: string } | undefined)?.note
   return note ? <span className="tool-note">{note}</span> : null
 }
-/** A row the kit draws as one step of the timeline: the glyph on the prose edge, like its tool rows. */
-const Step = ({ id, children }: { id: string; children: ReactNode }) => <AgentTimeline className="ar-tl" items={[{ id, kind: 'custom', content: children }]} />
-
 type Clip = { bytes: number; sha256: string | null }
 const clipOf = (value: unknown): Clip | undefined => (value && typeof value === 'object' && 'bytes' in value ? (value as Clip) : undefined)
 /** A clipped body names what was left out and opens its full source text. */
@@ -142,80 +141,53 @@ export interface ConversationRenderContext {
 }
 
 /** Repeated calls answered only by pending receipts: one row, the calls listed when opened. */
-function PollRows({ row, context }: { row: Extract<ConversationRow, { kind: 'polls' }>; context: ConversationRenderContext }) {
+function pollItem(row: Extract<ConversationRow, { kind: 'polls' }>): AgentTimelineItem {
   const summary = pollSummary(row.events)
   const args = argsLabel(row.input) ?? compact(row.input ?? '')
-  return (
-    <div className={`chat-row poll-group${row.events.some((event) => event.id === context.selected) ? ' selected' : ''}`} data-poll-group={row.events.length} data-entry={row.events[0]!.id} title={utcTime(row.events[0]!.at)}>
-      <Step id={row.key}>
-        <RunRowShell icon={<ToolIcon name={row.name} />} title={toolName(row.name)} description={[summary.label, args].filter(Boolean).join(' · ')} descriptionMono>
-          <ol className="poll-calls">
-            {row.events.map((event) => (
-              <li key={event.id} data-message={event.id}><time dateTime={event.at}>{utcTime(event.at)}</time><span className="mono">{argsLabel(callsOf(event)[0]?.input) ?? compact(callsOf(event)[0]?.input ?? '')}</span></li>
-            ))}
-          </ol>
-        </RunRowShell>
-      </Step>
-    </div>
-  )
+  return {
+    id: row.key,
+    kind: 'custom',
+    content: (
+      <RunRowShell icon={<ToolIcon name={row.name} />} title={toolName(row.name)} description={[summary.label, args].filter(Boolean).join(' · ')} descriptionMono>
+        <ol className="poll-calls">
+          {row.events.map((event) => (
+            <li key={event.id} data-message={event.id}><time dateTime={event.at}>{utcTime(event.at)}</time><span className="mono">{argsLabel(callsOf(event)[0]?.input) ?? compact(callsOf(event)[0]?.input ?? '')}</span></li>
+          ))}
+        </ol>
+      </RunRowShell>
+    ),
+  }
 }
 
 /** Consecutive tool turns whose arguments and results were not captured: one row naming the calls. */
-function HollowRow({ row, context }: { row: Extract<ConversationRow, { kind: 'hollow' }>; context: ConversationRenderContext }) {
-  return (
-    <div className={`chat-row hollow-group${row.events.some((event) => event.id === context.selected) ? ' selected' : ''}`} data-hollow-group={row.events.length} data-entry={row.events[0]!.id} title={utcTime(row.events[0]!.at)}>
-      <Step id={row.key}>
-        <RunRowShell icon={<ToolIcon name={row.calls[0]?.name ?? 'tool'} />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />
-      </Step>
-    </div>
-  )
-}
+const hollowItem = (row: Extract<ConversationRow, { kind: 'hollow' }>): AgentTimelineItem => ({
+  id: row.key,
+  kind: 'custom',
+  content: <RunRowShell icon={<ToolIcon name={row.calls[0]?.name ?? 'tool'} />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />,
+})
 
-export function ConversationRowView({ row, context }: { row: ConversationRow; context: ConversationRenderContext }) {
-  if (row.kind === 'polls') return <PollRows row={row} context={context} />
-  if (row.kind === 'hollow') return <HollowRow row={row} context={context} />
-  const { index, cutoff, selected, anchor, thinkingSpan, opened, setOpen, flagMarks, opener, flags, paired, live } = context
+/** What one record row shows, as the kit's timeline items. */
+export function rowItems(row: ConversationRow, context: ConversationRenderContext): AgentTimelineItem[] {
+  if (row.kind === 'polls') return [pollItem(row)]
+  if (row.kind === 'hollow') return [hollowItem(row)]
+  const { index, cutoff, anchor, thinkingSpan, opened, paired, live } = context
   const event = row.event
-  const rowProps = {
-    className: ['chat-row', selected === event.id && 'selected', flags?.has(event.id) && 'flagged'].filter(Boolean).join(' '),
-    'data-entry': event.id,
-    'data-message': event.id,
-    'data-message-node': event.node,
-    title: utcTime(event.at),
-  }
   if (isLifecycle(event)) {
     const text = textOf(event)
-    return (
-      <p {...rowProps} className={`${rowProps.className} lifecycle-note${event.detail.isError ? ' lifecycle-error' : ''}`}>
-        <b>{event.label}</b>{text && <span>{compact(text).slice(0, 280)}</span>}{flagMarks(event)}
-      </p>
-    )
+    return [{ id: event.id, kind: 'custom', content: <p className={`lifecycle-note${event.detail.isError ? ' lifecycle-error' : ''}`}><b>{event.label}</b>{text && <span>{compact(text).slice(0, 280)}</span>}</p> }]
   }
   const message = textOf(event)
   const calls = callsOf(event)
   const reasoning = typeof event.detail.reasoning === 'string' ? event.detail.reasoning : ''
   const withheld = thinkingMarkers(event.detail)
-  const user = event.detail.role === 'user'
   const failed = event.detail.responseStatus === 'error'
   const finding = event.detail.recordedClaim !== undefined
   const standalone = event.detail.toolCallId !== undefined || event.detail.role === 'toolResult'
-  const clip = clipOf(event.detail.clip)
   // The prompt an agent received is the reader's own bubble; a long one opens in full on request.
-  if (user && message && !standalone) {
+  if (event.detail.role === 'user' && message && !standalone) {
     const body = promptText(message)
-    const key = `prompt:${anchor(event)}`
-    const long = body.length > 280
-    const short = long && !opened.has(key)
-    return (
-      <article {...rowProps}>
-        <div className="ar-user">
-          <UserMessage content={short ? `${body.slice(0, 280).trimEnd()}…` : body} timestamp={new Date(event.at)}
-            actions={long ? <button type="button" className="link-button" data-open-key={key} aria-expanded={!short} onClick={() => setOpen(key, short)}>{short ? 'Full prompt' : 'Shorter'}</button> : undefined} />
-        </div>
-        {!short && <ClipNote clip={clip} open={opener(event)} />}
-        {flagMarks(event)}
-      </article>
-    )
+    const short = body.length > 280 && !opened.has(`prompt:${anchor(event)}`)
+    return [{ id: event.id, kind: 'message', role: 'user', content: short ? `${body.slice(0, 280).trimEnd()}…` : body, timestamp: new Date(event.at) }]
   }
   const items: AgentTimelineItem[] = []
   if (reasoning) items.push({ id: `${event.id}:reasoning`, kind: 'custom', content: <InlineThinkingItem part={{ type: 'reasoning', text: reasoning }} autoCollapse={false} /> })
@@ -245,11 +217,46 @@ export function ConversationRowView({ row, context }: { row: ConversationRow; co
     const duration = recorded ?? (last && last.detail.atBasis !== 'carried' ? ms(last.at) - ms(event.at) : null)
     items.push(toolItem(`tool:${at}:${call.id}`, call, last, state, duration, live))
   }
+  return items
+}
+
+/** The kind of a row's last item, which sets the gap above the next row. */
+export const lastKind = (items: readonly AgentTimelineItem[]): AgentTimelineStepKind | undefined => (items.length ? agentTimelineStepKind(items[items.length - 1]!) : undefined)
+
+export function ConversationRowView({ row, items, previous, context }: { row: ConversationRow; items: readonly AgentTimelineItem[]; previous?: AgentTimelineStepKind; context: ConversationRenderContext }) {
+  const { selected, opened, anchor, setOpen, flagMarks, opener, flags } = context
+  const events = row.kind === 'event' ? [row.event] : row.events
+  const event = events[0]!
+  const steps = items.map((item, i) => <AgentTimelineStep key={item.id} item={item} previous={i ? agentTimelineStepKind(items[i - 1]!) : previous} renderToolActions={toolNote} />)
+  const rowProps = {
+    className: ['chat-row', events.some((e) => e.id === selected) && 'selected', row.kind === 'event' && flags?.has(event.id) && 'flagged'].filter(Boolean).join(' '),
+    'data-entry': event.id,
+    title: utcTime(event.at),
+    ...(row.kind === 'polls' ? { 'data-poll-group': row.events.length } : row.kind === 'hollow' ? { 'data-hollow-group': row.events.length } : { 'data-message': event.id, 'data-message-node': event.node }),
+  }
+  if (row.kind !== 'event' || isLifecycle(event)) return <div {...rowProps}>{steps}{row.kind === 'event' && flagMarks(event)}</div>
+  const message = textOf(event)
+  const standalone = event.detail.toolCallId !== undefined || event.detail.role === 'toolResult'
+  const clip = clipOf(event.detail.clip)
+  if (event.detail.role === 'user' && message && !standalone) {
+    const key = `prompt:${anchor(event)}`
+    const long = promptText(message).length > 280
+    const short = long && !opened.has(key)
+    return (
+      <article {...rowProps}>
+        {steps}
+        {long && <p className="ar-prompt-more"><button type="button" className="link-button" data-open-key={key} aria-expanded={!short} onClick={() => setOpen(key, short)}>{short ? 'Full prompt' : 'Shorter'}</button></p>}
+        {!short && <ClipNote clip={clip} open={opener(event)} />}
+        {flagMarks(event)}
+      </article>
+    )
+  }
+  const finding = event.detail.recordedClaim !== undefined
   const notes = [event.detail.publicationNote, finding ? event.detail.assessment : undefined].filter((note): note is string => Boolean(note))
   return (
     <article {...rowProps}>
-      <AgentTimeline className="ar-tl" items={items} renderToolActions={toolNote} />
-      {message && !standalone && <ClipNote clip={calls.length ? undefined : clip} open={opener(event)} />}
+      {steps}
+      {message && !standalone && <ClipNote clip={callsOf(event).length ? undefined : clip} open={opener(event)} />}
       {notes.map((note) => <p key={note} className="publication-note">{note}</p>)}
       {flagMarks(event)}
     </article>

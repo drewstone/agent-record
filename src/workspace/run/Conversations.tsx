@@ -41,6 +41,11 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
   const picked = Boolean(route.params.get('agent'))
   const recorded = selected && index && index.nodes.has(index.canonical(selected.id))
   const [emptyStream, setEmptyStream] = useState<ReadonlySet<string>>(new Set())
+  // The root was started with the run's input; its record starts at its first step, so the chat opens with that prompt.
+  const opening = useMemo(() => {
+    const text = [doc.input?.objective, doc.input?.instruction].filter((part): part is string => typeof part === 'string' && part.trim().length > 0).join('\n\n')
+    return selected && selected.id === m.root?.id && text ? { text, at: doc.run.startedAt ?? new Date(m.t0).toISOString() } : undefined
+  }, [doc, selected, m])
   useEffect(() => setEmptyStream(new Set()), [doc.run.id])
   return (
     <div className="rp-conv" data-picked={picked ? '' : undefined}>
@@ -73,13 +78,13 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
           </div>
           <div className="rp-scroll rp-tx">
             {!live && recorded ? (
-              <AgentConversation key={selected.id} runUrl={runUrl} version={version} index={index!} actor={index!.canonical(selected.id)} />
+              <AgentConversation key={selected.id} runUrl={runUrl} version={version} index={index!} actor={index!.canonical(selected.id)} opening={opening} />
             ) : !live && (nodes.loading || nodes.pending) ? (
               <p className="ws-status" role="status">Loading the conversation…</p>
             ) : emptyStream.has(selected.id) ? (
               <StepLog m={m} a={selected} />
             ) : (
-              <LiveTranscript key={selected.id} runUrl={runUrl} runId={doc.run.id} alive={live} selected={selected.id} onSelect={(id) => selectAgent(id)} chooser={false}
+              <LiveTranscript key={selected.id} runUrl={runUrl} runId={doc.run.id} alive={live} selected={selected.id} onSelect={(id) => selectAgent(id)} chooser={false} opening={opening}
                 onEmpty={() => setEmptyStream((s) => new Set([...s, selected.id]))} />
             )}
           </div>

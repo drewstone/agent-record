@@ -59,13 +59,18 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
   return { schema: 'agent-record.v1', runId, title: runId, nodes: nodes.map((item) => ({ ...item, kind: 'agent' })), events, sources: [], assignment: { objective: '', suppliedKnowledge: '', deliverables: '', constraints: '', source: null }, terminal: null, coverage: { completeOriginalCapture: false, publicContent: 'Live stream window', categoryMethod: 'Runtime event kind', cost: 'Unknown' } }
 }
 
-/** A bounded stream window. Only the selected agent is fetched; settled runs load once, without a timer. */
+/**
+ * A bounded stream window. Only the selected agent is fetched. A live agent opens at its newest event and follows it; a
+ * settled one reads like a finished chat, from its first event (and the prompt it was started with) down, a page at a
+ * time, without a timer.
+ */
 /** `chooser` false: the page around it already chooses the agent (the run page's agent list), so no picker of its own. */
-export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded, onEmpty, chooser = true }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void; onEmpty?: () => void; chooser?: boolean }) {
+export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded, onEmpty, chooser = true, opening }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void; onEmpty?: () => void; chooser?: boolean; opening?: { text: string; at: string } }) {
   const node = selected ?? runId
-  const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
+  const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; more: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, more: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
   const [reload, setReload] = useState(0)
   const older = useRef<(() => void) | null>(null)
+  const newer = useRef<(() => void) | null>(null)
   const wasAlive = useRef(alive)
   const windowState = useRef({ node, rows: [] as StreamRow[], earlier: false, generation: undefined as string | undefined, first: null as number | null, last: null as number | null })
   useEffect(() => {
@@ -84,23 +89,28 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     let readingHistory = false
     let forwardPending = false
     let olderPending = false
-    setState((prior) => ({ ...prior, rows, earlier, loading: true, error: null, trimmed: retain && prior.trimmed, history: false, emptyTail: false }))
-    const load = async (direction: 'tail' | 'after' | 'before') => {
+    // A settled agent reads from its start; its pages arrive when the reader asks for more.
+    const fromHead = !alive && !retain
+    setState((prior) => ({ ...prior, rows, earlier, more: false, loading: true, error: null, trimmed: retain && prior.trimmed, history: false, emptyTail: false }))
+    const load = async (direction: 'tail' | 'head' | 'after' | 'before') => {
       if (cancelled || (direction === 'before' ? olderPending : forwardPending)) return
       if (direction === 'before') olderPending = true
       else forwardPending = true
-      const cursor = direction === 'after' ? last : direction === 'before' ? first : null
+      const cursor = direction === 'after' ? last : direction === 'before' ? first : direction === 'head' ? LIMIT : null
       try {
         const query = new URLSearchParams({ node, limit: String(LIMIT) })
-        if (cursor !== null) query.set(direction, String(cursor))
+        if (cursor !== null) query.set(direction === 'head' ? 'before' : direction, String(cursor))
         if (generation && cursor !== null) query.set('generation', generation)
         const response = await fetch(`${runUrl}/transcript?${query}`, { signal: controller.signal, credentials: 'same-origin' })
         if (!response.ok) throw new Error(`Transcript unavailable (HTTP ${response.status})`)
         const page = await response.json() as StreamPage
         if (cancelled) return
-        const merged = direction === 'tail' || page.reset ? page.events : direction === 'before' ? [...page.events, ...rows] : [...rows, ...page.events]
+        // A stream that does not start near seq 0 has no head page: read its tail.
+        if (direction === 'head' && !page.events.length) { timer = window.setTimeout(() => void load('tail'), 0); return }
+        const fresh = direction === 'tail' || direction === 'head' || page.reset
+        const merged = fresh ? page.events : direction === 'before' ? [...page.events, ...rows] : [...rows, ...page.events]
         generation = page.generation
-        if (direction === 'tail' || page.reset) { first = page.firstSeq; last = page.lastSeq }
+        if (fresh) { first = page.firstSeq; last = page.lastSeq }
         else if (direction === 'before') first = page.firstSeq ?? first
         else last = page.lastSeq ?? last
         const seen = new Map(merged.map((row) => [row.seq, row]))
@@ -111,9 +121,10 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
         if (direction !== 'after' || page.reset) earlier = page.hasEarlier
         if (trimmed && direction !== 'before') earlier = true
         windowState.current = { node, rows, earlier, generation, first, last }
-        setState((prior) => ({ rows, nodes: page.nodes, earlier, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: !page.alive && rows.length === 0 && first === null && last === null }))
-        // Drain bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
-        if (direction !== 'before' && page.hasMore && last !== cursor) timer = window.setTimeout(() => void load('after'), 0)
+        const more = fromHead && direction !== 'before' ? page.hasMore : false
+        setState((prior) => ({ rows, nodes: page.nodes, earlier, more: direction === 'before' ? prior.more : more, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: !page.alive && rows.length === 0 && first === null && last === null }))
+        // A live window drains bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
+        if (!fromHead && direction !== 'before' && page.hasMore && last !== cursor) timer = window.setTimeout(() => void load('after'), 0)
         else if (direction !== 'before' && page.alive && alive) timer = window.setTimeout(() => void load('after'), 3_000)
       } catch (error) {
         if (!cancelled && !controller.signal.aborted) {
@@ -125,9 +136,10 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
         else forwardPending = false
       }
     }
-    older.current = () => { readingHistory = true; setState((prior) => ({ ...prior, history: true })); void load('before') }
-    void load(retain && last !== null ? 'after' : 'tail')
-    return () => { cancelled = true; controller.abort(); window.clearTimeout(timer); older.current = null }
+    older.current = () => { readingHistory = true; setState((prior) => ({ ...prior, history: !fromHead })); void load('before') }
+    newer.current = () => void load('after')
+    void load(retain && last !== null ? 'after' : fromHead ? 'head' : 'tail')
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timer); older.current = null; newer.current = null }
   }, [runUrl, node, alive, reload])
   useEffect(() => { if (state.emptyTail && onEmpty) onEmpty() }, [state.emptyTail, onEmpty])
   const nodes = state.nodes.some((item) => item.id === node) ? state.nodes : [...state.nodes, { id: node, label: node === runId ? 'Root' : node, parent: null }]
@@ -146,6 +158,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     {state.error && <p role="alert">{state.error}</p>}
     {state.rows.filter((row) => row.event?.kind === 'capture_gap' && (!row.at || !Number.isFinite(Date.parse(row.at)))).map((row) => <p className="faint" key={row.seq}>{row.event?.text ?? 'A stream record could not be displayed.'}</p>)}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
-    {(!state.loading || state.rows.length > 0) && <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive} />}
+    {(!state.loading || state.rows.length > 0) && <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive} opening={state.earlier ? undefined : opening} />}
+    {state.more && <p className="transcript-edge"><button type="button" className="link-button" disabled={state.loading} onClick={() => newer.current?.()}>Load more</button></p>}
   </section>
 }
