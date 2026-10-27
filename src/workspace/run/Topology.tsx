@@ -10,7 +10,7 @@ type Frame = { id: string; x: number; y: number; w: number; h: number; open: boo
 function layout(m: RunModel, width: number, height: number, open: ReadonlySet<string>, narrow: boolean) {
   const teams = new Set(m.teams.map((t) => t.id))
   const NW = narrow ? Math.min(280, width - 32) : teams.size ? 216 : 272
-  const NH = 58, GAP = 10, COL = NW + (teams.size ? 56 : 72), SMW = 210, SMH = 44, SMG = 8, HEAD = 48
+  const NH = 58, GAP = 10, COL = NW + (teams.size ? 56 : 72), SMW = 240, SMH = 44, SMG = 8, HEAD = 48
   const pos = new Map<string, Box>()
   const frames: Frame[] = []
   const place = (a: Agent, depth: number, y: number): number => {

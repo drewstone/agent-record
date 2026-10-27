@@ -9,6 +9,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { agentSpendRows, AgentTable, FinalOutputPanel, finalOutputSchema, parseRecord, RunOverview, newerStarted, runReceiptSchema, SpendBars, StatusPill, statusOf } from '../dist/index.js'
 import { indexRecord } from '../src/viewer/model.ts'
+import { checkVerdict } from '../src/workspace/run/model.ts'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const play = fixture('discovery-play-magnetar-rust.json')
@@ -141,3 +142,17 @@ function markTexts(html) {
   }
   return out
 }
+
+// Run 22a, 10-27 17:51Z: rc14 passed all six steps under a checker whose four stages have no known-good fixture. The run's
+// one check verdict (Overview's Check card and the Checks tab) says it is held, never that it failed.
+test('a release that passed an uncalibrated checker is held, not failed', () => {
+  const latest = { tag: 'rc14', known: true, solved: false, line: 'SOLVED: 15 RV64I workloads …' }
+  const calibration = { state: 'uncalibrated', uncalibrated: ['guests', 'hidden', 'keys', 'workloads'] }
+  const held = checkVerdict({ latest, held: { tag: 'rc14' }, calibration })
+  assert.equal(held.word, 'Held')
+  assert.match(held.note, /rc14 passed; it counts once guests, hidden, keys and workloads have a known-good fixture/)
+  assert.equal(checkVerdict({ latest, calibration }).word, 'Not solved')
+  assert.equal(checkVerdict({ latest: { ...latest, solved: true } }).word, 'Passed')
+  assert.equal(checkVerdict({ latest: { known: false, solved: false } }).word, 'No verdict')
+  assert.equal(checkVerdict(null).word, 'Not checked')
+})

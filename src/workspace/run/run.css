@@ -414,7 +414,7 @@
 .rp .rp-cpm g:hover .hit, .rp .rp-cpm g:focus .hit { fill: var(--ix-hover-bg); }
 .rp .rp-cpm .xf { fill: var(--surface-danger-text); font-weight: 600; }
 .rp .rp-at-wrap { flex: 1; min-height: 0; overflow: auto; }
-.rp .rp-at { display: grid; grid-template-columns: minmax(104px, 1fr) 124px 52px 44px 52px 64px 60px 56px; align-items: center; height: 28px; padding: 0 12px 0 16px; }
+.rp .rp-at { display: grid; grid-template-columns: minmax(104px, 1fr) 124px 56px 48px 60px 76px 72px 60px; align-items: center; height: 28px; padding: 0 12px 0 16px; }
 .rp .rp-at .r, .rp .rp-at .tk { font-variant-numeric: tabular-nums; }
 .rp .rp-at > span { padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rp .rp-at .r { text-align: right; }
@@ -546,8 +546,11 @@
   .rp .rp-doc [class~='border-border'][class~='p-5'] { padding: 20px 16px 32px; }
   .rp .rp-topo-wrap { min-height: 560px; }
   .rp .rp-trw { grid-template-columns: minmax(0, 1fr); }
-  .rp .rp-tr { grid-template-columns: 76px minmax(0, 1fr) 64px 52px; padding-left: 12px; }
-  .rp .rp-tr > span:nth-child(2), .rp .rp-tr > span:nth-child(3) { display: none; }
+  /* A phone's span row: start, name, duration; a failed span leads its name with the ✕ the hidden status column held. */
+  .rp .rp-tr { grid-template-columns: 84px minmax(0, 1fr) 76px; padding-left: 12px; }
+  .rp .rp-tr > span:nth-child(2), .rp .rp-tr > span:nth-child(3), .rp .rp-tr > span:nth-child(6) { display: none; }
+  .agent-record .rp-hd.rp-hd-tools [role='radiogroup'] .ct { display: none; }
+  .rp .rp-tr.failed .nm::before { content: '✕ '; color: var(--surface-danger-text); font-weight: 600; }
   .agent-record .rp-hd.rp-hd-tools { height: auto; flex-wrap: wrap; gap: 8px; padding: 8px !important; }
   .agent-record .rp-hd.rp-hd-tools > .rp-cbx { flex: 1 1 100%; width: auto !important; }
   .agent-record .rp-hd.rp-hd-tools > .rp-legend { flex: 1 1 100%; flex-wrap: wrap; gap: 4px 12px; }

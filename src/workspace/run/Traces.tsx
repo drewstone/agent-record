@@ -49,12 +49,12 @@ export function Traces({ m, doc, agent, route }: TabProps) {
       </div>
       <div className="rp-trw">
         <div className="rp-tbl" ref={table} role="grid" aria-label="Spans" aria-rowcount={rows.length} onKeyDown={keys}>
-          <div className="rp-tr th" role="row"><span role="columnheader">Start (UTC)</span><span role="columnheader">Agent</span><span role="columnheader">Kind</span><span role="columnheader">Name</span><span role="columnheader" className="r">Duration</span><span role="columnheader">Status</span></div>
+          <div className="rp-tr th" role="row"><span role="columnheader">Start<span className="ph-hide"> (UTC)</span></span><span role="columnheader">Agent</span><span role="columnheader">Kind</span><span role="columnheader">Name</span><span role="columnheader" className="r">Duration</span><span role="columnheader">Status</span></div>
           <div style={{ height: win.before }} />
           {rows.slice(win.first, win.last).map(({ agent: a, step: s }, k) => {
             const i = win.first + k
             return (
-              <div key={i} data-i={i} className="rp-tr" role="row" aria-selected={i === at} tabIndex={i === at ? 0 : -1} onClick={() => pick(i)}>
+              <div key={i} data-i={i} className={`rp-tr${s.failed ? ' failed' : ''}`} role="row" aria-selected={i === at} tabIndex={i === at ? 0 : -1} onClick={() => pick(i)}>
                 <span className="m">{clock(s.t)}</span>
                 <span title={a.name}>{nameFit(a, 30)}</span>
                 <span className="kind"><i className={s.kind} />{s.kind}</span>

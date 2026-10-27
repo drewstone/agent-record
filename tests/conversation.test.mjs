@@ -124,6 +124,9 @@ test('the rendered conversation shows the collapsed polls, absent captures and w
   // A tool row names its subject, never its JSON arguments.
   assert.match(html, /knowledge read/)
   assert.doesNotMatch(html, /\{&quot;pageId&quot;/)
+  // The whole transcript is one chat column, its rows the kit's timeline steps: never a column per row (Drew 10-27).
+  assert.equal(html.match(/max-w-5xl/g)?.length, 1)
+  assert.ok((html.match(/data-timeline-step=/g)?.length ?? 0) > 3)
 })
 
 test('native opening input and a child without a transcript both begin with one prompt', () => {

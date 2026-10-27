@@ -79,7 +79,7 @@ function moves(doc: OverviewDocument, plays: Play[], mark: number): Move[] {
       out.push({ at: bar.latest.at!, play: p.play, title: p.title, text: <><b>{bar.label}</b> {measure(bar.latest.value, bar.unit)}{bar.latest.release ? ` at ${bar.latest.release}` : ''} · {distance(bar)}</>, ...(change !== null && Math.abs(change) >= 1 ? { badge: { text: `${change > 0 ? '+' : ''}${change.toFixed(0)}% in ${7} days`, tone: better ? 'ok' : 'warn' } } : {}) })
     }
     const since = p.view.blocker?.since
-    if (p.view.blocker && after(since)) out.push({ at: since!, play: p.play, title: p.title, text: <>{p.view.blocker.kind === 'stopped' ? 'Stopped' : 'Held'}: <b>{clip(p.view.blocker.sentence ?? p.view.blocker.text)}</b></>, badge: { text: p.view.blocker.kind === 'stopped' ? 'stopped' : 'held', tone: 'neutral' } })
+    if (p.view.blocker && after(since)) out.push({ at: since!, play: p.play, title: p.title, text: <>{p.view.blocker.kind === 'stopped' ? 'Stopped' : 'Held'}: {clip((p.view.blocker.sentence ?? p.view.blocker.text).replace(/^(?:Stopped|Held) by [\w ]+: /, ''), 12)}</> })
   }
   for (const r of doc.now ?? []) if (after(r.startedAt)) out.push({ at: r.startedAt!, play: r.play, title: r.title, text: <>Run <a href={runHref(r.runId)}><b>{shortRun(r.play, r.runId)}</b></a> started{r.agents ? ` · ${r.agents} agents` : ''}</>, badge: { text: 'started', tone: 'neutral' } })
   return out.sort((a, b) => (a.at < b.at ? 1 : -1))
