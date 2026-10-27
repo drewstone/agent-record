@@ -46,7 +46,7 @@ export function LiveRun({ api }: { api: string }) {
       const costKnown = worker.spend.usdKnown !== false && worker.metered.usdKnown !== false
       return [{ id: worker.id, ...(worker.parent ? { parentId: worker.parent } : {}), name: worker.label, kind: 'pipeline', startMs: start, endMs: Math.max(start, end - first), status: worker.status === 'running' ? 'running' : worker.status === 'down' ? 'failed' : 'done', ...(costKnown ? { costUsd: worker.spend.usd + worker.metered.usd } : {}), ...(worker.runtime ? { detail: worker.runtime } : {}) }]
     })
-    if (run?.startedAt && run.status !== 'unobserved') spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: run.status === 'running' ? 'running' : run.status === 'down' ? 'failed' : 'done', ...(run.driverSpend.usdKnown !== false ? { costUsd: run.driverSpend.usd } : {}) })
+    if (run?.startedAt && run.status !== 'unobserved' && !spans.some((span) => span.id === run.id)) spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: run.status === 'running' ? 'running' : run.status === 'down' ? 'failed' : 'done', ...(run.driverSpend.usdKnown !== false ? { costUsd: run.driverSpend.usd } : {}) })
     return { spans, totalMs: Math.max(0, ...spans.map((span) => span.endMs)), promptTokens: 0, completionTokens: 0, modelCalls: 0, toolCalls: 0, errors: spans.filter((span) => span.status === 'failed').length }
   }, [active?.snapshot, active?.run])
   return (
