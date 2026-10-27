@@ -90,7 +90,7 @@
     "@tangle-network/brand": "^1.29.0",
     "@tangle-network/charts": "^0.21.19",
     "@tangle-network/harness-sessions": "0.1.0",
-    "@tangle-network/sandbox-ui": "^1.1.0",
+    "@tangle-network/sandbox-ui": "^1.1.2",
     "@tangle-network/ui": "^11.45.0",
     "@xterm/addon-fit": "~0.11.0",
     "@xterm/addon-web-links": "~0.12.0",
