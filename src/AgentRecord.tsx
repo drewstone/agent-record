@@ -107,7 +107,7 @@ export function AgentRecord({
     [selection, onSelectionChange],
   )
   return (
-    <div className={`agent-record ${className}`} data-theme={theme}>
+    <div className={`agent-record ${className}`} data-theme={theme === 'auto' ? undefined : theme}>
       {record ? (
         <RecordView
           key={record.runId}

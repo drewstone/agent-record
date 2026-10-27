@@ -8,6 +8,7 @@ import { RunRoles } from './RoleScorecards.js'
 import { Lines } from '@tangle-network/charts/react'
 import type { RunWorkspaceDocument } from './RunWorkspace.js'
 import type { GraphModel, GraphNode } from './version-graph.js'
+import { Picker } from './run/ui.js'
 
 // Geometry, in CSS pixels at the workspace's type scale; a phone gets narrower lanes so the text keeps its room.
 const WIDE = { column: 16, gutter: 14 }
@@ -99,13 +100,9 @@ export function VersionGraph({
       <div className="vg-toolbar" role="group" aria-label={`${label}: lanes`}>
         {/* Many lanes read as one control, not a row of chips (REVIEW-8: 17 chips were chrome words on Built). */}
         {allLanes.length > 5 ? (
-          <label className="vg-lane-select">
-            <span className="sr-only">Lane</span>
-            <select value={lane ?? ''} onChange={(event) => setLane(event.target.value || null)}>
-              <option value="">All {allLanes.length} lanes</option>
-              {allLanes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
-          </label>
+          <Picker label="Lane" value={lane} all={{ label: `All ${allLanes.length} lanes` }} options={allLanes.map((item) => ({ id: item.id, label: item.label }))} width={280} placeholder="Search lanes" onChange={setLane}>
+            {lane ? allLanes.find((item) => item.id === lane)?.label ?? lane : `All ${allLanes.length} lanes`}
+          </Picker>
         ) : (
           <>
             {/* Showing every lane already, the chip is a state, not a control (REVIEW-8 sweep: a dead click). */}

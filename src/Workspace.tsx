@@ -1,8 +1,10 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { PageHeader, SegmentedControl } from '@tangle-network/ui/primitives'
+import { Icon, Picker } from './workspace/run/ui.js'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
-import type { RecordEvent, RecordGap } from './record.js'
-import { AgentFindings, RunFindings } from './workspace/Findings.js'
+import type { RecordGap } from './record.js'
+import { RunFindings } from './workspace/Findings.js'
 import { WorkGraph } from './workspace/WorkGraph.js'
 import { FindingsFeed, REVIEWS } from './workspace/FindingsFeed.js'
 import { PlayBarTable } from './workspace/PlayBarTable.js'
@@ -15,18 +17,12 @@ import { PlayReleases } from './workspace/PlayReleases.js'
 import { PlaysTable } from './workspace/PlaysTable.js'
 import { inlinedPlayHead, type PlayHead } from './workspace/play-standing.js'
 import { TheatrePage } from './workspace/Theatre.js'
-import { BuiltSummary, RunVersions } from './workspace/VersionGraph.js'
+import { RunVersions } from './workspace/VersionGraph.js'
 import type { PlayDocument, PlayInput, PlaysDocument, ProfileGraphDocument, RunDocument } from './workspace-model.js'
 type Play = PlayDocument & PlayHead
-import { Conversation } from './viewer/Conversation.js'
-import type { EventFlag } from './viewer/Conversation.js'
-import { categoryClass, Timeline, UsageChart } from './viewer/Charts.js'
-import type { Axis, Metric, PlotTooltip, ShowTooltip } from './viewer/Charts.js'
-import { agentState, measuredUsage, ms, roleOf, utcTime } from './viewer/model.js'
 import type { RecordIndex } from './viewer/model.js'
-import { EventDetail } from './workspace/EventDetail.js'
-import { AssessmentMatrix, dimensionMap, flagsFrom, RunAssessments } from './workspace/Assessments.js'
-import { dataStatus, duration, go, money, newerStarted, runStatus, StatusPill, statusOf, useDocument, when } from './workspace/data.js'
+import { AssessmentMatrix, dimensionMap, RunAssessments } from './workspace/Assessments.js'
+import { duration, go, money, newerStarted, runStatus, StatusPill, useDocument, when } from './workspace/data.js'
 import { FinalOutputPanel } from './workspace/FinalOutput.js'
 import { InputView } from './workspace/InputView.js'
 import { ReliabilityPanel } from './workspace/Reliability.js'
@@ -35,22 +31,16 @@ import { HIDDEN_LABEL, HIDDEN_ORDER, splitHidden, splitRuns } from './workspace/
 import type { HiddenReason } from './workspace/plays-filter.js'
 import { findProfile, profileGraph, runOfProfile } from './workspace/profile-graph.js'
 import { versionsOf } from './workspace/profile-compare.js'
-import { AgentTable } from './workspace/RunTable.js'
 import { outcomeOfCheck, RunOverview, RunReceiptView } from './workspace/RunOverview.js'
 import type { RunReceipt } from './workspace/run-receipt.js'
-import { LiveTranscript } from './workspace/LiveTranscript.js'
 import { RunHow } from './workspace/RunHow.js'
-import { detailsOf, RunDetails } from './workspace/RunDetails.js'
 import { Coverage } from './workspace/Coverage.js'
-import { RunStatusLine, RunWhy } from './workspace/RunFold.js'
-import { AgentConversation, useRecordPart } from './workspace/record-part.js'
-import { readSource } from './workspace/source-reader.js'
+import { useRecordPart } from './workspace/record-part.js'
 import { artifactNavigation, useSearch } from './workspace/navigation.js'
 import { goalText } from './workspace/plain-words.js'
-import { isLazyMode, type LazyMode, LazyOutputsView, LazyPage, LazyRunWorkspace } from './workspace/lazy-pages.js'
-import { newestAgent } from './workspace/run-answers.js'
+import { isLazyMode, type LazyMode, LazyOutputsView, LazyPage, LazyRunPage } from './workspace/lazy-pages.js'
 import { AsOfStamp } from './workspace/AnswerStrip.js'
-import { AGENT_PART_SECTIONS, RunTabBar, type RunSection, sectionOf } from './workspace/RunTabs.js'
+import { AGENT_PART_SECTIONS, type RunSection, sectionOf } from './workspace/RunTabs.js'
 import type { NodeStats } from './workspace/RunTable.js'
 import { Inspector, type Selection, VersionCanvas } from './workspace/VersionCanvas.js'
 import { ProfileCanvas } from './workspace/ProfileCanvas.js'
@@ -68,8 +58,8 @@ export interface WorkspaceProps {
 /** Play and run pages of a run workspace. Reads only the same-origin API; navigation stays in the host tab. */
 export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
-    <div className="agent-record ar-ws" data-theme={theme}>
-      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <RunPage api={api} id={id} />}
+    <div className="agent-record ar-ws" data-theme={theme === 'auto' ? undefined : theme}>
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <Suspense fallback={null}><LazyRunPage api={api} id={id} legacy={() => <LegacyRunSection api={api} id={id} />} /></Suspense>}
     </div>
   )
 }
@@ -173,21 +163,20 @@ function PlaysPage({ api }: { api: string }) {
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
   const home = (['plays', 'findings', 'runs'] as const).find((value) => value === params.get('view')) ?? 'plays'
+  const ORDERS = [['latest', 'Latest run first'], ['spend', 'Most API-equivalent first'], ['runs', 'Most runs first'], ['name', 'By name']] as const
   const order = home !== 'plays' ? null : (
-    <select aria-label="Order" value={sort} onChange={(event) => update({ sort: event.target.value === 'latest' ? undefined : event.target.value })}>
-      <option value="latest">Latest run first</option>
-      <option value="spend">Most API-equivalent first</option>
-      <option value="runs">Most runs first</option>
-      <option value="name">By name</option>
-    </select>
+    <Picker label="Order" value={sort} options={ORDERS.map(([id, label]) => ({ id, label }))} width={260} placeholder="Order plays"
+      onChange={(value) => update({ sort: !value || value === 'latest' ? undefined : value })}>
+      {ORDERS.find(([id]) => id === sort)?.[1] ?? 'Latest run first'}
+    </Picker>
   )
-  const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters"><input type="search" aria-label="Search research" placeholder="Search research" value={draft}
-      onChange={(event) => { setDraft(event.target.value); update({ q: event.target.value || undefined }, true) }} />
-    <select aria-label="Program" value={program} onChange={(event) => update({ program: event.target.value || undefined })}><option value="">All programs</option>
-      {programs.map((item) => <option key={item} value={item}>{item}</option>)}
-    </select>
+  const sharedFilters = <div className="message-filters plays-filters" aria-label="Research filters"><label className="rp-field"><Icon name="search" /><input type="search" aria-label="Search research" placeholder="Search research" value={draft}
+      onChange={(event) => { setDraft(event.target.value); update({ q: event.target.value || undefined }, true) }} /></label>
+    <Picker label="Program" value={program || null} all={{ label: 'All programs' }} options={programs.map((item) => ({ id: item, label: item }))} width={260} placeholder="Search programs"
+      onChange={(value) => update({ program: value ?? undefined })}>
+      {program || 'All programs'}
+    </Picker>
     {order}
-    {plays.data?.builtAt && <AsOfStamp asOf={{ at: plays.data.builtAt, meaning: 'when the host built this list of plays', source: 'the Discovery plays index' }} />}
   </div>
   const frontiers = !plays.data?.frontiers?.length ? null : <details className="research-frontiers" aria-label="Frontier statements">
     <summary className="faint">Frontier statements ({plays.data.frontiers.length}, as of {plays.data.frontiers.map((item) => item.asOf).filter(Boolean).sort().at(-1) ?? 'an unrecorded date'})</summary>
@@ -197,19 +186,18 @@ function PlaysPage({ api }: { api: string }) {
         <small>{item.asOf || 'date unknown'} · {item.banked} banked · {item.next} next</small>
       </a>)}</div>
   </details>
+  const playsHeader = (
+    <PageHeader className="rp-head" title="Plays"
+      actions={plays.data ? <ul className="rp-stats"><li><b>{plays.data.plays.length}</b> plays</li><li><b>{plays.data.plays.filter((p) => p.latestRun?.state === 'running').length}</b> running</li>{plays.data.builtAt && <li title="when the host built this list">built <b>{plays.data.builtAt.slice(11, 16)}</b> UTC</li>}</ul> : undefined} />
+  )
   const homeTabs = (
-    <nav className="run-tabs" aria-label="Research views">
-      {([['plays', 'Plays'], ['findings', 'Findings'], ['runs', 'Runs']] as const).map(([value, label]) => (
-        <button key={value} type="button" className={`run-tab ${home === value ? 'on' : ''}`} aria-current={home === value ? 'page' : undefined} data-home-tab={value}
-          onClick={() => update({ view: value === 'plays' ? undefined : value })}>
-          {label}
-        </button>
-      ))}
-    </nav>
+    <SegmentedControl aria-label="Research views" className="ws-views" value={home} onValueChange={(value) => update({ view: value === 'plays' ? undefined : value })}
+      options={[{ value: 'plays', label: 'Plays' }, { value: 'findings', label: 'Findings' }, { value: 'runs', label: 'Runs' }]} />
   )
   if (home === 'findings')
     return (
       <div className="ws-page ws-plays" data-plays-home="findings">
+        {playsHeader}
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <FindingsFeed api={api} query={query} program={program} review={REVIEWS.find(([id]) => id === params.get('review'))?.[0] ?? null} onReview={(review) => update({ review: review ?? undefined })} />
         {frontiers}
@@ -222,6 +210,7 @@ function PlaysPage({ api }: { api: string }) {
       && (!program || run.program === program) && (!query || `${run.id} ${run.play} ${run.reason ?? ''} ${run.stopCause ?? ''}`.toLowerCase().includes(query.toLowerCase())))
     const clock = (iso: string | null | undefined) => (iso ? `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z` : '—')
     return <div className="ws-page ws-plays" data-plays-home="runs">
+        {playsHeader}
       <div className="plays-bar">{homeTabs}{sharedFilters}</div>
       {/* One answer region (journey Q6): which runs ran clean, what still kills them, and every run. */}<div className="runs-answer"><ReliabilityPanel api={api} />
       <div className="table-scroll"><table className="data-table runs-table" data-run-ledger>
@@ -239,6 +228,7 @@ function PlaysPage({ api }: { api: string }) {
   return (
     <Status loading={plays.loading} error={plays.error && `Plays are unavailable: ${plays.error}`}>
       <div className="ws-page ws-plays" data-plays>
+        {playsHeader}
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
         <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
@@ -402,13 +392,11 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 <PlayBarTable play={doc} />
                 <section className="ws-section play-input" data-section="input">
                   <div className="input-run-picker">
-                    <select aria-label="Run" value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
-                      {doc.runs.map((run) => (
-                        <option key={run.id} value={run.id}>
-                          {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <Picker label="Run" value={selectedRun ?? doc.input?.runId ?? null} width={320} placeholder={`Search ${doc.runs.length} runs`}
+                      options={doc.runs.map((run) => ({ id: run.id, label: shortRun(doc.id, run.id), meta: `${when(run.startedAt)}${run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}` }))}
+                      onChange={(value) => update({ run: !value || value === doc.input?.runId ? undefined : value })}>
+                      {shortRun(doc.id, selectedRun ?? doc.input?.runId ?? '')}
+                    </Picker>
                   </div>
                   <Status loading={runDoc.loading} error={runDoc.error}>
                     <InputView compact input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} more={<>
@@ -581,12 +569,6 @@ function gapCauses(gaps: { code: string; runId?: string; detail: string }[]) {
 }
 
 /** The selected agent's own views; the run's spend, assessments, input and coverage are sections of the run page. */
-type AgentTab = 'messages' | 'timeline' | 'usage'
-const AGENT_TABS = [
-  ['messages', 'Messages'],
-  ['timeline', 'Timeline'],
-  ['usage', 'Usage'],
-] as const
 
 /** The run's profiles on the lineage canvas, read from its play's profile index (which carries every ancestor, in any play). */
 function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; runId: string; play: string; selected: string | null; onSelect: (short: string | null) => void }) {
@@ -606,21 +588,11 @@ function RunProfiles({ api, runId, play, selected, onSelect }: { api: string; ru
 }
 
 /**
- * The run page: a header, the run's answer in one strip, and one tab bar. Findings (what the agents wrote) open first;
- * Agents is a rail of the run's agents beside the selected agent's conversation; the other sections are the run's
- * graph, readout, outputs, spend, assessments, input and coverage, each full width. The page draws from the record's
- * node list; an agent's events load only when a section needs them, so a run with a 5 MB record opens as fast as a
- * small one.
+ * A run section from before the tabs (findings, graph, versions, profiles, readout, input, assessments, capture): drawn under
+ * the run page's header and tab bar when a link names it with `?section=`. The tabs hold everything else.
  */
-function RunPage({ api, id }: { api: string; id: string }) {
+function LegacyRunSection({ api, id }: { api: string; id: string }) {
   const [params, update] = useSearch()
-  // `?agent=<name>` (the Lab fold's agent name: root, s3, s3:s0), the link the explorer and the Lab's computed-column
-  // disagreements write, opens that agent's conversation: it becomes `section=agents&node=<run>:<name>` in place.
-  const linkedAgent = params.get('agent')
-  useEffect(() => {
-    if (!linkedAgent) return
-    update({ agent: undefined, section: 'agents', node: linkedAgent === 'root' ? id : `${id}:${linkedAgent}` }, true)
-  }, [linkedAgent, id])
   const [poll, setPoll] = useState<number | undefined>(undefined)
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
   // A saved grade changes the run's document; asking under a new query fetches it again (the host ignores the query).
@@ -630,8 +602,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const [capturedStreams, setCapturedStreams] = useState<ReadonlySet<string>>(() => new Set())
   const openedLiveStream = useRef<string | null>(null)
   const run = useDocument<RunDocument>(revision ? `${runUrl}?revision=${revision}` : runUrl, poll, true)
-  // The play supplies the run's best against the play's, its lineage and the run that continued it.
-  const play = useDocument<Play>(run.data ? `${api}/plays/${encodeURIComponent(run.data.run.play)}` : null)
   // A live run's record digest changes every few seconds; a new digest refetches the parts, so this sets the delay.
   useEffect(() => setPoll(run.data?.live.polling ? 3_000 : undefined), [run.data?.live.polling])
   const digest = run.data?.run.record.digest ?? null
@@ -664,8 +634,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
   const doc = run.data!
   // One URL key per section: the section, plus what that section shows (the agent, its tab, the file).
   const open = (next: RunSection, patch: Record<string, string | undefined> = {}) => update({ section: next, view: undefined, drawer: undefined, ...patch })
-  const counts = overviewCounts(doc, index)
-  const tabs = <RunTabBar section={section} counts={counts} onOpen={(next) => (next ? open(next, { tab: undefined }) : update({ section: undefined, node: undefined, tab: undefined, event: undefined, t: undefined, commit: undefined, file: undefined, profile: undefined, view: undefined, drawer: undefined, graph: undefined }))} />
   const openFinding = (sha: string) => {
     setFinding(sha)
     open('findings')
@@ -692,35 +660,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
       delivered={doc.finalOutput?.files} onOpenFile={(file) => update({ section: 'outputs', file, commit: undefined, details: undefined })}
     />
   )
-  const details = detailsOf(params)
-  if (section === null)
-    return (
-      <div className="ws-page ws-run" data-run={summary.id} data-section="overview">
-        <Suspense fallback={<p className="ws-status" role="status">Loading…</p>}>
-          <LazyRunWorkspace
-            api={api} doc={doc} play={play.data}
-            transcript={(node, select) =>
-              settledRecord && index ? (
-                <AgentConversation key={node} runUrl={runUrl} version={version} index={index} actor={index.nodes.has(index.canonical(node)) ? index.canonical(node) : root ?? node} />
-              ) : (
-                <LiveTranscript runUrl={runUrl} runId={doc.run.id} alive={Boolean(doc.execution?.alive)} selected={node} onSelect={select} />
-              )
-            }
-          />
-          <RunDetails tab={details} counts={counts} onTab={(next) => update({ details: next === 'built' ? undefined : next, commit: undefined }, true)}>
-            {details === 'built' && <BuiltSummary delivered={doc.finalOutput?.files} onOpenFile={(file) => update({ section: 'outputs', file, commit: undefined, details: undefined })} historyHref="?section=versions" />}
-            {details === 'agents' && (index ? <div className="agent-rail details-agents"><AgentTable index={index} stats={nodes.stats} doc={doc} assessments={assessments.data?.rows ?? []} dimensions={catalogue} selected={null} onSelect={selectAgent} /></div> : <p className="ws-status" role="status">Loading the agents…</p>)}
-            {details === 'findings' && (doc.findings?.total ? <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} folded /> : <p className="ws-status">No knowledge pages were recorded for this run.</p>)}
-            {details === 'how' && how}
-          </RunDetails>
-          <RunWhy doc={doc} play={play.data} />
-        </Suspense>
-      </div>
-    )
+  if (section === null) return null
   return (
     <div className="ws-page ws-run" data-run={summary.id} data-section={section}>
-      <RunStatusLine doc={doc} play={play.data} />
-      {tabs}
       {section === 'findings' &&
         (doc.findings?.total ? (
           <RunFindings doc={doc} runUrl={runUrl} open={finding} onOpen={setFinding} />
@@ -729,25 +671,9 @@ function RunPage({ api, id }: { api: string; id: string }) {
         ))}
       {section === 'graph' && (
         <>
-          <div className="graph-modes" role="group" aria-label="Graph view">
-            {(
-              [
-                ['work', 'Work'],
-                ['provenance', 'Provenance'],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={`run-tab ${(params.get('graph') === 'provenance' ? 'provenance' : 'work') === value ? 'on' : ''}`}
-                aria-pressed={(params.get('graph') === 'provenance' ? 'provenance' : 'work') === value}
-                data-graph-mode={value}
-                onClick={() => update({ section: 'graph', graph: value === 'work' ? undefined : value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl aria-label="Graph view" className="graph-modes" value={params.get('graph') === 'provenance' ? 'provenance' : 'work'}
+            onValueChange={(value) => update({ section: 'graph', graph: value === 'work' ? undefined : value })}
+            options={[{ value: 'work', label: 'Work' }, { value: 'provenance', label: 'Provenance' }]} />
           {params.get('graph') === 'provenance' ? (
             <section className="run-panel run-profiles" aria-label="Provenance">
               <ProvenanceCanvas doc={doc} runUrl={runUrl} onOpenPage={openFinding} />
@@ -781,40 +707,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
         <section className="run-panel" aria-label="Input">
           <InputView input={doc.input} api={api} />
         </section>
-      )}
-      {section === 'agents' && doc.execution && streamConversation && <LiveTranscript runUrl={runUrl} runId={summary.id} alive={doc.execution.alive} selected={requested ?? (doc.execution.alive ? newestAgent(doc) : null)} onSelect={selectAgent} onRecorded={recordReady ? () => open('agents', { tab: 'timeline' }) : undefined} onEmpty={!doc.execution.alive && recordReady && index?.nodes.has(index.canonical(streamNode)) ? () => setCapturedStreams((prior) => new Set([...prior, streamNode])) : undefined} />}
-      {index && section === 'agents' && !streamConversation && actor && (
-        <div className="agents-layout">
-          <aside className="agent-rail" aria-label="Agents">
-            <AgentTable
-              index={index}
-              stats={nodes.stats}
-              doc={doc}
-              assessments={assessments.data?.rows ?? []}
-              dimensions={catalogue}
-              selected={actor}
-              onSelect={selectAgent}
-            />
-            <AgentFindings doc={doc} agent={actor} label={index.nodes.get(actor)?.label ?? actor} onOpen={openFinding} />
-          </aside>
-          <section className="agent-pane" aria-label="Selected agent" data-drawer="agent">
-            {agent.index ? (
-              <RunBody
-                key={actor}
-                api={api}
-                doc={doc}
-                index={agent.index}
-                actor={actor}
-                params={params}
-                update={update}
-                assessments={assessments.data}
-                dimensions={dimensions.data}
-              />
-            ) : (
-              loadingAgent
-            )}
-          </section>
-        </div>
       )}
       {section === 'spend' && <section className="run-panel" aria-label="Time and cost">{how}</section>}
       {index && (section === 'assessments' || section === 'coverage') && actor && (
@@ -867,15 +759,6 @@ function RunPage({ api, id }: { api: string; id: string }) {
   )
 }
 
-/** The counts the detail bar shows beside its views. */
-function overviewCounts(doc: RunDocument, index: RecordIndex | null): Partial<Record<RunSection, number>> {
-  return {
-    findings: doc.findings?.items.filter((item) => item.kind === 'result' || item.kind === 'claim').length,
-    agents: index?.actors.filter((node) => node.kind !== 'finding').length,
-    outputs: doc.finalOutput?.files.length,
-  }
-}
-
 /** Spend, input and gaps for a run without a record. */
 function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
   return (
@@ -917,219 +800,6 @@ function RunExtras({ api, doc }: { api: string; doc: RunDocument }) {
   )
 }
 
-/** The selected agent beside the agent rail: its record part (every node, this agent's events), replay and views. */
-function RunBody({
-  api,
-  doc,
-  index,
-  actor,
-  params,
-  update,
-  assessments,
-  dimensions,
-}: {
-  api: string
-  doc: RunDocument
-  index: RecordIndex
-  actor: string
-  params: URLSearchParams
-  update: (patch: Record<string, string | undefined | null>, replace?: boolean) => void
-  assessments: AssessmentsDocument | undefined
-  dimensions: DimensionsDocument | undefined
-}) {
-  const runId = doc.run.id
-  const tab = (AGENT_TABS.map(([value]) => value) as AgentTab[]).find((value) => value === params.get('tab')) ?? 'messages'
-  const node = index.nodes.get(actor)
-  const at = params.get('t')
-  const cutoff = at && Number.isFinite(ms(at)) ? Math.max(index.start, Math.min(index.end, ms(at))) : index.end
-  const [category, setCategory] = useState('all')
-  const [query, setQuery] = useState('')
-  const [zoom, setZoom] = useState(1)
-  const [metric, setMetric] = useState<Metric>('cumulative')
-  const [axis, setAxis] = useState<Axis>('time')
-  const [tooltip, setTooltip] = useState<PlotTooltip | null>(null)
-  const [detail, setDetail] = useState<{ event: RecordEvent; sha?: string } | null>(null)
-  const nodeCapture = node?.capture as { channel?: string; status?: string; reason?: string | null } | undefined
-  const conversationless = !(index.byActor.get(actor) ?? []).some((event) => event.category !== 'lifecycle' && event.detail.lifecycle === undefined)
-  const [lifecycleChoice, setLifecycle] = useState<boolean | null>(null)
-  const lifecycle = lifecycleChoice ?? conversationless
-  // A call without a result is pending while the run is being mirrored and this agent has not settled.
-  const live = !!doc.live.polling && (!node?.status || /^(running|pending|active|live|started|spawned|paused|waiting)$/i.test(node.status))
-  const catalogue = useMemo(() => dimensionMap(dimensions), [dimensions])
-  const flags = useMemo(() => flagsFrom(assessments?.rows ?? [], catalogue), [assessments, catalogue])
-  const select = (patch: Record<string, string | undefined | null>, replace = false) => update(patch, replace)
-  const selectNode = (id: string) => {
-    select({ node: id, event: undefined })
-  }
-  const inspect = (event: RecordEvent, source = false) => {
-    setTooltip(null)
-    if (source) setDetail({ event })
-    select({ node: index.canonical(event.node), event: event.id, ...(ms(event.at) > cutoff ? { t: undefined } : {}) })
-  }
-  const loadSource = useMemo(() => readSource(`${api}/runs/${encodeURIComponent(runId)}`), [api, runId])
-  const showTooltip: ShowTooltip = (target, title, lines) => {
-    const box = target.currentTarget.getBoundingClientRect()
-    const x = Math.max(8, Math.min(box.left + box.width / 2, window.innerWidth - 361))
-    const y = box.top > window.innerHeight / 2 ? Math.max(8, box.top - 12) : box.bottom + 10
-    setTooltip({ title, lines, x, y })
-  }
-  const hideTooltip = () => setTooltip(null)
-  const visible = useMemo(
-    () => index.events.filter((event) => category === 'all' || event.category === category),
-    [index, category],
-  )
-  const navigate = (direction: number) => {
-    const lane = (index.byActor.get(actor) ?? []).filter((event) => ms(event.at) <= cutoff)
-    if (!lane.length) return
-    const position = lane.findIndex((event) => event.id === params.get('event'))
-    const next = lane[position < 0 ? (direction > 0 ? 0 : lane.length - 1) : (position + direction + lane.length) % lane.length]!
-    inspect(next)
-  }
-
-  const categories = useMemo(() => [...new Set(index.events.map((event) => event.category))].sort(), [index])
-  const listFromRecord = useMemo(() => {
-    let total: number | null = null
-    for (const event of index.byActor.get(actor) ?? [])
-      if (typeof event.detail.costListUsd === 'number') total = (total ?? 0) + event.detail.costListUsd
-    return total
-  }, [index, actor])
-  const role = roleOf(node)
-  const model = node?.servedModel ? `${node.servedModel}` : node?.model ? `${node.model} (declared)` : null
-  const measured = useMemo(() => measuredUsage(index, actor), [index, actor])
-  const empty = !(index.byActor.get(actor) ?? []).length
-  const agentStatus = statusOf({ axis: 'agent', status: node?.status, live: doc.live.polling })
-  return (
-    <div className="agent-drawer" onScrollCapture={hideTooltip}>
-      <section className="ws-panel" aria-label="Agent record">
-        <div className="agent-head">
-          <div className="agent-identity">
-            <span className="agent-avatar" data-status={dataStatus(agentStatus)} aria-hidden="true">
-              {role.slice(0, 1).toUpperCase()}
-              <i className="status-shape">{agentStatus.shape}</i>
-            </span>
-            <div>
-              <h2 data-agent-title>{node?.label ?? actor}</h2>
-              <p className="agent-meta">
-                {[role, model, node?.harness as string | undefined, agentState(node, measured, doc.live.polling ? (doc.progress?.agents.find((agent) => agent.node === actor)?.status ?? 'running') : null)].filter(Boolean).join(' · ')}
-              </p>
-            </div>
-          </div>
-          {/* A complete capture is the norm and says nothing; only a partial or missing one is worth the words. */}
-          {nodeCapture?.status !== 'complete' && (
-            <div className="agent-capture" data-capture={nodeCapture?.status}>
-              <span className={`capture-chip capture-${nodeCapture?.status ?? 'unknown'}`} title={[nodeCapture?.channel, nodeCapture?.reason].filter(Boolean).join(' · ')}>
-                {nodeCapture?.status === 'lossy' ? 'Partial conversation' : nodeCapture?.status === 'absent' ? 'No conversation' : 'Capture unknown'}
-              </span>
-            </div>
-          )}
-        </div>
-        {/* Time travel lives on the run's waterfall (Now); a link from there opens this agent as of that moment. */}
-        {cutoff < index.end && (
-          <p className="as-of-chip" data-cursor>
-            As of {utcTime(new Date(cutoff).toISOString())}
-            <button type="button" className="link-button" data-full onClick={() => select({ t: undefined }, true)}>Show all</button>
-          </p>
-        )}
-        <Tabs label="Agent record" value={tab} onChange={(next) => select({ tab: next === 'messages' ? undefined : next })} tabs={AGENT_TABS} />
-        <div className="ws-panel-body" role="tabpanel">
-          {tab === 'messages' && empty && <EmptyAgent index={index} actor={actor} onSelect={selectNode} />}
-          {tab === 'messages' && !empty && (
-            <>
-              <div className="message-filters">
-                <select aria-label="Activity type" value={category} onChange={(event) => setCategory(event.target.value)} data-category>
-                  <option value="all">All activity</option>
-                  <option value="prompts">Prompts and steering</option>
-                  {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-                <input type="search" aria-label="Search this agent" placeholder="Search this agent" value={query} onChange={(event) => setQuery(event.target.value)} />
-                <label className="toggle">
-                  <input type="checkbox" checked={lifecycle} onChange={(event) => setLifecycle(event.target.checked)} data-lifecycle />
-                  Lifecycle
-                </label>
-              </div>
-              <Conversation
-                index={index}
-                actor={actor}
-                cutoff={cutoff}
-                query={query.trim().toLowerCase()}
-                category={category}
-                selected={params.get('event') ?? undefined}
-                inspect={inspect}
-                openSource={(sha, event) => {
-                                setDetail({ event, sha })
-                }}
-                flags={flags}
-                lifecycle={lifecycle}
-                live={live}
-                onFlag={(flag: EventFlag) => select({ section: 'assessments', tab: undefined, dim: flag.dimension })}
-              />
-            </>
-          )}
-          {tab === 'timeline' && (
-            <div className="timeline-tab">
-              <div className="message-filters">
-                <select aria-label="Activity type" value={category} onChange={(event) => setCategory(event.target.value)}>
-                  <option value="all">All activity</option>
-                  {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-                <label className="toggle">Zoom <input type="range" min={1} max={8} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
-              </div>
-              <Timeline
-                index={index}
-                events={visible}
-                cutoff={cutoff}
-                selected={params.get('event') ?? undefined}
-                zoom={zoom}
-                inspect={inspect}
-                navigate={navigate}
-                showTooltip={showTooltip}
-                hideTooltip={hideTooltip}
-                marks={flags}
-              />
-              <div className="legend">
-                {categories.map((item) => <span key={item}><i className={`category-${categoryClass(item)}`} />{item}</span>)}
-              </div>
-            </div>
-          )}
-          {tab === 'usage' && (
-            <div className="usage-tab">
-              <div className="message-filters">
-                <select aria-label="Measure" value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>
-                  <option value="cumulative">Cumulative tokens</option>
-                  <option value="response">Tokens per response</option>
-                  <option value="tool-time">Tool return time</option>
-                </select>
-                <select aria-label="Horizontal axis" value={axis} onChange={(event) => setAxis(event.target.value as Axis)}>
-                  <option value="time">Elapsed time</option>
-                  <option value="order">Recorded order</option>
-                </select>
-              </div>
-              <UsageChart index={index} cutoff={cutoff} actor={actor} metric={metric} axis={axis} inspect={inspect} navigate={navigate} showTooltip={showTooltip} hideTooltip={hideTooltip} />
-              {listFromRecord !== null && <p className="small">Recorded usage prices at {money(listFromRecord)} list, not billed.</p>}
-            </div>
-          )}
-        </div>
-      </section>
-      {detail && (
-        <EventDetail
-          key={`${detail.event.id}:${detail.sha ?? ''}`}
-          event={detail.event}
-          full={detail.sha}
-          index={index}
-          onClose={() => setDetail(null)}
-          load={loadSource}
-        />
-      )}
-      {tooltip && (
-        <div className="ui-plot-tooltip" role="tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: tooltip.y > window.innerHeight / 2 ? 'translateY(-100%)' : undefined }}>
-          <strong>{tooltip.title}</strong>
-          {tooltip.lines.map((line, i) => <p key={i}>{typeof line === 'string' ? line : line.value}</p>)}
-        </div>
-      )}
-    </div>
-  )
-}
-
 /** The run's spend, assessments and coverage, full width under the tab bar; they read the selected agent's record part. */
 function RunPanels({
   section,
@@ -1166,34 +836,6 @@ function RunPanels({
   if (section === 'assessments')
     return <RunAssessments doc={assessments} dimensions={dimensions} index={index} node={actor} focus={params.get('dim')} onFocus={(dimension) => update({ dim: dimension }, true)} onCite={cite} />
   return <Coverage index={index} doc={doc} gaps={gaps} stats={stats} onSelect={onSelectAgent} />
-}
-
-/** An agent with no recorded event: say what is missing instead of an empty pane, and lead to its agents. */
-function EmptyAgent({ index, actor, onSelect }: { index: RecordIndex; actor: string; onSelect: (id: string) => void }) {
-  const node = index.nodes.get(actor)
-  const capture = node?.capture as { channel?: string; status?: string; reason?: string | null } | undefined
-  const children = index.actors.filter((item) => item.kind !== 'finding' && item.parent && index.canonical(item.parent) === actor)
-  return (
-    <div className="agent-empty" data-agent-empty={actor}>
-      <h3>Nothing was recorded for {node?.label ?? actor}</h3>
-      <p>
-        {index.events.length ? 'The record holds no event from this agent' : 'This run’s record holds no events at all'}, and no usage.{' '}
-        Capture: {capture?.status ?? 'unknown'}
-        {capture?.channel ? ` (${capture.channel})` : ''}
-        {capture?.reason ? `; ${capture.reason}` : ''}. An empty record is not evidence that the agent did no work.
-      </p>
-      {children.length > 0 && (
-        <p className="agent-empty-children">
-          <span className="faint">Its agents:</span>{' '}
-          {children.map((child) => (
-            <button key={child.id} type="button" className="link-button" onClick={() => onSelect(child.id)}>
-              {child.label}
-            </button>
-          ))}
-        </p>
-      )}
-    </div>
-  )
 }
 
 /** The run overview in print mode over the run document (its check facts too); a tagged release's receipt is the receipt alone. */

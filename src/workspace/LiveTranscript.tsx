@@ -61,7 +61,8 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
 }
 
 /** A bounded stream window. Only the selected agent is fetched; settled runs load once, without a timer. */
-export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded, onEmpty }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void; onEmpty?: () => void }) {
+/** `chooser` false: the page around it already chooses the agent (the run page's agent list), so no picker of its own. */
+export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded, onEmpty, chooser = true }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void; onEmpty?: () => void; chooser?: boolean }) {
   const node = selected ?? runId
   const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
   const [reload, setReload] = useState(0)
@@ -136,7 +137,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
   const index = useMemo(() => indexRecord(streamRecord(runId, node, nodes, state.rows)), [runId, node, state.nodes, state.rows])
   return <section className="run-panel live-transcript" aria-label="Conversations">
     <div className="message-filters">
-      <label>Agent <select aria-label="Agent conversation" value={node} onChange={(event) => onSelect(event.target.value)}>{nodes.map((item) => <option key={item.id} value={item.id}>{item.label}{item.parent ? ' (child)' : ' (root)'}</option>)}</select></label>
+      {chooser && <label>Agent <select aria-label="Agent conversation" value={node} onChange={(event) => onSelect(event.target.value)}>{nodes.map((item) => <option key={item.id} value={item.id}>{item.label}{item.parent ? ' (child)' : ' (root)'}</option>)}</select></label>}
       <button type="button" className="ui-button" disabled={!state.earlier || state.loading} onClick={() => older.current?.()}>Load older</button>
       <button type="button" className="ui-button" disabled={!state.history} onClick={() => setReload((value) => value + 1)}>Latest</button>
       {onRecorded && <button type="button" className="ui-button" onClick={onRecorded}>Timeline and usage</button>}

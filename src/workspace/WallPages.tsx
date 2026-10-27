@@ -1,3 +1,4 @@
+import { PageHeader } from '@tangle-network/ui/primitives'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { HBars, Lines, Meter } from '@tangle-network/charts/react'
@@ -44,7 +45,7 @@ const asOf = (at: string | null, source: string) => (at ? { at, meaning: `when t
 function Page({ mode, title, at, source, doc, children }: { mode: string; title: string; at?: string | null; source: string; doc: { error?: string; data?: unknown }; children: () => ReactNode }) {
   return (
     <div className="ws-page td wp" data-mode={mode}>
-      <header className="td-head"><h1>{title}</h1><AsOfStamp asOf={asOf(at ?? null, source)} /></header>
+      <PageHeader className="rp-head" title={title} actions={<AsOfStamp asOf={asOf(at ?? null, source)} />} />
       {doc.data ? <div className="wp-body">{children()}</div> : <p className="ws-status" role={doc.error ? 'alert' : 'status'}>{doc.error ? `${title} is unavailable: ${doc.error}` : `Reading ${source}…`}</p>}
     </div>
   )
@@ -275,7 +276,7 @@ function IdeasView({ doc }: { doc: IdeasDoc }) {
   const max = Math.max(1, ...counted.map((s) => s.count!))
   return (
     <>
-      <p className="tj-hero">{doc.awaiting === null ? 'The idea inbox was not read.' : doc.awaiting ? `${doc.awaiting} ${doc.awaiting === 1 ? 'idea waits' : 'ideas wait'} on you.` : 'No idea waits on you.'}</p>
+      <p className="wp-lead">{doc.awaiting === null ? 'The idea inbox was not read.' : doc.awaiting ? `${doc.awaiting} ${doc.awaiting === 1 ? 'idea waits' : 'ideas wait'} on you.` : 'No idea waits on you.'}</p>
       {awaiting.length > 0 && <ul className="wp-awaiting" aria-label="Awaiting you">{awaiting.map((r) => <li key={r.id}><IdeaDetail idea={r} decideUrl={doc.decideUrl} /></li>)}</ul>}
       <section aria-label="From intake to launch">
         <HBars limit={counted.length} max={max} format={(v) => String(v)} rows={counted.map((s) => ({ label: s.stage, value: s.count!, note: s.of !== null ? `of ${s.of} approved for Discovery` : undefined }))} />
