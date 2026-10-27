@@ -8,7 +8,7 @@ import { Bar, agentCost, StateDot, Icon } from './ui.js'
 /**
  * Who did what, when: the shared waterfall (charts FlowWaterfall), one lane per agent with its model and tool calls as
  * child steps, so the hover card shows the agent's tokens in · out · cached, model latency, cost, tool calls by tool, failed
- * and retried steps. The selected agent's whole-run numbers sit below it.
+ * and retried steps. An agent the reader picked shows its whole-run numbers below; the page's default root does not (round 28).
  */
 export function flowTrace(m: RunModel): FlowTrace {
   const root = m.root?.model ?? null
@@ -26,6 +26,7 @@ export function flowTrace(m: RunModel): FlowTrace {
       startMs: Math.max(0, a.start),
       endMs: end,
       status: running ? 'running' : a.status === 'failed' ? 'failed' : 'done',
+      ...(a.commits === null ? {} : { outcome: a.commits ? { tone: 'ok', label: 'Shipped' } : a.status === 'failed' ? { tone: 'failed', label: 'Failed' } : running ? { tone: 'warn', label: 'Running' } : { tone: 'neutral', label: 'Nothing shipped' } }),
       ...(a.listUsd !== null ? { costUsd: a.listUsd } : a.billedUsd !== null ? { costUsd: a.billedUsd } : {}),
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
       marks: a.restarts.map((at) => ({ at, kind: 'restart', label: `Restarted ${clockOf(m.t0)(at)} UTC` })),
@@ -68,7 +69,7 @@ export function flowTrace(m: RunModel): FlowTrace {
 
 export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
   const trace = useMemo(() => flowTrace(m), [m])
-  const markers = useMemo((): FlowMarker[] => m.releases.filter((r) => r.taggedAt && Date.parse(r.taggedAt) >= m.t0).map((r) => ({
+  const markers = useMemo((): FlowMarker[] => m.releases.filter((r, i, all) => r.taggedAt && Date.parse(r.taggedAt) >= m.t0 && (i === all.length - 1 || r.passed !== all[i - 1]?.passed)).map((r) => ({
     at: Date.parse(r.taggedAt!) - m.t0,
     label: `${r.release}${r.total ? ` ${r.passed ?? 0}/${r.total}` : ''}`,
     kind: 'release',
@@ -83,7 +84,7 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
     observe.observe(el)
     return () => observe.disconnect()
   }, [])
-  const selected = agent ? m.byId.get(agent) ?? null : null
+  const picked = route.params.get('agent') ? agent : null, selected = picked ? m.byId.get(picked) ?? null : null
   return (
     <div className="rp-tl">
       <section className="rp-tl-chart" aria-label="Agents over time" ref={box}>
@@ -95,10 +96,9 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
             summary={false}
             markers={markers}
             maxHeight={Math.max(200, height - 230)}
-            selectedId={agent ?? undefined}
+            selectedId={picked ?? undefined}
             onDeselect={() => selectAgent(null)}
             onSelect={(s) => { const id = s.kind === 'pipeline' ? s.id : s.parentId; if (id && m.byId.has(id)) selectAgent(id) }}
-            agentFill="muted"
           />
       </section>
       {selected && <AgentInspector m={m} a={selected} href={(tab) => route.href(tab, { agent: agentParam(doc.run.id, selected.id) })} />}
