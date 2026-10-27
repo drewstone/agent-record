@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@tangle-network/ui/prim
 import { shortRun } from '../play-standing.js'
 import { goalText } from '../plain-words.js'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, clockOf, abbr, count, type RunModel, elapsed } from './model.js'
+import { type Agent, clockOf, abbr, count, type RunModel, elapsed, spanOf, stampOf } from './model.js'
 import { AgentCard, StateDot, Icon, type IconName, useHoverTarget, useRows } from './ui.js'
 
 /** The first clause of a host message, without the program prefixes and host paths (`bridgeExecutor: …: opencode: Free usage exceeded`). */
@@ -30,12 +30,13 @@ function workIntervals(m: RunModel): [number, number][] {
 
 export function Overview(props: TabProps) {
   const { m, doc, play, route } = props
-  const clock = clockOf(m.t0)
   const view = doc.view
   const run = doc.run as typeof doc.run & { check?: CheckDoc; ending?: { at?: string | null; reason?: string | null; sentence?: string | null } }
   const execution = doc.execution as unknown as { failedAttempts?: number; lastAttempt?: { at?: string; error?: string | null } | null } | undefined
   const newer = (play?.runs ?? []).filter((r) => r.id !== doc.run.id && r.startedAt && doc.run.startedAt && r.startedAt > doc.run.startedAt).sort((a, b) => (a.startedAt! < b.startedAt! ? -1 : 1))[0]
   const work = useMemo(() => workIntervals(m), [m])
+  // A run that crosses a UTC midnight names the day on its clocks, so its end never reads as its start.
+  const days = new Date(m.t0).toISOString().slice(0, 10) !== new Date(m.t0 + m.duration).toISOString().slice(0, 10)
   const working = work.reduce((t, [a, b]) => t + (b - a), 0)
   const best = m.best
   const solved = best && best.passed !== null && best.passed !== undefined && best.total && best.passed === best.total
@@ -65,30 +66,32 @@ export function Overview(props: TabProps) {
             {lede && <p className="rp-lede">{lede}</p>}
           </div>
           <div className="rp-vd-act">
-            {newer ? <a className="rp-btn primary" href={`/run/${encodeURIComponent(newer.id)}`}>Open run {shortRun(doc.run.play, newer.id)}<Icon name="arrow" /></a>
-              : m.live ? <a className="rp-btn primary" href={route.href('timeline')}>Watch the timeline<Icon name="arrow" /></a> : null}
+            {m.live ? <a className="rp-btn primary" href={route.href('timeline')}>Watch the timeline<Icon name="arrow" /></a>
+              : newer ? <a className="rp-btn primary" href={`/run/${encodeURIComponent(newer.id)}`}>Open run {shortRun(doc.run.play, newer.id)}<Icon name="arrow" /></a> : null}
             <a className="rp-btn outline" href={route.href('files')}>Files</a>
           </div>
         </div>
         <ol className="rp-story">
           {story.map((s, i) => (
-            <li key={i}><span className={`sd ${s.tone}`} /><time>{s.at ? `${s.at.slice(11, 16)} UTC` : '—'}</time><b>{s.title}</b><span title={s.sub}>{s.sub}</span></li>
+            <li key={i}><span className={`sd ${s.tone}`} /><time>{s.at ? stampOf(s.at, days) : '—'}</time><b>{s.title}</b><span title={s.sub}>{s.sub}</span></li>
           ))}
         </ol>
       </section>
       <Summary {...props} />
       <div className="rp-ov-b">
         <TimeCard m={m} work={work} working={working} failed={failed} />
-        <AgentsCard {...props} clock={clock} />
+        <AgentsCard {...props} />
       </div>
     </div>
   )
 }
 
-type CheckDoc = { latest?: { line?: string | null; verdict?: string | null; known?: boolean; solved?: boolean } | null; counts?: { checks?: number }; checkerNames?: { label: string }[] }
+type CheckDoc = { latest?: { line?: string | null; verdict?: string | null; known?: boolean; solved?: boolean } | null; counts?: { checks?: number }; checkerNames?: { label: string; current?: boolean }[] }
 
 function Summary({ m, doc, route }: TabProps) {
   const check = (doc.run as unknown as { check?: CheckDoc }).check
+  // The checker the Checks tab names: the current one, else the first recorded.
+  const checker = check?.checkerNames?.find((c) => c.current) ?? check?.checkerNames?.[0]
   const goal = goalText(doc.input?.objective)
   const pages = (doc.findings?.items ?? []).filter((item) => item.path)
   const branches = m.agents.filter((a) => a.node.hasCode).length
@@ -111,7 +114,7 @@ function Summary({ m, doc, route }: TabProps) {
         <h3>Check</h3>
         <div className="v">{verdict === 'Passed' ? <StateDot tone="ok" /> : verdict === 'Failed' ? <StateDot tone="fail" /> : <StateDot tone="none" />}{verdict}</div>
         <div className="sub">
-          {check?.counts?.checks ? `Checker ${check.checkerNames?.[0]?.label ?? ''} ran ${check.counts.checks} times; the latest line is in ` : 'No check has run. '}
+          {check?.counts?.checks ? `${checker ? `Checker ${checker.label}` : 'The checker'} ran ${check.counts.checks} times${check.latest?.line ? `; latest: ${clause(check.latest.line, 10)}` : ''}. ` : 'No check has run. '}
           <a href={route.href('checks')}>Checks</a>
         </div>
       </div>
@@ -139,7 +142,8 @@ function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, nu
   const hours = m.duration > 3_600_000 ? Math.floor(m.duration / 3_600_000) : 0
   const step = hours <= 10 ? 1 : Math.ceil(hours / 8), ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => h % step === 0 && (h + step) * 3_600_000 <= m.duration) : []
   const restarters = m.tree.filter((a) => a.restarts.length || a.state.tone === 'ok').slice(0, 14)
-  const clock = clockOf(m.t0)
+  const days = new Date(m.t0).toISOString().slice(0, 10) !== new Date(m.t0 + m.duration).toISOString().slice(0, 10)
+  const clock = (t: number) => (days ? stampOf(new Date(m.t0 + t).toISOString(), true).replace(' UTC', '') : clockOf(m.t0)(t))
   return (
     <section className="rp-card" aria-label="Where the time went">
       <div className="rp-hd sm">
@@ -191,7 +195,7 @@ function RestartRow({ m, a, X }: { m: RunModel; a: Agent; X: (t: number) => stri
   )
 }
 
-function AgentsCard({ m, route, doc, clock }: TabProps & { clock: (ms: number) => string }) {
+function AgentsCard({ m, route, doc }: TabProps) {
   const rows = useMemo(() => [...m.agents].sort((a, b) => (b.tokens ?? -1) - (a.tokens ?? -1)), [m])
   const scroller = useRef<HTMLDivElement>(null)
   const win = useRows(scroller, rows.length, 32)
@@ -209,7 +213,7 @@ function AgentsCard({ m, route, doc, clock }: TabProps & { clock: (ms: number) =
   return (
     <section className="rp-card" aria-label="Agents">
       <div className="rp-hd sm"><h2>Agents<span className="ct">{m.agents.length}</span></h2><span className="end"><a className="rp-btn sm" href={route.href('topology')}>Topology<Icon name="arrow" size={14} /></a></span></div>
-      <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide">{clock(0)}–{clock(end)}</span><span>Steps</span><span>Tokens</span></div>
+      <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide">{spanOf(m.t0, 0, end)}</span><span>Steps</span><span>Tokens</span></div>
       <div className="rp-scroll" ref={scroller}>
         <div style={{ height: win.before }} />
         {rows.slice(win.first, win.last).map((a) => <AgentRow key={a.id} m={m} a={a} bins={bins} end={end} peak={peak} href={route.href('timeline', { agent: agentParam(doc.run.id, a.id) })} />)}
@@ -230,7 +234,7 @@ function AgentRow({ m, a, bins, end, peak, href }: { m: RunModel; a: Agent; bins
       <span className="nm">{a.name}</span>
       <svg className="ph-hide" viewBox="0 0 120 20" aria-hidden="true">
         <line x1="0" x2="120" y1="19.5" y2="19.5" className="base" />
-        {counts.map((n, i) => (n ? <rect key={i} x={i * w + 0.5} width={w - 1.2} y={19 - Math.max(1.5, (n / peak) * 18)} height={Math.max(1.5, (n / peak) * 18)} rx="0.8" /> : null))}
+        {counts.map((n, i) => { const h = n ? Math.max(4, Math.sqrt(n / peak) * 18) : 0; return h ? <rect key={i} x={i * w + 0.5} width={w - 1.2} y={19 - h} height={h} rx="0.8" /> : null })}
       </svg>
       <span className="v">{a.steps.length ? count(a.steps.length) : '—'}</span>
       <span className="v">{a.tokens === null ? '—' : abbr(a.tokens)}</span>

@@ -41,6 +41,9 @@ export function middle(text: string, max: number) {
   return `${text.slice(0, head)}…${text.slice(text.length - (max - 1 - head))}`
 }
 
+/** An agent's name in `max` characters: whole when it fits, else what tells it apart (its short name) cut in the middle. */
+export const nameFit = (a: { name: string; short: string }, max: number) => (a.name.length <= max ? a.name : middle(a.short, max))
+
 /** The match in a label, underlined. */
 export function Hilite({ text, query }: { text: string; query: string }) {
   const q = query.trim().toLowerCase()
