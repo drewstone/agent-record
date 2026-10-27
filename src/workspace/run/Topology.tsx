@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, clockOf, abbr, count, lat, type RunModel } from './model.js'
+import { type Agent, clockOf, abbr, count, finished, lat, type RunModel } from './model.js'
 import { AgentCard, agentGroups, agentOptions, Bar, agentCost, StateDot, Icon, middle, Picker, TeamCard, useCard, useNarrow } from './ui.js'
 
 type Box = { x: number; y: number; w: number; h: number; sm?: boolean; team?: string }
@@ -140,7 +140,7 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
             {L.frames.map((f) => {
               const team = m.teams.find((t) => t.id === f.id)!
               const members = team.members.map((id) => m.byId.get(id)!)
-              const run = members.filter((a) => a.state.tone === 'live').length, done = members.filter((a) => a.state.tone === 'ok').length
+              const run = members.filter((a) => a.state.tone === 'live').length, done = members.filter((a) => finished(a.state.tone)).length
               const fade = focus && !(f.id === selected || anc.has(f.id) || L.pos.get(selected ?? '')?.team === f.id)
               return (
                 <div key={f.id} className={`rp-team${fade ? ' fade' : ''}`} style={{ left: f.x, top: f.y, width: f.w, height: f.h }}>

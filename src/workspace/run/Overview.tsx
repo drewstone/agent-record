@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@tangle-network/ui/prim
 import { shortRun } from '../play-standing.js'
 import { goalText } from '../plain-words.js'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, type CheckDoc, checkVerdict, clockOf, abbr, count, type RunModel, elapsed, stampOf } from './model.js'
+import { type Agent, type CheckDoc, checkVerdict, clockOf, abbr, count, finished, type RunModel, elapsed, stampOf } from './model.js'
 import { AgentCard, StateDot, Icon, type IconName, useHoverTarget, useRows } from './ui.js'
 
 /**
@@ -29,6 +29,17 @@ function workIntervals(m: RunModel): [number, number][] {
     else out.push([a, b])
   }
   return out
+}
+
+/** How many agents worked in each of `n` equal slices of the run: the whole-run strip's bar heights. */
+function concurrency(m: RunModel, n: number) {
+  const slice = Math.max(1, m.duration) / n
+  const sets = Array.from({ length: n }, () => new Set<string>())
+  for (const { agent, step } of m.steps) {
+    if (step.kind === 'waiting') continue
+    for (let i = Math.max(0, Math.floor(step.t / slice)); i <= Math.min(n - 1, Math.floor((step.t + step.d) / slice)); i++) sets[i].add(agent.id)
+  }
+  return sets.map((s) => s.size)
 }
 
 export function Overview(props: TabProps) {
@@ -85,7 +96,7 @@ export function Overview(props: TabProps) {
       </section>
       <Summary {...props} />
       <div className="rp-ov-b">
-        <TimeCard m={m} work={work} working={working} failed={failed} />
+        <TimeCard m={m} working={working} failed={failed} />
         <AgentsCard {...props} />
       </div>
     </div>
@@ -130,8 +141,8 @@ function Summary({ m, doc, route }: TabProps) {
         <h3>Work kept</h3>
         <div className="v">{count(pages.length)} pages · {count(branches)} branches</div>
         <div className="files">
-          {pages.slice(0, 3).map((item) => (
-            <a key={item.path} href={route.href('files', { file: `page:${item.path}` })} title={item.path}><Icon name="file" size={14} /><span>{item.path!.split('/').pop()}</span></a>
+          {pages.slice(0, 3).map((item, _, shown) => (
+            <a key={item.path} href={route.href('files', { file: `page:${item.path}` })} title={item.path}><Icon name="file" size={14} /><span>{tellApart(item.path!, shown.map((p) => p.path!))}</span></a>
           ))}
           {pages.length > 3 && <a href={route.href('files')}><span>{pages.length - 3} more</span></a>}
         </div>
@@ -140,7 +151,18 @@ function Summary({ m, doc, route }: TabProps) {
   )
 }
 
-function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, number][]; working: number; failed: number }) {
+/** A path's file name, with as many parent folders as it takes to tell it from the other paths shown ("state.md" three times read as one file). */
+function tellApart(path: string, shown: string[]) {
+  const parts = path.split('/')
+  const tail = (p: string, n: number) => p.split('/').slice(-n).join('/')
+  let n = 1
+  while (n < parts.length && shown.some((p) => p !== path && tail(p, n) === tail(path, n))) n++
+  return tail(path, n)
+}
+
+function TimeCard({ m, working, failed }: { m: RunModel; working: number; failed: number }) {
+  const conc = useMemo(() => concurrency(m, 96), [m])
+  const peak = Math.max(1, ...conc)
   const X = (t: number) => `${Math.max(0, Math.min(100, (t / Math.max(1, m.duration)) * 100))}%`
   const hours = m.duration > 3_600_000 ? Math.floor(m.duration / 3_600_000) : 0
   const days = new Date(m.t0).toISOString().slice(0, 10) !== new Date(m.t0 + m.duration).toISOString().slice(0, 10)
@@ -162,11 +184,11 @@ function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, nu
       </div>
       <div className="rp-twrap">
         <div className="rp-tg">
-          <span className="nm h">Whole run</span>
-          <div className="rp-strip" role="img" aria-label={`Agents worked ${elapsed(working)} of ${elapsed(m.duration)}`}>
-            {work.map(([a, b], i) => <i key={i} style={{ left: X(a), width: `max(1px, calc(${X(b)} - ${X(a)}))` }} />)}
+          <span className="nm h">Agents at once</span>
+          <div className="rp-strip" role="img" aria-label={`Agents working at once over the run, peak ${peak}; they worked ${elapsed(working)} of ${elapsed(m.duration)}`}>
+            {conc.map((n, i) => <i key={i} className={n ? undefined : 'idle'} title={`${clock((i * m.duration) / conc.length)}: ${n} working`} style={{ left: `${(i * 100) / conc.length}%`, width: `${100 / conc.length}%`, height: n ? `${Math.max(10, (n / peak) * 100)}%` : undefined }} />)}
           </div>
-          <span className="ct">{elapsed(m.duration)}</span>
+          <span className="ct">peak {peak}</span>
           <span />
           <div className="rp-strip-ax">
             <span className="first" style={{ left: 0 }}>{clock(0)}</span>
@@ -194,7 +216,7 @@ function RestartRow({ m, a, X }: { m: RunModel; a: Agent; X: (t: number) => stri
       <div className="rp-tr-row" tabIndex={0} aria-label={`${a.name}: ${a.restarts.length} restarts`} {...hover}>
         <span className="life" style={{ left: X(Math.max(0, a.start ?? 0)), right: `calc(100% - ${X(a.end ?? m.duration)})` }} />
         {a.restarts.map((t, i) => <span key={i} className="mk" style={{ left: X(t) }}>✕</span>)}
-        {a.state.tone === 'ok' && a.end !== null && <span className="mk ok" style={{ left: X(a.end) }} />}
+        {finished(a.state.tone) && a.end !== null && <span className="mk ok" style={{ left: X(a.end) }} />}
       </div>
       <span className="ct">{a.restarts.length || '—'}</span>
     </>
