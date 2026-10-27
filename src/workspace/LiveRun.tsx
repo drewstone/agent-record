@@ -4,7 +4,7 @@ import { TraceWorkspace } from '@tangle-network/sandbox-ui/run'
 
 // A display-only subset of Runtime's TopSnapshot wire contract. Runtime owns all lifecycle/accounting projection.
 type Worker = { id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; spend: { usd: number; usdKnown?: boolean }; metered: { usd: number; usdKnown?: boolean } }
-type Node = { id: string; runId: string; model?: string; backend?: string; trace?: { status: string; reason?: string } }
+type Node = { id: string; runId: string; model?: string; backend?: string }
 type Snapshot = { pursuit?: { nodes: Node[] }; root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; task?: string; startedAt?: string; completedAt?: string; driverSpend: { usd: number; usdKnown?: boolean }; workers: Worker[] }[] }
 type Frame = { sequence: number; observedAt: number; reset: boolean; snapshots: Snapshot[] }
 
@@ -14,7 +14,6 @@ export function LiveRun({ api }: { api: string }) {
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [selected, setSelected] = useState('')
-  const [agent, setAgent] = useState<string>()
   const [rendered, setRendered] = useState(0)
   useEffect(() => {
     const source = new EventSource(`${api}/events`)
@@ -38,7 +37,6 @@ export function LiveRun({ api }: { api: string }) {
   const active = runs.find((run) => run.key === selected) ?? runs[0]
   const facts = active?.snapshot.pursuit?.nodes.filter((node) => node.runId === active.run.id) ?? []
   const detail = (id: string) => { const node = facts.find((node) => node.id === id); return [node?.model, node?.backend].filter(Boolean).join(' · ') || undefined }
-  const capture = facts.find((node) => node.id === agent)?.trace
   const startedAt = active ? Math.min(...[active.run.startedAt, ...active.run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
   const trace = useMemo((): FlowTrace => {
     const run = active?.run
@@ -59,14 +57,13 @@ export function LiveRun({ api }: { api: string }) {
     <main className="ws-live" data-top-sequence={rendered}>
       <header>
         <h1>Live agents</h1>
-        <label>Run<select aria-label="Run" value={active?.key ?? ''} onChange={(event) => { setSelected(event.target.value); setAgent(undefined) }}>{runs.map((item) => <option key={item.key} value={item.key}>{item.run.id}</option>)}</select></label>
+        <label>Run<select aria-label="Run" value={active?.key ?? ''} onChange={(event) => setSelected(event.target.value)}>{runs.map((item) => <option key={item.key} value={item.key}>{item.run.id}</option>)}</select></label>
         <span role="status">{connected ? '● Connected' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
       </header>
       {active?.run.task && active.run.task !== active.run.id && <p>{active.run.task}</p>}
       {error && <p role="alert">{error}</p>}
       {active?.snapshot.completeness === 'partial' && <p role="alert">Partial capture: {active.snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>}
-      {capture?.status === 'unavailable' && <p role="status">Selected agent: tool trace unavailable ({capture.reason ?? 'not recorded'}). Recorded delegated input is shown when retained; it is separate from native conversation.</p>}
-      {active ? <TraceWorkspace onSelectAgent={setAgent} key={active.key} trace={trace} label={active.run.id} live={active.run.status === 'running' || active.run.workers.some((worker) => worker.status === 'running')} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} /> : connected && <p role="status">No recorded agents in these roots.</p>}
+      {active ? <TraceWorkspace key={active.key} trace={trace} label={active.run.id} live={active.run.status === 'running' || active.run.workers.some((worker) => worker.status === 'running')} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} /> : connected && <p role="status">No recorded agents in these roots.</p>}
     </main>
   )
 }
