@@ -1,6 +1,6 @@
 import { createContext, type CSSProperties, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { type Agent, abbr, count, lat, type RunModel, elapsed, type ToolStats, usd } from './model.js'
+import { type Agent, abbr, count, finished, lat, type RunModel, elapsed, type ToolStats, usd } from './model.js'
 
 /** The run page's glyphs, 16 px strokes in the text colour. */
 const PATHS = {
@@ -250,7 +250,7 @@ export function TeamCard({ m, team }: { m: RunModel; team: { id: string; label: 
   const running = members.filter((a) => a.state.tone === 'live').length
   return (
     <>
-      <div className="rp-card-h"><div className="t"><Icon name="users" /><span className="nm">{team.label}</span><span className="v">{members.length} agents</span></div><div className="s">{running} running · {members.filter((a) => a.state.tone === 'ok').length} done</div></div>
+      <div className="rp-card-h"><div className="t"><Icon name="users" /><span className="nm">{team.label}</span><span className="v">{members.length} agents</span></div><div className="s">{running} running · {members.filter((a) => finished(a.state.tone)).length} done</div></div>
       <div className="rp-card-cols two">
         <section><h6>Team totals</h6><dl>
           <dt>Tokens</dt><dd>{abbr(sum((a) => a.tokens ?? 0))}</dd>
@@ -455,14 +455,14 @@ export function agentOptions(m: RunModel, keep: (a: Agent) => boolean = () => tr
 }
 export const agentGroups = (m: RunModel) => (m.teams.length ? m.teams.map((t) => ({ id: t.id, label: t.label })) : undefined)
 
-/** A fixed-row window over a scroller: the first and last row to render, and the spacer heights. */
+/** A fixed-row window over a scroller: the first and last row to render, the spacer heights, and the scroller's width. */
 export function useRows(scroller: RefObject<HTMLElement | null>, count: number, row: number, overscan = 6) {
-  const [view, setView] = useState({ top: 0, height: 800 })
+  const [view, setView] = useState({ top: 0, height: 800, width: 0 })
   useEffect(() => {
     const el = scroller.current
     if (!el) return
     let frame = 0
-    const update = () => { frame = 0; setView({ top: el.scrollTop, height: el.clientHeight || 800 }) }
+    const update = () => { frame = 0; setView({ top: el.scrollTop, height: el.clientHeight || 800, width: el.clientWidth }) }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update) }
     update()
     el.addEventListener('scroll', schedule, { passive: true })
@@ -472,7 +472,7 @@ export function useRows(scroller: RefObject<HTMLElement | null>, count: number, 
   }, [scroller])
   const first = Math.max(0, Math.floor(view.top / row) - overscan)
   const last = Math.min(count, Math.ceil((view.top + view.height) / row) + overscan)
-  return { first, last, before: first * row, after: Math.max(0, (count - last) * row) }
+  return { first, last, before: first * row, after: Math.max(0, (count - last) * row), width: view.width }
 }
 
 export function useNarrow() {

@@ -56,12 +56,11 @@ function Kpis({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Retur
 
 // ----- Tool calls by agent and tool: a heatmap with ✕ failure counts, row totals and an "N more" column
 
+const HM_NAME = 168, HM_COL = 76, HM_TOTAL = 88
 function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: ReturnType<typeof mergeTools> }) {
   const [sort, setSort] = useState<'calls' | 'fails' | 'name'>('calls')
   const card = useCard()
   const wrap = useRef<HTMLDivElement>(null)
-  const cols = tools.slice(0, 8)
-  const rest = tools.slice(8)
   const rows = useMemo(() => {
     const withTools = agents.filter((a) => a.toolCalls > 0)
     const key = sort === 'calls' ? (a: Agent) => -a.toolCalls : sort === 'fails' ? (a: Agent) => -a.toolFailures * 1e6 - a.toolCalls : null
@@ -69,11 +68,17 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   }, [agents, sort])
   const ROW = 28
   const win = useRows(wrap, rows.length, ROW, 6)
+  // As many tool columns as the card holds beside the name and total columns; the rest fold into one "N more" column, so
+  // no column is ever cut by the card's edge (25b showed 8 and a cut 9th at 1512 px).
+  const room = Math.floor(((win.width || 1e4) - 32 - HM_NAME - HM_TOTAL) / HM_COL)
+  const fit = tools.length <= room ? tools.length : Math.max(1, room - 1)
+  const cols = tools.slice(0, fit)
+  const rest = tools.slice(fit)
   const max = Math.max(1, ...rows.flatMap((a) => a.tools.map((t) => t.calls)))
   const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls))
   const shade = (n: number) => (n ? `color-mix(in oklab, var(--rp-tool) ${Math.round(14 + 86 * Math.sqrt(n / max))}%, hsl(var(--hsl-card)))` : undefined)
   const ink = (n: number) => (n && Math.sqrt(n / max) > 0.55 ? 'on' : '')
-  const grid = { gridTemplateColumns: `minmax(168px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(76px, 1fr)) 88px` }
+  const grid = { gridTemplateColumns: `minmax(${HM_NAME}px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(${HM_COL}px, 1fr)) ${HM_TOTAL}px` }
   const cell = (a: Agent, t: { name: string; calls: number; failures: number; p50: number | null; p90: number | null; p99: number | null; ms: number } | null, label: string, target: Element) =>
     card.show({ rect: target.getBoundingClientRect(), wide: false, content: (
       <>
@@ -205,8 +210,11 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const ROW = 28
   const win = useRows(wrap, rows.length, ROW)
   const maxTok = Math.max(1, ...agents.map((a) => a.tokens ?? 0))
+  // A count column shows only when some agent has one: 26a has no restarts, so no empty Restarts column takes the width.
+  const counts = (['failed', 'restarts', 'spawns'] as const).filter((k) => agents.some((a) => (k === 'failed' ? a.failedSteps : k === 'restarts' ? a.restarts.length : a.children.length) > 0))
+  const grid = { gridTemplateColumns: `minmax(96px, 1fr) 112px 52px 44px ${counts.map((k) => (k === 'restarts' ? '72px' : k === 'spawns' ? '64px' : '56px')).join(' ')} 64px` }
   const head = (k: SortKey, label: string, cls = '') => (
-    <span role="columnheader" className={cls} aria-sort={sort.k === k ? (sort.d < 0 ? 'descending' : 'ascending') : undefined}>
+    <span key={k} role="columnheader" className={cls} aria-sort={sort.k === k ? (sort.d < 0 ? 'descending' : 'ascending') : undefined}>
       <button type="button" onClick={() => setSort((s) => ({ k, d: s.k === k ? (s.d === 1 ? -1 : 1) : k === 'name' ? 1 : -1 }))}>{label}{sort.k === k ? (sort.d < 0 ? ' ↓' : ' ↑') : ''}</button>
     </span>
   )
@@ -214,19 +222,17 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
     <section className="rp-card w5" aria-label="Agents">
       <div className="rp-hd sm"><h3>Agents<span className="ct">{agents.length}</span></h3></div>
       <div className="rp-at-wrap" ref={wrap} role="table" aria-label="Agents" aria-rowcount={rows.length}>
-        <div className="rp-at th" role="row">{head('name', 'Agent')}{head('tokens', 'Tokens', 'tk')}{head('model', 'Model', 'r')}{head('tool', 'Tool', 'r')}{head('failed', 'Failed', 'r')}{head('restarts', 'Restarts', 'r')}{head('spawns', 'Spawns', 'r')}{head('cost', 'Cost', 'r')}</div>
+        <div className="rp-at th" role="row" style={grid}>{head('name', 'Agent')}{head('tokens', 'Tokens', 'tk')}{head('model', 'Model', 'r')}{head('tool', 'Tool', 'r')}{counts.map((k) => head(k, { failed: 'Failed', restarts: 'Restarts', spawns: 'Spawns' }[k], 'r'))}{head('cost', 'Cost', 'r')}</div>
         <div style={{ height: win.before }} />
         {rows.slice(win.first, win.last).map((a) => (
-          <div key={a.id} className="rp-at" role="row" tabIndex={0}
+          <div key={a.id} className="rp-at" role="row" tabIndex={0} style={grid}
             onPointerEnter={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onPointerLeave={() => card.hide()}
             onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onBlur={() => card.hide()}>
             <span className="nm" role="cell" title={a.name}>{nameFit(a, 20)}</span>
-            <span className="tk" role="cell"><b style={{ width: `${((a.tokens ?? 0) / maxTok) * 60}px` }} /><span>{abbr(a.tokens)}</span></span>
+            <span className="tk" role="cell"><b style={{ width: `${((a.tokens ?? 0) / maxTok) * 48}px` }} /><span>{abbr(a.tokens)}</span></span>
             <span className="r" role="cell">{count(a.modelCalls)}</span>
             <span className="r" role="cell">{count(a.toolCalls)}</span>
-            <span className="r" role="cell">{a.failedSteps || ''}</span>
-            <span className="r" role="cell">{a.restarts.length || ''}</span>
-            <span className="r" role="cell">{a.children.length || ''}</span>
+            {counts.map((k) => <span key={k} className="r" role="cell">{(k === 'failed' ? a.failedSteps : k === 'restarts' ? a.restarts.length : a.children.length) || ''}</span>)}
             <span className="r" role="cell">{a.listUsd !== null ? usd(a.listUsd) : a.billedUsd !== null ? usd(a.billedUsd) : '—'}</span>
           </div>
         ))}

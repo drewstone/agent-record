@@ -71,7 +71,9 @@ export interface ToolStats {
   p90: number | null
   p99: number | null
 }
-export type Tone = 'ok' | 'live' | 'none' | 'fail' | ''
+/** ok: shipped commits; done: settled without commits (a ring of the same ink, so the two never read as one state). */
+export type Tone = 'ok' | 'done' | 'live' | 'none' | 'fail' | ''
+export const finished = (tone: Tone) => tone === 'ok' || tone === 'done'
 export interface Agent {
   id: string
   /** The name people use: its role, else its label. */
@@ -155,7 +157,7 @@ const targetOf = (step: RawStep) => {
 function stateOf(node: Node, live: boolean, steps: number): Agent['state'] {
   if (node.status === 'running' || (live && node.status === 'waiting')) return { label: node.status === 'waiting' ? 'Waiting' : 'Running', tone: 'live' }
   if (node.shipped) return { label: 'Shipped', tone: 'ok' }
-  if (node.status === 'succeeded') return { label: 'Done', tone: 'ok' }
+  if (node.status === 'succeeded') return { label: 'Done', tone: 'done' }
   if (node.status === 'failed') return { label: 'Failed', tone: 'fail' }
   if (!steps && (!node.start || !node.usage)) return { label: 'Never ran', tone: 'none' }
   return { label: node.status === 'idle' ? 'Idle' : 'Stopped', tone: '' }
