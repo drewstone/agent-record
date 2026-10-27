@@ -164,6 +164,8 @@ function PlaysPage({ api }: { api: string }) {
       )
     return { rows, hidden: { plays: hidden, counts, total: matching.length } }
   }, [plays.data, query, program, sort, showHidden])
+  // Each play's newest running run, so a play running an older run never reads as its newest, stopped one.
+  const live = useMemo(() => new Map((plays.data?.runs ?? []).filter((run) => run.state === 'running').sort((a, b) => String(a.startedAt ?? '').localeCompare(String(b.startedAt ?? ''))).map((run) => [run.play, run.id])), [plays.data])
   const home = (['plays', 'findings', 'runs'] as const).find((value) => value === params.get('view')) ?? 'plays'
   const ORDERS = [['latest', 'Latest run first'], ['spend', 'Most API-equivalent first'], ['runs', 'Most runs first'], ['name', 'By name']] as const
   const order = home !== 'plays' ? null : (
@@ -235,7 +237,7 @@ function PlaysPage({ api }: { api: string }) {
         <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
           <div className="table-scroll">
-            <PlaysTable rows={rows.slice(0, shownRows)} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} />
+            <PlaysTable rows={rows.slice(0, shownRows)} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} live={live} />
           </div>
           {rows.length > shownRows && (
             <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>
