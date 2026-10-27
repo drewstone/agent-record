@@ -185,7 +185,7 @@
 .rp .rp-sum > div + div { box-shadow: -1px 0 0 var(--rp-line); }
 .rp .rp-sum h3 { margin: 0 0 6px; font: 500 14px/20px var(--font-sans); color: hsl(var(--hsl-muted-foreground)); }
 .rp .rp-sum .v { display: flex; align-items: center; gap: 8px; font: 600 18px/26px var(--font-sans); }
-.rp .rp-sum .goal { font-size: 16px; line-height: 24px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rp .rp-sum .goal { font-size: 16px; line-height: 24px; }
 .rp .rp-sum .sub { margin-top: 4px; color: hsl(var(--hsl-muted-foreground)); }
 .rp .rp-sum .sub a { color: var(--accent-text); font-weight: 500; }
 .rp .rp-sum .files { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }

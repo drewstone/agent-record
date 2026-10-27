@@ -7,7 +7,7 @@ import { type Agent, clockOf, abbr, count, type RunModel, elapsed } from './mode
 import { AgentCard, StateDot, Icon, type IconName, useHoverTarget, useRows } from './ui.js'
 
 /** The first clause of a host message, without the program prefixes and host paths (`bridgeExecutor: …: opencode: Free usage exceeded`). */
-export function clause(text: string | null | undefined, words = 18): string {
+export function clause(text: string | null | undefined, words = Infinity): string {
   if (!text) return ''
   let t = text.replace(/\/(home|mnt|Users|tmp|private)\/\S+/g, '').replace(/\s+/g, ' ').trim()
   t = t.replace(/^(?:[\w-]+(?: [\w-]+){0,3}: )+(?=\S)/, (prefix) => (prefix.split(': ').length > 2 ? '' : prefix))
@@ -99,7 +99,7 @@ function Summary({ m, doc, route }: TabProps) {
     <section className="rp-card rp-sum" aria-label="Summary">
       <div>
         <h3>Goal</h3>
-        <div className="goal">{goal || 'Not recorded'}</div>
+        <div className="goal">{clause(goal) || 'Not recorded'}</div>
         {goal && (
           <Popover>
             <PopoverTrigger asChild><button type="button" className="rp-link">Read the goal</button></PopoverTrigger>
@@ -111,7 +111,7 @@ function Summary({ m, doc, route }: TabProps) {
         <h3>Check</h3>
         <div className="v">{verdict === 'Passed' ? <StateDot tone="ok" /> : verdict === 'Failed' ? <StateDot tone="fail" /> : <StateDot tone="none" />}{verdict}</div>
         <div className="sub">
-          {check?.counts?.checks ? `Checker ${check.checkerNames?.[0]?.label ?? ''} ran ${check.counts.checks} times; latest: ${clause(check.latest?.line, 12)}. ` : 'No check has run. '}
+          {check?.counts?.checks ? `Checker ${check.checkerNames?.[0]?.label ?? ''} ran ${check.counts.checks} times; latest: ${clause(check.latest?.line)}. ` : 'No check has run. '}
           <a href={route.href('checks')}>Checks</a>
         </div>
       </div>
@@ -137,7 +137,7 @@ function Summary({ m, doc, route }: TabProps) {
 function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, number][]; working: number; failed: number }) {
   const X = (t: number) => `${Math.max(0, Math.min(100, (t / Math.max(1, m.duration)) * 100))}%`
   const hours = m.duration > 3_600_000 ? Math.floor(m.duration / 3_600_000) : 0
-  const ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => hours <= 10 || h % Math.ceil(hours / 8) === 0) : []
+  const ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => (hours <= 10 || h % Math.ceil(hours / 8) === 0) && h * 3_600_000 < m.duration * 0.92) : []
   const restarters = m.tree.filter((a) => a.restarts.length || a.state.tone === 'ok').slice(0, 14)
   const clock = clockOf(m.t0)
   return (
