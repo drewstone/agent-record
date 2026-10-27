@@ -85,7 +85,8 @@ export function LiveRun({ api }: { api: string }) {
       </header>
       {active?.run.task && active.run.task !== active.run.id && <p>{active.run.task}</p>}
       {error && <p role="alert">{error}</p>}
-      {active?.snapshot.completeness === 'partial' && <p role="alert">Partial capture: {active.snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>}
+      {/* With no run to show, every root's diagnostics say why; an unreadable root is never "no agents". */}
+      {(active ? [active.snapshot] : snapshots).filter((snapshot) => snapshot.completeness === 'partial').map((snapshot) => <p key={snapshot.root} role="alert">Partial capture: {snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>)}
       {active ? (
         <div className="ws-live-split">
           <section aria-label="Agent graph">
@@ -94,7 +95,7 @@ export function LiveRun({ api }: { api: string }) {
           </section>
           <TraceWorkspace key={active.key} trace={trace} label={active.run.id} selectedAgentId={agent} onSelectAgent={setAgent} live={active.run.status === 'running' || run!.workers.some((worker) => worker.status === 'running')} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
         </div>
-      ) : connected && <p role="status">No recorded agents in these roots.</p>}
+      ) : connected && !snapshots.some((snapshot) => snapshot.completeness === 'partial') && <p role="status">No recorded agents in these roots.</p>}
     </main>
   )
 }
