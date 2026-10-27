@@ -4,7 +4,7 @@ import { TraceWorkspace } from '@tangle-network/sandbox-ui/run'
 
 // A display-only subset of Runtime's TopSnapshot wire contract. Runtime owns all lifecycle/accounting projection.
 type Worker = { id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; spend: { usd: number; usdKnown?: boolean }; metered: { usd: number; usdKnown?: boolean } }
-type Snapshot = { root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; startedAt?: string; workers: Worker[] }[] }
+type Snapshot = { root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; startedAt?: string; completedAt?: string; driverSpend: { usd: number; usdKnown?: boolean }; workers: Worker[] }[] }
 type Frame = { sequence: number; observedAt: number; reset: boolean; snapshots: Snapshot[] }
 
 /** Both the Discovery host and agent-runtime-top mount this same stream consumer and shared run workspace. */
@@ -46,6 +46,7 @@ export function LiveRun({ api }: { api: string }) {
       const costKnown = worker.spend.usdKnown !== false && worker.metered.usdKnown !== false
       return [{ id: worker.id, ...(worker.parent ? { parentId: worker.parent } : {}), name: worker.label, kind: 'pipeline', startMs: start, endMs: Math.max(start, end - first), status: worker.status === 'running' ? 'running' : worker.status === 'down' ? 'failed' : 'done', ...(costKnown ? { costUsd: worker.spend.usd + worker.metered.usd } : {}), ...(worker.runtime ? { detail: worker.runtime } : {}) }]
     })
+    if (run?.startedAt && run.status !== 'unobserved') spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: run.status === 'running' ? 'running' : run.status === 'down' ? 'failed' : 'done', ...(run.driverSpend.usdKnown !== false ? { costUsd: run.driverSpend.usd } : {}) })
     return { spans, totalMs: Math.max(0, ...spans.map((span) => span.endMs)), promptTokens: 0, completionTokens: 0, modelCalls: 0, toolCalls: 0, errors: spans.filter((span) => span.status === 'failed').length }
   }, [active?.snapshot, active?.run])
   return (
@@ -53,7 +54,7 @@ export function LiveRun({ api }: { api: string }) {
       <header>
         <h1>Live agents</h1>
         <label>Run<select aria-label="Run" value={active?.key ?? ''} onChange={(event) => setSelected(event.target.value)}>{runs.map((item) => <option key={item.key} value={item.key}>{item.run.id}</option>)}</select></label>
-        <span role="status">{connected ? '● Live' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
+        <span role="status">{connected ? '● Connected' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
       </header>
       {error && <p role="alert">{error}</p>}
       {active?.snapshot.completeness === 'partial' && <p role="alert">Partial capture: {active.snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>}
