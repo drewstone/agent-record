@@ -3555,7 +3555,7 @@
 .ar-ws .tj-blind b { font-weight: 600; }
 .ar-ws .tj-names { display: grid; gap: 4px; color: var(--ar-fg-muted); }
 .ar-ws .ar-tip-anchor { position: relative; display: inline-flex; align-items: center; gap: 8px; outline-offset: 2px; }
-.ar-ws .ar-tip { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; width: max-content; max-width: 320px; padding: 8px 12px; border: 1px solid var(--ar-line, #8884); border-radius: 8px; background: var(--ar-surface, #1f1f22); color: var(--ar-fg); font: 400 12px/16px var(--ar-font-body); white-space: normal; box-shadow: 0 8px 24px #0004; pointer-events: none; }
+.ar-ws .ar-tip { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; width: max-content; max-width: 320px; padding: 8px 12px; border: 1px solid var(--ar-border); border-radius: 8px; background: var(--ws-raised); color: var(--ar-fg); font: 400 12px/16px var(--ar-font-body); white-space: normal; box-shadow: 0 8px 24px #0004; pointer-events: none; }
 .ar-ws .as-of.is-stale { color: var(--ar-c-warn, #f5a524); }
 .ar-ws h2.tj-finding { margin-top: 32px; padding-bottom: 8px; }
 .ar-ws .tj-finding { margin: 0; font-size: 14px; line-height: 1.6; max-width: 110ch; }
