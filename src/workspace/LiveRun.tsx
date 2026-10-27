@@ -6,9 +6,16 @@ import { AgentGraph, type AgentGraphNode, type AgentGraphStatus } from '@tangle-
 // A display-only subset of Runtime's TopSnapshot wire contract. Runtime owns all lifecycle/accounting projection.
 type Spend = { usd: number; usdKnown?: boolean }
 type Worker = { id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; verdict?: string; liveTail?: string[]; spend?: Spend; metered?: Spend }
-type Node = { id: string; runId: string; model?: string; backend?: string }
+type Node = { id: string; runId: string; parentId?: string; label?: string; runtime?: string; status?: string; settledAt?: number; timing?: { startedAt: number; settledAt?: number }; model?: string; backend?: string }
 type Snapshot = { pursuit?: { nodes: Node[] }; root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; task?: string; startedAt?: string; completedAt?: string; driverSpend?: Spend; workers: Worker[] }[] }
 const time = (value?: string) => { const ms = value ? Date.parse(value) : Number.NaN; return Number.isFinite(ms) ? ms : undefined }
+const iso = (ms?: number) => ms !== undefined && Number.isFinite(ms) ? new Date(ms).toISOString() : undefined
+// A run with no spawn journal (a retained or observer-only run) has its agents only as pursuit nodes; their spawn and
+// settle clocks fill the times a worker lacks, so no recorded agent loses its card or its waterfall bar.
+const withNodes = (run: Snapshot['supervisors'][number], nodes: Node[]): Worker[] => [
+  ...run.workers.map((worker) => { const node = nodes.find((node) => node.id === worker.id); return { ...worker, startedAt: worker.startedAt ?? iso(node?.timing?.startedAt), endedAt: worker.endedAt ?? iso(node?.timing?.settledAt ?? node?.settledAt) } }),
+  ...nodes.filter((node) => node.id !== run.id && !run.workers.some((worker) => worker.id === node.id)).map((node) => ({ id: node.id, parent: node.parentId, label: node.label ?? node.id, runtime: node.runtime, status: node.status ?? 'running', startedAt: iso(node.timing?.startedAt), endedAt: iso(node.timing?.settledAt ?? node.settledAt) })),
+]
 // A missing or unknown spend is unknown, never zero, and never drops the agent.
 const cost = (...spends: (Spend | undefined)[]) => spends.every((spend) => spend && spend.usdKnown !== false) ? spends.reduce((sum, spend) => sum + (spend?.usd ?? 0), 0) : undefined
 const graphStatus = (status: string): AgentGraphStatus => status === 'running' ? 'running' : status === 'done' ? 'succeeded' : status === 'down' ? 'failed' : status === 'cancelled' ? 'stopped' : 'unknown'
@@ -45,9 +52,9 @@ export function LiveRun({ api }: { api: string }) {
   const active = runs.find((run) => run.key === selected) ?? runs[0]
   const facts = active?.snapshot.pursuit?.nodes.filter((node) => node.runId === active.run.id) ?? []
   const detail = (id: string) => { const node = facts.find((node) => node.id === id); return [node?.model, node?.backend].filter(Boolean).join(' · ') || undefined }
-  const startedAt = active ? Math.min(...[active.run.startedAt, ...active.run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
+  const run = active && { ...active.run, workers: withNodes(active.run, facts) }
+  const startedAt = run ? Math.min(...[run.startedAt, ...run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
   const trace = useMemo((): FlowTrace => {
-    const run = active?.run
     const at = active?.snapshot.generatedAt ?? Date.now()
     const first = startedAt !== undefined && Number.isFinite(startedAt) ? startedAt : at
     const spans: FlowSpan[] = (run?.workers ?? []).flatMap((worker) => {
@@ -61,7 +68,6 @@ export function LiveRun({ api }: { api: string }) {
     return { spans, totalMs: Math.max(0, ...spans.map((span) => span.endMs)), promptTokens: 0, completionTokens: 0, modelCalls: 0, toolCalls: 0, errors: spans.filter((span) => span.status === 'failed').length }
   }, [active?.snapshot, active?.run, startedAt])
   // Every recorded worker gets a card, timed or not; the waterfall only places workers with a recorded start.
-  const run = active?.run
   const workers = run?.workers.filter((worker) => worker.id !== run.id) ?? []
   const nodes: AgentGraphNode[] = run ? [
     { id: run.id, label: 'root', status: graphStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), result: run.status === 'cancelled' ? 'Cancelled' : undefined },
@@ -69,7 +75,7 @@ export function LiveRun({ api }: { api: string }) {
   ] : []
   const known = new Set(nodes.map((node) => node.id))
   const edges = workers.map((worker) => ({ from: worker.parent && worker.parent !== worker.id && known.has(worker.parent) ? worker.parent : run!.id, to: worker.id, kind: 'spawn' as const }))
-  const agentCards = Object.fromEntries([...(active?.run.workers ?? []).filter((worker) => worker.status === 'cancelled').map((worker) => [worker.id, { status: 'stopped' as const, result: 'Cancelled' }]), ...(active?.run.status === 'cancelled' ? [[active.run.id, { status: 'stopped' as const, result: 'Cancelled' }]] : [])])
+  const agentCards = Object.fromEntries([...(run?.workers ?? []).filter((worker) => worker.status === 'cancelled').map((worker) => [worker.id, { status: 'stopped' as const, result: 'Cancelled' }]), ...(active?.run.status === 'cancelled' ? [[active.run.id, { status: 'stopped' as const, result: 'Cancelled' }]] : [])])
   return (
     <main className="ws-live" data-top-sequence={rendered}>
       <header>
@@ -86,7 +92,7 @@ export function LiveRun({ api }: { api: string }) {
             <div role="group" aria-label="Graph layout">{(['tree', 'hub'] as const).map((option) => <button key={option} type="button" aria-pressed={layout === option} onClick={() => setLayout(option)}>{option}</button>)}</div>
             <AgentGraph key={active.key} nodes={nodes} edges={edges} layout={layout} live={nodes.some((node) => node.status === 'running')} selectedId={agent ?? null} onSelect={setAgent} title={active.run.id} className="ws-live-graph" />
           </section>
-          <TraceWorkspace key={active.key} trace={trace} label={active.run.id} selectedAgentId={agent} onSelectAgent={setAgent} live={active.run.status === 'running' || active.run.workers.some((worker) => worker.status === 'running')} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
+          <TraceWorkspace key={active.key} trace={trace} label={active.run.id} selectedAgentId={agent} onSelectAgent={setAgent} live={active.run.status === 'running' || run!.workers.some((worker) => worker.status === 'running')} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} summary={false} defaultView="agents" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
         </div>
       ) : connected && <p role="status">No recorded agents in these roots.</p>}
     </main>
