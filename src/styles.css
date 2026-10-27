@@ -3743,7 +3743,8 @@
 .ar-ws .wp-idea ol { padding-left: 20px; display: grid; gap: 8px; }
 .ar-ws .wp-go { justify-self: start; font-size: 14px; font-weight: 600; }
 @media (max-width: 760px) {
-  .ar-ws .wp-split { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  /* Phone order: asks, then hosts, then seats (the split's sections join the page grid). */
+  .ar-ws .wp-split { display: contents; } .ar-ws .wp-hosts { order: 1; } .ar-ws .wp-split > [aria-label=Seats] { order: 2; }
   .ar-ws .wp-rows li { grid-template-columns: 8px minmax(0, 1fr) auto; gap: 4px 12px; }
   .ar-ws .wp-rows li > .wp-step { grid-column: 2 / -1; order: 1; }
   .ar-ws .wp-table th:nth-child(4), .ar-ws .wp-table td:nth-child(4) { display: none; }
