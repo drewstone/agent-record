@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { HBars, Lines, Meter } from '@tangle-network/charts/react'
 import { AsOfStamp, Tip } from './AnswerStrip.js'
-import { hm } from './answers.js'
+import { hm, stamp } from './answers.js'
 import { useDocument } from './data.js'
 
 /**
@@ -12,7 +12,7 @@ import { useDocument } from './data.js'
  * the autoscaled hosts cost and hold; Ideas which idea waits on Drew.
  */
 type State = 'ok' | 'warn' | 'breach' | 'stale' | 'unknown'
-interface Breach { family: string; label: string; text: string; limit: string; alarm: boolean }
+interface Breach { family: string; label: string; text: string; limit: string; held?: string | null; alarm: boolean }
 interface Host { name: string; state: State; local: boolean; reportMin: number | null; up: boolean | null; load1: number | null; loadPerCore: number | null; loadLimit: number | null; cores: number | null; diskFreeGb: number | null; diskFloorGb: number | null; breaches: Breach[] }
 interface Agent { name: string; lane: string; state: 'asks' | 'working' | 'blocked' | 'limited'; harness: string | null; model: string | null; effort: string | null; since: string | null; limitUntil: string | null; step: string | null }
 interface QuotaWindow { used: number | null; reset: string | null; label: string | null; why: string | null }
@@ -57,10 +57,12 @@ function DiskBar({ h }: { h: Host }) {
   if (h.diskFreeGb === null || h.diskFloorGb === null) return <span className="wp-muted">disk not reported</span>
   const top = Math.max(h.diskFloorGb * 1.5, 1)
   const below = h.diskFreeGb < h.diskFloorGb
+  // A held disk alarm (back above the floor, not yet at its clear line) stays red until the producer clears it.
+  const red = below || h.breaches.some((b) => b.family === 'disk' && b.alarm)
   return (
     <Tip className="wp-bar" text={`${num(h.diskFreeGb, 1)} GB free; the floor is ${h.diskFloorGb} GB${below ? `, ${num(h.diskFloorGb - h.diskFreeGb, 1)} GB below it` : `, ${num(h.diskFreeGb - h.diskFloorGb, 1)} GB above it`}`}>
       <span className="wp-val"><b>{num(h.diskFreeGb)} GB</b> free</span>
-      <span className="wp-track"><span style={{ width: `${Math.min(100, (h.diskFreeGb / top) * 100)}%`, background: below ? TONE.breach : TONE.ok }} /><i style={{ left: `${(h.diskFloorGb / top) * 100}%` }} /></span>
+      <span className="wp-track"><span style={{ width: `${Math.min(100, (h.diskFreeGb / top) * 100)}%`, background: red ? TONE.breach : TONE.ok }} /><i style={{ left: `${(h.diskFloorGb / top) * 100}%` }} /></span>
     </Tip>
   )
 }
@@ -82,7 +84,7 @@ function HostCard({ h }: { h: Host }) {
         <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : 'var(--ws-accent)'} />
       </Tip>
       <DiskBar h={h} />
-      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label} data-alarm={b.alarm || undefined}><Tip text={`${b.text} (${b.limit})`}>{b.label}</Tip></li>)}</ul>}
+      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label} data-alarm={b.alarm || undefined}><Tip text={`${b.text} (${b.limit}${b.held ? `; ${b.held}` : ''})`}>{b.label}{b.alarm && b.held ? ` ${b.held}` : ''}</Tip></li>)}</ul>}
     </li>
   )
 }
@@ -108,25 +110,28 @@ function FleetView({ doc }: { doc: FleetDoc }) {
   // A seat with no long-window reading is listed apart, never drawn as 0% (an unknown is not a zero).
   const read = doc.seats.rows.filter((s) => s.long.used !== null).sort((a, b) => b.long.used! - a.long.used!)
   const unread = doc.seats.rows.filter((s) => s.long.used === null)
+  // Seats at a limit lead with the day and time each returns; seats with room are one disclosure.
+  const limited = read.filter((s) => s.state === 'empty'), room = read.filter((s) => s.state !== 'empty')
+  const bars = (seats: Seat[]) => <HBars limit={seats.length} max={1} format={pct} rows={seats.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, color: s.state === 'empty' ? TONE.warn : undefined,
+    note: [s.long.label, s.state === 'empty' ? `back ${s.back ? stamp(s.back, Date.now()) : '—'}` : s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} />
   const back = doc.seats.rows.filter((s) => s.state === 'empty' && s.back).map((s) => s.back!).sort()[0]
   return (
     <>
-      <ul className="wp-hosts" aria-label="Hosts">{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul>
       <div className="wp-split">
         <section aria-label="Agents">
-          <h2>Agents <span className="wp-muted">{doc.agents.total ?? '—'}</span></h2>
+          <h2>{counts.asks ?? '—'} asking for Drew <span className="wp-muted">of {doc.agents.total ?? '—'} agents</span></h2>
           <Meter text="" total={doc.agents.total} segments={(['working', 'asks', 'blocked', 'limited', 'idle'] as const).map((s) => ({ label: s, value: counts[s] ?? null, color: AGENT_TONE[s] }))} format={(v) => String(v)} />
           {rows('asks').length > 0 && <ul className="wp-rows" aria-label="Asking for Drew">{rows('asks').map((a) => <AgentRow key={a.lane} a={a} />)}</ul>}
           {(['blocked', 'limited', 'working'] as const).map((state) => rows(state).length > 0 && <details key={state} className="wp-group"><summary>{rows(state).length} {state}</summary><ul className="wp-rows">{rows(state).map((a) => <AgentRow key={a.lane} a={a} />)}</ul></details>)}
         </section>
         <section aria-label="Seats">
-          <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit{back ? `, first back ${hm(back)}` : ''}</span></h2>
-          <HBars limit={read.length} max={1} format={pct}
-            rows={read.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, color: s.state === 'empty' ? TONE.warn : undefined,
-              note: [s.long.label, s.state === 'empty' ? `back ${s.back ? hm(s.back) : '—'}` : s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} />
+          <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit{back ? `, first back ${stamp(back, Date.now())}` : ''}</span></h2>
+          {limited.length > 0 && bars(limited)}
+          {room.length > 0 && <details className="wp-group"><summary>{room.length} with room</summary>{bars(room)}</details>}
           {unread.length > 0 && <p className="wp-muted wp-line">Not reported: {unread.map((s) => `${s.provider.toLowerCase()} ${s.name}${s.long.why ? ` (${s.long.why})` : ''}`).join(', ')}</p>}
         </section>
       </div>
+      <ul className="wp-hosts" aria-label="Hosts">{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul>
     </>
   )
 }
