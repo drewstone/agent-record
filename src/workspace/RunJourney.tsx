@@ -154,7 +154,7 @@ function Lanes({ m, live, cost, picked, onPick }: { m: Model; live: boolean; cos
       return {
         id: n.id, ...(from && ids.has(from) ? { parentId: from } : {}), kind: 'pipeline' as const,
         name: n.role ?? n.label,
-        // Name, plus the model only where it differs from the root's that the trigger names (round 27: 22a's 18 rows repeated it).
+        // Name, plus the model only where it differs from the root's that the stat row names (round 27: 22a's 18 rows repeated it).
         detail: n.model && n.model !== rootModel ? n.model.split('/').pop() : undefined,
         startMs: ms(n.start) - m.t0, endMs: Math.max(ms(n.start), Number.isFinite(end) ? end : ms(n.start)) - m.t0,
         status: running(n) ? 'running' as const : failed(n) ? 'failed' as const : 'done' as const,
@@ -222,10 +222,10 @@ function runUsage(m: Model) {
 /** The run's numbers as one row of large numerals above the timeline (review 4 #4); agents, shipped and failed are the trace's legend. */
 function Stats({ m, spend }: { m: Model; spend: { apiEquivalentUsd?: number | null; apiEquivalentProvenance?: string | null } | null | undefined }) {
   // The host's one figure (journals.api_equivalent), the one /play and /plays print; never a sum of this page's own (index 02:45Z).
-  const listUsd = spend?.apiEquivalentUsd ?? null
-  const how = spend?.apiEquivalentProvenance ?? ''
+  const listUsd = spend?.apiEquivalentUsd ?? null, how = spend?.apiEquivalentProvenance ?? '', model = m.nodes.find((n) => n.id === m.root)?.model
   const stats: [string, string, string?][] = [
     ['Duration', duration(m.t1 - m.t0)],
+    ...(model ? [['Model', model.split('/').pop()!, `The root agent's model (${model}); a trace row names any other`] as [string, string, string]] : []),
     ...(listUsd != null ? [['Cost', `${how.endsWith('at least') ? '≥' : '≈'}${money(listUsd)}`, `API-equivalent at list price, ${how || 'source not recorded'}`] as [string, string, string]] : []),
   ]
   return <dl className="rj-stats">{stats.map(([label, value, title]) => <div key={label} title={title}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
@@ -281,7 +281,7 @@ function Trigger({ doc, m }: { doc: RunDocument; m: Model }) {
   const input = doc.input
   const root = m.nodes.find((n) => n.id === m.root) ?? m.nodes[0]
   if (!input) return null
-  const ran = root && [root.harness, root.model].filter(Boolean).join(' · ')
+  const ran = root?.harness
   return (
     <div className="rj-trigger">
       {/* The goal's whole first sentence: a 14-word cut ended at "retain the…" and dropped the teardown this smoke is about
