@@ -110,10 +110,8 @@ function FleetView({ doc }: { doc: FleetDoc }) {
   // A seat with no long-window reading is listed apart, never drawn as 0% (an unknown is not a zero).
   const read = doc.seats.rows.filter((s) => s.long.used !== null).sort((a, b) => b.long.used! - a.long.used!)
   const unread = doc.seats.rows.filter((s) => s.long.used === null)
-  // Seats at a limit lead with the day and time each returns; seats with room are one disclosure.
+  // Seats at a limit are a name and the day and time each returns (every bar would read 100%); seats with room fold.
   const limited = read.filter((s) => s.state === 'empty'), room = read.filter((s) => s.state !== 'empty')
-  const bars = (seats: Seat[]) => <HBars limit={seats.length} max={1} format={pct} rows={seats.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, color: s.state === 'empty' ? TONE.warn : undefined,
-    note: [s.long.label, s.state === 'empty' ? `back ${s.back ? stamp(s.back, Date.now()) : '—'}` : s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} />
   const back = doc.seats.rows.filter((s) => s.state === 'empty' && s.back).map((s) => s.back!).sort()[0]
   return (
     <>
@@ -126,8 +124,9 @@ function FleetView({ doc }: { doc: FleetDoc }) {
         </section>
         <section aria-label="Seats">
           <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit{back ? `, first back ${stamp(back, Date.now())}` : ''}</span></h2>
-          {limited.length > 0 && bars(limited)}
-          {room.length > 0 && <details className="wp-group"><summary>{room.length} with room</summary>{bars(room)}</details>}
+          {limited.length > 0 && <ul className="wp-back">{limited.map((s) => <li key={`${s.provider} ${s.name}`}><span>{s.provider.toLowerCase()} {s.name}</span><span className="wp-muted">{s.long.label ? `${s.long.label} · ` : ''}back {s.back ? stamp(s.back, Date.now()) : '—'}</span></li>)}</ul>}
+          {room.length > 0 && <details className="wp-group"><summary>{room.length} with room</summary><HBars limit={room.length} max={1} format={pct}
+            rows={room.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, note: [s.long.label, s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} /></details>}
           {unread.length > 0 && <p className="wp-muted wp-line">Not reported: {unread.map((s) => `${s.provider.toLowerCase()} ${s.name}${s.long.why ? ` (${s.long.why})` : ''}`).join(', ')}</p>}
         </section>
       </div>
@@ -181,10 +180,17 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
   return (
     <>
       <div className="wp-stats">
-        <Stat label="Autoscaled hosts" value={`${t.hosts ?? '—'} · ${usd(t.monthlyUsd)}/mo`}><Tip className={t.idleHosts ? 'wp-warn' : 'wp-muted'} text={`${t.idleHosts ?? '—'} idle, ${usd(t.idleMonthlyUsd)} a month; ${usd(t.perHourUsd, 2)} an hour at list price`}>{t.idleHosts ? `${t.idleHosts} idle` : 'none idle'}</Tip></Stat>
+        <Stat label="Autoscaled hosts" value={`${t.hosts ?? '—'} · ${usd(t.monthlyUsd)}/mo`}><Tip className={t.idleHosts ? 'wp-warn' : 'wp-muted'} text={`${usd(t.perHourUsd, 2)} an hour at list price; ${t.draining ?? '—'} hosts draining`}>{t.idleHosts ? `${t.idleHosts} with nothing running · ${usd(t.idleMonthlyUsd)}/mo` : 'all running sandboxes'}</Tip></Stat>
         <Stat label="Slots running" value={pct(t.runningShare)}><Tip text={`${t.running ?? '—'} of ${t.slots ?? '—'} slots run a sandbox; ${t.discoveryRunning ?? '—'} are Discovery's`}><Meter used={t.running} total={t.slots} tone="var(--ws-accent)" text="" /></Tip></Stat>
         <Stat label="Parked" value={String(t.parked ?? '—')}><Tip text={`${t.discoveryParked ?? '—'} of them Discovery's`}><Meter used={t.parked} total={t.slots} tone="var(--ws-accent)" text="" /></Tip></Stat>
         <Stat label="Fleet key left" value={usd(key.leftUsd, 2)}><Tip text={`${key.name ?? 'Discovery fleet key'}: ${usd(key.spentUsd, 2)} spent of a ${usd(key.capUsd, 2)} cap`}><Meter used={key.leftUsd} total={key.capUsd} tone="var(--ws-accent)" text="" /></Tip></Stat>
+      </div>
+      <div className="wp-split">
+        <section aria-label="Hosts over time"><h2><Tip text={`Autoscaler decision ${doc.scaler.decision}: ${doc.scaler.current} counted, target ${doc.scaler.target}, max ${doc.scaler.max}; birth breaker ${doc.scaler.breaker}; ${doc.scaler.pendingRetirement ?? 0} pending retirement; last error ${doc.scaler.error ?? 'none'}`}>Autoscaled hosts, {doc.hostsOverTime.days} days</Tip></h2>
+          <div><Lines series={[{ name: 'hosts', color: 'var(--ws-accent)', points: doc.hostsOverTime.points.map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
+        <section aria-label="Why parked sandboxes stay"><h2>Why {t.parked ?? '—'} stay parked</h2>
+          <HBars limit={doc.parked.length} format={(v) => String(v)} color="var(--ws-accent)"
+            rows={doc.parked.map((c) => ({ label: c.label, value: c.boxes, note: `${c.discovery} Discovery's${c.hours === null ? '' : ` · ${num(c.hours, 1)} h`}` }))} /></section>
       </div>
       <section aria-label="Hosts">
         <table className="wp-table">
@@ -192,7 +198,7 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
           <tbody>
             {doc.hosts.map((h) => (
               <tr key={h.id} data-state={h.state}>
-                <td><Tip text={`${h.id} · ${h.type}${h.heldBy && h.heldBy !== '—' ? ` · parked boxes held by ${h.heldBy}` : ''}`}><b>{h.name}</b></Tip> <span className="wp-muted">{h.type}</span></td>
+                <td><Tip text={`${h.id} · ${h.type}${h.heldBy && h.heldBy !== '—' ? ` · parked boxes held by ${h.heldBy}` : ''}`}><b>{h.name}</b></Tip> <span className="wp-muted">{h.type}{h.autoscaled ? '' : ' · fixed'}</span></td>
                 <td className={h.state === 'idle' ? 'wp-warn' : 'wp-muted'}>{h.state}</td>
                 <td><Tip text={`${h.running ?? '—'} running and ${h.parked ?? '—'} parked of ${h.slots ?? '—'} slots`}><Meter used={(h.running ?? 0) + (h.parked ?? 0)} total={h.slots} tone="var(--ws-accent)" text={`${h.running ?? '—'} running · ${h.parked ?? '—'} parked of ${h.slots ?? '—'}`} /></Tip></td>
                 <td><Tip text={`CPU ${pct(h.cpu)} at the host scan`}><Meter used={h.cpu} total={1} tone="var(--ws-accent)" text={pct(h.cpu)} /></Tip></td>
@@ -204,13 +210,6 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
         </table>
         {retiring && <Retire host={doc.hosts.find((h) => h.id === retiring)!} onDone={() => setRetiring(null)} />}
       </section>
-      <div className="wp-split">
-        <section aria-label="Hosts over time"><h2><Tip text={`Autoscaler decision ${doc.scaler.decision}: ${doc.scaler.current} counted, target ${doc.scaler.target}, max ${doc.scaler.max}; birth breaker ${doc.scaler.breaker}; ${doc.scaler.pendingRetirement ?? 0} pending retirement; last error ${doc.scaler.error ?? 'none'}`}>Autoscaled hosts, {doc.hostsOverTime.days} days</Tip></h2>
-          <div><Lines series={[{ name: 'hosts', color: 'var(--ws-accent)', points: doc.hostsOverTime.points.map(([at, n]) => [at * 1000, n]) }]} format={(v) => String(Math.round(v))} /></div></section>
-        <section aria-label="Why parked sandboxes stay"><h2>Why {t.parked ?? '—'} stay parked</h2>
-          <HBars limit={doc.parked.length} format={(v) => String(v)} color="var(--ws-accent)"
-            rows={doc.parked.map((c) => ({ label: c.label, value: c.boxes, note: `${c.discovery} Discovery's${c.hours === null ? '' : ` · ${num(c.hours, 1)} h`}` }))} /></section>
-      </div>
     </>
   )
 }
