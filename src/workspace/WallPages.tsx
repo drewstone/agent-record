@@ -85,12 +85,13 @@ function HostCard({ h }: { h: Host }) {
         <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : 'var(--ws-accent)'} />
       </Tip>
       <DiskBar h={h} />
-      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label} data-alarm={b.alarm || undefined}><Tip text={`${b.text} (${b.limit}${b.held ? `; ${b.held}` : ''})`}>{b.label}{b.alarm && b.held ? ` ${b.held}` : ''}</Tip></li>)}</ul>}
+      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label} data-alarm={b.alarm || undefined}><Tip text={`${b.text} (${b.limit}${b.held ? `; ${b.held}` : ''})`}>{b.alarm && b.held ? `${b.label.replace(/\s*\/\s*$/, '')}: ${b.held}` : b.label}</Tip></li>)}</ul>}
     </li>
   )
 }
 
-const AGENT_TONE: Record<string, string> = { asks: TONE.warn, working: TONE.ok, blocked: TONE.breach, limited: TONE.warn, idle: 'var(--ar-fg-faint)' }
+// One hue per state: asking is the warning ink, a seat limit the accent, so the two never read as one.
+const AGENT_TONE: Record<string, string> = { asks: TONE.warn, working: TONE.ok, blocked: TONE.breach, limited: 'var(--accent-text)', idle: 'var(--ar-fg-faint)' }
 
 /** One agent: its name (harness and model as the tooltip), what it is doing or waiting on (a tap or Enter wraps it in place;
  * a hover-only title never reached phones or keyboards), and how long since it moved. */

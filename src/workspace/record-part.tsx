@@ -25,19 +25,19 @@ export function useRecordPart(url: string | null) {
 }
 
 /** One agent's conversation from the record, for the run workspace's centre pane: its events load when it is selected. */
-export function AgentConversation({ runUrl, version, index, actor }: { runUrl: string; version: string; index: RecordIndex; actor: string }) {
+export function AgentConversation({ runUrl, version, index, actor, opening }: { runUrl: string; version: string; index: RecordIndex; actor: string; opening?: { text: string; at: string } }) {
   const agent = useRecordPart(`${runUrl}/record?node=${encodeURIComponent(actor)}${version}`)
   if (!agent.index) return <p className="ws-status" role={agent.fetchError || agent.error ? 'alert' : 'status'}>{agent.fetchError || agent.error ? `This agent's record is unavailable: ${agent.fetchError ?? agent.error}` : `Loading ${index.nodes.get(actor)?.label ?? 'the agent'}'s conversation…`}</p>
-  return <ConversationWithDetail runUrl={runUrl} index={agent.index} actor={actor} />
+  return <ConversationWithDetail runUrl={runUrl} index={agent.index} actor={actor} opening={opening} />
 }
 
 /** The conversation; a clipped body opens in full in the shared EventDetail. */
-function ConversationWithDetail({ runUrl, index, actor }: { runUrl: string; index: RecordIndex; actor: string }) {
+function ConversationWithDetail({ runUrl, index, actor, opening }: { runUrl: string; index: RecordIndex; actor: string; opening?: { text: string; at: string } }) {
   const [detail, setDetail] = useState<{ event: RecordEvent; sha?: string } | null>(null)
   const load = useMemo(() => readSource(runUrl), [runUrl])
   return (
     <>
-      <Conversation index={index} actor={actor} cutoff={index.end} query="" category="all" lifecycle={false}
+      <Conversation index={index} actor={actor} cutoff={index.end} query="" category="all" lifecycle={false} opening={opening}
         openSource={(sha, event) => setDetail({ event, sha })} />
       {detail && <EventDetail key={`${detail.event.id}:${detail.sha ?? ''}`} event={detail.event} full={detail.sha} index={index} onClose={() => setDetail(null)} load={load} />}
     </>

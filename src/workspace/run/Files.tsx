@@ -7,6 +7,7 @@ import { useDocument } from '../data.js'
 import { readRunFiles, runFileHref, type RunFile } from '../run-files.js'
 import { RefDiff, useRefFile } from '../ref-file.js'
 import { useFileText } from '../use-file-text.js'
+import { usePhone } from '../use-phone.js'
 import { agentParam, agentFromParam, type TabProps } from './RunPage.js'
 import type { Agent } from './model.js'
 import { agentOptions, Icon, Picker } from './ui.js'
@@ -70,13 +71,16 @@ export function Files({ api, runUrl, doc, m, route }: TabProps) {
   // Each branch file's mark against main: A added, M modified (sandbox-ui 1.1.0 draws them in the tree).
   const status = useMemo(() => Object.fromEntries(entries.filter((e) => e.kind === 'code').map((e) => [e.tree, e.kind === 'code' && e.status === 'A' ? 'added' as const : 'modified' as const])), [entries])
   const asked = route.params.get('file')
-  const open = entries.find((e) => e.key === asked) ?? (asked ? null : entries[0] ?? null)
+  // Side by side, the first file opens with the tree; on a phone the tree comes first, and Back returns to it.
+  const phone = usePhone('(max-width: 720px)')
+  const open = entries.find((e) => e.key === asked) ?? (asked || phone ? null : entries[0] ?? null)
   const loading = !pages && !inventory.error ? 'Reading the retained files…' : shown.some((a) => !diffs.has(a.id)) && !entries.length ? 'Reading the agent branches…' : null
-  const scopeOptions = agentOptions(m, (a) => a.node.hasCode, (a) => { const d = diffs.get(a.id); return d && !('error' in d) ? `${d.files.length} files` : '' })
+  // A branch's count is the files it changed against main.
+  const scopeOptions = agentOptions(m, (a) => a.node.hasCode, (a) => { const d = diffs.get(a.id); return d && !('error' in d) ? `${d.files.length} changed` : '' })
   const scopePicker = (
-    <Picker label="Files written by" options={[{ id: 'pages', label: 'Pages', meta: pages ? `${pages.items.length}` : '' }, ...scopeOptions]} all={{ label: 'All agents' }} value={scope} placeholder={`Search ${coders.length} branches`} width={300} className="rp-fscope"
+    <Picker label="Files written by" options={[{ id: 'pages', label: 'Pages', meta: pages ? `${pages.items.length} pages` : '' }, ...scopeOptions]} all={{ label: 'Pages and every branch' }} value={scope} placeholder={`Search ${coders.length} branches`} width={300} className="rp-fscope"
       onChange={(value) => route.go('files', { scope: value === 'pages' ? 'pages' : value ? agentParam(doc.run.id, value) : null, file: null })}>
-      {scope === 'pages' ? 'Pages' : scope ? (m.byId.get(scope)?.name ?? 'Agent') : 'All agents'}
+      {scope === 'pages' ? 'Pages' : scope ? (m.byId.get(scope)?.name ?? 'Branch') : 'All files'}
     </Picker>
   )
   return (
@@ -134,12 +138,12 @@ function FileActions({ entry, runUrl, link }: { entry: Entry; runUrl: string; li
     <span className="rp-factions">
       {options.length > 1 && <SegmentedControl aria-label="File view" value={options.some((o) => o.value === view) ? view : options[0]!.value} onValueChange={setView} options={options} />}
       <span className="rp-group ph-hide">
-        {href && <a className="rp-btn" href={href} download={name}><Icon name="download" /><span>Download</span></a>}
-        <button type="button" className="rp-btn" onClick={() => { void navigator.clipboard?.writeText(new URL(link, window.location.href).toString()).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500) }) }}>
-          <Icon name={copied ? 'check' : 'link'} /><span>{copied ? 'Copied' : 'Copy link'}</span>
+        {href && <a className="rp-btn ic" href={href} download={name} aria-label={`Download ${name}`} title="Download"><Icon name="download" /></a>}
+        <button type="button" className="rp-btn ic" aria-label={copied ? 'Link copied' : 'Copy link'} title={copied ? 'Copied' : 'Copy link'} onClick={() => { void navigator.clipboard?.writeText(new URL(link, window.location.href).toString()).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500) }) }}>
+          <Icon name={copied ? 'check' : 'link'} />
         </button>
         <Popover>
-          <PopoverTrigger asChild><button type="button" className="rp-btn"><Icon name="info" /><span>Provenance</span></button></PopoverTrigger>
+          <PopoverTrigger asChild><button type="button" className="rp-btn ic" aria-label="Provenance" title="Provenance"><Icon name="info" /></button></PopoverTrigger>
           <PopoverContent className="rp-pop" align="end"><Provenance entry={entry} /></PopoverContent>
         </Popover>
       </span>

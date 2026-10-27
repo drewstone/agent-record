@@ -3,17 +3,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '@tangle-network/ui/prim
 import { shortRun } from '../play-standing.js'
 import { goalText } from '../plain-words.js'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, clockOf, abbr, count, type RunModel, elapsed, spanOf, stampOf } from './model.js'
+import { type Agent, type CheckDoc, checkVerdict, clockOf, abbr, count, type RunModel, elapsed, stampOf } from './model.js'
 import { AgentCard, StateDot, Icon, type IconName, useHoverTarget, useRows } from './ui.js'
 
-/** The first clause of a host message, without the program prefixes and host paths (`bridgeExecutor: …: opencode: Free usage exceeded`). */
+/**
+ * The first clause of a host message, without the program prefixes, host paths and commit hashes
+ * (`bridgeExecutor: …: opencode: Free usage exceeded`). A cut clause ends on a word and one ellipsis, never `,…`.
+ */
 export function clause(text: string | null | undefined, words = Infinity): string {
   if (!text) return ''
-  let t = text.replace(/\/(home|mnt|Users|tmp|private)\/\S+/g, '').replace(/\s+/g, ' ').trim()
+  let t = text.replace(/\/(home|mnt|Users|tmp|private)\/\S+/g, '').replace(/:?\s*\b[0-9a-f]{10,40}\b/g, '').replace(/\s+/g, ' ').trim()
   t = t.replace(/^(?:[\w-]+(?: [\w-]+){0,3}: )+(?=\S)/, (prefix) => (prefix.split(': ').length > 2 ? '' : prefix))
   t = t.split(/(?<=[.;])\s|;\s|, the |, starting /)[0] ?? t
   const cut = t.split(' ')
-  return (cut.length > words ? `${cut.slice(0, words).join(' ')}…` : t).replace(/[.;,]$/, '')
+  return cut.length > words ? `${cut.slice(0, words).join(' ').replace(/[.;,:]+$/, '')}…` : t.replace(/[.;,:]$/, '')
 }
 
 /** Busy intervals of every agent, merged: when anything was working. */
@@ -66,9 +69,12 @@ export function Overview(props: TabProps) {
             {lede && <p className="rp-lede">{lede}</p>}
           </div>
           <div className="rp-vd-act">
+            {/* Every verdict has a next step: follow a live run, open the run that continued it, read its best release, or its files. */}
             {m.live ? <a className="rp-btn primary" href={route.href('timeline')}>Watch the timeline<Icon name="arrow" /></a>
-              : newer ? <a className="rp-btn primary" href={`/run/${encodeURIComponent(newer.id)}`}>Open run {shortRun(doc.run.play, newer.id)}<Icon name="arrow" /></a> : null}
-            <a className="rp-btn framed" href={route.href('files')}>Files</a>
+              : newer ? <a className="rp-btn primary" href={`/run/${encodeURIComponent(newer.id)}`}>Open run {shortRun(doc.run.play, newer.id)}<Icon name="arrow" /></a>
+                : best ? <a className="rp-btn primary" href={route.href('checks')}>Review {best.release}<Icon name="arrow" /></a>
+                  : <a className="rp-btn primary" href={route.href('files')}>Open the files<Icon name="arrow" /></a>}
+            {(m.live || newer || best) && <a className="rp-btn framed" href={route.href('files')}>Files</a>}
           </div>
         </div>
         <ol className="rp-story">
@@ -86,8 +92,6 @@ export function Overview(props: TabProps) {
   )
 }
 
-type CheckDoc = { latest?: { line?: string | null; verdict?: string | null; known?: boolean; solved?: boolean } | null; counts?: { checks?: number }; checkerNames?: { label: string; current?: boolean }[] }
-
 function Summary({ m, doc, route }: TabProps) {
   const check = (doc.run as unknown as { check?: CheckDoc }).check
   // The checker the Checks tab names: the current one, else the first recorded.
@@ -97,7 +101,8 @@ function Summary({ m, doc, route }: TabProps) {
   const branches = m.agents.filter((a) => a.node.hasCode).length
   const commits = m.agents.reduce((t, a) => t + (a.commits ?? 0), 0)
   const best = m.best
-  const verdict = !check?.latest ? 'Not checked' : check.latest.solved ? 'Passed' : check.latest.known ? 'Failed' : 'No verdict'
+  const verdict = checkVerdict(check)
+  const ran = check?.counts?.checks ? `${checker ? `Checker ${checker.label}` : 'The checker'} ran ${count(check.counts.checks)} times` : 'No check has run'
   return (
     <section className="rp-card rp-sum" aria-label="Summary">
       <div>
@@ -112,11 +117,9 @@ function Summary({ m, doc, route }: TabProps) {
       </div>
       <div>
         <h3>Check</h3>
-        <div className="v">{verdict === 'Passed' ? <StateDot tone="ok" /> : verdict === 'Failed' ? <StateDot tone="fail" /> : <StateDot tone="none" />}{verdict}</div>
-        <div className="sub">
-          {check?.counts?.checks ? `${checker ? `Checker ${checker.label}` : 'The checker'} ran ${check.counts.checks} times${check.latest?.line ? `; latest: ${clause(check.latest.line, 10)}` : ''}. ` : 'No check has run. '}
-          <a href={route.href('checks')}>Checks</a>
-        </div>
+        <div className="v"><StateDot tone={verdict.tone} />{verdict.word}</div>
+        <div className="sub">{verdict.note ? `${verdict.note}.` : `${ran}.`}</div>
+        <a className="rp-link" href={route.href('checks')}>See the checks</a>
       </div>
       <div>
         <h3>Best release</h3>
@@ -144,7 +147,8 @@ function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, nu
   // Hour ticks clear the end clocks, which are wider when they name the day.
   const clear = m.duration * (days ? 0.16 : 0.08)
   const step = hours <= 10 ? 1 : Math.ceil(hours / 8), ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => h % step === 0 && h * 3_600_000 >= clear && (h + step) * 3_600_000 <= m.duration && h * 3_600_000 <= m.duration - clear) : []
-  const restarters = m.tree.filter((a) => a.restarts.length || a.state.tone === 'ok').slice(0, 14)
+  // Only agents that restarted; a run where none did shows no restart section at all.
+  const restarters = m.tree.filter((a) => a.restarts.length).sort((a, b) => b.restarts.length - a.restarts.length).slice(0, 14)
   const clock = (t: number) => (days ? stampOf(new Date(m.t0 + t).toISOString(), true).replace(' UTC', '') : clockOf(m.t0)(t))
   return (
     <section className="rp-card" aria-label="Where the time went">
@@ -172,7 +176,7 @@ function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, nu
           <span />
           {restarters.length > 0 && (
             <>
-              <div className="rp-tries-h"><b>Restarts by agent</b><span className="end rp-keys"><span className="rp-key"><span className="x">✕</span>Restart</span><span className="rp-key"><span className="rp-dot ok" />Done</span></span></div>
+              <div className="rp-tries-h"><b>Restarts by agent</b><span className="end rp-keys"><span className="rp-key"><span className="x">✕</span>Restart</span><span className="rp-key"><span className="rp-dot ok" />Finished</span></span></div>
               {restarters.map((a) => <RestartRow key={a.id} m={m} a={a} X={X} />)}
             </>
           )}
@@ -215,7 +219,7 @@ function AgentsCard({ m, route, doc }: TabProps) {
   return (
     <section className="rp-card" aria-label="Agents">
       <div className="rp-hd sm"><h2>Agents<span className="ct">{m.agents.length}</span></h2><span className="end"><a className="rp-btn sm" href={route.href('topology')}>Topology<Icon name="arrow" size={14} /></a></span></div>
-      <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide">{spanOf(m.t0, 0, end)}</span><span>Steps</span><span>Tokens</span></div>
+      <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide" title={`When each agent worked, over the run's ${elapsed(end)}`}>Activity · {elapsed(end).split(' ')[0]}</span><span>Steps</span><span>Tokens</span></div>
       <div className="rp-scroll" ref={scroller}>
         <div style={{ height: win.before }} />
         {rows.slice(win.first, win.last).map((a) => <AgentRow key={a.id} m={m} a={a} bins={bins} end={end} peak={peak} href={route.href('timeline', { agent: agentParam(doc.run.id, a.id) })} />)}
@@ -234,9 +238,9 @@ function AgentRow({ m, a, bins, end, peak, href }: { m: RunModel; a: Agent; bins
     <a className="rp-agt" href={href} {...hover}>
       <StateDot tone={a.state.tone} />
       <span className="nm">{a.name}</span>
-      <svg className="ph-hide" viewBox="0 0 120 20" aria-hidden="true">
-        <line x1="0" x2="120" y1="19.5" y2="19.5" className="base" />
-        {counts.map((n, i) => { const h = n ? Math.max(4, Math.sqrt(n / peak) * 18) : 0; return h ? <rect key={i} x={i * w + 0.5} width={w - 1.2} y={19 - h} height={h} rx="0.8" /> : null })}
+      <svg className="ph-hide" viewBox="0 0 120 16" aria-hidden="true">
+        <line x1="0" x2="120" y1="15.5" y2="15.5" className="base" />
+        {counts.map((n, i) => { const h = n ? 6 + Math.sqrt(n / peak) * 10 : 0; return h ? <rect key={i} x={i * w + 0.5} width={w - 1.2} y={16 - h} height={h} rx="1" /> : null })}
       </svg>
       <span className="v">{a.steps.length ? count(a.steps.length) : '—'}</span>
       <span className="v">{a.tokens === null ? '—' : abbr(a.tokens)}</span>

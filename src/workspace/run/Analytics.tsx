@@ -18,9 +18,8 @@ export function Analytics({ m }: TabProps) {
     <div className="rp-an">
       <div className="rp-an-f">
         <Picker label="Agents" multi options={agentOptions(m)} groups={agentGroups(m)} all={{ label: 'All agents', meta: String(m.agents.length) }} value={chosen} onChange={setChosen} width={360} placeholder={`Search ${m.agents.length} agents`} style={{ width: 280 }}>
-          <span className="dim">Agents </span>{scope}
+          {chosen.size ? scope : `All ${m.agents.length} agents`}
         </Picker>
-        <span className="scope">Every chart below covers {chosen.size ? <b>{agents.length} of {m.agents.length}</b> : <>all <b>{m.agents.length}</b></>} agents.</span>
       </div>
       <Kpis m={m} agents={agents} tools={tools} />
       <div className="rp-an-g">
@@ -74,7 +73,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls))
   const shade = (n: number) => (n ? `color-mix(in oklab, var(--rp-tool) ${Math.round(14 + 86 * Math.sqrt(n / max))}%, hsl(var(--hsl-card)))` : undefined)
   const ink = (n: number) => (n && Math.sqrt(n / max) > 0.55 ? 'on' : '')
-  const grid = { gridTemplateColumns: `minmax(120px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(64px, 1fr)) 88px` }
+  const grid = { gridTemplateColumns: `minmax(168px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(76px, 1fr)) 88px` }
   const cell = (a: Agent, t: { name: string; calls: number; failures: number; p50: number | null; p90: number | null; p99: number | null; ms: number } | null, label: string, target: Element) =>
     card.show({ rect: target.getBoundingClientRect(), wide: false, content: (
       <>
@@ -152,8 +151,9 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const peak = Math.max(1, ...bins.map(value))
   const W = 600, H = 240, L = 40, B = 24, T = 18
   const bw = (W - L) / n
-  const y = (v: number) => H - B - (v / peak) * (H - B - T)
+  // The scale tops out at the rounded maximum, so the top gridline is the plot's top edge, never above it.
   const nice = niceMax(peak)
+  const y = (v: number) => H - B - (v / nice) * (H - B - T)
   const clock = clockOf(m.t0)
   const label = bin === 60_000 ? 'minute' : bin === 3_600_000 ? 'hour' : bin > 3_600_000 ? `${bin / 3_600_000} h` : `${bin / 60_000} min`
   const ticks = Math.max(1, Math.ceil(n / 6))
@@ -167,8 +167,8 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
           {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={y(nice * f)} y2={y(nice * f)} className="grid" /><text x={L - 6} y={y(nice * f) + 4} textAnchor="end">{measure === 'calls' ? count(Math.round(nice * f)) : abbr(nice * f)}</text></g>)}
           {bins.map((b, i) => {
             const x = L + i * bw + 1, w = Math.max(1, bw - 2)
-            const hm = measure === 'calls' ? (b.model / peak) * (H - B - T) : (b.tokens / peak) * (H - B - T)
-            const ht = measure === 'calls' ? (b.tool / peak) * (H - B - T) : 0
+            const hm = measure === 'calls' ? (b.model / nice) * (H - B - T) : (b.tokens / nice) * (H - B - T)
+            const ht = measure === 'calls' ? (b.tool / nice) * (H - B - T) : 0
             const show = (e: PointerEvent<SVGGElement> | FocusEvent<SVGGElement>) => card.show({ rect: e.currentTarget.getBoundingClientRect(), content: (
               <><div className="rp-card-h"><div className="t"><span className="nm">{clock(start + i * bin)}–{clock(start + (i + 1) * bin)} UTC</span></div></div>
                 <div className="rp-card-cols"><section><dl><dt>Model calls</dt><dd>{count(b.model)}</dd><dt>Tool calls</dt><dd>{count(b.tool)}</dd><dt>Failed</dt><dd>{b.failed ? <span className="f">{b.failed} ✕</span> : '0'}</dd><dt>Metered tokens</dt><dd>{b.tokens ? abbr(b.tokens) : 'not recorded'}</dd></dl></section></div></>

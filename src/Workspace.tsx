@@ -129,6 +129,8 @@ function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: 
 // /plays: every play this host has a run of
 // ---------------------------------------------------------------------------------------------------------
 const PLAYS_PAGE = 50
+/** Plays with any run still running (Today counts the same): an older run can be live while the newest has stopped. */
+const runningPlays = (doc: PlaysDocument) => new Set([...(doc.runs ?? []).filter((run) => run.state === 'running').map((run) => run.play), ...doc.plays.filter((play) => play.latestRun?.state === 'running').map((play) => play.id)]).size
 function PlaysPage({ api }: { api: string }) {
   const [params, update] = useSearch()
   const plays = useDocument<PlaysDocument>(`${api}/plays`)
@@ -188,7 +190,7 @@ function PlaysPage({ api }: { api: string }) {
   </details>
   const playsHeader = (
     <PageHeader className="rp-head" title="Plays"
-      actions={plays.data ? <ul className="rp-stats"><li><b>{plays.data.plays.length}</b> plays</li><li><b>{plays.data.plays.filter((p) => p.latestRun?.state === 'running').length}</b> running</li>{plays.data.builtAt && <li title="when the host built this list">built <b>{plays.data.builtAt.slice(11, 16)}</b> UTC</li>}</ul> : undefined} />
+      actions={plays.data ? <ul className="rp-stats"><li><b>{plays.data.plays.length}</b> plays</li><li><b>{runningPlays(plays.data)}</b> running</li>{plays.data.builtAt && <li title="when the host built this list">built <b>{plays.data.builtAt.slice(11, 16)}</b> UTC</li>}</ul> : undefined} />
   )
   const homeTabs = (
     <SegmentedControl aria-label="Research views" className="ws-views" value={home} onValueChange={(value) => update({ view: value === 'plays' ? undefined : value })}

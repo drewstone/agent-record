@@ -10,7 +10,7 @@ type Frame = { id: string; x: number; y: number; w: number; h: number; open: boo
 function layout(m: RunModel, width: number, height: number, open: ReadonlySet<string>, narrow: boolean) {
   const teams = new Set(m.teams.map((t) => t.id))
   const NW = narrow ? Math.min(280, width - 32) : teams.size ? 216 : 272
-  const NH = 58, GAP = 10, COL = NW + (teams.size ? 56 : 72), SMW = 210, SMH = 44, SMG = 8, HEAD = 48
+  const NH = 58, GAP = 10, COL = NW + (teams.size ? 56 : 72), SMW = 240, SMH = 44, SMG = 8, HEAD = 48
   const pos = new Map<string, Box>()
   const frames: Frame[] = []
   const place = (a: Agent, depth: number, y: number): number => {
@@ -45,9 +45,9 @@ function layout(m: RunModel, width: number, height: number, open: ReadonlySet<st
   const maxX = Math.max(0, ...all.map((p) => p.x + p.w)) + 24
   const maxY = Math.max(0, ...all.map((p) => p.y + p.h)) + 24
   const dx = narrow ? 0 : Math.max(0, (width - maxX) / 2)
-  const dy = narrow ? 0 : Math.max(0, (height - maxY) / 2)
-  for (const p of all) { p.x += dx; p.y += dy }
-  return { pos, frames, W: Math.max(width, maxX + dx), H: Math.max(height, maxY + dy), over: maxY > height + 160 || maxX > width + 160 }
+  // The tree starts at the canvas's top; only its width is centred.
+  for (const p of all) p.x += dx
+  return { pos, frames, W: Math.max(width, maxX + dx), H: Math.max(height, maxY), over: maxY > height + 160 || maxX > width + 160 }
 }
 
 /**
@@ -108,15 +108,21 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
   const visible = m.agents.filter((a) => { const p = L.pos.get(a.id); return p && p.y + p.h >= view.top - margin && p.y <= view.top + size.h + margin && p.x + p.w >= view.left - margin && p.x <= view.left + size.w + margin })
   const bounds = () => host.current?.getBoundingClientRect()
   const sel = selected ? m.byId.get(selected) ?? null : null
+  // The legend names the states the nodes show, in their words, and only those this run has.
+  const states = useMemo(() => {
+    const seen = new Map<string, Agent['state']>()
+    for (const a of m.agents) if (!seen.has(a.state.label)) seen.set(a.state.label, a.state)
+    return [...seen.values()]
+  }, [m])
   return (
     <div className="rp-topo">
       <section className="rp-card" aria-label="Spawn tree">
-        <div className="rp-hd">
+        <div className="rp-hd rp-hd-tools">
           <div className="rp-legend">
-            <span className="rp-key"><StateDot tone="ok" />Done</span><span className="rp-key"><StateDot tone="live" />Running</span><span className="rp-key"><StateDot tone="" />Stopped</span><span className="rp-key"><StateDot tone="none" />Never ran</span>
+            {states.map((st) => <span key={st.label} className="rp-key"><StateDot tone={st.tone} />{st.label}</span>)}
           </div>
           <span className="end">
-            {m.teams.length > 0 && (
+            {m.teams.length > 0 && !narrow && (
               <span className="rp-group" role="group" aria-label="Teams">
                 <button type="button" className="rp-btn" onClick={() => setOpen(new Set(m.teams.map((t) => t.id)))}>Expand all</button>
                 <button type="button" className="rp-btn" onClick={() => setOpen(new Set())}>Collapse all</button>
@@ -156,8 +162,9 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
                   onPointerLeave={() => card.hide()}
                   onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 })}
                   onBlur={() => card.hide()}>
-                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{middle(p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name.length <= (p.sm ? 20 : 30) ? a.name : a.short, p.sm ? 20 : 30)}</span><span className="dim">{p.sm ? abbr(a.tokens) : a.state.label}</span></span>
-                  {!p.sm && <span className="r2">{a.tokens === null ? 'no usage recorded' : `${abbr(a.tokens)} tokens · ${count(a.steps.length)} steps${a.failedSteps ? ` · ${a.failedSteps} failed` : ''}`}</span>}
+                  {/* A name too long for its node is cut in the middle, so two agents never read the same. */}
+                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{middle(p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name.length <= (p.sm ? 18 : 24) ? a.name : a.short, p.sm ? 18 : 24)}</span>{p.sm && <span className="dim">{abbr(a.tokens)}</span>}</span>
+                  {!p.sm && <span className="r2">{[a.state.label, a.tokens === null ? 'no usage recorded' : `${abbr(a.tokens)} tokens`, a.tokens === null ? '' : `${count(a.steps.length)} steps`, a.failedSteps ? `${a.failedSteps} failed` : ''].filter(Boolean).join(' · ')}</span>}
                 </button>
               )
             })}

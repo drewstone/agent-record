@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { VirtualList } from './VirtualList.js'
-import { ConversationRowView, isLifecycle } from './ConversationRowView.js'
+import { AgentTimelineColumn } from '@tangle-network/ui/chat'
+import { ConversationRowView, isLifecycle, lastKind, rowItems } from './ConversationRowView.js'
 import type { RecordEvent } from '../record.js'
 import {
   callsOf,
@@ -36,6 +37,8 @@ interface ConversationProps {
   lifecycle?: boolean
   /** The agent can still act: a call without a result is pending, not uncaptured. */
   live?: boolean
+  /** The prompt the agent was started with, when its record holds no prompt of its own (a root's run input). */
+  opening?: { text: string; at: string }
 }
 
 export function Conversation({
@@ -50,6 +53,7 @@ export function Conversation({
   onFlag,
   lifecycle = false,
   live = false,
+  opening,
 }: ConversationProps) {
   // The opening prompt starts open (who asked what comes first) but stays collapsible like every other row.
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => {
@@ -128,10 +132,16 @@ export function Conversation({
       }),
     [index, actor, cutoff, query, category, lifecycle, target],
   )
+  // A root's record starts at its first step; the prompt it was started with opens the chat, as the reader's bubble.
+  const shown = useMemo(() => {
+    if (!opening?.text || query || category !== 'all' || items.some((event) => event.detail.role === 'user')) return items
+    const first = items[0]?.at ?? opening.at
+    return [{ id: `${actor}:opening`, node: actor, at: first < opening.at ? first : opening.at, kind: 'message', category: 'other', label: 'prompt', detail: { role: 'user', publicText: opening.text, promptKind: 'initial' } } as RecordEvent, ...items]
+  }, [items, opening, actor, query, category])
   const rows = useMemo(
     () =>
       collapseHollowTurns(
-        collapsePolls(items, {
+        collapsePolls(shown, {
           callsOf,
           answered: (event, id) => answeredBy(index.results.get(toolKey(event.node, id))),
           keyOf: anchor,
@@ -143,7 +153,7 @@ export function Conversation({
           keyOf: anchor,
         },
       ),
-    [items, index, anchor],
+    [shown, index, anchor],
   )
   // How long each withheld-thinking turn took: the time since this agent's previous event.
   const thinkingSpan = useMemo(() => {
@@ -251,7 +261,10 @@ export function Conversation({
               : 96,
     [],
   )
-  const render = (row: ConversationRow) => <ConversationRowView row={row} context={{ index, cutoff, selected, opened, anchor, opener, setOpen, flagMarks, paired, thinkingSpan, flags, live }} />
+  const context = { index, cutoff, selected, opened, anchor, opener, setOpen, flagMarks, paired, thinkingSpan, flags, live }
+  // Each row's kit items, built once per change: a row's first gap follows the kind of the row above it.
+  const itemsOf = useMemo(() => rows.map((row) => rowItems(row, context)), [rows, opened, cutoff, selected, live, index, thinkingSpan]) // eslint-disable-line react-hooks/exhaustive-deps
+  const render = (row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i ? lastKind(itemsOf[i - 1] ?? []) : undefined} context={context} />
   return (
     <>
       <div
@@ -270,7 +283,9 @@ export function Conversation({
                 : 'Conversation not retained. Its absence does not mean the agent did no work.'}
           </p>
         )}
-        <VirtualList items={rows} keyOf={keyOf} render={render} scroller={scroll} target={target ? rowOf.get(target) : undefined} estimate={estimate} />
+        <AgentTimelineColumn className="ar-chat">
+          <VirtualList items={rows} keyOf={keyOf} render={render} scroller={scroll} target={target ? rowOf.get(target) : undefined} estimate={estimate} />
+        </AgentTimelineColumn>
       </div>
     </>
   )

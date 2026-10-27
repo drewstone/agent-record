@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { SegmentedControl } from '@tangle-network/ui/primitives'
 import { agentParam, type TabProps } from './RunPage.js'
-import { clockSecondsOf, abbr, count, lat, offset } from './model.js'
+import { clockSecondsOf, abbr, count, lat, usd } from './model.js'
 import { agentGroups, agentOptions, agentCost, nameFit, Picker, useRows } from './ui.js'
 
 type Kind = 'all' | 'model' | 'tool' | 'failed'
@@ -39,7 +39,7 @@ export function Traces({ m, doc, agent, route }: TabProps) {
   const options = agentOptions(m, (a) => a.steps.length > 0, (a) => `${count(a.steps.length)} steps`)
   return (
     <section className="rp-card rp-traces" aria-label="Traces">
-      <div className="rp-hd" style={{ paddingLeft: 8 }}>
+      <div className="rp-hd rp-hd-tools" style={{ paddingLeft: 8 }}>
         <Picker label="Agent" options={options} groups={agentGroups(m)} all={{ label: 'All agents', meta: `${count(m.totals.steps)} steps` }} value={who} width={340} placeholder={`Search ${options.length} agents`} style={{ width: 260 }}
           onChange={(id) => route.go('traces', { agent: id ? agentParam(doc.run.id, id) : null })}>
           {who ? m.byId.get(who)?.name : 'All agents'}
@@ -49,14 +49,13 @@ export function Traces({ m, doc, agent, route }: TabProps) {
       </div>
       <div className="rp-trw">
         <div className="rp-tbl" ref={table} role="grid" aria-label="Spans" aria-rowcount={rows.length} onKeyDown={keys}>
-          <div className="rp-tr th" role="row"><span role="columnheader">Start (UTC)</span><span role="columnheader">Offset</span><span role="columnheader">Agent</span><span role="columnheader">Kind</span><span role="columnheader">Name</span><span role="columnheader" className="r">Duration</span><span role="columnheader">Status</span></div>
+          <div className="rp-tr th" role="row"><span role="columnheader">Start<span className="ph-hide"> (UTC)</span></span><span role="columnheader">Agent</span><span role="columnheader">Kind</span><span role="columnheader">Name</span><span role="columnheader" className="r">Duration</span><span role="columnheader">Status</span></div>
           <div style={{ height: win.before }} />
           {rows.slice(win.first, win.last).map(({ agent: a, step: s }, k) => {
             const i = win.first + k
             return (
-              <div key={i} data-i={i} className="rp-tr" role="row" aria-selected={i === at} tabIndex={i === at ? 0 : -1} onClick={() => pick(i)}>
+              <div key={i} data-i={i} className={`rp-tr${s.failed ? ' failed' : ''}`} role="row" aria-selected={i === at} tabIndex={i === at ? 0 : -1} onClick={() => pick(i)}>
                 <span className="m">{clock(s.t)}</span>
-                <span className="m muted">{offset(s.t)}</span>
                 <span title={a.name}>{nameFit(a, 30)}</span>
                 <span className="kind"><i className={s.kind} />{s.kind}</span>
                 <span className="m nm" title={s.kind === 'tool' ? `${s.tool}${s.target ? ` ${s.target}` : ''}` : undefined}>{s.kind === 'model' ? (s.model?.split('/').pop() ?? a.model ?? 'model') : s.kind === 'tool' ? <>{s.tool}{s.target && <span className="muted"> {s.target}</span>}</> : <span className="muted">waiting on a spawned agent</span>}</span>
@@ -72,15 +71,29 @@ export function Traces({ m, doc, agent, route }: TabProps) {
           <div className="rp-scroll">
             {row ? (
               <>
-                <pre className="rp-json">{JSON.stringify({
-                  run: doc.run.id, agent: row.agent.name, agentId: row.agent.id, kind: row.step.kind,
-                  ...(row.step.kind === 'tool' ? { tool: row.step.tool } : row.step.kind === 'model' ? { model: row.step.model ?? row.agent.node.model } : {}),
-                  ...(row.step.target ? { target: row.step.target } : {}),
-                  startedAt: new Date(m.t0 + row.step.t).toISOString(), durationMs: row.step.d, failed: row.step.failed,
-                  ...(row.step.latency !== null ? { latencyMs: row.step.latency } : {}),
-                  tokens: row.step.tokens, ...(row.step.usd !== null ? { billedUsd: row.step.usd } : {}),
-                }, null, 2)}</pre>
-                <h5 className="rp-subh">{row.agent.name} · whole run</h5>
+                {/* The selected span's own facts first; its agent's totals below, under the agent's name. */}
+                <h5 className="rp-subh">This span</h5>
+                <dl className="rp-kv">
+                  <dt>Agent</dt><dd>{row.agent.name}</dd>
+                  <dt>{row.step.kind === 'tool' ? 'Tool' : row.step.kind === 'model' ? 'Model' : 'Kind'}</dt><dd>{row.step.kind === 'tool' ? `${row.step.tool ?? 'tool'}${row.step.target ? ` ${row.step.target}` : ''}` : row.step.kind === 'model' ? (row.step.model ?? row.agent.node.model ?? 'model') : 'waiting on a spawned agent'}</dd>
+                  <dt>Started</dt><dd>{new Date(m.t0 + row.step.t).toISOString().slice(0, 19).replace('T', ' ')} UTC</dd>
+                  <dt>Duration</dt><dd>{lat(row.step.d)}{row.step.latency !== null ? ` · first token ${lat(row.step.latency)}` : ''}</dd>
+                  {row.step.tokens && <><dt>Tokens</dt><dd>{abbr(row.step.tokens.input)} in · {abbr(row.step.tokens.output)} out · {abbr(row.step.tokens.cacheRead)} cached</dd></>}
+                  {row.step.usd !== null && <><dt>Cost</dt><dd>{usd(row.step.usd)}</dd></>}
+                  <dt>Status</dt><dd>{row.step.failed ? <span className="f">✕ failed</span> : 'ok'}</dd>
+                </dl>
+                <details className="rp-raw">
+                  <summary>Raw span</summary>
+                  <pre className="rp-json">{JSON.stringify({
+                    agent: row.agent.name, kind: row.step.kind,
+                    ...(row.step.kind === 'tool' ? { tool: row.step.tool } : row.step.kind === 'model' ? { model: row.step.model ?? row.agent.node.model } : {}),
+                    ...(row.step.target ? { target: row.step.target } : {}),
+                    startedAt: new Date(m.t0 + row.step.t).toISOString(), durationMs: row.step.d, failed: row.step.failed,
+                    ...(row.step.latency !== null ? { latencyMs: row.step.latency } : {}),
+                    tokens: row.step.tokens, ...(row.step.usd !== null ? { billedUsd: row.step.usd } : {}),
+                  }, null, 2)}</pre>
+                </details>
+                <h5 className="rp-subh">{row.agent.name}, whole run</h5>
                 <dl className="rp-kv">
                   <dt>Tokens</dt><dd>{abbr(row.agent.tokens)}{row.agent.byClass ? ` · ${abbr(row.agent.byClass.input)} in · ${abbr(row.agent.byClass.output)} out · ${abbr(row.agent.byClass.cacheRead)} cached` : ''}</dd>
                   <dt>Cost</dt><dd>{agentCost(row.agent)}</dd>
