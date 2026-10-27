@@ -195,16 +195,16 @@ function SandboxesView({ doc, writer }: { doc: SandboxesDoc; writer: boolean }) 
       </div>
       <section aria-label="Hosts">
         <table className="wp-table">
-          <thead><tr><th>Host</th><th>State</th><th>Slots used</th><th>CPU</th><th className="wp-r">Per month</th>{writer && <th />}</tr></thead>
+          <thead><tr><th>Host</th><th>State</th><th>Slots used</th><th>CPU</th><th className="wp-r">Per month</th></tr></thead>
           <tbody>
             {doc.hosts.map((h) => (
               <tr key={h.id} data-state={h.state}>
-                <td><Tip text={`${h.id} · ${h.type}${h.heldBy && h.heldBy !== '—' ? ` · parked boxes held by ${h.heldBy}` : ''}`}><b>{h.name}</b></Tip> <span className="wp-muted">{h.type}{h.autoscaled ? '' : ' · fixed'}</span></td>
-                <td className={h.state === 'idle' ? 'wp-warn' : 'wp-muted'}>{h.state}</td>
+                <td><Tip text={`${h.id} · ${h.type}${h.heldBy && h.heldBy !== '—' ? ` · parked boxes held by ${h.heldBy}` : ''}`}><b>{h.name}</b></Tip> <span className="wp-muted">{h.type}</span>{!h.autoscaled && <span className="wp-k"> · fixed</span>}</td>
+                {/* Retire sits under the idle state it acts on: a column of its own pushed phones 59 px past the viewport. */}
+                <td className={h.state === 'idle' ? 'wp-warn' : 'wp-muted'}>{h.state}{writer && h.retire && h.state === 'idle' && <>{' '}<button type="button" onClick={() => setRetiring(h.id)}>Retire</button></>}</td>
                 <td><Tip text={`${h.running ?? '—'} running and ${h.parked ?? '—'} parked of ${h.slots ?? '—'} slots`}><Meter used={(h.running ?? 0) + (h.parked ?? 0)} total={h.slots} tone="var(--ws-accent)" text={`${h.running ?? '—'} running · ${h.parked ?? '—'} parked of ${h.slots ?? '—'}`} /></Tip></td>
                 <td><Tip text={`CPU ${pct(h.cpu)} at the host scan`}><Meter used={h.cpu} total={1} tone="var(--ws-accent)" text={pct(h.cpu)} /></Tip></td>
                 <td className="wp-r wp-num">{usd(h.monthlyUsd)}</td>
-                {writer && <td>{h.retire && h.state === 'idle' && <button type="button" onClick={() => setRetiring(h.id)}>Retire</button>}</td>}
               </tr>
             ))}
           </tbody>

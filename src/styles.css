@@ -3339,7 +3339,7 @@
 .ar-ws .wp h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
 .ar-ws .wp h2 .wp-muted { font-size: 14px; font-weight: 400; }
 .ar-ws .wp-muted { color: var(--ar-fg-muted); }
-.ar-ws .wp-warn { color: var(--ar-c-warn, #f5a524); }
+.ar-ws .wp-warn { color: var(--ar-c-run); }
 .ar-ws .wp-num { font-variant-numeric: tabular-nums; color: var(--ar-fg-muted); text-align: right; }
 .ar-ws .wp-k { font-size: 12px; color: var(--ar-fg-muted); }
 .ar-ws .wp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
