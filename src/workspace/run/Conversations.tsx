@@ -3,7 +3,7 @@ import { LiveTranscript } from '../LiveTranscript.js'
 import { AgentConversation, useRecordPart } from '../record-part.js'
 import type { TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, type RunModel, elapsed } from './model.js'
-import { StateDot, Hilite, Icon, useRows } from './ui.js'
+import { StateDot, Hilite, Icon, middle, useRows } from './ui.js'
 
 type Row = { kind: 'team'; id: string; label: string; n: number } | { kind: 'agent'; a: Agent }
 
@@ -53,7 +53,7 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent }: TabProps) 
           ) : (
             <button key={r.a.id} type="button" role="listitem" aria-current={r.a.id === selected?.id} style={{ height: ROW }} onClick={() => selectAgent(r.a.id)}>
               <StateDot tone={r.a.state.tone} />
-              <span className="nm" title={r.a.name}><Hilite text={r.a.name} query={query} /></span>
+              <span className="nm" title={r.a.name}><Hilite text={query.trim() ? r.a.name : middle(r.a.name, 30)} query={query} /></span>
               <span className="sb">{r.a.steps.length} steps{r.a.first !== null ? ` · ${clock(r.a.first)}–${r.a.state.tone === 'live' ? 'now' : clock(r.a.last ?? r.a.first)}` : ''}</span>
               <span className="n">{abbr(r.a.tokens)}</span>
             </button>

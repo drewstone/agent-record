@@ -2,6 +2,7 @@ import { type DotGroup, ENDING_COLORS, ENDING_ORDER, type RateRow, rankedRates, 
 import { DOT_MAP_CATEGORIES, DotMap, type DotMapLabel, type DotMapRect, FigureView } from '@tangle-network/charts/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { dataStatus, statusOf, useDocument } from './data.js'
+import { Picker } from './run/ui.js'
 
 /**
  * The fleet explorer (J5, J3): every Discovery run as one dot, packed in a rectangle per play, or every agent the Lab
@@ -341,14 +342,13 @@ export function ExplorePage({ api }: { api: string }) {
             <button type="button" aria-pressed={layout === 'runs'} onClick={() => { setLayout('runs'); setLens('ending'); setNamed(null); setOnly(null); setSelected(null) }}>Runs by play</button>
             <button type="button" aria-pressed={layout === 'agents'} disabled={!data.semantic} title={data.semantic ? undefined : 'The Lab has not built a semantic map of agents'} onClick={() => { setLayout('agents'); setLens('cluster'); setNamed(null); setOnly(null); setSelected(null) }}>Agents by behaviour</button>
           </div>
-          <label className="explore-lens">
+          <span className="explore-lens">
             <span className="faint">Colour</span>
-            <select value={lens} onChange={(event) => { setLens(event.target.value as Lens); setNamed(null); setOnly(null) }}>
-              {lensOptions.map((value) => (
-                <option key={value} value={value}>{lensTitle(value)}</option>
-              ))}
-            </select>
-          </label>
+            <Picker label="Colour" value={lens} options={lensOptions.map((value) => ({ id: value, label: lensTitle(value) }))} width={240} placeholder="Colour by"
+              onChange={(value) => { if (!value) return; setLens(value as Lens); setNamed(null); setOnly(null) }}>
+              {lensTitle(lens)}
+            </Picker>
+          </span>
           <input type="search" className="explore-search" placeholder="Find a run, play or label" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Find a run, play or label" />
           {matches !== null && <span className="faint">{fmtInt(matches)} match</span>}
         </div>

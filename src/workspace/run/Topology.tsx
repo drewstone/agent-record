@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { agentParam, type TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, count, lat, type RunModel } from './model.js'
-import { AgentCard, agentGroups, agentOptions, Bar, agentCost, StateDot, Icon, Picker, TeamCard, useCard, useNarrow } from './ui.js'
+import { AgentCard, agentGroups, agentOptions, Bar, agentCost, StateDot, Icon, middle, Picker, TeamCard, useCard, useNarrow } from './ui.js'
 
 type Box = { x: number; y: number; w: number; h: number; sm?: boolean; team?: string }
 type Frame = { id: string; x: number; y: number; w: number; h: number; open: boolean }
@@ -156,7 +156,7 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
                   onPointerLeave={() => card.hide()}
                   onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 })}
                   onBlur={() => card.hide()}>
-                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm">{p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name}</span><span className="dim">{p.sm ? abbr(a.tokens) : a.state.label}</span></span>
+                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{middle(p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name, p.sm ? 20 : 30)}</span><span className="dim">{p.sm ? abbr(a.tokens) : a.state.label}</span></span>
                   {!p.sm && <span className="r2">{a.tokens === null ? 'no usage recorded' : `${abbr(a.tokens)} tokens · ${count(a.steps.length)} steps${a.failedSteps ? ` · ${a.failedSteps} failed` : ''}`}</span>}
                 </button>
               )

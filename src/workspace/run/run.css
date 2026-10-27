@@ -302,6 +302,7 @@
 .rp .rp-lt td { padding: 4px 0; text-align: right; font-variant-numeric: tabular-nums; border-top: 1px solid var(--rp-line); }
 .rp .rp-lt td:first-child { font-variant-numeric: normal; }
 .rp .rp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.rp .rp-tbars.four { margin-bottom: 18px; }
 .rp .rp-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: var(--radius-tag); background: var(--rp-raised); color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); cursor: pointer; }
 
 /* Conversations */
@@ -373,7 +374,7 @@
 .rp .rp-hm-wrap { flex: 1; min-height: 0; overflow: auto; margin: 0 -16px; padding: 0 16px; }
 .rp .rp-hm { display: grid; align-items: center; }
 .rp .rp-hm .ch { position: sticky; top: 0; z-index: 2; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 2px 6px; background: hsl(var(--hsl-card)); color: hsl(var(--hsl-muted-foreground)); text-align: center; font-size: 13px; line-height: 16px; overflow: hidden; }
-.rp .rp-hm .ch span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; }
+.rp .rp-hm .ch span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: normal; word-break: normal; }
 .rp .rp-hm .ch.c0 { left: 0; z-index: 3; }
 .rp .rp-hm .ch.tot { text-align: left; padding-left: 8px; }
 .rp .rp-hm .gap { grid-column: 1 / -1; }
@@ -397,7 +398,7 @@
 .rp .rp-cpm g:hover .hit, .rp .rp-cpm g:focus .hit { fill: var(--ix-hover-bg); }
 .rp .rp-cpm .xf { fill: var(--surface-danger-text); font-weight: 600; }
 .rp .rp-at-wrap { flex: 1; min-height: 0; overflow: auto; }
-.rp .rp-at { display: grid; grid-template-columns: minmax(104px, 1fr) 128px 52px 44px 52px 64px 56px 56px; align-items: center; height: 28px; padding: 0 12px 0 16px; }
+.rp .rp-at { display: grid; grid-template-columns: minmax(104px, 1fr) 124px 52px 44px 52px 64px 60px 56px; align-items: center; height: 28px; padding: 0 12px 0 16px; }
 .rp .rp-at .r, .rp .rp-at .tk { font-variant-numeric: tabular-nums; }
 .rp .rp-at > span { padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rp .rp-at .r { text-align: right; }
@@ -539,7 +540,7 @@
 .rp .td2-moves .pl { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp .td2-moves .tx b { font-weight: 600; }
 .rp .td2-moves .tx a { color: var(--accent-text); }
-.rp .td2-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--radius-pill); font: 500 13px/18px var(--font-sans); white-space: nowrap; background: var(--rp-raised); color: hsl(var(--hsl-muted-foreground)); }
+.rp .td2-badge { justify-self: start; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--radius-pill); font: 500 13px/18px var(--font-sans); white-space: nowrap; background: var(--rp-raised); color: hsl(var(--hsl-muted-foreground)); }
 .rp .td2-badge.ok { background: var(--surface-success-bg); color: var(--surface-success-text); }
 .rp .td2-badge.warn { background: var(--surface-warning-bg); color: var(--surface-warning-text); }
 .rp .td2-board .rp-hd .end { flex: 1; justify-content: flex-end; }

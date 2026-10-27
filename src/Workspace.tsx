@@ -392,13 +392,11 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 <PlayBarTable play={doc} />
                 <section className="ws-section play-input" data-section="input">
                   <div className="input-run-picker">
-                    <select aria-label="Run" value={selectedRun ?? doc.input?.runId ?? ''} onChange={(event) => update({ run: event.target.value === doc.input?.runId ? undefined : event.target.value })}>
-                      {doc.runs.map((run) => (
-                        <option key={run.id} value={run.id}>
-                          {shortRun(doc.id, run.id)} · {when(run.startedAt)}{run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <Picker label="Run" value={selectedRun ?? doc.input?.runId ?? null} width={320} placeholder={`Search ${doc.runs.length} runs`}
+                      options={doc.runs.map((run) => ({ id: run.id, label: shortRun(doc.id, run.id), meta: `${when(run.startedAt)}${run.inputDigest && latestDigest && run.inputDigest !== latestDigest ? ' · different input' : ''}` }))}
+                      onChange={(value) => update({ run: !value || value === doc.input?.runId ? undefined : value })}>
+                      {shortRun(doc.id, selectedRun ?? doc.input?.runId ?? '')}
+                    </Picker>
                   </div>
                   <Status loading={runDoc.loading} error={runDoc.error}>
                     <InputView compact input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} more={<>

@@ -2,7 +2,7 @@ import { type FocusEvent, type PointerEvent, type ReactNode, useMemo, useRef, us
 import { SegmentedControl } from '@tangle-network/ui/primitives'
 import type { TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, count, lat, mergeTools, percentile, type RunModel, elapsed, usd } from './model.js'
-import { AgentCard, agentGroups, agentOptions, StateDot, Picker, useCard, useRows } from './ui.js'
+import { AgentCard, agentGroups, agentOptions, middle, StateDot, Picker, useCard, useRows } from './ui.js'
 
 /**
  * Where time, tokens and failures went. One multi-select agent picker scopes every chart; each chart keeps its numbers
@@ -102,7 +102,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
               const other = a.tools.filter((t) => !cols.some((c) => c.name === t.name))
               const otherCalls = other.reduce((s, t) => s + t.calls, 0), otherFails = other.reduce((s, t) => s + t.failures, 0)
               return [
-                <span key={`${a.id}:n`} className="rh" title={a.name}><StateDot tone={a.state.tone} /><span className="nm">{a.name}</span></span>,
+                <span key={`${a.id}:n`} className="rh" title={a.name}><StateDot tone={a.state.tone} /><span className="nm">{middle(a.name, 22)}</span></span>,
                 ...cols.map((c) => {
                   const t = has.get(c.name)
                   const n = t?.calls ?? 0
@@ -155,7 +155,7 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const y = (v: number) => H - B - (v / peak) * (H - B - T)
   const nice = niceMax(peak)
   const clock = clockOf(m.t0)
-  const label = bin === 60_000 ? 'minute' : bin >= 3_600_000 ? `${bin / 3_600_000} h` : `${bin / 60_000} min`
+  const label = bin === 60_000 ? 'minute' : bin === 3_600_000 ? 'hour' : bin > 3_600_000 ? `${bin / 3_600_000} h` : `${bin / 60_000} min`
   const ticks = Math.max(1, Math.ceil(n / 6))
   return (
     <section className="rp-card w5" aria-label={measure === 'calls' ? 'Calls over time' : 'Tokens over time'}>
@@ -220,7 +220,7 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
           <div key={a.id} className="rp-at" role="row" tabIndex={0}
             onPointerEnter={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onPointerLeave={() => card.hide()}
             onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onBlur={() => card.hide()}>
-            <span className="nm" role="cell" title={a.name}>{a.name}</span>
+            <span className="nm" role="cell" title={a.name}>{middle(a.name, 20)}</span>
             <span className="tk" role="cell"><b style={{ width: `${((a.tokens ?? 0) / maxTok) * 60}px` }} /><span>{abbr(a.tokens)}</span></span>
             <span className="r" role="cell">{count(a.modelCalls)}</span>
             <span className="r" role="cell">{count(a.toolCalls)}</span>
@@ -335,7 +335,7 @@ function Failures({ agents, tools }: { m: RunModel; agents: Agent[]; tools: Retu
         {!byTool.length && !byAgent.length ? <p className="ws-status">No step failed.</p> : (
           <>
             {byTool.length > 0 && <><h5>By tool · {byTool.length}</h5>{byTool.slice(0, 6).map((t) => share(t.name.replace(/^agent-runtime-coordination_/, ''), t.failures, t.calls, t.name, `${t.name}: ${t.failures} of ${t.calls} calls failed`))}</>}
-            {byAgent.length > 0 && <><h5>By agent · {byAgent.length}</h5>{byAgent.slice(0, 6).map((a) => share(a.name, a.failedSteps, a.steps.length, a.id, `${a.name}: ${a.failedSteps} of ${a.steps.length} steps failed`))}</>}
+            {byAgent.length > 0 && <><h5>By agent · {byAgent.length}</h5>{byAgent.slice(0, 6).map((a) => share(middle(a.name, 22), a.failedSteps, a.steps.length, a.id, `${a.name}: ${a.failedSteps} of ${a.steps.length} steps failed`))}</>}
           </>
         )}
       </div>

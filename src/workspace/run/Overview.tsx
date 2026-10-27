@@ -160,7 +160,7 @@ function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, nu
           <span />
           <div className="rp-strip-ax">
             <span className="first" style={{ left: 0 }}>{clock(0)}</span>
-            {ticks.map((h) => <span key={h} style={{ left: X(h * 3_600_000) }}>{h}h</span>)}
+            {ticks.map((h) => <span key={h} className={h % 4 ? 'ph-hide' : undefined} style={{ left: X(h * 3_600_000) }}>{h}h</span>)}
             <span className="last" style={{ left: '100%' }}>{clock(m.duration)}</span>
           </div>
           <span />
