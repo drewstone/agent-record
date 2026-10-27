@@ -111,7 +111,7 @@ function Summary({ m, doc, route }: TabProps) {
         <h3>Check</h3>
         <div className="v">{verdict === 'Passed' ? <StateDot tone="ok" /> : verdict === 'Failed' ? <StateDot tone="fail" /> : <StateDot tone="none" />}{verdict}</div>
         <div className="sub">
-          {check?.counts?.checks ? `Checker ${check.checkerNames?.[0]?.label ?? ''} ran ${check.counts.checks} times; latest: ${clause(check.latest?.line)}. ` : 'No check has run. '}
+          {check?.counts?.checks ? `Checker ${check.checkerNames?.[0]?.label ?? ''} ran ${check.counts.checks} times; the latest line is in ` : 'No check has run. '}
           <a href={route.href('checks')}>Checks</a>
         </div>
       </div>
