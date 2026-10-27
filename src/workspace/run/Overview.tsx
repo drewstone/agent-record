@@ -137,7 +137,7 @@ function Summary({ m, doc, route }: TabProps) {
 function TimeCard({ m, work, working, failed }: { m: RunModel; work: [number, number][]; working: number; failed: number }) {
   const X = (t: number) => `${Math.max(0, Math.min(100, (t / Math.max(1, m.duration)) * 100))}%`
   const hours = m.duration > 3_600_000 ? Math.floor(m.duration / 3_600_000) : 0
-  const ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => (hours <= 10 || h % Math.ceil(hours / 8) === 0) && h * 3_600_000 < m.duration * 0.92) : []
+  const step = hours <= 10 ? 1 : Math.ceil(hours / 8), ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => h % step === 0 && (h + step) * 3_600_000 <= m.duration) : []
   const restarters = m.tree.filter((a) => a.restarts.length || a.state.tone === 'ok').slice(0, 14)
   const clock = clockOf(m.t0)
   return (
