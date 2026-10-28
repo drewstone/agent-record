@@ -1246,11 +1246,6 @@
   /* A lane key is painted by its background, which forced colours would erase. */
   .ar-ws .vg-swatch { forced-color-adjust: none; }
 }
-/* An inline status mark a reader points at (a link, a button, or a span with a hover title) gets a 24 px target from a
-   transparent box centred on it, so small marks such as the overview chips and verdict ticks keep their layout. */
-.ar-ws :is(a, button, span[title])[data-status] { position: relative; }
-.ar-ws :is(a, button, span[title])[data-status]::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: max(100%, 24px); transform: translate(-50%, -50%); }
-
 /* spend */
 .ar-ws .spend-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
 .ar-ws .spend-chip { display: inline-flex; gap: 8px; align-items: baseline; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--ar-border); color: var(--ar-fg-muted); }
