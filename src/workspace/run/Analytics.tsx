@@ -36,20 +36,20 @@ export function Analytics({ m }: TabProps) {
 function Kpis({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: ReturnType<typeof mergeTools> }) {
   const sum = (pick: (a: Agent) => number | null) => agents.reduce((t, a) => t + (pick(a) ?? 0), 0)
   const all = agents.length === m.agents.length
-  const tokens = all && m.totals.tokens !== null ? m.totals.tokens : sum((a) => a.tokens)
+  const tokens = all ? m.totals.tokens : agents.every(a => a.tokens !== null) ? sum(a => a.tokens) : null
   const by = agents.reduce((t, a) => (a.byClass ? { input: t.input + a.byClass.input, output: t.output + a.byClass.output, cacheRead: t.cacheRead + a.byClass.cacheRead } : t), { input: 0, output: 0, cacheRead: 0 })
-  const model = sum((a) => a.modelCalls), tool = sum((a) => a.toolCalls), toolFail = sum((a) => a.toolFailures)
-  const billed = agents.some((a) => a.billedUsd !== null) ? sum((a) => a.billedUsd) : null
-  const list = agents.some((a) => a.listUsd !== null) ? sum((a) => a.listUsd) : null
+  const model = agents.every(a => a.modelCalls !== null) ? sum(a => a.modelCalls) : null, tool = agents.every(a => a.toolCalls !== null) ? sum(a => a.toolCalls) : null, toolFail = sum((a) => a.toolFailures)
+  const billed = all ? m.totals.billedUsd : agents.every(a => a.billedUsd !== null) ? sum(a => a.billedUsd) : null
+  const list = all ? m.totals.listUsd : agents.every(a => a.listUsd !== null) ? sum(a => a.listUsd) : null
   const items: [string, string][] = [
     [abbr(tokens), by.input + by.output + by.cacheRead ? `in ${abbr(by.input)} · out ${abbr(by.output)} · cached ${abbr(by.cacheRead)}` : 'tokens'],
     [count(model), 'model calls'],
     [count(tool), `tool calls · ${tools.length} tools`],
-    [count(toolFail), `tool failures · ${tool ? ((toolFail / tool) * 100).toFixed(1) : '0'}%`],
+    [count(toolFail), `tool failures · ${tool === null ? '—' : tool ? ((toolFail / tool) * 100).toFixed(1) : '0'}%`],
     [count(sum((a) => a.retries)), 'retried steps'],
     [count(sum((a) => a.restarts.length)), 'restarts'],
     [elapsed(sum((a) => a.busy)), `busy of ${elapsed(m.duration)}`],
-    [list !== null ? usd(list) : usd(billed), list !== null ? `list · ${usd(billed ?? 0)} billed` : 'billed'],
+    [list !== null ? usd(list) : usd(billed), list !== null ? `list · ${usd(billed)} billed` : 'billed'],
   ]
   return <section className="rp-card rp-kpis" aria-label="Totals">{items.map(([v, l]) => <div key={l}><b>{v}</b><span title={l}>{l}</span></div>)}</section>
 }
@@ -84,8 +84,8 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   const [wrap, { w: width }] = useSize()
   const [all, setAll] = useState(false)
   const rows = useMemo(() => {
-    const withTools = agents.filter((a) => a.toolCalls > 0)
-    const key = sort === 'calls' ? (a: Agent) => -a.toolCalls : sort === 'fails' ? (a: Agent) => -a.toolFailures * 1e6 - a.toolCalls : null
+    const withTools = agents.filter((a) => (a.toolCalls ?? 0) > 0)
+    const key = sort === 'calls' ? (a: Agent) => -(a.toolCalls ?? 0) : sort === 'fails' ? (a: Agent) => -a.toolFailures * 1e6 - (a.toolCalls ?? 0) : null
     return key ? [...withTools].sort((a, b) => key(a) - key(b)) : [...withTools].sort((a, b) => a.name.localeCompare(b.name))
   }, [agents, sort])
   const name = narrow ? 120 : HM_NAME
@@ -96,7 +96,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   const cols = tools.slice(0, fit)
   const rest = tools.slice(fit)
   const max = Math.max(1, ...rows.flatMap((a) => a.tools.map((t) => t.calls)))
-  const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls))
+  const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls ?? 0))
   const shade = (n: number) => (n ? `color-mix(in oklab, var(--rp-tool) ${Math.round(14 + 86 * Math.sqrt(n / max))}%, hsl(var(--hsl-card)))` : undefined)
   const ink = (n: number) => (n && Math.sqrt(n / max) > 0.55 ? 'on' : '')
   const grid = { gridTemplateColumns: `minmax(${name}px, 2fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(${narrow ? 64 : HM_COL}px, 1fr)) ${HM_TOTAL}px` }
@@ -106,7 +106,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
         <div className="rp-card-h"><div className="t"><StateDot tone={a.state.tone} /><span className="nm">{a.name}</span><span className="v">{label}</span></div><div className="s">{t ? `${count(t.calls)} calls · ${elapsed(t.ms)} in all` : 'no calls'}</div></div>
         {t && <div className="rp-card-cols"><section><dl>
           <dt>Calls</dt><dd>{count(t.calls)}</dd><dt>Failed</dt><dd>{t.failures ? <span className="f">{t.failures} ✕ · {((t.failures / t.calls) * 100).toFixed(0)}%</span> : '0'}</dd>
-          <dt>p50 · p90 · p99</dt><dd>{lat(t.p50)} · {lat(t.p90)} · {lat(t.p99)}</dd><dt>Share of its tool calls</dt><dd>{((t.calls / Math.max(1, a.toolCalls)) * 100).toFixed(0)}%</dd>
+          <dt>p50 · p90 · p99</dt><dd>{lat(t.p50)} · {lat(t.p90)} · {lat(t.p99)}</dd><dt>Share of its tool calls</dt><dd>{((t.calls / Math.max(1, a.toolCalls ?? 0)) * 100).toFixed(0)}%</dd>
         </dl></section></div>}
       </>
     ) })
@@ -138,13 +138,13 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
                   )
                 }),
                 ...(rest.length ? [<span key={`${a.id}:rest`} className={`c${otherCalls ? '' : ' z'} ${ink(otherCalls)}`} style={{ background: shade(otherCalls) }}>{otherCalls ? count(otherCalls) : ''}{otherFails ? <span className="xf">✕{otherFails}</span> : null}</span>] : []),
-                <span key={`${a.id}:t`} className="tot"><b style={{ width: `${(a.toolCalls / maxTotal) * 56}px` }} />{count(a.toolCalls)}</span>,
+                <span key={`${a.id}:t`} className="tot"><b style={{ width: `${((a.toolCalls ?? 0) / maxTotal) * 56}px` }} />{count(a.toolCalls)}</span>,
               ]
             })}
           </div>
         </div>
         <ShowAll n={rows.length} all={all} set={setAll} />
-        <div className="rp-hm-foot"><span className="ramp"><span>1</span><i /><span>{count(max)}</span></span><span><span className="x">✕</span> failed calls in the cell</span>{agents.length > rows.length && <span className="end">{agents.length - rows.length} agents made no tool calls</span>}</div>
+        <div className="rp-hm-foot"><span className="ramp"><span>1</span><i /><span>{count(max)}</span></span><span><span className="x">✕</span> failed calls in the cell</span>{agents.some(a => a.toolCalls === 0) && <span className="end">{agents.filter(a => a.toolCalls === 0).length} agents made no tool calls</span>}</div>
       </div>
     </section>
   )
@@ -233,7 +233,7 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const [sort, setSort] = useState<{ k: SortKey; d: 1 | -1 }>({ k: 'tokens', d: -1 })
   const card = useCard()
   const [all, setAll] = useState(false)
-  const value = (a: Agent): number | string => ({ tokens: a.tokens ?? -1, model: a.modelCalls, tool: a.toolCalls, failed: a.failedSteps, restarts: a.restarts.length, spawns: a.children.length, cost: a.listUsd ?? a.billedUsd ?? -1, name: a.name })[sort.k]
+  const value = (a: Agent): number | string => ({ tokens: a.tokens ?? -1, model: a.modelCalls ?? -1, tool: a.toolCalls ?? -1, failed: a.failedSteps, restarts: a.restarts.length, spawns: a.children.length, cost: a.listUsd ?? a.billedUsd ?? -1, name: a.name })[sort.k]
   const rows = useMemo(() => [...agents].sort((a, b) => { const x = value(a), y = value(b); return (typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number)) * sort.d }), [agents, sort]) // eslint-disable-line react-hooks/exhaustive-deps
   const maxTok = Math.max(1, ...agents.map((a) => a.tokens ?? 0))
   // A count column shows only when some agent has one: 26a has no restarts, so no empty Restarts column takes the width.

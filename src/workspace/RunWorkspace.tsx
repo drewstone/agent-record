@@ -12,9 +12,13 @@ export interface WorkspaceNode {
   assignment: string | null
   harness: string | null
   model: string | null
-  status: 'running' | 'waiting' | 'succeeded' | 'failed' | 'stopped' | 'idle' | 'unknown'
+  status: 'running' | 'waiting' | 'needs-you' | 'succeeded' | 'failed' | 'stopped' | 'idle' | 'unknown'
   turn: string | null
+  failureReason?: string | null
   lastAt: string | null
+  lastActivityAt?: number | null
+  medianEventGapMs?: number | null
+  activityEvents?: { id: string; label: string; at: number }[] | null
   /** From the spawn journal: driver turns, worker restarts (ISO), and its "<label>:" commits in the run's deliverables. */
   turns?: number | null
   restarts?: string[]

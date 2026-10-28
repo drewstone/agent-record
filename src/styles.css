@@ -1028,8 +1028,8 @@
 .agent-record .rr-markdown table { width:100%;border-collapse:collapse;font-size:var(--ar-text-s); }
 .agent-record .rr-markdown th,.agent-record .rr-markdown td { padding:8px;text-align:left;border:1px solid var(--ar-border); }
 .agent-record .rr-media-reference { font-size:var(--ar-text-s);color:var(--ar-fg-muted); }
-.agent-record [data-reduced-motion] *, .agent-record [data-reduced-motion] *::before, .agent-record [data-reduced-motion] *::after { animation:none !important;transition:none !important;scroll-behavior:auto !important; }
-@media(prefers-reduced-motion:reduce) { .agent-record *, .agent-record *::before, .agent-record *::after { animation:none !important;transition:none !important;scroll-behavior:auto !important; } }
+.agent-record [data-reduced-motion] *, .agent-record [data-reduced-motion] *::before, .agent-record [data-reduced-motion] *::after { transition:none !important;scroll-behavior:auto !important; }
+@media(prefers-reduced-motion:reduce) { .agent-record *, .agent-record *::before, .agent-record *::after { transition:none !important;scroll-behavior:auto !important; } }
 @media print { .agent-record.research-report { background:white;color:black; } .agent-record .rr-print { display:block; } }
 @container agent-record (max-width:500px) { .agent-record .replay-settings { grid-template-columns:1fr 1fr; } .agent-record .replay-settings .ar-select:last-of-type { grid-column:1/-1; } }
 
@@ -1246,10 +1246,10 @@
   /* A lane key is painted by its background, which forced colours would erase. */
   .ar-ws .vg-swatch { forced-color-adjust: none; }
 }
-/* A status mark a reader points at (a link, a button, or one with a hover title) gets a 24 px target from a
+/* An inline status mark a reader points at (a link, a button, or a span with a hover title) gets a 24 px target from a
    transparent box centred on it, so small marks such as the overview chips and verdict ticks keep their layout. */
-.ar-ws :is(a, button, [title])[data-status] { position: relative; }
-.ar-ws :is(a, button, [title])[data-status]::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: max(100%, 24px); transform: translate(-50%, -50%); }
+.ar-ws :is(a, button, span[title])[data-status] { position: relative; }
+.ar-ws :is(a, button, span[title])[data-status]::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: max(100%, 24px); transform: translate(-50%, -50%); }
 
 /* spend */
 .ar-ws .spend-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
@@ -2847,7 +2847,6 @@
 /* Under the journey, the old run page keeps only its tabs into what the journey does not show (findings, spend,
    conversations, outputs): its "Now" tab, "Why it stopped" and the Now section repeat the ladder and sentence above. */
 
-@keyframes rj-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* Today (Today.tsx): one focal line, color only for state. */
 
@@ -3029,7 +3028,7 @@
 }
 /* A host's open issues are chips: a quiet tint each, an alarm in the danger tint. */
 .ar-ws .wp { --wp-ink: hsl(var(--hsl-foreground) / 0.55); }
-.ar-ws .wp-alarm { display: block; padding: 8px 12px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ar-c-fail) 9%, transparent); box-shadow: inset 2px 0 0 var(--ar-c-fail); color: var(--ar-fg); font-size: var(--ar-text-s); line-height: 20px; }
+.ar-ws .wp-alarm { display: block; overflow-wrap: anywhere; padding: 8px 12px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ar-c-fail) 9%, transparent); box-shadow: inset 2px 0 0 var(--ar-c-fail); color: var(--ar-fg); font-size: var(--ar-text-s); line-height: 20px; }
 .ar-ws .wp-alarm b { color: var(--ar-c-fail); font-weight: 600; }
 .ar-ws .wp-watch { display: block; margin: 0; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
 .ar-ws .wp-seats > summary b { color: var(--ar-fg); font-weight: 600; }
@@ -3173,11 +3172,4 @@
 .ws-live > header h1 { margin: 0 auto 0 0; }
 .ws-live > header label { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ws-live select { max-width: min(50vw, 480px); }
-.ws-live-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; align-items: start; }
-.ws-live-split > section { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.ws-live-split [aria-label="Graph layout"] { display: flex; gap: 2px; align-self: flex-end; padding: 2px; border: 1px solid var(--ar-border); border-radius: 8px; background: var(--ar-bg-alt); }
-.ws-live-split [aria-label="Graph layout"] button { padding: 4px 12px; border: 0; border-radius: 6px; background: none; color: var(--ar-fg-muted); font: inherit; font-size: var(--ar-text-s); text-transform: capitalize; cursor: pointer; }
-.ws-live-split [aria-label="Graph layout"] button[aria-pressed="true"] { background: var(--ar-bg); color: var(--ar-fg); }
-.ws-live-graph { height: min(70vh, 650px); min-height: 420px; border: 1px solid var(--ar-border, currentColor); border-radius: 12px; }
-@media (max-width: 900px) { .ws-live-split { grid-template-columns: minmax(0, 1fr); } .ws-live-graph { height: 60vh; min-height: 360px; } }
 @media (max-width: 600px) { .ws-live { padding: 16px; } .ws-live > header h1 { flex-basis: 100%; } }

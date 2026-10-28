@@ -102,6 +102,7 @@
 .agent-record .rp-pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: var(--radius-pill); font: 500 14px/20px var(--font-sans); white-space: nowrap; box-shadow: inset 0 0 0 1px var(--rp-line); color: hsl(var(--hsl-muted-foreground)); }
 .agent-record .rp-pill.ok, .agent-record .rp-pill.done { box-shadow: none; background: var(--surface-success-bg); color: var(--surface-success-text); }
 .agent-record .rp-pill.live { box-shadow: none; background: color-mix(in oklab, var(--accent-text) 12%, transparent); color: var(--accent-text); }
+.agent-record .rp-pill.needs-you { color: var(--surface-warning-text); background: transparent; }
 .agent-record .rp-pill.danger, .agent-record .rp-pill.fail { box-shadow: none; background: var(--surface-danger-bg); color: var(--surface-danger-text); }
 .rp-dot { display: inline-block; box-sizing: border-box; width: 8px; height: 8px; border-radius: 50%; flex: none; background: transparent; box-shadow: inset 0 0 0 2px var(--text-dim); }
 .rp-dot.ok { background: var(--surface-success-text); box-shadow: none; }
@@ -283,31 +284,7 @@
 
 /* Topology: nested groups on the recessed canvas, each headed by the agent that spawned it, its agents in a grid of full names */
 .rp .rp-topo { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; }
-.rp .rp-topo-wrap { position: relative; flex: 1; min-height: 0; }
-.rp .rp-topo-canvas { position: absolute; inset: 0; overflow: auto; background: var(--rp-well); }
-.rp .rp-node { position: absolute; height: 58px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 14px; border-radius: var(--radius-md); background: hsl(var(--hsl-card)); border: 1px solid var(--rp-edge); text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 15px/22px var(--font-sans); transition: opacity 0.12s; }
-.rp .rp-node .r1 { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 500; white-space: nowrap; }
-.rp .rp-node .r1 .nm { overflow: hidden; text-overflow: ellipsis; }
-.rp .rp-node .r2 { padding-left: 16px; font-size: 14px; line-height: 18px; color: hsl(var(--hsl-muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.rp .rp-node.sel { border-color: var(--accent-text); box-shadow: 0 0 0 1px var(--accent-text); }
-.rp .rp-node.fade, .rp .rp-team.fade > .rp-team-h { opacity: 0.45; }
-.rp .rp-node:not(.sel):hover { border-color: var(--border-strong); }
-.rp .rp-node.ghost { background: transparent; border-style: dashed; border-color: var(--border-strong); color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-team { position: absolute; border-radius: var(--radius-xl); background: color-mix(in oklab, hsl(var(--hsl-card)) 45%, var(--rp-well)); box-shadow: inset 0 0 0 1px var(--rp-edge); }
-.rp .rp-team-h { position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 2px; padding: 0 10px 0 6px; }
-.rp .rp-team-h .tg { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: transparent; color: hsl(var(--hsl-muted-foreground)); cursor: pointer; }
-.rp .rp-team-h .tg .rp-i { transition: transform 0.12s; }
-.rp .rp-team-h .tg[aria-expanded='false'] .rp-i { transform: rotate(-90deg); }
-.rp .rp-team-h .tg:hover, .rp .rp-team-h .hn:hover { background: var(--ix-hover-bg); }
-.rp .rp-team-h .hn { flex: 1; min-width: 0; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: var(--radius-md); background: transparent; text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 15px/22px var(--font-sans); }
-.rp .rp-team-h .hn b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rp .rp-team-h .hn .st { margin-left: auto; padding-left: 16px; font-size: 14px; color: hsl(var(--hsl-muted-foreground)); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rp .rp-team.sel > .rp-team-h .hn { background: var(--ix-sel-bg); box-shadow: inset 2px 0 0 var(--accent-text); }
-.rp .rp-mm { position: absolute; left: 12px; bottom: 12px; width: 184px; background: hsl(var(--hsl-card)); border-radius: var(--radius-md); box-shadow: var(--shadow-dropdown), 0 0 0 1px var(--rp-line); overflow: hidden; cursor: pointer; }
-.rp .rp-mm svg { display: block; width: 100%; }
-.rp .rp-mm rect { fill: var(--border-strong); } .rp .rp-mm rect.fr { fill: var(--rp-raised); } .rp .rp-mm rect.sel { fill: var(--accent-text); } .rp .rp-mm rect.live { fill: color-mix(in srgb, var(--accent-text) 55%, transparent); }
-.rp .rp-mm rect.vp { fill: var(--ix-hover-bg); stroke: var(--accent-text); stroke-width: 1.25; }
-.rp .rp-mm .mm-h { display: flex; justify-content: space-between; padding: 6px 10px; font-size: 14px; color: hsl(var(--hsl-muted-foreground)); border-bottom: 1px solid var(--rp-line); }
+.rp .rp-topo-graph { flex: 1; min-height: 560px; }
 .rp .rp-tinsp { padding: 16px; }
 .rp .rp-kv { grid-template-columns: 84px minmax(0, 1fr); gap: 6px 12px; margin: 0 0 16px; }
 .rp .rp-kv dd { margin: 0; overflow-wrap: anywhere; }
@@ -556,7 +533,6 @@
   .rp .rp-files { height: 80dvh; }
   .rp .rp-doc { overflow-wrap: anywhere; }
   .rp .rp-doc [class~='border-border'][class~='p-5'] { padding: 20px 16px 32px; }
-  .rp .rp-topo-wrap { min-height: 560px; }
   .rp .rp-trw { grid-template-columns: minmax(0, 1fr); }
   /* A phone's span row: start, name, duration; a failed span leads its name with the ✕ the hidden status column held. */
   .rp .rp-tr { grid-template-columns: 84px minmax(0, 1fr) 76px; padding-left: 12px; }
