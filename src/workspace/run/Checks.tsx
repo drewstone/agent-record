@@ -5,7 +5,7 @@ import { Bar, StateDot } from './ui.js'
 
 type Row = { kind: 'release'; r: RunRelease } | { kind: 'unscored'; from: string; to: string; n: number }
 
-/** Newest first; a run of releases the checker never scored reads as one line, not one "not scored" per tag. */
+/** Newest first; a run of releases the checker never scored reads as one line in reading order (`rc3–rc7`), not one "not scored" per tag. */
 function ladder(releases: readonly RunRelease[]): Row[] {
   const out: Row[] = []
   for (const r of [...releases].reverse()) {
@@ -30,7 +30,7 @@ export function Checks({ m, doc }: TabProps) {
   return (
     <div className="rp-ck">
       <section className="rp-card" aria-label="Checks">
-        <div className="rp-scroll rp-ck-in">
+        <div className="rp-ck-in">
           <h2 className="rp-ck-h"><StateDot tone={verdict.tone} />{verdict.word}</h2>
           {verdict.note && <p className="rp-ck-note">{verdict.note}.</p>}
           <div className="rp-ck-stats">
@@ -42,8 +42,9 @@ export function Checks({ m, doc }: TabProps) {
             <p className="rp-ck-line"><span className="lbl">Latest</span><span>{clause(latest.line, 28)}</span><time>{latest.at ? `${latest.at.slice(5, 10)} ${latest.at.slice(11, 16)} UTC` : ''}{latest.tag ? ` · ${latest.tag}` : ''}</time></p>
           )}
           {stages.some((s) => s.state !== 'calibrated') && (
-            <p className="rp-ck-line"><span className="lbl">Calibrated</span>
-              <span className="rp-ck-cal">{stages.map((s) => <span key={s.name} className={s.state === 'calibrated' ? 'ok' : ''}>{s.state === 'calibrated' ? '✓' : '○'} {s.name}</span>)}</span>
+            // In words, not ✓ and ○ glyphs nobody had a key for (judges 10-27).
+            <p className="rp-ck-line"><span className="lbl">Calibration</span>
+              <span>{plural(stages.filter((s) => s.state === 'calibrated').length, 'stage')} of {stages.length} calibrated{stages.some((s) => s.state === 'calibrated') ? ` (${stages.filter((s) => s.state === 'calibrated').map((s) => s.name).join(', ')})` : ''}; not yet: {stages.filter((s) => s.state !== 'calibrated').map((s) => s.name).join(', ')}</span>
             </p>
           )}
           {m.releases.length > 0 && (
@@ -51,7 +52,7 @@ export function Checks({ m, doc }: TabProps) {
               <h3 className="rp-subh">Releases</h3>
               <ol className="rp-rel">
                 {ladder(m.releases).map((row) => row.kind === 'unscored' ? (
-                  <li key={row.from} className="gap"><b>{row.n > 1 ? `${row.from}–${row.to}` : row.from}</b><span className="sub">{row.n > 1 ? `${row.n} releases the checker did not score` : 'not scored'}</span></li>
+                  <li key={row.from} className="gap"><b>{row.n > 1 ? `${row.to}–${row.from}` : row.from}</b><span className="sub">{row.n > 1 ? `${row.n} releases, not scored` : 'not scored'}</span></li>
                 ) : (
                   <li key={row.r.release}>
                     <b>{row.r.release}</b>
@@ -68,9 +69,9 @@ export function Checks({ m, doc }: TabProps) {
       </section>
       <section className="rp-card" aria-label="Commits by agent">
         <div className="rp-hd sm"><h2>Commits by agent<span className="ct">{count(committers.reduce((t, a) => t + (a.commits ?? 0), 0))}</span></h2></div>
-        <div className="rp-scroll rp-commits">
+        <div className="rp-commits">
           {committers.length ? committers.map((a) => (
-            <div key={a.id} className="row"><span className="l"><StateDot tone={a.state.tone} />{a.name}</span><Bar ok={a.commits ?? 0} max={maxCommits} /><span className="n">{a.commits}</span></div>
+            <div key={a.id} className="row"><span className="l" title={a.name}>{a.name}</span><Bar ok={a.commits ?? 0} max={maxCommits} /><span className="n">{a.commits}</span></div>
           )) : <p className="ws-status">No agent's commits reached the run's deliverables.</p>}
         </div>
       </section>

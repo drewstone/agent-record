@@ -3,14 +3,15 @@ import { LiveTranscript } from '../LiveTranscript.js'
 import { AgentConversation, useRecordPart } from '../record-part.js'
 import type { TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, type RunModel, elapsed, plural, spanOf } from './model.js'
-import { StateDot, Hilite, Icon, nameFit, useRows } from './ui.js'
+import { StateDot, Hilite, Icon, useRows } from './ui.js'
 
 type Row = { kind: 'team'; id: string; label: string; n: number } | { kind: 'agent'; a: Agent }
 
-/** The agent list: the agents that did anything, grouped by team, filtered by the search. */
+/** The agent list: every agent of the run (the header's count), grouped by team, filtered by the search; one that never ran
+ * says so in place, so the list never counts fewer agents than the header (26a: "10 agents" above a list of 9). */
 function rowsOf(m: RunModel, query: string): Row[] {
   const q = query.trim().toLowerCase()
-  const list = m.tree.filter((a) => (a.steps.length || a.turns) && (!q || `${a.name} ${a.node.label}`.toLowerCase().includes(q)))
+  const list = m.tree.filter((a) => !q || `${a.name} ${a.node.label}`.toLowerCase().includes(q))
   if (!m.teams.length) return list.map((a) => ({ kind: 'agent', a }))
   const out: Row[] = list.filter((a) => !a.team || a.team === a.id).map((a) => ({ kind: 'agent', a }))
   for (const t of m.teams) {
@@ -36,8 +37,8 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
   const nodes = useRecordPart(ready ? `${runUrl}/record?part=nodes${version}` : null)
   const index = nodes.index
   const live = Boolean(doc.execution?.alive)
-  // One count everywhere: the agents that did anything, which is what the list holds and what the search searches.
-  const talkers = useMemo(() => m.tree.filter((a) => a.steps.length || a.turns).length, [m])
+  // One count everywhere: the run's agents, as the header, the tab and the search name them.
+  const talkers = m.agents.length
   const picked = Boolean(route.params.get('agent'))
   const recorded = selected && index && index.nodes.has(index.canonical(selected.id))
   const [emptyStream, setEmptyStream] = useState<ReadonlySet<string>>(new Set())
@@ -59,9 +60,9 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
           ) : (
             <button key={r.a.id} type="button" role="listitem" aria-current={r.a.id === selected?.id} style={{ height: ROW }} onClick={() => selectAgent(r.a.id)}>
               <StateDot tone={r.a.state.tone} />
-              <span className="nm" title={r.a.name}><Hilite text={query.trim() ? r.a.name : nameFit(r.a, 30)} query={query} /></span>
-              <span className="sb">{plural(r.a.steps.length, 'step')}{r.a.first !== null ? ` · ${spanOf(m.t0, r.a.first, r.a.state.tone === 'live' ? 'now' : r.a.last ?? r.a.first)}` : ''}</span>
-              <span className="n">{abbr(r.a.tokens)}</span>
+              <span className="nm" title={r.a.name}><Hilite text={r.a.name} query={query} /></span>
+              <span className="sb">{r.a.steps.length || r.a.turns ? `${plural(r.a.steps.length, 'step')}${r.a.first !== null ? ` · ${spanOf(m.t0, r.a.first, r.a.state.tone === 'live' ? 'now' : r.a.last ?? r.a.first)}` : ''}` : r.a.state.label}</span>
+              <span className="n">{r.a.tokens === null ? '' : abbr(r.a.tokens)}</span>
             </button>
           ))}
           <div style={{ height: win.after }} />
@@ -107,7 +108,7 @@ function StepLog({ m, a }: { m: RunModel; a: Agent }) {
   }
   if (!groups.length) return <p className="ws-status">No conversation or step was recorded for {a.name}.</p>
   return (
-    <>
+    <div className="rp-steplog">
       <p className="rp-note">No conversation was recorded for this agent; these are its {plural(a.steps.length, 'recorded step')}.</p>
       {groups.map((g, i) => (
         <div key={i} className="rp-msg">
@@ -118,6 +119,6 @@ function StepLog({ m, a }: { m: RunModel; a: Agent }) {
           </div>
         </div>
       ))}
-    </>
+    </div>
   )
 }

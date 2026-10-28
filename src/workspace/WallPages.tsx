@@ -80,12 +80,16 @@ function HostCard({ h }: { h: Host }) {
         <b>{h.name}</b>
         <span className={h.up === false ? 'wp-warn' : 'wp-muted'}>{status}</span>
       </Tip>
+      {/* Load is data, so it is drawn in ink, not the accent that marks actions; it takes the warning ink at its limit and the
+          failure ink only on an alarm, as disk does (judges 10-27). */}
       <Tip className="wp-bar" text={`load1 ${num(h.load1, 1)} on ${h.cores ?? '—'} cores; the limit is ${num(h.loadLimit)}`}>
         <span className="wp-val"><b>{num(h.loadPerCore, 1)}</b> load per core</span>
-        <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : 'var(--ws-accent)'} />
+        <Meter used={h.load1} total={h.loadLimit} text="" tone={loadOver ? TONE.breach : h.load1 !== null && h.loadLimit !== null && h.load1 >= h.loadLimit ? TONE.warn : 'var(--wp-ink)'} />
       </Tip>
       <DiskBar h={h} />
-      {h.breaches.length > 0 && <ul className="wp-over">{h.breaches.map((b) => <li key={b.label} data-alarm={b.alarm || undefined}><Tip text={`${b.text} (${b.limit}${b.held ? `; ${b.held}` : ''})`}>{b.alarm && b.held ? `${b.label.replace(/\s*\/\s*$/, '')}: ${b.held}` : b.label}</Tip></li>)}</ul>}
+      {/* An alarm is a callout in its producer's words; the rest are what the host watches, one quiet line. */}
+      {h.breaches.filter((b) => b.alarm).map((b) => <Tip key={b.label} className="wp-alarm" text={`${b.text} (${b.limit}${b.held ? `; ${b.held}` : ''})`}><b>{b.label.replace(/\s*\/\s*$/, '')}</b>{b.held ? ` ${b.held}` : ` ${b.text}`}</Tip>)}
+      {h.breaches.some((b) => !b.alarm) && <p className="wp-watch">Watching: {h.breaches.filter((b) => !b.alarm).map((b, i) => <Tip key={b.label} text={`${b.text} (${b.limit})`}>{i ? ', ' : ''}{b.label}</Tip>)}</p>}
     </li>
   )
 }
@@ -126,10 +130,15 @@ function FleetView({ doc }: { doc: FleetDoc }) {
         </section>
         <section aria-label="Seats">
           <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit{back ? `, first back ${stamp(back, Date.now())}` : ''}</span></h2>
-          {limited.length > 0 && <ul className="wp-back">{limited.map((s) => <li key={`${s.provider} ${s.name}`}><span>{s.provider.toLowerCase()} {s.name}</span><span className="wp-muted">{s.long.label ? `${s.long.label} · ` : ''}back {s.back ? stamp(s.back, Date.now()) : '—'}</span></li>)}</ul>}
+          {/* Seats at a limit grouped by provider, each account with the time it returns (rows of "claude drew@webb" read as a dump). */}
+          {[...new Set(limited.map((s) => s.provider))].map((provider) => {
+            const seats = limited.filter((s) => s.provider === provider)
+            return <div key={provider} className="wp-seats"><h3>{provider[0]!.toUpperCase() + provider.slice(1).toLowerCase()}<span className="wp-muted">{seats.length} at a limit</span></h3>
+              <ul className="wp-back">{seats.map((s) => <li key={s.name}><span>{s.name}</span><span className="wp-muted">{s.long.label ? `${s.long.label} · ` : ''}back {s.back ? stamp(s.back, Date.now()) : '—'}</span></li>)}</ul></div>
+          })}
           {room.length > 0 && <details className="wp-group"><summary>{room.length} with room</summary><HBars limit={room.length} max={1} format={pct}
             rows={room.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, note: [s.long.label, s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} /></details>}
-          {unread.length > 0 && <p className="wp-muted wp-line">Not reported: {unread.map((s) => `${s.provider.toLowerCase()} ${s.name}${s.long.why ? ` (${s.long.why})` : ''}`).join(', ')}</p>}
+          {unread.length > 0 && <details className="wp-group"><summary>{unread.length} not reported</summary><ul className="wp-back">{unread.map((s) => <li key={`${s.provider} ${s.name}`}><span>{s.provider.toLowerCase()} {s.name}</span><span className="wp-muted">{s.long.why ?? 'no reading'}</span></li>)}</ul></details>}
         </section>
       </div>
       <ul className="wp-hosts" aria-label="Hosts">{doc.hosts.map((h) => <HostCard key={h.name} h={h} />)}</ul>

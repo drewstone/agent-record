@@ -1,66 +1,68 @@
-import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, clockOf, abbr, count, finished, lat, type RunModel } from './model.js'
-import { AgentCard, agentGroups, agentOptions, Bar, agentCost, StateDot, Icon, middle, Picker, TeamCard, useCard, useNarrow } from './ui.js'
+import { type Agent, abbr, count, lat, plural, type RunModel, stampOf } from './model.js'
+import { AgentCard, agentGroups, agentOptions, Bar, agentCost, StateDot, Icon, Picker, useCard, useNarrow } from './ui.js'
 
-type Box = { x: number; y: number; w: number; h: number; sm?: boolean; team?: string }
+type Box = { x: number; y: number; w: number; h: number; group?: string }
 type Frame = { id: string; x: number; y: number; w: number; h: number; open: boolean }
 
-/** A spawn tree, left to right; a lead with more than eight spawned agents draws them in one team frame that folds. */
-function layout(m: RunModel, width: number, height: number, open: ReadonlySet<string>, narrow: boolean) {
-  const teams = new Set(m.teams.map((t) => t.id))
-  const NW = narrow ? Math.min(280, width - 32) : teams.size ? 216 : 272
-  const NH = 58, GAP = 10, COL = NW + (teams.size ? 56 : 72), SMW = 240, SMH = 44, SMG = 8, HEAD = 48
-  const pos = new Map<string, Box>()
-  const frames: Frame[] = []
-  const place = (a: Agent, depth: number, y: number): number => {
-    const x = 24 + depth * COL
-    if (a.children.length > 8 && teams.has(a.id)) {
-      const fx = 24 + (depth + 1) * COL
-      const cols = Math.max(1, Math.floor((width - fx - 48 + SMG) / (SMW + SMG)))
-      const isOpen = open.has(a.id)
-      const rows = Math.ceil(a.children.length / cols)
-      const fh = isOpen ? HEAD + rows * (SMH + SMG) - SMG + 12 : HEAD
-      frames.push({ id: a.id, x: fx, y, w: cols * (SMW + SMG) - SMG + 24, h: fh, open: isOpen })
-      if (isOpen) a.children.forEach((c, i) => pos.set(c, { x: fx + 12 + (i % cols) * (SMW + SMG), y: y + HEAD + Math.floor(i / cols) * (SMH + SMG), w: SMW, h: SMH, sm: true, team: a.id }))
-      pos.set(a.id, { x, y: y + HEAD / 2 - NH / 2 + 4, w: NW, h: NH })
-      return Math.max(fh, NH) + 16
-    }
-    if (!a.children.length) { pos.set(a.id, { x, y, w: NW, h: NH }); return NH + GAP }
-    let cy = y
-    for (const c of a.children) cy += place(m.byId.get(c)!, depth + 1, cy)
-    const used = cy - y - GAP
-    const first = pos.get(a.children[0]!)!
-    pos.set(a.id, { x, y: used > height - 48 ? first.y : y + Math.max(0, used / 2 - NH / 2), w: NW, h: NH })
-    return Math.max(cy - y, NH + GAP)
-  }
-  if (narrow) {
-    let y = 16
-    for (const a of m.tree) { pos.set(a.id, { x: 12 + Math.min(a.depth, 4) * 20, y, w: NW - Math.min(a.depth, 4) * 20, h: NH }); y += NH + 8 }
-  } else {
-    let y = 24
-    for (const a of m.agents.filter((x) => !x.parent)) y += place(a, 0, y)
-  }
-  const all = [...pos.values(), ...frames]
-  const maxX = Math.max(0, ...all.map((p) => p.x + p.w)) + 24
-  const maxY = Math.max(0, ...all.map((p) => p.y + p.h)) + 24
-  const dx = narrow ? 0 : Math.max(0, (width - maxX) / 2)
-  // The tree starts at the canvas's top; only its width is centred.
-  for (const p of all) p.x += dx
-  return { pos, frames, W: Math.max(width, maxX + dx), H: Math.max(height, maxY), over: maxY > height + 160 || maxX > width + 160 }
-}
+const CARD_H = 58, HEAD = 52, GAP = 10, INSET = 12, PAD = 16, MIN_W = 260
 
 /**
- * Who spawned whom and what each cost: the spawn tree on the recessed canvas, with the selected agent's ancestors and
- * descendants in full ink and the rest faded. Nodes past a screen from the viewport are not in the document; a minimap
- * appears once the graph outgrows the canvas.
+ * Who spawned whom, as nested groups that fill the canvas's width: an agent that spawned others is a group whose header is
+ * the agent itself, its leaf agents an auto-fill grid of full-name cards (at least 260 px wide), and its children that
+ * spawned in turn nested groups under them. Containment shows the parent, so no edge is drawn and no name is cut to fit a
+ * column (judges 10-27: half the canvas empty while 'verify-sca…-lead-2' was cut in the middle).
+ */
+function layout(m: RunModel, width: number, open: ReadonlySet<string>) {
+  const pos = new Map<string, Box>()
+  const frames: Frame[] = []
+  const group = (a: Agent, x: number, y: number, w: number): number => {
+    const isOpen = open.has(a.id)
+    pos.set(a.id, { x, y, w, h: HEAD })
+    // The frame goes in before its nested groups, so a parent's frame is drawn under its children's.
+    const frame: Frame = { id: a.id, x, y, w, h: HEAD, open: isOpen }
+    frames.push(frame)
+    let cy = y + HEAD
+    if (isOpen) {
+      const kids = a.children.map((id) => m.byId.get(id)!).filter(Boolean)
+      const leaves = kids.filter((k) => !k.children.length), parents = kids.filter((k) => k.children.length)
+      const inner = w - 2 * INSET
+      const cols = Math.max(1, Math.floor((inner + GAP) / (MIN_W + GAP)))
+      const cw = (inner - (cols - 1) * GAP) / cols
+      leaves.forEach((k, i) => pos.set(k.id, { x: x + INSET + (i % cols) * (cw + GAP), y: cy + Math.floor(i / cols) * (CARD_H + GAP), w: cw, h: CARD_H, group: a.id }))
+      if (leaves.length) cy += Math.ceil(leaves.length / cols) * (CARD_H + GAP)
+      for (const c of parents) cy += group(c, x + INSET, cy, inner) + GAP
+      cy += INSET - GAP
+    }
+    frame.h = cy - y
+    return cy - y
+  }
+  let y = PAD
+  const w = Math.max(MIN_W + 2 * INSET, width - 2 * PAD)
+  for (const a of m.agents.filter((x) => !x.parent)) {
+    if (a.children.length) y += group(a, PAD, y, w) + 16
+    else { pos.set(a.id, { x: PAD, y, w: Math.min(w, 2 * MIN_W), h: CARD_H }); y += CARD_H + 16 }
+  }
+  const all = [...pos.values(), ...frames]
+  const maxY = Math.max(0, ...all.map((p) => p.y + p.h)) + PAD
+  return { pos, frames, W: width, H: maxY, over: maxY > 1400 }
+}
+
+/** Every agent that spawned others: the groups Expand all and Collapse all act on. */
+const leads = (m: RunModel) => m.agents.filter((a) => a.children.length).map((a) => a.id)
+
+/**
+ * Who spawned whom and what each cost. The selected agent's ancestors and descendants keep full ink and the rest fade;
+ * cards past a screen from the viewport are not in the document, and a minimap appears once the groups outgrow the canvas.
  */
 export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
   const host = useRef<HTMLDivElement>(null)
   const narrow = useNarrow()
   const [size, setSize] = useState({ w: 1000, h: 700 })
   const [view, setView] = useState({ top: 0, left: 0 })
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(m.teams.length === 1 ? [m.teams[0]!.id] : []))
+  // Every group opens on a run of up to 80 agents; a larger one opens its roots and leaves the rest one click away.
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(m.agents.length <= 80 ? leads(m) : m.agents.filter((a) => !a.parent).map((a) => a.id)))
   const card = useCard()
   useLayoutEffect(() => {
     const el = host.current
@@ -71,7 +73,7 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
     r.observe(el)
     return () => r.disconnect()
   }, [])
-  const L = useMemo(() => layout(m, size.w, size.h, open, narrow), [m, size, open, narrow])
+  const L = useMemo(() => layout(m, size.w, open), [m, size.w, open])
   const selected = agent ?? m.root?.id ?? null
   const { anc, desc } = useMemo(() => {
     const anc = new Set<string>(), desc = new Set<string>()
@@ -84,36 +86,27 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
   const related = (id: string) => !focus || id === selected || anc.has(id) || desc.has(id)
   const center = (id: string) => {
     const p = L.pos.get(id)
-    if (p && host.current) host.current.scrollTo({ left: p.x + p.w / 2 - size.w / 2, top: p.y + p.h / 2 - size.h / 2, behavior: 'smooth' })
+    if (p && host.current) host.current.scrollTo({ top: p.y + p.h / 2 - size.h / 2, behavior: 'smooth' })
   }
-  useEffect(() => { if (selected) { const t = m.byId.get(selected)?.team; if (t && t !== selected && !open.has(t)) setOpen(new Set([...open, t])) } }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
-  const right = (p: Box) => [p.x + p.w, p.y + p.h / 2] as const
-  const left = (p: Box) => [p.x, p.y + p.h / 2] as const
-  const edge = (from: Box, to: Box, hot: boolean, key: string) => {
-    if (narrow) {
-      const [x2, y2] = left(to)
-      return <path key={key} d={`M${from.x + 16} ${from.y + from.h} V${y2 - 8} q0 8 8 8 H${x2}`} className={hot ? 'hot' : ''} />
-    }
-    const [x1, y1] = right(from), [x2, y2] = left(to), mx = (x1 + x2) / 2
-    return <path key={key} d={`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`} className={hot ? 'hot' : focus ? 'fade' : ''} />
-  }
-  const edges: ReactNode[] = []
-  for (const a of m.agents) {
-    const p = L.pos.get(a.id), q = a.parent ? L.pos.get(a.parent) : null
-    if (!p || !q || p.team) continue
-    edges.push(edge(q, p, a.id === selected || a.parent === selected || (anc.has(a.id) && (anc.has(a.parent!) || a.parent === selected)), a.id))
-  }
-  for (const f of L.frames) { const lead = L.pos.get(f.id); if (lead) edges.push(edge(lead, { x: f.x, y: f.y, w: f.w, h: 48 }, f.id === selected || L.pos.get(selected ?? '')?.team === f.id, `f:${f.id}`)) }
+  // A selected agent inside a closed group opens every group above it.
+  useEffect(() => { if (selected && [...anc].some((id) => !open.has(id))) setOpen(new Set([...open, ...anc])) }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
   const margin = 400
-  const visible = m.agents.filter((a) => { const p = L.pos.get(a.id); return p && p.y + p.h >= view.top - margin && p.y <= view.top + size.h + margin && p.x + p.w >= view.left - margin && p.x <= view.left + size.w + margin })
+  const visible = m.agents.filter((a) => { const p = L.pos.get(a.id); return p && !L.frames.some((f) => f.id === a.id) && p.y + p.h >= view.top - margin && p.y <= view.top + size.h + margin })
   const bounds = () => host.current?.getBoundingClientRect()
   const sel = selected ? m.byId.get(selected) ?? null : null
-  // The legend names the states the nodes show, in their words, and only those this run has.
+  // The legend names the states the cards show, in their words, and only those this run has.
   const states = useMemo(() => {
     const seen = new Map<string, Agent['state']>()
     for (const a of m.agents) if (!seen.has(a.state.label)) seen.set(a.state.label, a.state)
     return [...seen.values()]
   }, [m])
+  const hover = (a: Agent) => ({
+    onPointerEnter: (e: { currentTarget: Element }) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 }),
+    onPointerLeave: () => card.hide(),
+    onFocus: (e: { currentTarget: Element }) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 }),
+    onBlur: () => card.hide(),
+  })
+  const groups = leads(m)
   return (
     <div className="rp-topo">
       <section className="rp-card" aria-label="Spawn tree">
@@ -122,13 +115,13 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
             {states.map((st) => <span key={st.label} className="rp-key"><StateDot tone={st.tone} />{st.label}</span>)}
           </div>
           <span className="end">
-            {m.teams.length > 0 && !narrow && (
-              <span className="rp-group" role="group" aria-label="Teams">
-                <button type="button" className="rp-btn" onClick={() => setOpen(new Set(m.teams.map((t) => t.id)))}>Expand all</button>
-                <button type="button" className="rp-btn" onClick={() => setOpen(new Set())}>Collapse all</button>
+            {groups.length > 1 && (
+              <span className="rp-group" role="group" aria-label="Groups">
+                <button type="button" className="rp-btn sm framed" onClick={() => setOpen(new Set(groups))}>Expand all</button>
+                <button type="button" className="rp-btn sm framed" onClick={() => setOpen(new Set())}>Collapse all</button>
               </span>
             )}
-            <Picker label="Go to agent" options={agentOptions(m)} groups={agentGroups(m)} value={selected} placeholder={`Search ${m.agents.length} agents`} width={340} style={{ width: 220 }}
+            <Picker label="Go to agent" options={agentOptions(m)} groups={agentGroups(m)} value={selected} placeholder={`Search ${m.agents.length} agents`} width={340} style={{ width: narrow ? undefined : 220 }}
               onChange={(id) => { if (id) { selectAgent(id); window.setTimeout(() => center(id), 60) } }}>
               <span className="dim">Go to agent</span>
             </Picker>
@@ -136,41 +129,35 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
         </div>
         <div className="rp-topo-wrap">
           <div className="rp-topo-canvas" ref={host} onScroll={(e) => setView({ top: e.currentTarget.scrollTop, left: e.currentTarget.scrollLeft })}>
-            <svg className="edges" width={L.W} height={L.H} aria-hidden="true">{edges}</svg>
             {L.frames.map((f) => {
-              const team = m.teams.find((t) => t.id === f.id)!
-              const members = team.members.map((id) => m.byId.get(id)!)
-              const run = members.filter((a) => a.state.tone === 'live').length, done = members.filter((a) => finished(a.state.tone)).length
-              const fade = focus && !(f.id === selected || anc.has(f.id) || L.pos.get(selected ?? '')?.team === f.id)
+              const a = m.byId.get(f.id)!
+              const running = a.children.filter((id) => m.byId.get(id)?.state.tone === 'live').length
+              const fade = focus && !related(f.id) && !(L.pos.get(selected ?? '')?.group === f.id)
               return (
-                <div key={f.id} className={`rp-team${fade ? ' fade' : ''}`} style={{ left: f.x, top: f.y, width: f.w, height: f.h }}>
-                  <button type="button" className="rp-team-h" aria-expanded={f.open} onClick={() => setOpen((s) => { const n = new Set(s); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n })}
-                    onPointerEnter={(e) => card.show({ content: <TeamCard m={m} team={team} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: true })} onPointerLeave={() => card.hide()}>
-                    <span className="cv"><Icon name="chevron" /></span><b>{team.label}</b><span className="ct">{members.length}</span>
-                    <span className="st"><span className="mb"><i className="ok" style={{ width: `${(done / members.length) * 100}%` }} /><i className="live" style={{ width: `${(run / members.length) * 100}%` }} /></span>{run ? `${run} running · ` : ''}{abbr(members.reduce((t, a) => t + (a.tokens ?? 0), 0))}</span>
-                  </button>
+                <div key={f.id} className={`rp-team${fade ? ' fade' : ''}${f.id === selected ? ' sel' : ''}`} style={{ left: f.x, top: f.y, width: f.w, height: f.h }}>
+                  <div className="rp-team-h">
+                    <button type="button" className="tg" aria-expanded={f.open} aria-label={`${f.open ? 'Collapse' : 'Expand'} ${a.name}'s group`} onClick={() => setOpen((s) => { const n = new Set(s); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n })}><Icon name="chevron" /></button>
+                    <button type="button" className="hn" aria-pressed={f.id === selected} onClick={() => selectAgent(a.id)} {...hover(a)}>
+                      <StateDot tone={a.state.tone} /><b title={a.name}>{a.name}</b>
+                      <span className="st">{[a.state.label, `${plural(a.children.length, 'agent')}`, running ? `${running} running` : '', a.tokens === null ? '' : `${abbr(a.tokens)} tokens`].filter(Boolean).join(' · ')}</span>
+                    </button>
+                  </div>
                 </div>
               )
             })}
             {visible.map((a) => {
               const p = L.pos.get(a.id)!
-              const cls = `rp-node${p.sm ? ' sm' : ''}${a.id === selected ? ' sel' : ''}${related(a.id) || (p.team && L.pos.get(selected ?? '')?.team === p.team) ? '' : ' fade'}${a.state.tone === 'none' ? ' ghost' : ''}`
+              const cls = `rp-node${a.id === selected ? ' sel' : ''}${related(a.id) || (p.group && L.pos.get(selected ?? '')?.group === p.group) ? '' : ' fade'}${a.state.tone === 'none' ? ' ghost' : ''}`
               return (
-                <button key={a.id} type="button" className={cls} style={{ left: p.x, top: p.y, width: p.w }} aria-pressed={a.id === selected}
-                  onClick={() => selectAgent(a.id)}
-                  onPointerEnter={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 })}
-                  onPointerLeave={() => card.hide()}
-                  onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), bounds: bounds(), vertical: true, wide: a.tools.length > 0 })}
-                  onBlur={() => card.hide()}>
-                  {/* A name too long for its node is cut in the middle, so two agents never read the same. */}
-                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{middle(p.sm && a.parent && a.name.startsWith(`${m.byId.get(a.parent)?.name}-`) ? a.name.slice((m.byId.get(a.parent)?.name.length ?? 0) + 1) : a.name.length <= (p.sm ? 18 : 24) ? a.name : a.short, p.sm ? 18 : 24)}</span>{p.sm && <span className="dim">{abbr(a.tokens)}</span>}</span>
-                  {!p.sm && <span className="r2">{[a.state.label, a.tokens === null ? 'no usage recorded' : `${abbr(a.tokens)} tokens`, a.tokens === null ? '' : `${count(a.steps.length)} steps`, a.failedSteps ? `${a.failedSteps} failed` : ''].filter(Boolean).join(' · ')}</span>}
+                <button key={a.id} type="button" className={cls} style={{ left: p.x, top: p.y, width: p.w }} aria-pressed={a.id === selected} onClick={() => selectAgent(a.id)} {...hover(a)}>
+                  <span className="r1"><StateDot tone={a.state.tone} /><span className="nm" title={a.name}>{a.name}</span></span>
+                  <span className="r2">{[a.state.label, a.tokens === null ? 'no usage recorded' : `${abbr(a.tokens)} tokens`, a.tokens === null ? '' : plural(a.steps.length, 'step'), a.failedSteps ? `${a.failedSteps} failed` : ''].filter(Boolean).join(' · ')}</span>
                 </button>
               )
             })}
-            <div style={{ position: 'absolute', left: 0, top: L.H - 1, width: L.W, height: 1 }} />
+            <div style={{ position: 'absolute', left: 0, top: L.H - 1, width: 1, height: 1 }} />
           </div>
-          {L.over && !narrow && <Minimap m={m} L={L} view={view} size={size} selected={selected} onJump={(x, y) => host.current?.scrollTo({ left: x - size.w / 2, top: y - size.h / 2 })} />}
+          {L.over && !narrow && <Minimap m={m} L={L} view={view} size={size} selected={selected} onJump={(_x, y) => host.current?.scrollTo({ top: y - size.h / 2 })} />}
         </div>
       </section>
       {sel && <TopoInspector m={m} a={sel} onSelect={(id) => { selectAgent(id); window.setTimeout(() => center(id), 60) }} href={route.href('conversations', { agent: agentParam(doc.run.id, sel.id) })} />}
@@ -193,7 +180,9 @@ function Minimap({ m, L, view, size, selected, onJump }: { m: RunModel; L: Retur
 }
 
 function TopoInspector({ m, a, onSelect, href }: { m: RunModel; a: Agent; onSelect: (id: string) => void; href: string }) {
-  const clock = clockOf(m.t0)
+  // A run longer than a day, or one that crosses a UTC midnight, names the day on every clock ("02:37 to 02:39" read as minutes).
+  const days = m.duration > 20 * 3_600_000 || new Date(m.t0).toISOString().slice(0, 10) !== new Date(m.t0 + m.duration).toISOString().slice(0, 10)
+  const clock = (ms: number) => stampOf(new Date(m.t0 + ms).toISOString(), days)
   const max = Math.max(1, ...a.tools.map((t) => t.calls))
   const parent = a.parent ? m.byId.get(a.parent) : null
   const rows: [string, number | null, number | null, number | null, number][] = [[a.model ?? 'model', a.latency.p50, a.latency.p90, a.latency.p99, a.modelCalls], ...a.tools.slice(0, 5).map((t) => [t.name, t.p50, t.p90, t.p99, t.calls] as [string, number | null, number | null, number | null, number])]
@@ -203,13 +192,13 @@ function TopoInspector({ m, a, onSelect, href }: { m: RunModel; a: Agent; onSele
       <div className="rp-scroll rp-tinsp">
         <dl className="rp-kv">
           <dt>Model</dt><dd>{[a.model, a.harness].filter(Boolean).join(' · ') || '—'}</dd>
-          <dt>Spawned</dt><dd>{parent ? `by ${parent.name} · ` : ''}{a.start === null ? '—' : `${clock(Math.max(0, a.start))} UTC`}</dd>
-          <dt>Ended</dt><dd>{a.state.tone === 'live' ? 'running' : a.end === null ? '—' : `${clock(a.end)} UTC`}</dd>
+          <dt>Spawned</dt><dd>{parent ? `by ${parent.name} · ` : ''}{a.start === null ? '—' : clock(Math.max(0, a.start))}</dd>
+          <dt>Ended</dt><dd>{a.state.tone === 'live' ? 'running' : a.end === null ? '—' : clock(a.end)}</dd>
           <dt>Cost</dt><dd>{agentCost(a)}</dd>
         </dl>
         <div className="rp-stat3">
-          <div><b>{abbr(a.tokens)}</b><span>tokens</span></div><div><b>{count(a.modelCalls)}</b><span>model calls</span></div><div><b>{count(a.toolCalls)}</b><span>tool calls</span></div>
-          <div><b>{a.failedSteps}</b><span>failed steps</span></div><div><b>{a.restarts.length}</b><span>restarts</span></div><div><b>{a.commits ?? '—'}</b><span>commits</span></div>
+          {([[abbr(a.tokens), 'tokens'], [count(a.modelCalls), a.modelCalls === 1 ? 'model call' : 'model calls'], [count(a.toolCalls), a.toolCalls === 1 ? 'tool call' : 'tool calls'],
+            [String(a.failedSteps), a.failedSteps === 1 ? 'failed step' : 'failed steps'], [String(a.restarts.length), a.restarts.length === 1 ? 'restart' : 'restarts'], [a.commits === null ? '—' : String(a.commits), a.commits === 1 ? 'commit' : 'commits']] as const).map(([v, l]) => <div key={l}><b>{v}</b><span>{l}</span></div>)}
         </div>
         {a.modelCalls > 0 && (
           <>

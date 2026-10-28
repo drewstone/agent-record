@@ -1,9 +1,9 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { PageHeader, SegmentedControl } from '@tangle-network/ui/primitives'
 import type { OverviewAttention, OverviewDocument, OverviewPlayWeek, OverviewRun } from '../overview-model.js'
-import { StatusPill, useDocument } from './data.js'
+import { useDocument } from './data.js'
 import { shortRun } from './play-standing.js'
-import { type HostView, type ViewBar, type ViewTrend, viewChip } from './view.js'
+import type { HostView, ViewBar } from './view.js'
 import { Icon, Picker } from './run/ui.js'
 
 /**
@@ -58,7 +58,24 @@ const target = (bar: ViewBar) => {
 const distance = (bar: ViewBar) => (!bar.ratio || bar.ratio.side === 'met' ? 'on target' : `${bar.ratio.x >= 100 ? Math.round(bar.ratio.x).toLocaleString('en-US') : bar.ratio.x.toFixed(1)}× ${bar.direction === 'down' ? 'over' : 'below'}`)
 const DECADES = 4
 
-type Move = { at: string; play: string; title: string; text: ReactNode; badge?: { text: string; tone: 'ok' | 'warn' | 'neutral' } }
+type Chip = { text: string; tone: 'ok' | 'neutral' }
+type Move = { at: string; play: string; title: string; text: ReactNode; badge?: Chip }
+
+/** A metric's move over the trend's window as a chip: better in the success ink, worse in plain grey (amber is for what needs
+ * you, judges 10-27), and no chip under 1%. */
+function changeChip(bar: ViewBar): Chip | null {
+  const change = bar.change && bar.change.from ? ((bar.change.to - bar.change.from) / bar.change.from) * 100 : null
+  if (change === null || Math.abs(change) < 1) return null
+  const better = bar.direction === 'down' ? change < 0 : change > 0
+  return { text: `${change > 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(0)}% ${better ? 'better' : 'worse'}`, tone: better ? 'ok' : 'neutral' }
+}
+/** A play's 7-day move: its primary metric's change, else the steps its newest check gained or lost since the window began. */
+function weekChip(p: Play, primary: ViewBar | undefined): Chip | null {
+  if (primary) { const chip = changeChip(primary); if (chip) return chip }
+  const passed = p.view.trend?.passed.filter((v): v is number => v !== null) ?? []
+  const delta = passed.length > 1 ? passed[passed.length - 1]! - passed[0]! : 0
+  return delta ? { text: `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)} step${Math.abs(delta) === 1 ? '' : 's'}`, tone: delta > 0 ? 'ok' : 'neutral' } : null
+}
 
 /** What moved since the mark: checks with their steps, metric moves, runs started, and new holds. */
 function moves(doc: OverviewDocument, plays: Play[], mark: number): Move[] {
@@ -70,18 +87,17 @@ function moves(doc: OverviewDocument, plays: Play[], mark: number): Move[] {
       if (!after(s.at)) return
       const prev = series[i - 1]
       const delta = prev ? s.passed - prev.passed : 0
-      out.push({ at: s.at, play: p.play, title: p.title, text: <><b>{s.release}</b>{s.runId ? ` of run ${shortRun(p.play, s.runId)}` : ''} checked: <b>{s.passed}/{p.view.trend!.total}</b> steps</>, ...(delta ? { badge: { text: `${delta > 0 ? '+' : ''}${delta} step${Math.abs(delta) === 1 ? '' : 's'}`, tone: delta > 0 ? 'ok' : 'warn' } } : {}) })
+      out.push({ at: s.at, play: p.play, title: p.title, text: <><b>{s.release}</b>{s.runId ? ` of run ${shortRun(p.play, s.runId)}` : ''} checked: <b>{s.passed}/{p.view.trend!.total}</b> steps</>, ...(delta ? { badge: { text: `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)} step${Math.abs(delta) === 1 ? '' : 's'}`, tone: delta > 0 ? 'ok' : 'neutral' } } : {}) })
     })
     for (const bar of p.view.bars ?? []) {
       if (!bar.latest || !after(bar.latest.at)) continue
-      const change = bar.change && bar.change.from ? ((bar.change.to - bar.change.from) / bar.change.from) * 100 : null
-      const better = change === null ? null : (bar.direction === 'down' ? change < 0 : change > 0)
-      out.push({ at: bar.latest.at!, play: p.play, title: p.title, text: <><b>{bar.label}</b> {measure(bar.latest.value, bar.unit)}{bar.latest.release ? ` at ${bar.latest.release}` : ''} · {distance(bar)}</>, ...(change !== null && Math.abs(change) >= 1 ? { badge: { text: `${change > 0 ? '+' : ''}${change.toFixed(0)}% in ${7} days`, tone: better ? 'ok' : 'warn' } } : {}) })
+      const chip = changeChip(bar)
+      out.push({ at: bar.latest.at!, play: p.play, title: p.title, text: <><b>{bar.label}</b> {measure(bar.latest.value, bar.unit)}{bar.latest.release ? ` at ${bar.latest.release}` : ''} · {distance(bar)}</>, ...(chip ? { badge: chip } : {}) })
     }
     const since = p.view.blocker?.since
     if (p.view.blocker && after(since)) out.push({ at: since!, play: p.play, title: p.title, text: <>{p.view.blocker.kind === 'stopped' ? 'Stopped' : 'Held'}: {clip((p.view.blocker.sentence ?? p.view.blocker.text).replace(/^(?:Stopped|Held) by [\w ]+: /, ''), 12)}</> })
   }
-  for (const r of doc.now ?? []) if (after(r.startedAt)) out.push({ at: r.startedAt!, play: r.play, title: r.title, text: <>Run <a href={runHref(r.runId)}><b>{shortRun(r.play, r.runId)}</b></a> started{r.agents ? ` · ${r.agents} agents` : ''}</>, badge: { text: 'started', tone: 'neutral' } })
+  for (const r of doc.now ?? []) if (after(r.startedAt)) out.push({ at: r.startedAt!, play: r.play, title: r.title, text: <>Run <a href={runHref(r.runId)}><b>{shortRun(r.play, r.runId)}</b></a> started{r.agents ? ` · ${r.agents} agents` : ''}</> })
   return out.sort((a, b) => (a.at < b.at ? 1 : -1))
 }
 /** Moves under their play, plays in the order of their newest move. */
@@ -159,7 +175,7 @@ function Need({ item }: { item: OverviewAttention }) {
   return <li>{item.href ? <a href={item.href.startsWith('#') ? `/${item.href}` : item.href}>{body}</a> : <div>{body}</div>}</li>
 }
 
-const SHOWN = 6
+const SHOWN = 8
 function Board({ plays, live, week, now }: { plays: Play[]; live: Map<string, OverviewRun[]>; week: Map<string, OverviewPlayWeek>; now: number }) {
   const [filter, setFilter] = useState<'all' | Group>('all')
   const [query, setQuery] = useState('')
@@ -181,12 +197,13 @@ function Board({ plays, live, week, now }: { plays: Play[]; live: Map<string, Ov
           options={(['all', 'running', 'stopped', 'solved'] as const).map((v) => ({ value: v, label: v === 'all' ? 'All' : v[0]!.toUpperCase() + v.slice(1), adornment: <span className="ct">{counts[v]}</span> }))} />
         <span className="end"><label className="rp-field td2-find"><Icon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a play" aria-label="Find a play" /></label></span>
       </div>
-      <div className="td2-cols" aria-hidden="true">
-        <span>Play</span><span>Steps passed</span>
-        <span className="axis">{Array.from({ length: DECADES }, (_, i) => <i key={i} style={{ left: `${(i / DECADES) * 100}%` }}>{(10 ** (DECADES - i)).toLocaleString('en-US')}×</i>)}<i style={{ left: '100%' }} className="t">target</i></span>
-        <span>7 days</span><span className="r">Live</span>
-      </div>
-      <div className="rp-scroll">
+      {/* The axis is one grid with the rows: its ticks sit over the same column as every row's distance bar. */}
+      <div className="td2-grid">
+        <div className="td2-cols" aria-hidden="true">
+          <span>Play</span><span>Steps</span><span>Metric</span>
+          <span className="axis">{Array.from({ length: DECADES }, (_, i) => <i key={i} style={{ left: `${(i / DECADES) * 100}%` }}>{(10 ** (DECADES - i)).toLocaleString('en-US')}×</i>)}<i style={{ left: '100%' }} className="t">target</i></span>
+          <span>Distance</span><span>7 days</span><span className="r">Live</span>
+        </div>
         {(['running', 'stopped', 'solved'] as const).filter((g) => (filter === 'all' || filter === g) && grouped[g].length).map((g) => {
           const rows = grouped[g]
           const shown = more[g] || query ? rows : rows.slice(0, SHOWN)
@@ -194,7 +211,7 @@ function Board({ plays, live, week, now }: { plays: Play[]; live: Map<string, Ov
             <div key={g} className="td2-group">
               <button type="button" className="td2-gh" aria-expanded={open[g]} onClick={() => setOpen({ ...open, [g]: !open[g] })}><Icon name="chevron" />{g[0]!.toUpperCase() + g.slice(1)}<span className="ct">{rows.length}</span></button>
               {open[g] && shown.map((p) => <PlayRow key={p.play} p={p} group={g} runs={live.get(p.play) ?? []} week={week.get(p.play)} now={now} />)}
-              {open[g] && shown.length < rows.length && <button type="button" className="rp-btn sm td2-more" onClick={() => setMore({ ...more, [g]: true })}>Show {rows.length - shown.length} more</button>}
+              {open[g] && shown.length < rows.length && <button type="button" className="rp-more-row" onClick={() => setMore({ ...more, [g]: true })}>Show {rows.length - shown.length} more</button>}
             </div>
           )
         })}
@@ -203,37 +220,41 @@ function Board({ plays, live, week, now }: { plays: Play[]; live: Map<string, Ov
   )
 }
 
+/**
+ * One play on one line (Drew 10-26: "how far each play is from its target, with its trend", for 20 plays at a glance): its name
+ * and state, steps passed, its first metric's distance on the shared log axis, the 7-day move and its live agents. Its other
+ * metrics open under it on request; a stopped play's reason is the line's tooltip, not a paragraph.
+ */
 function PlayRow({ p, group, runs, week, now }: { p: Play; group: Group; runs: OverviewRun[]; week?: OverviewPlayWeek; now: number }) {
+  const [open, setOpen] = useState(false)
   const trend = p.view.trend
   const newest = trend?.newest
-  const delta = trend && newest ? newest.passed - trend.best : 0
   const agents = runs.reduce((t, r) => t + (r.agents ?? 0), 0)
   const bars = (p.view.bars ?? []).filter((b) => b.latest)
+  const [primary, ...rest] = bars
+  const chip = weekChip(p, primary)
+  const why = p.view.blocker ? scrub(p.view.blocker.sentence ?? p.view.blocker.text) : undefined
+  const sub = group === 'stopped' && p.view.blocker ? `${p.view.blocker.kind === 'stopped' ? 'Stopped' : 'Held'} ${hhmm(p.view.blocker.since)}`
+    : group === 'running' && p.view.blocker ? 'Held'
+      : week ? `${week.runCount ?? week.runs.length} ${(week.runCount ?? week.runs.length) === 1 ? 'run' : 'runs'} this week${week.lostHours >= 0.1 ? ` · ${week.lostHours.toFixed(week.lostHours < 10 ? 1 : 0)} h lost` : ''}`
+        : p.view.status.label
   return (
     <div className={`td2-row ${group}`}>
       <div className="nm">
         <a href={playHref(p.play)}>{p.title}</a>
-        <span className="sub">{group === 'stopped' && p.view.blocker && bars.length ? <span title={scrub(p.view.blocker.sentence ?? p.view.blocker.text)}>Stopped {hhmm(p.view.blocker.since)}</span>
-          : week ? `${week.runCount ?? week.runs.length} ${(week.runCount ?? week.runs.length) === 1 ? 'run' : 'runs'} this week${week.lostHours >= 0.1 ? ` · ${week.lostHours.toFixed(week.lostHours < 10 ? 1 : 0)} h lost` : ''}` : <StatusPill status={viewChip(p.view.status)} />}</span>
+        <span className="sub" title={why}>{sub}</span>
       </div>
       <div className="steps">
-        {trend && newest ? (
-          <>
-            <span className="st"><b>{newest.passed}/{trend.total}</b><Meter passed={newest.passed} total={trend.total} />{delta < 0 && <span className="td2-badge warn" title={`best ${trend.best}/${trend.total}`}>▾ {-delta}</span>}</span>
-            <span className="sub">{newest.release} · {ago(newest.at, now)}{delta < 0 ? ` · best ${trend.best}/${trend.total}` : ''}</span>
-          </>
-        ) : <span className="dim">—</span>}
+        {trend && newest ? <span className="st" title={`${newest.release}, ${ago(newest.at, now)}${newest.passed < trend.best ? `; best ${trend.best}/${trend.total}` : ''}`}><b>{newest.passed}/{trend.total}</b><Meter passed={newest.passed} total={trend.total} /></span> : <span className="dim">—</span>}
       </div>
-      <div className="metrics">
-        {group === 'stopped' && p.view.blocker && !bars.length ? <p className="hold"><b>Stopped {hhmm(p.view.blocker.since)}:</b> {clip((p.view.blocker.sentence ?? p.view.blocker.text).replace(/^Stopped by [\w ]+: /, ''), 22)}</p>
-          : bars.length ? bars.map((b) => <MetricRow key={b.metric} bar={b} />)
-          : group === 'running' && p.view.blocker ? <p className="hold"><b>Held:</b> {clip(p.view.blocker.sentence ?? p.view.blocker.text, 18)}</p> : null}
-      </div>
-      <div className="trend">{trend && <Spark trend={trend} />}</div>
+      {primary ? <MetricCells bar={primary} /> : <><span className="ml dim">{why ? <span title={why}>{clip(why, 8)}</span> : 'No metric'}</span><span /><span /></>}
+      <div className="wk">{chip ? <span className={`td2-badge ${chip.tone}`}>{chip.text}</span> : <span className="dim">—</span>}</div>
       <div className="live">
-        {runs.length ? <><span className="lv"><span className="rp-dot live" /><b>{runs.length}</b> {runs.length === 1 ? 'run' : 'runs'}{agents ? <> · <b>{agents}</b> agents</> : null}</span><span className="sub">{runs.slice(0, 3).map((r, i) => <span key={r.runId}>{i ? ' · ' : ''}<a href={runHref(r.runId)}>{shortRun(p.play, r.runId)}</a></span>)}</span></>
-          : <span className="sub">{week?.lastActiveAt ? `active ${ago(week.lastActiveAt, now)}` : ''}</span>}
+        {runs.length ? <span className="lv" title={runs.map((r) => shortRun(p.play, r.runId)).join(', ')}><span className="rp-dot live" /><a href={runHref(runs[0]!.runId)}><b>{agents || runs.length}</b> {agents ? (agents === 1 ? 'agent' : 'agents') : runs.length === 1 ? 'run' : 'runs'}</a></span>
+          : <span className="sub">{week?.lastActiveAt ? ago(week.lastActiveAt, now) : ''}</span>}
       </div>
+      {rest.length > 0 && <button type="button" className="td2-mx" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Fewer metrics' : `${rest.length} more ${rest.length === 1 ? 'metric' : 'metrics'}`}</button>}
+      {open && rest.map((b) => <div key={b.metric} className="td2-extra"><MetricCells bar={b} /></div>)}
     </div>
   )
 }
@@ -242,32 +263,17 @@ function Meter({ passed, total }: { passed: number; total: number }) {
   return <span className="td2-meter" aria-hidden="true">{Array.from({ length: Math.min(total, 12) }, (_, i) => <i key={i} className={i < passed ? 'on' : ''} />)}</span>
 }
 
-/** One metric on the shared distance axis: 10,000× away on the left, the target at the right. */
-function MetricRow({ bar }: { bar: ViewBar }) {
+/** One metric as three cells of the board's grid: its name, its distance on the shared axis (10,000× away at the left, the
+ * target at the right), and its value with the distance in words. */
+function MetricCells({ bar }: { bar: ViewBar }) {
   const met = !bar.ratio || bar.ratio.side === 'met'
   const d = met ? 0 : Math.min(DECADES, Math.log10(Math.max(1, bar.ratio!.x)))
+  const title = `${bar.label}: ${measure(bar.latest?.value, bar.unit)}${bar.latest?.release ? ` at ${bar.latest.release}` : ''}; target ${target(bar)}`
   return (
-    <div className="td2-metric" title={`${bar.label}: ${measure(bar.latest?.value, bar.unit)}${bar.latest?.release ? ` at ${bar.latest.release}` : ''}; target ${target(bar)}`}>
-      <span className="l">{bar.label} {bar.direction === 'down' ? '↓' : '↑'}<span className="tg">{target(bar)}</span></span>
-      <span className="ax"><i className="track" />{!met && <i className="dist" style={{ left: `${(1 - d / DECADES) * 100}%` }} />}<i className="tick" /></span>
-      <span className="v"><b>{measure(bar.latest?.value, bar.unit)}</b> <span className={met ? 'ok' : 'warn'}>{distance(bar)}</span></span>
-    </div>
-  )
-}
-
-/** Steps passed per day over the window, against the all-steps line. */
-function Spark({ trend }: { trend: ViewTrend }) {
-  const w = 168, h = 30, n = trend.passed.length
-  const x = (i: number) => (n <= 1 ? w : (i / (n - 1)) * (w - 6) + 3)
-  const y = (v: number) => h - 3 - (v / Math.max(1, trend.total)) * (h - 8)
-  let d = ''
-  trend.passed.forEach((v, i) => { if (v === null) return; d += `${d ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}` })
-  const last = [...trend.passed.entries()].reverse().find(([, v]) => v !== null)
-  return (
-    <svg className="td2-spark" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`Steps passed over ${n} days, newest ${last?.[1] ?? 'none'} of ${trend.total}`}>
-      <line x1="0" x2={w} y1={y(trend.total)} y2={y(trend.total)} className="all" />
-      {d && <path d={d} className="ln" />}
-      {last && <circle cx={x(last[0])} cy={y(last[1]!)} r="3" className="pt" />}
-    </svg>
+    <>
+      <span className="ml" title={title}>{bar.label} {bar.direction === 'down' ? '↓' : '↑'}</span>
+      <span className="ax" title={title}><i className="track" />{!met && <i className="dist" style={{ left: `${(1 - d / DECADES) * 100}%` }} />}<i className="tick" /></span>
+      <span className="mv" title={`target ${target(bar)}`}><b>{measure(bar.latest?.value, bar.unit)}</b> <span className={met ? 'ok' : 'dim'}>{distance(bar)}</span></span>
+    </>
   )
 }

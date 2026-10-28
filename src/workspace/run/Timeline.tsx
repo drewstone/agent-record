@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { FlowMarker, FlowSpan, FlowTrace } from '@tangle-network/charts'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { FlowMarker, FlowOutcome, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import { agentParam, type TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, count, lat, type RunModel, elapsed } from './model.js'
 import { Bar, agentCost, StateDot, Icon } from './ui.js'
+
+/** Each state tone as the waterfall draws it: the same hue and shape as the page's own StateDot. */
+const OUTCOME: Record<Agent['state']['tone'], (label: string) => FlowOutcome> = {
+  live: (label) => ({ tone: 'live', label }),
+  ok: (label) => ({ tone: 'ok', label }),
+  done: (label) => ({ tone: 'ok', label, ring: true }),
+  fail: (label) => ({ tone: 'failed', label }),
+  none: (label) => ({ tone: 'neutral', label, ring: true }),
+  '': (label) => ({ tone: 'neutral', label, ring: true }),
+}
 
 /**
  * Who did what, when: the shared waterfall (charts FlowWaterfall), one lane per agent with its model and tool calls as
@@ -26,7 +36,8 @@ export function flowTrace(m: RunModel): FlowTrace {
       startMs: Math.max(0, a.start),
       endMs: end,
       status: running ? 'running' : a.status === 'failed' ? 'failed' : 'done',
-      ...(a.commits === null ? {} : { outcome: a.commits ? { tone: 'ok', label: 'Shipped' } : a.status === 'failed' ? { tone: 'failed', label: 'Failed' } : running ? { tone: 'warn', label: 'Running' } : { tone: 'neutral', label: 'Nothing shipped' } }),
+      // The lane's dot is the agent's state in the words and marks Topology and Overview use (model.ts stateOf).
+      outcome: OUTCOME[a.state.tone](a.state.label),
       // A free seat's $0.00 says nothing on every lane; only a measured cost is printed.
       ...(a.listUsd ? { costUsd: a.listUsd } : a.billedUsd ? { costUsd: a.billedUsd } : {}),
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
@@ -85,6 +96,15 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
     observe.observe(el)
     return () => observe.disconnect()
   }, [])
+  // The rows take what the waterfall's own header, legend, controls and axis leave: measured, so the card meets the bottom
+  // of the screen (22a stopped 80 px short with a guessed 230).
+  const [chrome, setChrome] = useState(196)
+  useLayoutEffect(() => {
+    const root = box.current?.querySelector<HTMLElement>('.fw-root'), rows = root?.querySelector<HTMLElement>('.fw-scroller')
+    if (!root || !rows) return
+    const next = root.offsetHeight - rows.offsetHeight
+    if (next > 0 && Math.abs(next - chrome) > 1) setChrome(next)
+  })
   const picked = route.params.get('agent') ? agent : null, selected = picked ? m.byId.get(picked) ?? null : null
   return (
     <div className="rp-tl">
@@ -96,7 +116,8 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
             defaultView="agents"
             summary={false}
             markers={markers}
-            maxHeight={Math.max(200, height - 230)}
+            agentFill="muted"
+            maxHeight={Math.max(200, height - chrome - 2)}
             selectedId={picked ?? undefined}
             onDeselect={() => selectAgent(null)}
             onSelect={(s) => { const id = s.kind === 'pipeline' ? s.id : s.parentId; if (id && m.byId.has(id)) selectAgent(id) }}
