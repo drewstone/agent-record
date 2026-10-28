@@ -54,8 +54,9 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
     res.writeHead(404).end()
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
-  const browser = await chromium.launch({ headless: true })
+  let browser
   try {
+    browser = await chromium.launch({ headless: true })
     for (theme of ['light', 'dark']) for (const width of [1512, 390]) {
       alive = true
       const context = await browser.newContext({ viewport: { width, height: 982 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 982 } } } : {}) })
@@ -77,6 +78,9 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('button', { name: /3 idle turns/ }).click()
       await page.getByRole('button', { name: 'Beginning', exact: true }).click()
       await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
+      const requestCount = requests.length
+      await page.waitForTimeout(3200)
+      assert.equal(requests.length, requestCount, 'reading the beginning does not poll or drain history')
       const bubble = page.locator('[data-timeline-step="user"] .justify-end').first()
       assert.ok(await bubble.count(), 'initial prompt uses the shared right-aligned user message')
       await page.getByRole('button', { name: 'Full prompt', exact: true }).click()
@@ -85,6 +89,8 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByText('Exact retained evidence, with source provenance.', { exact: true }).waitFor()
       await page.getByRole('button', { name: 'Latest', exact: true }).click()
       await page.locator('[data-idle-group="3"]').waitFor()
+      await page.getByRole('button', { name: /Shell.*check proof/i }).click()
+      await page.getByText('Proof verification failed: witness mismatch', { exact: true }).last().waitFor()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'long play/run header and transcript fit the phone')
       assert.ok(await page.locator('.virtual-row').count() < 100)
       if (evidence) await page.screenshot({ path: `${evidence}/chat-${width}-${theme}.png` })
@@ -102,7 +108,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await context.close()
     }
   } finally {
-    await browser.close()
+    await browser?.close()
     await new Promise(resolve => server.close(resolve))
   }
 })
