@@ -89,7 +89,7 @@ function HostCard({ h }: { h: Host }) {
       <DiskBar h={h} />
       {/* An alarm is a callout in its producer's words; the rest are what the host watches, one quiet line. */}
       {h.breaches.filter((b) => b.alarm).map((b) => <Tip key={b.label} className="wp-alarm" text={`${b.text} (${b.limit}${b.held ? `; ${b.held}` : ''})`}><b>{b.label.replace(/\s*\/\s*$/, '')}</b>{b.held ? ` ${b.held}` : ` ${b.text}`}</Tip>)}
-      {h.breaches.some((b) => !b.alarm) && <p className="wp-watch">Watching: {h.breaches.filter((b) => !b.alarm).map((b, i) => <Tip key={b.label} text={`${b.text} (${b.limit})`}>{i ? ', ' : ''}{b.label}</Tip>)}</p>}
+      {h.breaches.some((b) => !b.alarm) && <Tip className="wp-watch" text={h.breaches.filter((b) => !b.alarm).map((b) => `${b.label}: ${b.text} (${b.limit})`).join('; ')}>Watching: {h.breaches.filter((b) => !b.alarm).map((b) => b.label).join(', ')}</Tip>}
     </li>
   )
 }

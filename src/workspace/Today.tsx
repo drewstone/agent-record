@@ -159,7 +159,7 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             {moved.length ? byPlay(moved.slice(0, 60)).map((g) => (
               <section key={g.play}>
                 <h3><a href={playHref(g.play)}>{g.title}</a><span className="ct">{g.moves.length}</span></h3>
-                <ol>{g.moves.map((m, i) => <li key={i}><time>{hhmm(m.at)}</time><span className="tx">{m.text}</span>{m.badge && <span><span className={`td2-badge ${m.badge.tone}`}>{m.badge.text}</span></span>}</li>)}</ol>
+                <ol>{g.moves.map((m, i) => <li key={i}><time>{hhmm(m.at)}</time><span className="tx">{m.text}</span>{m.badge && <span className="bd"><span className={`td2-badge ${m.badge.tone}`}>{m.badge.text}</span></span>}</li>)}</ol>
               </section>
             )) : <p className="td2-none">Nothing moved since {markWords}.</p>}
           </div>

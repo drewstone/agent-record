@@ -602,7 +602,7 @@
 .rp .td2-moves h3 a:hover { color: var(--accent-text); }
 .rp .td2-moves ol { list-style: none; margin: 0; padding: 0 0 8px; }
 .rp .td2-moves li { display: grid; grid-template-columns: 48px minmax(0, 1fr) 136px; gap: 12px; align-items: baseline; padding: 4px 20px; }
-.rp .td2-moves li > span:last-child { justify-self: end; }
+.rp .td2-moves li > .bd { justify-self: end; }
 .rp .td2-moves time { font: 14px/20px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text-dim); }
 .rp .td2-moves .tx b { font-weight: 600; }
 .rp .td2-moves .tx a { color: var(--accent-text); }
@@ -655,7 +655,7 @@
   .rp .td2-top { display: flex; flex-direction: column; }
   .rp .td2-top > .rp-card { height: auto; max-height: 420px; }
   .rp .td2-moves li { grid-template-columns: 44px minmax(0, 1fr); }
-  .rp .td2-moves li > span:last-child { grid-column: 2; justify-self: start; }
+  .rp .td2-moves li > .bd { grid-column: 2; justify-self: start; }
   .rp .td2-find { width: 100%; }
   .rp .td2-board .rp-hd { height: auto; flex-wrap: wrap; padding: 8px 12px; }
   .rp .td2-grid { --td2-cols: minmax(0, 1fr) auto auto; }

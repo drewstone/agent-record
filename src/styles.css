@@ -3031,7 +3031,7 @@
 .ar-ws .wp { --wp-ink: hsl(var(--hsl-foreground) / 0.55); }
 .ar-ws .wp-alarm { display: block; padding: 8px 12px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ar-c-fail) 9%, transparent); box-shadow: inset 2px 0 0 var(--ar-c-fail); color: var(--ar-fg); font-size: var(--ar-text-s); line-height: 20px; }
 .ar-ws .wp-alarm b { color: var(--ar-c-fail); font-weight: 600; }
-.ar-ws .wp-watch { margin: 0; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
+.ar-ws .wp-watch { display: block; margin: 0; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
 .ar-ws .wp-seats > summary b { color: var(--ar-fg); font-weight: 600; }
 .ar-ws .wp-seats > .wp-back { margin: 4px 0 8px 22px; }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
