@@ -1,3 +1,4 @@
+import { statusMeta } from '@tangle-network/ui/run'
 import type { RunWorkspaceDocument, WorkspaceNode, WorkspaceRelease } from '../RunWorkspace.js'
 
 /**
@@ -7,7 +8,7 @@ import type { RunWorkspaceDocument, WorkspaceNode, WorkspaceRelease } from '../R
  */
 export type ByClass = { input: number; output: number; cacheRead: number; cacheWrite?: number }
 export type ToolUsage = { calls: number; failures: number; ms: number }
-/** One step as the host recorded it (epoch ms), with the per-step metrics tangle-tools #2190 added where known. */
+/** Host display segment in epoch ms; long runs coalesce calls. Full activity cadence comes from usage's clock fields. */
 export type RawStep = {
   kind: 'model' | 'tool' | 'waiting'
   startMs: number
@@ -41,6 +42,9 @@ export type Usage = {
   failures?: { model: number; tool: number } | null
   retries?: { model: number; tool: number } | null
   steps?: RawStep[]
+  lastActivityAt?: number | null
+  medianEventGapMs?: number | null
+  activityEvents?: WorkspaceNode['activityEvents']
 }
 export type Node = WorkspaceNode & { start?: string | null; end?: string | null; seat?: string | null; usage?: Usage | null }
 export type RunRelease = WorkspaceRelease & { by?: Record<string, number>; files?: Record<string, string[]>; tagged?: boolean; held?: string[] }
@@ -72,7 +76,7 @@ export interface ToolStats {
   p99: number | null
 }
 /** ok: shipped commits; done: settled without commits (a ring of the same ink, so the two never read as one state). */
-export type Tone = 'ok' | 'done' | 'live' | 'none' | 'fail' | ''
+export type Tone = 'ok' | 'done' | 'live' | 'none' | 'fail' | 'waiting' | 'needs-you' | ''
 export const finished = (tone: Tone) => tone === 'ok' || tone === 'done'
 export interface Agent {
   id: string
@@ -95,8 +99,11 @@ export interface Agent {
   billedUsd: number | null
   listUsd: number | null
   steps: Step[]
-  modelCalls: number
-  toolCalls: number
+  lastActivityAt?: number
+  medianEventGapMs?: number
+  events: NonNullable<WorkspaceNode['activityEvents']>
+  modelCalls: number | null
+  toolCalls: number | null
   failedSteps: number
   toolFailures: number
   retries: number
@@ -121,7 +128,7 @@ export interface RunModel {
   teams: { id: string; label: string; members: string[] }[]
   tools: ToolStats[]
   steps: { agent: Agent; step: Step }[]
-  totals: { steps: number; model: number; tool: number; failed: number; toolFailures: number; retries: number; tokens: number | null; byClass: ByClass | null; billedUsd: number | null; listUsd: number | null; busy: number; lastStep: number | null }
+  totals: { steps: number; model: number | null; tool: number | null; failed: number; toolFailures: number; retries: number; tokens: number | null; byClass: ByClass | null; billedUsd: number | null; listUsd: number | null; busy: number; lastStep: number | null }
   pauses: { from: number; to: number; reason: string }[]
   releases: RunRelease[]
   best: RunRelease | null
@@ -151,15 +158,16 @@ const targetOf = (step: RawStep) => {
   return cut >= 0 ? name.slice(cut + 3) : null
 }
 
-/** An agent's state word and tone, from the spawn journal's settle; one with commits shipped, whatever the settle (21c: memscale-5 committed, then failed). */
-function stateOf(node: Node, live: boolean, steps: number): Agent['state'] {
-  if (node.status === 'running' || (live && node.status === 'waiting')) return { label: node.status === 'waiting' ? 'Waiting' : 'Running', tone: 'live' }
-  if (node.shipped) return { label: 'Shipped', tone: 'ok' }
-  if (node.status === 'succeeded') return { label: 'Done', tone: 'done' }
-  if (node.status === 'failed') return { label: 'Failed', tone: 'fail' }
-  if (!steps && (!node.start || !node.usage)) return { label: 'Never ran', tone: 'none' }
-  // An idle agent of a live run is waiting for work; once the run ends it stopped like the rest: one word per state.
-  return node.status === 'idle' && live ? { label: 'Waiting', tone: 'live' } : { label: 'Stopped', tone: '' }
+const knownCount = (value: number | null | undefined) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+const toolCount = (usage: Usage | null) => usage?.tools && Object.values(usage.tools).every(tool => knownCount(tool.calls) !== null) ? Object.values(usage.tools).reduce((total, tool) => total + tool.calls, 0) : null
+
+/** Execution status keeps its source meaning; a shipped commit qualifies only a successful settlement. */
+function stateOf(node: Node): Agent['state'] {
+  if (node.status === 'failed') return { label: statusMeta(node.status).label, tone: 'fail' }
+  if (node.status === 'needs-you' || node.status === 'waiting') return { label: statusMeta(node.status).label, tone: node.status }
+  if (node.status === 'running') return { label: statusMeta(node.status).label, tone: 'live' }
+  if (node.status === 'succeeded') return { label: `${statusMeta(node.status).label}${node.shipped ? ' · Shipped' : ''}`, tone: node.shipped ? 'ok' : 'done' }
+  return { label: statusMeta(node.status).label, tone: node.status === 'idle' ? 'none' : '' }
 }
 
 export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; durationMs?: number | null }): RunModel {
@@ -172,10 +180,7 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
   const duration = ws.live ? Math.max(0, Date.now() - t0) : run.durationMs ?? Math.max(0, (ends.length ? Math.max(...ends) : t0) - t0)
   const parentOf = (n: Node) => {
     const from = spawned.get(n.id)
-    if (from && ids.has(from)) return from
-    const cut = n.id.lastIndexOf(':')
-    const prefix = cut > 0 ? n.id.slice(0, cut) : null
-    return prefix && ids.has(prefix) ? prefix : null
+    return from && ids.has(from) ? from : null
   }
   const agents: Agent[] = nodes.map((node) => {
     const usage = node.usage ?? null
@@ -193,25 +198,16 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
     }))
     steps.sort((a, b) => a.t - b.t)
     const model = steps.filter((s) => s.kind === 'model')
-    const byTool = new Map<string, { d: number[]; f: number; ms: number }>()
-    for (const s of steps) {
-      if (s.kind !== 'tool' || !s.tool) continue
-      const entry = byTool.get(s.tool) ?? { d: [], f: 0, ms: 0 }
-      entry.d.push(s.d)
-      entry.f += s.failed ? 1 : 0
-      entry.ms += s.d
-      byTool.set(s.tool, entry)
-    }
-    // Steps are the store's timed calls; an agent whose store lost them keeps the host's per-tool counts.
-    const tools = byTool.size
-      ? [...byTool].map(([name, t]) => toolStats(name, t.d, t.f, t.ms))
-      : Object.entries(usage?.tools ?? {}).map(([name, t]) => ({ ...toolStats(name, [], t.failures, t.ms), calls: t.calls }))
+    // Aggregate counts cover the full stream; display steps can be coalesced or capped.
+    const tools = Object.entries(usage?.tools ?? {}).filter(([, tool]) => knownCount(tool.calls) !== null).map(([name, tool]) => {
+      const durations = steps.filter(step => step.kind === 'tool' && step.tool === name).map(step => step.d)
+      return { ...toolStats(name, durations.length === tool.calls ? durations : [], tool.failures, tool.ms), calls: tool.calls }
+    })
     tools.sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name))
     const latencies = model.map((s) => s.latency!).filter((v) => Number.isFinite(v))
     const ends = steps.map((s) => s.t + s.d)
     const start = Number.isFinite(time(node.start)) ? time(node.start) - t0 : steps[0]?.t ?? null
     const end = Number.isFinite(time(node.end)) ? time(node.end) - t0 : ends.length ? Math.max(...ends) : null
-    const toolCalls = byTool.size ? steps.filter((s) => s.kind === 'tool').length : tools.reduce((t, x) => t + x.calls, 0)
     return {
       id: node.id,
       name: node.role ?? node.label,
@@ -221,7 +217,7 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
       depth: 0,
       team: null,
       status: node.status,
-      state: stateOf(node, ws.live, steps.length),
+      state: stateOf(node),
       model: shortModel(node.model ?? Object.keys(usage?.models ?? {})[0]),
       harness: node.harness,
       start,
@@ -231,12 +227,15 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
       billedUsd: usage?.billedUsd ?? null,
       listUsd: usage?.listUsd ?? null,
       steps,
-      modelCalls: model.length || usage?.calls || 0,
-      toolCalls,
-      failedSteps: steps.length ? steps.filter((s) => s.failed).length : (usage?.failures?.model ?? 0) + (usage?.failures?.tool ?? 0),
-      toolFailures: steps.length ? steps.filter((s) => s.kind === 'tool' && s.failed).length : usage?.failures?.tool ?? 0,
+      lastActivityAt: usage?.lastActivityAt ?? node.lastActivityAt ?? undefined,
+      medianEventGapMs: usage?.medianEventGapMs ?? node.medianEventGapMs ?? undefined,
+      events: usage?.activityEvents ?? node.activityEvents ?? [],
+      modelCalls: knownCount(usage?.calls),
+      toolCalls: toolCount(usage),
+      failedSteps: usage?.failures ? usage.failures.model + usage.failures.tool : steps.filter((s) => s.failed).length,
+      toolFailures: usage?.failures?.tool ?? tools.reduce((total, tool) => total + tool.failures, 0),
       retries: (usage?.retries?.model ?? 0) + (usage?.retries?.tool ?? 0),
-      latency: latencies.length ? { p50: percentile(latencies, 50), p90: percentile(latencies, 90), p99: percentile(latencies, 99) } : { p50: usage?.latencyMs?.p50 ?? null, p90: usage?.latencyMs?.p90 ?? null, p99: usage?.latencyMs?.max ?? null },
+      latency: { p50: usage?.latencyMs?.p50 ?? (usage?.calls === latencies.length ? percentile(latencies, 50) : null), p90: usage?.latencyMs?.p90 ?? (usage?.calls === latencies.length ? percentile(latencies, 90) : null), p99: usage?.calls === latencies.length ? percentile(latencies, 99) : null },
       tools,
       busy: steps.filter((s) => s.kind !== 'waiting').reduce((t, s) => t + s.d, 0),
       first: steps.length ? steps[0]!.t : null,
@@ -267,18 +266,9 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
   for (const t of teams) for (const m of t.members) byId.get(m)!.team = t.id
   for (const t of teams) byId.get(t.id)!.team ??= t.id
   const steps = agents.flatMap((agent) => agent.steps.map((step) => ({ agent, step }))).sort((a, b) => a.step.t - b.step.t)
-  const runTools = new Map<string, { d: number[]; f: number; ms: number }>()
-  for (const { step } of steps) {
-    if (step.kind !== 'tool' || !step.tool) continue
-    const entry = runTools.get(step.tool) ?? { d: [], f: 0, ms: 0 }
-    entry.d.push(step.d)
-    entry.f += step.failed ? 1 : 0
-    entry.ms += step.d
-    runTools.set(step.tool, entry)
-  }
-  const tools = [...runTools].map(([name, t]) => toolStats(name, t.d, t.f, t.ms)).sort((a, b) => b.calls - a.calls)
+  const tools = mergeTools(agents)
   const whole = ws.runUsage ?? null
-  const sum = (pick: (a: Agent) => number | null) => (agents.some((a) => pick(a) !== null) ? agents.reduce((t, a) => t + (pick(a) ?? 0), 0) : null)
+  const sum = (pick: (a: Agent) => number | null) => (agents.length && agents.every((a) => pick(a) !== null) ? agents.reduce((t, a) => t + (pick(a) ?? 0), 0) : null)
   const lastEnds = steps.map(({ step }) => step.t + step.d)
   const releases = ws.releases.map((r) => ({ ...r, tagged: Boolean(r.taggedAt), taggedAt: r.taggedAt ?? r.at ?? null }))
   return {
@@ -294,8 +284,8 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
     steps,
     totals: {
       steps: steps.length,
-      model: steps.filter((s) => s.step.kind === 'model').length,
-      tool: steps.filter((s) => s.step.kind === 'tool').length,
+      model: knownCount(whole?.calls) ?? sum(a => a.modelCalls),
+      tool: toolCount(whole) ?? sum(a => a.toolCalls),
       failed: steps.filter((s) => s.step.failed).length,
       toolFailures: steps.filter((s) => s.step.kind === 'tool' && s.step.failed).length,
       retries: (whole?.retries?.model ?? 0) + (whole?.retries?.tool ?? 0),
@@ -337,7 +327,7 @@ export function mergeTools(agents: readonly Agent[]): ToolStats[] {
       entry.calls += t.calls
       merged.set(t.name, entry)
     }
-  return [...merged].map(([name, t]) => ({ ...toolStats(name, t.d, t.f, t.ms), calls: t.calls })).sort((a, b) => b.calls - a.calls)
+  return [...merged].map(([name, t]) => ({ ...toolStats(name, t.d.length === t.calls ? t.d : [], t.f, t.ms), calls: t.calls })).sort((a, b) => b.calls - a.calls)
 }
 
 // ----- formatting on the run's clock -----

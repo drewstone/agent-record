@@ -9,10 +9,10 @@ A React component for reading what an agent team did: conversations, tool inputs
 ## Install
 
 ```sh
-pnpm add https://github.com/drewstone/agent-record/releases/download/v0.5.1/drewstone-agent-record-0.5.1.tgz react react-dom
+pnpm add "$(gh release view --repo drewstone/agent-record --json assets --jq '.assets[] | select(.name | endswith(".tgz")) | .url')" react react-dom
 ```
 
-The release is an ESM package with TypeScript declarations and CSS.
+The command resolves the package tarball from the latest GitHub release. It is an ESM package with TypeScript declarations and CSS.
 It is distributed through GitHub Releases; this version is not published to the npm registry.
 React 18.3 and 19 are supported peer versions; release verification uses React 19.
 
@@ -135,7 +135,7 @@ export function BundleGraph({ record }: { record: RunRecord }) {
 
 The public `@drewstone/agent-record/workspace-viewer.js` export resolves the self-contained browser entry. Its adjacent `styles.css` includes the styles emitted by lazy graph and terminal modules. Install the maintained tarball from [GitHub Releases](https://github.com/drewstone/agent-record/releases), which also owns its artifact digest.
 
-For `agent-runtime-top` embedding, the CLI declares this renderer package and resolves its public asset internally:
+For `agent-runtime-top` embedding, install this renderer in the caller or pass its extracted `dist` directory through the CLI’s `--assets` option. Programmatic embedding resolves the same public asset:
 
 ```ts
 import { dirname } from 'node:path'
@@ -156,6 +156,8 @@ await viewer.close()
 <div id="agent-workspace" data-api="/api/discovery" data-mode="run" data-id="research-math-20261004system3"></div>
 <script type="module" src="/assets/agent-record/workspace-viewer.js"></script>
 ```
+
+The embedding page supplies its surrounding header and page gutters. Runtime's LiveRun owns its own padding.
 
 The play page (`data-mode="play"`) answers how close the play is to its goal and its bar, for every play, from the composer's play document (`goal`, `checkers`, `standing`, `bar`, `live`, `climb`, `barSeries`, `ledger`, `findings`, `releases`). Its first screen states the goal, the standing sentence the host composed (solved or not under the current checker, named `vN` with the ruling that made it, the best release under it and the best under an earlier checker), the current check as a stage ladder with workloads passed and published releases passing, each bar metric's best comparable value or nearest candidate (✕ failing, * not comparable, ? unknown) with its distance to the bar as words and on a log track, the live or last run with its blocker and kill checkpoints, and the API-equivalent cost with its provenance (never $0 for unmetered use). Standing then draws the climb (check progress per checked release, one colour per checker, grouped by run; **Over time** puts the same marks at the minute each check ran, each run a band, with a brush strip, run chips and ←/→ stepping), what the checks said per run, each bar metric against its target on the climb's axis, the runs ledger (agent-hours by attempt outcome, best check, cost and seat), each run's team as an agent timeline, and findings grouped as verified, contradicted, undecided and unchecked claims. Releases, Runs, Findings and Setup hold the full tables, the version graph and the play's input.
 The explore page (`data-mode="explore"`, `/api/discovery/explore`, `agent-workspace.explore.v1`) draws every catalogued run as one dot in a rectangle per play (a squarified treemap sized by runs; a dot's area follows its wall hours), or every agent the Lab mapped by what it said (`agent_semantics`, its clusters labelled), on one canvas that pans and zooms. A lens colours the dots: how a run ended, its research outcome with infrastructure failures counted apart, harness, credential, program, effort, behaviour cluster, or a computed column. The fleet line counts runs by outcome; Compare shows each cohort's solve rate and research-verdict rate with 95% Wilson intervals (under five, the count prints alone); Computed columns show each LLM-labelled column's agreement between two classifiers as Cohen's kappa with the disagreements one click from the agent's transcript.
@@ -195,7 +197,7 @@ When the host supplies `execution`, the top of the run page states whether it is
 The plays page also shows the last seven days' run reliability from `reliability` (discovery-lab `tools/reliability.mjs`, `discovery-lab.reliability.v1`): the share of settled runs that ran clean (below 80% in the failure colour), each day's share and run count, and the top three causes still happening (seen in the last 48 hours), most runs lost first, each with its layer, owner and when it was last seen. A cause that topped the week but stopped days ago is not listed as live.
 Tests and smoke runs, failed runs and archived runs are hidden until `show=all` ("Show them"), and the page counts what it hides, failures first; the host decides each run's and play's `hidden` reason, the viewer never guesses it.
 A document the host serves as last composed while it recomposes it (`X-Workspace-Stale: 1`) is fetched again after 2.5 s, backing off, for about a minute.
-An agent of a live run without a terminal state reads `working`; one whose status says `done` with no recorded usage reads `done · no usage recorded` (and `; capture missing` when its conversation was not captured); an agent with no recorded event says so in place of an empty conversation.
+Agent execution labels follow `@tangle-network/ui/run`; unreported status remains Unknown. A failed agent retains its full recorded reason in the selected details, and an agent with no recorded event says so in place of an empty conversation.
 Theme tokens come from the host: `--ar-background`, `--ar-surface`, `--ar-raised`, `--ar-line`, `--ar-foreground`, `--ar-muted`, `--ar-faint`, `--ar-accent`, `--ar-frame`, `--ar-ok`, `--ar-warn`, `--ar-crit`, `--ar-font` and `--ar-mono`.
 
 The conversation list renders only the rows near its viewport, so records with tens of thousands of events stay responsive.
@@ -269,6 +271,8 @@ pnpm build
 pnpm typecheck
 pnpm test
 pnpm build:example
+pnpm exec playwright install chromium
+pnpm test:run-ui
 pnpm pack
 ```
 

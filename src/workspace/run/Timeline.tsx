@@ -8,6 +8,8 @@ import { Bar, agentCost, StateDot, Icon } from './ui.js'
 /** Each state tone as the waterfall draws it: the same hue and shape as the page's own StateDot. */
 const OUTCOME: Record<Agent['state']['tone'], (label: string) => FlowOutcome> = {
   live: (label) => ({ tone: 'live', label }),
+  waiting: label => ({ tone: 'neutral', label, ring: true }),
+  'needs-you': label => ({ tone: 'warn', label }),
   ok: (label) => ({ tone: 'ok', label }),
   done: (label) => ({ tone: 'ok', label, ring: true }),
   fail: (label) => ({ tone: 'failed', label }),
@@ -25,7 +27,7 @@ export function flowTrace(m: RunModel): FlowTrace {
   const spans: FlowSpan[] = []
   for (const a of m.agents) {
     if (a.start === null) continue
-    const running = a.state.tone === 'live'
+    const running = a.status === 'running' || a.status === 'waiting' || a.status === 'needs-you'
     const end = running ? m.duration : Math.max(a.start, a.end ?? a.last ?? a.start)
     spans.push({
       id: a.id,
@@ -35,14 +37,17 @@ export function flowTrace(m: RunModel): FlowTrace {
       ...(a.model && a.model !== root ? { detail: a.model } : {}),
       startMs: Math.max(0, a.start),
       endMs: end,
-      status: running ? 'running' : a.status === 'failed' ? 'failed' : 'done',
+      status: a.status === 'succeeded' ? 'done' : a.status,
       // The lane's dot is the agent's state in the words and marks Topology and Overview use (model.ts stateOf).
       outcome: OUTCOME[a.state.tone](a.state.label),
-      // A free seat's $0.00 says nothing on every lane; only a measured cost is printed.
-      ...(a.listUsd ? { costUsd: a.listUsd } : a.billedUsd ? { costUsd: a.billedUsd } : {}),
+      activityAt: a.lastActivityAt === undefined ? [] : [a.lastActivityAt - m.t0],
+      medianEventGapMs: a.medianEventGapMs,
+      ...(a.listUsd !== null ? { costUsd: a.listUsd } : a.billedUsd !== null ? { costUsd: a.billedUsd } : {}),
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
       marks: a.restarts.map((at) => ({ at, kind: 'restart', label: `Restarted ${clockOf(m.t0)(at)} UTC` })),
       facts: [
+        ...(a.tokens !== null && !a.byClass ? [{ label: 'Tokens (split not recorded)', value: abbr(a.tokens) }] : []),
+        ...(a.node.failureReason ? [{ label: 'Failure', value: a.node.failureReason }] : []),
         { label: 'Commits', value: a.commits === null ? '—' : String(a.commits) },
         { label: 'Restarts', value: String(a.restarts.length) },
         ...(a.turns !== null ? [{ label: 'Turns', value: String(a.turns) }] : []),
@@ -60,7 +65,7 @@ export function flowTrace(m: RunModel): FlowTrace {
         endMs: Math.max(0, s.t + s.d),
         status: s.failed ? 'failed' : 'done',
         ...(s.tokens ? { promptTokens: s.tokens.input + s.tokens.cacheRead, completionTokens: s.tokens.output, cachedTokens: s.tokens.cacheRead } : {}),
-        ...(s.usd ? { costUsd: s.usd } : {}),
+        ...(s.usd !== null ? { costUsd: s.usd } : {}),
       })
     })
   }
@@ -68,12 +73,11 @@ export function flowTrace(m: RunModel): FlowTrace {
   return {
     spans,
     totalMs: m.duration,
-    promptTokens: by ? by.input + by.cacheRead : (m.totals.tokens ?? 0),
-    completionTokens: by?.output ?? 0,
+    ...(by ? { promptTokens: by.input + by.cacheRead, completionTokens: by.output } : {}),
     ...(m.totals.listUsd !== null ? { costUsd: m.totals.listUsd, costBasis: 'list' as const } : {}),
     ...(m.totals.billedUsd !== null ? { billedUsd: m.totals.billedUsd } : {}),
-    modelCalls: m.totals.model,
-    toolCalls: m.totals.tool,
+    ...(m.totals.model !== null ? { modelCalls: m.totals.model } : {}),
+    ...(m.totals.tool !== null ? { toolCalls: m.totals.tool } : {}),
     errors: m.totals.failed,
     pauses: m.pauses.map((p) => ({ startMs: p.from, endMs: p.to, label: `No agent turn ${elapsed(p.to - p.from)}`, detail: p.reason })),
   }
@@ -112,6 +116,7 @@ export function TimelineTab({ m, agent, selectAgent, route, doc }: TabProps) {
           <FlowWaterfall
             trace={trace}
             live={m.live}
+            startedAt={Number.isFinite(Date.parse(doc.run.startedAt ?? '')) || m.agents.some(a => Number.isFinite(Date.parse(a.node.start ?? ''))) ? m.t0 : undefined}
             label="Agents over time"
             defaultView="agents"
             summary={false}
@@ -166,7 +171,7 @@ export function AgentInspector({ m, a, href }: { m: RunModel; a: Agent; href: (t
                 <div key={t.name} className="row"><span className="l" title={t.name}>{t.name}</span><Bar ok={t.calls - t.failures} failed={t.failures} max={max} /><span className="n">{count(t.calls)}</span></div>
               ))}
             </div>
-          ) : <span className="dim">No tool calls</span>}
+          ) : <span className="dim">{a.toolCalls === null ? 'Tool calls not recorded' : 'No tool calls'}</span>}
         </div>
         <div>
           <h4>Reliability</h4>

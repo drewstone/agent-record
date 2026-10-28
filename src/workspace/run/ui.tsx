@@ -1,3 +1,4 @@
+import { RunStatusIcon } from '@tangle-network/ui/run'
 import { createContext, type CSSProperties, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type Agent, abbr, count, lat, type RunModel, elapsed, type ToolStats, usd } from './model.js'
@@ -32,7 +33,8 @@ export function Icon({ name, size = 16, className }: { name: IconName; size?: nu
   )
 }
 
-export const StateDot = ({ tone }: { tone: Agent['state']['tone'] | 'held' }) => <span className={`rp-dot${tone ? ` ${tone}` : ''}`} aria-hidden="true" />
+export const StateDot = ({ tone }: { tone: Agent['state']['tone'] | 'held' }) => tone === 'waiting' || tone === 'needs-you'
+  ? <RunStatusIcon status={tone} aria-hidden /> : <span className={`rp-dot${tone ? ` ${tone}` : ''}`} aria-hidden="true" />
 
 /** The match in a label, underlined. */
 export function Hilite({ text, query }: { text: string; query: string }) {
