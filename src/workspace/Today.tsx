@@ -159,7 +159,7 @@ function TodayView({ doc }: { doc: OverviewDocument }) {
             {moved.length ? byPlay(moved.slice(0, 60)).map((g) => (
               <section key={g.play}>
                 <h3><a href={playHref(g.play)}>{g.title}</a><span className="ct">{g.moves.length}</span></h3>
-                <ol>{g.moves.map((m, i) => <li key={i}><time>{hhmm(m.at)}</time><span className="tx">{m.text}</span><span>{m.badge && <span className={`td2-badge ${m.badge.tone}`}>{m.badge.text}</span>}</span></li>)}</ol>
+                <ol>{g.moves.map((m, i) => <li key={i}><time>{hhmm(m.at)}</time><span className="tx">{m.text}</span>{m.badge && <span><span className={`td2-badge ${m.badge.tone}`}>{m.badge.text}</span></span>}</li>)}</ol>
               </section>
             )) : <p className="td2-none">Nothing moved since {markWords}.</p>}
           </div>
@@ -202,7 +202,7 @@ function Board({ plays, live, week, now }: { plays: Play[]; live: Map<string, Ov
         <div className="td2-cols" aria-hidden="true">
           <span>Play</span><span>Steps</span><span>Metric</span>
           <span className="axis">{Array.from({ length: DECADES }, (_, i) => <i key={i} style={{ left: `${(i / DECADES) * 100}%` }}>{(10 ** (DECADES - i)).toLocaleString('en-US')}×</i>)}<i style={{ left: '100%' }} className="t">target</i></span>
-          <span>Distance</span><span>7 days</span><span className="r">Live</span>
+          <span>Now</span><span>7 days</span><span className="r">Live</span>
         </div>
         {(['running', 'stopped', 'solved'] as const).filter((g) => (filter === 'all' || filter === g) && grouped[g].length).map((g) => {
           const rows = grouped[g]
@@ -247,13 +247,13 @@ function PlayRow({ p, group, runs, week, now }: { p: Play; group: Group; runs: O
       <div className="steps">
         {trend && newest ? <span className="st" title={`${newest.release}, ${ago(newest.at, now)}${newest.passed < trend.best ? `; best ${trend.best}/${trend.total}` : ''}`}><b>{newest.passed}/{trend.total}</b><Meter passed={newest.passed} total={trend.total} /></span> : <span className="dim">—</span>}
       </div>
-      {primary ? <MetricCells bar={primary} /> : <><span className="ml dim">{why ? <span title={why}>{clip(why, 8)}</span> : 'No metric'}</span><span /><span /></>}
+      {primary ? <MetricCells bar={primary} more={rest.length ? <button type="button" className="td2-mx" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} ${rest.length} more ${rest.length === 1 ? 'metric' : 'metrics'}`} onClick={() => setOpen(!open)}>{open ? '−' : `+${rest.length}`}</button> : null} />
+        : <><span className="ml dim">{why ? <span title={why}>{clip(why, 8)}</span> : 'No metric'}</span><span /><span /></>}
       <div className="wk">{chip ? <span className={`td2-badge ${chip.tone}`}>{chip.text}</span> : <span className="dim">—</span>}</div>
       <div className="live">
         {runs.length ? <span className="lv" title={runs.map((r) => shortRun(p.play, r.runId)).join(', ')}><span className="rp-dot live" /><a href={runHref(runs[0]!.runId)}><b>{agents || runs.length}</b> {agents ? (agents === 1 ? 'agent' : 'agents') : runs.length === 1 ? 'run' : 'runs'}</a></span>
           : <span className="sub">{week?.lastActiveAt ? ago(week.lastActiveAt, now) : ''}</span>}
       </div>
-      {rest.length > 0 && <button type="button" className="td2-mx" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Fewer metrics' : `${rest.length} more ${rest.length === 1 ? 'metric' : 'metrics'}`}</button>}
       {open && rest.map((b) => <div key={b.metric} className="td2-extra"><MetricCells bar={b} /></div>)}
     </div>
   )
@@ -265,13 +265,13 @@ function Meter({ passed, total }: { passed: number; total: number }) {
 
 /** One metric as three cells of the board's grid: its name, its distance on the shared axis (10,000× away at the left, the
  * target at the right), and its value with the distance in words. */
-function MetricCells({ bar }: { bar: ViewBar }) {
+function MetricCells({ bar, more }: { bar: ViewBar; more?: ReactNode }) {
   const met = !bar.ratio || bar.ratio.side === 'met'
   const d = met ? 0 : Math.min(DECADES, Math.log10(Math.max(1, bar.ratio!.x)))
   const title = `${bar.label}: ${measure(bar.latest?.value, bar.unit)}${bar.latest?.release ? ` at ${bar.latest.release}` : ''}; target ${target(bar)}`
   return (
     <>
-      <span className="ml" title={title}>{bar.label} {bar.direction === 'down' ? '↓' : '↑'}</span>
+      <span className="ml"><span title={title}>{bar.label} {bar.direction === 'down' ? '↓' : '↑'}</span>{more}</span>
       <span className="ax" title={title}><i className="track" />{!met && <i className="dist" style={{ left: `${(1 - d / DECADES) * 100}%` }} />}<i className="tick" /></span>
       <span className="mv" title={`target ${target(bar)}`}><b>{measure(bar.latest?.value, bar.unit)}</b> <span className={met ? 'ok' : 'dim'}>{distance(bar)}</span></span>
     </>

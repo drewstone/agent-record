@@ -277,7 +277,8 @@
    files pane the pane is the frame, so the inner frame steps back. The preview scrolls inside the pane, so the page's
    margins sit inside its scroller: the text runs to the pane's edge, never stopping short of it. */
 .rp .rp-doc [class~='border-border'][class~='p-5'], .rp .rp-doc [class~='border-border'][class~='max-h-[70vh]'] { border: 0; border-radius: 0; background: transparent; padding: 32px 40px 64px; max-height: none; }
-.rp .rp-doc:not(.code) [class~='border-border'][class~='p-5'] > * { max-width: 800px; }
+/* The reading column sits in the middle of the pane, not against its left edge with 430 px of nothing to its right. */
+.rp .rp-doc:not(.code) [class~='border-border'][class~='p-5'] > * { max-width: 800px; margin-inline: auto; }
 .rp .rp-doc.code [class~='border-border'][class~='max-h-[70vh]'] { padding: 16px 20px; }
 
 /* Topology: nested groups on the recessed canvas, each headed by the agent that spawned it, its agents in a grid of full names */
@@ -344,7 +345,7 @@
 .rp .rp-tx { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
 .rp .rp-tx > :is(.run-panel, .rp-steplog) { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 0; padding: 0; margin: 0; background: none; box-shadow: none; }
 .rp .rp-tx .conversation-scroll { flex: 1; min-height: 0; height: auto; max-height: none; overflow: auto; padding: 8px 8px 48px; }
-.rp .rp-tx .ar-chat { max-width: 920px; }
+.rp .rp-tx .ar-chat { max-width: 960px; margin-left: 0; padding-left: 24px; }
 .rp .rp-tx .transcript-edge { flex: none; margin: 0; height: 40px; align-items: center; box-shadow: inset 0 -1px 0 var(--rp-line); font-size: 14px; }
 .rp .rp-tx .conversation-scroll + .transcript-edge { box-shadow: inset 0 1px 0 var(--rp-line); }
 .rp .rp-tx > :is(.run-panel, .rp-steplog) > [role='status'], .rp .rp-tx > .ws-status { margin: 0; padding: 16px 24px; }
@@ -502,7 +503,7 @@
 .rp .rp-rel li.gap { grid-template-columns: 80px minmax(0, 1fr); }
 .rp .rp-rel li.gap b { font-weight: 500; color: hsl(var(--hsl-muted-foreground)); }
 .rp .rp-rel li.gap .sub { grid-column: auto; margin: 0; }
-.rp .rp-commits { padding: 12px 20px 16px; display: grid; gap: 0; align-content: start; }
+.rp .rp-commits { flex: 1; padding: 12px 20px 16px; display: grid; gap: 0; align-content: start; }
 .rp .rp-commits .row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(48px, 1fr) 40px; gap: 12px; align-items: center; height: 32px; }
 .rp .rp-commits .l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp .rp-commits .n { text-align: right; font-variant-numeric: tabular-nums; }
@@ -538,7 +539,7 @@
   .rp .rp-vd-top { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .rp .rp-verdict { font-size: 20px; line-height: 28px; }
   .rp .rp-vd-act { flex-wrap: wrap; }
-  .rp .rp-sum { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .rp .rp-sum { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0; }
   .rp .rp-sum > div { padding: 14px 16px; }
   .rp .rp-sum > div:first-child, .rp .rp-sum > div:nth-child(4) { grid-column: 1 / -1; }
   .rp .rp-sum > div + div { border-top: 1px solid var(--rp-line); }
@@ -616,7 +617,7 @@
 .rp .td2-cols .r, .rp .td2-row .live { text-align: right; justify-self: end; }
 .rp .td2-cols .axis { position: relative; height: 20px; }
 .rp .td2-cols .axis i { position: absolute; top: 0; font-style: normal; transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rp .td2-cols .axis i.t { color: hsl(var(--hsl-muted-foreground)); }
+.rp .td2-cols .axis i.t { transform: translateX(-100%); color: hsl(var(--hsl-muted-foreground)); }
 .rp .td2-gh { display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; padding: 0 20px; border: 0; border-bottom: 1px solid var(--rp-line); background: transparent; font: 600 15px/22px var(--font-sans); color: hsl(var(--hsl-foreground)); text-align: left; cursor: pointer; }
 .rp .td2-gh .rp-i { transition: transform 0.12s; color: var(--text-dim); }
 .rp .td2-gh[aria-expanded='false'] .rp-i { transform: rotate(-90deg); }
@@ -630,7 +631,8 @@
 .rp .td2-meter { display: inline-flex; gap: 2px; }
 .rp .td2-meter i { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--rp-raised); box-shadow: inset 0 0 0 1px var(--rp-line); }
 .rp .td2-meter i.on { background: var(--surface-success-text); box-shadow: none; }
-.rp .td2-row .ml { min-width: 0; font-size: 14px; color: hsl(var(--hsl-muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp .td2-row .ml { min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: hsl(var(--hsl-muted-foreground)); white-space: nowrap; }
+.rp .td2-row .ml > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rp .td2-row .ax { position: relative; height: 12px; }
 .rp .td2-row .ax .track { position: absolute; left: 0; right: 0; top: 5px; height: 2px; background: var(--rp-raised); }
 .rp .td2-row .ax .dist { position: absolute; right: 0; top: 3px; height: 6px; border-radius: var(--radius-tag) 0 0 var(--radius-tag); background: hsl(var(--hsl-foreground) / 0.62); }
@@ -640,13 +642,14 @@
 .rp .td2-row .mv .ok { color: var(--surface-success-text); }
 .rp .td2-row .lv { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .rp .td2-row .lv a:hover { color: var(--accent-text); }
-.rp .td2-mx { grid-column: 3 / span 3; justify-self: start; margin: 2px 0 0; padding: 0; border: 0; background: none; color: var(--accent-text); font: 500 14px/20px var(--font-sans); cursor: pointer; }
+.rp .td2-mx { flex: none; height: 22px; padding: 0 7px; border: 0; border-radius: var(--radius-pill); background: var(--rp-raised); color: hsl(var(--hsl-foreground)); font: 500 14px/20px var(--font-sans); font-variant-numeric: tabular-nums; cursor: pointer; }
+.rp .td2-mx:hover, .rp .td2-mx[aria-expanded='true'] { background: var(--ix-sel-bg); color: var(--accent-text); }
 .rp .td2-extra { display: contents; }
 .rp .td2-extra > .ml { grid-column: 3; }
 @media (max-width: 1100px) {
   .rp .td2-grid { --td2-cols: minmax(0, 1fr) auto auto auto; }
   .rp .td2-cols { display: none; }
-  .rp .td2-row .ml, .rp .td2-row .ax, .rp .td2-row .mv, .rp .td2-mx, .rp .td2-extra { display: none; }
+  .rp .td2-row .ml, .rp .td2-row .ax, .rp .td2-row .mv, .rp .td2-extra { display: none; }
 }
 @media (max-width: 720px) {
   .rp .td2-top { display: flex; flex-direction: column; }

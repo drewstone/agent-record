@@ -130,11 +130,13 @@ function FleetView({ doc }: { doc: FleetDoc }) {
         </section>
         <section aria-label="Seats">
           <h2>Seats <span className="wp-muted">{doc.seats.limited ?? '—'} of {doc.seats.total ?? '—'} at a limit{back ? `, first back ${stamp(back, Date.now())}` : ''}</span></h2>
-          {/* Seats at a limit grouped by provider, each account with the time it returns (rows of "claude drew@webb" read as a dump). */}
+          {/* Seats at a limit as one line per provider with a count and the first return; its accounts open under it (a list of
+              every account address read as a dump, judges 10-27). */}
           {[...new Set(limited.map((s) => s.provider))].map((provider) => {
             const seats = limited.filter((s) => s.provider === provider)
-            return <div key={provider} className="wp-seats"><h3>{provider[0]!.toUpperCase() + provider.slice(1).toLowerCase()}<span className="wp-muted">{seats.length} at a limit</span></h3>
-              <ul className="wp-back">{seats.map((s) => <li key={s.name}><span>{s.name}</span><span className="wp-muted">{s.long.label ? `${s.long.label} · ` : ''}back {s.back ? stamp(s.back, Date.now()) : '—'}</span></li>)}</ul></div>
+            const first = seats.map((s) => s.back).filter((b): b is string => Boolean(b)).sort()[0]
+            return <details key={provider} className="wp-group wp-seats"><summary><b>{provider[0]!.toUpperCase() + provider.slice(1).toLowerCase()}</b> {seats.length} at a limit{first ? `, first back ${stamp(first, Date.now())}` : ''}</summary>
+              <ul className="wp-back">{seats.map((s) => <li key={s.name}><span>{s.name}</span><span className="wp-muted">{s.long.label ? `${s.long.label} · ` : ''}back {s.back ? stamp(s.back, Date.now()) : '—'}</span></li>)}</ul></details>
           })}
           {room.length > 0 && <details className="wp-group"><summary>{room.length} with room</summary><HBars limit={room.length} max={1} format={pct}
             rows={room.map((s) => ({ label: `${s.provider.toLowerCase()} ${s.name}`, value: s.long.used!, note: [s.long.label, s.state === 'unknown' ? 'state unknown' : null].filter(Boolean).join(' · ') || undefined }))} /></details>}

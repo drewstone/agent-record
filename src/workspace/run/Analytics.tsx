@@ -56,7 +56,7 @@ function Kpis({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Retur
 
 // ----- Tool calls by agent and tool: a heatmap with ✕ failure counts, row totals and an "N more" column
 
-const HM_NAME = 168, HM_COL = 76, HM_TOTAL = 88
+const HM_NAME = 232, HM_COL = 76, HM_TOTAL = 88
 /** The rows a card shows before "Show all": the page scrolls, no card scrolls inside (judges 10-27: four nested scrollers). */
 const ROWS_SHOWN = 14
 function ShowAll({ n, all, set }: { n: number; all: boolean; set: (all: boolean) => void }) {
@@ -99,7 +99,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls))
   const shade = (n: number) => (n ? `color-mix(in oklab, var(--rp-tool) ${Math.round(14 + 86 * Math.sqrt(n / max))}%, hsl(var(--hsl-card)))` : undefined)
   const ink = (n: number) => (n && Math.sqrt(n / max) > 0.55 ? 'on' : '')
-  const grid = { gridTemplateColumns: `minmax(${name}px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(${narrow ? 64 : HM_COL}px, 1fr)) ${HM_TOTAL}px` }
+  const grid = { gridTemplateColumns: `minmax(${name}px, 2fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(${narrow ? 64 : HM_COL}px, 1fr)) ${HM_TOTAL}px` }
   const cell = (a: Agent, t: { name: string; calls: number; failures: number; p50: number | null; p90: number | null; p99: number | null; ms: number } | null, label: string, target: Element) =>
     card.show({ rect: target.getBoundingClientRect(), wide: false, content: (
       <>

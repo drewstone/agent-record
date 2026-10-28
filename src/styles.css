@@ -1481,7 +1481,7 @@
 .ar-ws .event-detail .verbatim .activity-code { max-height: none; }
 
 .ar-ws .spend-value .unknown { color: var(--ar-fg-muted); }
-.ar-ws .plays-filters { padding: 0; }
+.ar-ws .plays-filters { padding: 0; border-bottom: 0; }
 .ar-ws .plays-filters input[type="search"] { min-width: 260px; }
 /* The transcript (viewer/ConversationRowView) is the kit's chat in one AgentTimelineColumn: prompts as the reader's
    bubbles, prose, and the kit's one-line reasoning and tool rows, spaced by the kit. Rows add no chrome of their own; a
@@ -3032,9 +3032,8 @@
 .ar-ws .wp-alarm { display: block; padding: 8px 12px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ar-c-fail) 9%, transparent); box-shadow: inset 2px 0 0 var(--ar-c-fail); color: var(--ar-fg); font-size: var(--ar-text-s); line-height: 20px; }
 .ar-ws .wp-alarm b { color: var(--ar-c-fail); font-weight: 600; }
 .ar-ws .wp-watch { margin: 0; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
-.ar-ws .wp-seats + .wp-seats { margin-top: 16px; }
-.ar-ws .wp-seats h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font: 600 var(--ar-text-m)/22px var(--ar-font-body); }
-.ar-ws .wp-seats h3 .wp-muted { font-weight: 400; font-size: var(--ar-text-s); }
+.ar-ws .wp-seats > summary b { color: var(--ar-fg); font-weight: 600; }
+.ar-ws .wp-seats > .wp-back { margin: 4px 0 8px 22px; }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
 @media (max-width: 760px) {
   .ar-ws .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

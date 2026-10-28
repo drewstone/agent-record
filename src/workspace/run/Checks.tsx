@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { TabProps } from './RunPage.js'
 import { clause } from './Overview.js'
 import { type CheckDoc, checkVerdict, count, plural, type RunRelease } from './model.js'
@@ -27,6 +28,8 @@ export function Checks({ m, doc }: TabProps) {
   const best = m.best
   const committers = m.tree.filter((a) => (a.commits ?? 0) > 0).sort((a, b) => (b.commits ?? 0) - (a.commits ?? 0))
   const maxCommits = Math.max(1, ...committers.map((a) => a.commits ?? 0))
+  // The first twelve committers, then all on request: the two cards end on one line instead of a long list beside a short one.
+  const [all, setAll] = useState(false)
   return (
     <div className="rp-ck">
       <section className="rp-card" aria-label="Checks">
@@ -70,10 +73,11 @@ export function Checks({ m, doc }: TabProps) {
       <section className="rp-card" aria-label="Commits by agent">
         <div className="rp-hd sm"><h2>Commits by agent<span className="ct">{count(committers.reduce((t, a) => t + (a.commits ?? 0), 0))}</span></h2></div>
         <div className="rp-commits">
-          {committers.length ? committers.map((a) => (
+          {committers.length ? (all ? committers : committers.slice(0, 12)).map((a) => (
             <div key={a.id} className="row"><span className="l" title={a.name}>{a.name}</span><Bar ok={a.commits ?? 0} max={maxCommits} /><span className="n">{a.commits}</span></div>
           )) : <p className="ws-status">No agent's commits reached the run's deliverables.</p>}
         </div>
+        {committers.length > 12 && <button type="button" className="rp-more-row" onClick={() => setAll(!all)}>{all ? 'Show the first 12' : `Show all ${committers.length} agents`}</button>}
       </section>
     </div>
   )
