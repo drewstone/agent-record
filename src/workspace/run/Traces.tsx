@@ -2,7 +2,7 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { SegmentedControl } from '@tangle-network/ui/primitives'
 import { agentParam, type TabProps } from './RunPage.js'
 import { clockSecondsOf, abbr, count, lat, usd } from './model.js'
-import { agentGroups, agentOptions, agentCost, nameFit, Picker, useRows } from './ui.js'
+import { agentGroups, agentOptions, agentCost, Picker, useRows } from './ui.js'
 
 type Kind = 'all' | 'model' | 'tool' | 'failed'
 const ROW = 34
@@ -49,38 +49,46 @@ export function Traces({ m, doc, agent, route }: TabProps) {
       </div>
       <div className="rp-trw">
         <div className="rp-tbl" ref={table} role="grid" aria-label="Spans" aria-rowcount={rows.length} onKeyDown={keys}>
-          <div className="rp-tr th" role="row"><span role="columnheader">Start<span className="ph-hide"> (UTC)</span></span><span role="columnheader">Agent</span><span role="columnheader">Kind</span><span role="columnheader">Name</span><span role="columnheader" className="r">Duration</span><span role="columnheader">Status</span></div>
+          <div className="rp-tr th" role="row"><span role="columnheader">Start<span className="ph-hide"> (UTC)</span></span><span role="columnheader">Agent</span><span role="columnheader">Kind</span><span role="columnheader">Name</span><span role="columnheader" className="r">Duration</span><span role="columnheader" className="sr">Status</span></div>
           <div style={{ height: win.before }} />
           {rows.slice(win.first, win.last).map(({ agent: a, step: s }, k) => {
             const i = win.first + k
             return (
               <div key={i} data-i={i} className={`rp-tr${s.failed ? ' failed' : ''}`} role="row" aria-selected={i === at} tabIndex={i === at ? 0 : -1} onClick={() => pick(i)}>
                 <span className="m">{clock(s.t)}</span>
-                <span title={a.name}>{nameFit(a, 30)}</span>
+                <span title={a.name}>{a.name}</span>
                 <span className="kind"><i className={s.kind} />{s.kind}</span>
                 <span className="m nm" title={s.kind === 'tool' ? `${s.tool}${s.target ? ` ${s.target}` : ''}` : undefined}>{s.kind === 'model' ? (s.model?.split('/').pop() ?? a.model ?? 'model') : s.kind === 'tool' ? <>{s.tool}{s.target && <span className="muted"> {s.target}</span>}</> : <span className="muted">waiting on a spawned agent</span>}</span>
                 <span className="m r dur"><b style={{ width: Math.max(2, (Math.log10(Math.max(s.d, 1)) / longest) * 56) }} />{lat(s.d)}</span>
-                <span>{s.failed ? <span className="f">✕ failed</span> : <span className="dim">ok</span>}</span>
+                {/* A span says its status only when it failed: "ok" on every one of 4,718 rows said nothing (judges 10-27). */}
+                <span className="st">{s.failed ? <span className="f" title="failed" aria-label="failed">✕</span> : null}</span>
               </div>
             )
           })}
           <div style={{ height: win.after }} />
         </div>
         <aside className="rp-trd" aria-label="Span">
-          <div className="rp-trd-h">Span</div>
           <div className="rp-scroll">
             {row ? (
               <>
-                {/* The selected span's own facts first; its agent's totals below, under the agent's name. */}
-                <h5 className="rp-subh">This span</h5>
+                {/* The selected span's own facts first, then its agent's totals under the agent's name, then the raw span. */}
                 <dl className="rp-kv">
                   <dt>Agent</dt><dd>{row.agent.name}</dd>
                   <dt>{row.step.kind === 'tool' ? 'Tool' : row.step.kind === 'model' ? 'Model' : 'Kind'}</dt><dd>{row.step.kind === 'tool' ? `${row.step.tool ?? 'tool'}${row.step.target ? ` ${row.step.target}` : ''}` : row.step.kind === 'model' ? (row.step.model ?? row.agent.node.model ?? 'model') : 'waiting on a spawned agent'}</dd>
                   <dt>Started</dt><dd>{new Date(m.t0 + row.step.t).toISOString().slice(0, 19).replace('T', ' ')} UTC</dd>
                   <dt>Duration</dt><dd>{lat(row.step.d)}{row.step.latency !== null ? ` · first token ${lat(row.step.latency)}` : ''}</dd>
                   {row.step.tokens && <><dt>Tokens</dt><dd>{abbr(row.step.tokens.input)} in · {abbr(row.step.tokens.output)} out · {abbr(row.step.tokens.cacheRead)} cached</dd></>}
-                  {row.step.usd !== null && <><dt>Cost</dt><dd>{usd(row.step.usd)}</dd></>}
-                  <dt>Status</dt><dd>{row.step.failed ? <span className="f">✕ failed</span> : 'ok'}</dd>
+                  {/* What the seat was charged for this one call: list price is recorded per agent, not per span. */}
+                  {row.step.usd !== null && <><dt>Billed</dt><dd>{usd(row.step.usd)}</dd></>}
+                  {row.step.failed && <><dt>Status</dt><dd><span className="f">✕ failed</span></dd></>}
+                </dl>
+                <h5 className="rp-subh">{row.agent.name}, whole run</h5>
+                <dl className="rp-kv">
+                  <dt>Tokens</dt><dd>{abbr(row.agent.tokens)}{row.agent.byClass ? ` · ${abbr(row.agent.byClass.input)} in · ${abbr(row.agent.byClass.output)} out · ${abbr(row.agent.byClass.cacheRead)} cached` : ''}</dd>
+                  <dt>Cost</dt><dd>{agentCost(row.agent)}</dd>
+                  <dt>Model calls</dt><dd>{count(row.agent.modelCalls)} · p50 {lat(row.agent.latency.p50)} · p99 {lat(row.agent.latency.p99)}</dd>
+                  <dt>Tool calls</dt><dd>{count(row.agent.toolCalls)} · {row.agent.toolFailures} failed</dd>
+                  <dt>Restarts</dt><dd>{row.agent.restarts.length}</dd>
                 </dl>
                 <details className="rp-raw">
                   <summary>Raw span</summary>
@@ -93,14 +101,6 @@ export function Traces({ m, doc, agent, route }: TabProps) {
                     tokens: row.step.tokens, ...(row.step.usd !== null ? { billedUsd: row.step.usd } : {}),
                   }, null, 2)}</pre>
                 </details>
-                <h5 className="rp-subh">{row.agent.name}, whole run</h5>
-                <dl className="rp-kv">
-                  <dt>Tokens</dt><dd>{abbr(row.agent.tokens)}{row.agent.byClass ? ` · ${abbr(row.agent.byClass.input)} in · ${abbr(row.agent.byClass.output)} out · ${abbr(row.agent.byClass.cacheRead)} cached` : ''}</dd>
-                  <dt>Cost</dt><dd>{agentCost(row.agent)}</dd>
-                  <dt>Model calls</dt><dd>{count(row.agent.modelCalls)} · p50 {lat(row.agent.latency.p50)} · p99 {lat(row.agent.latency.p99)}</dd>
-                  <dt>Tool calls</dt><dd>{count(row.agent.toolCalls)} · {row.agent.toolFailures} failed</dd>
-                  <dt>Restarts</dt><dd>{row.agent.restarts.length}</dd>
-                </dl>
               </>
             ) : <p className="ws-status">No span matches.</p>}
           </div>

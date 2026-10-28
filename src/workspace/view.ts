@@ -7,7 +7,7 @@ import type { Status, StatusAxis } from './data.js'
  * Status word, blocker, progress, what needs Drew and the page's one as-of are decided there; pages print them as served
  * and never recompute them, so two pages that show the same run cannot disagree.
  */
-const tone = z.enum(['pass', 'attention', 'fail', 'neutral'])
+const tone = z.enum(['pass', 'live', 'attention', 'fail', 'neutral'])
 
 export const viewStatusSchema = z.object({ key: z.string(), label: z.string(), tone, icon: z.string(), at: z.string().nullable().optional(), reason: z.string().nullable().optional() })
 

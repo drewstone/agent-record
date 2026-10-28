@@ -140,7 +140,7 @@ export const when = (value: string | null | undefined, withDate = true) => {
  * fixture that settles it; the held verdict itself stays neutral). Red has no default: a past crash, an operator or Lab stop, a research miss, a verdict under
  * a retired check and an unknown are all neutral, and keep their meaning through their word and shape.
  */
-export type StatusTone = 'pass' | 'attention' | 'fail' | 'neutral'
+export type StatusTone = 'pass' | 'live' | 'attention' | 'fail' | 'neutral'
 export type StatusAxis = 'run' | 'result' | 'alert' | 'agent' | 'release' | 'cause' | 'measure'
 export interface Status {
   axis: StatusAxis
@@ -198,7 +198,7 @@ function runAxis(input: Extract<StatusInput, { axis: 'run' }>): Status {
     case 'building':
     case 'live': {
       const age = elapsedMs !== null && elapsedMs !== undefined && elapsedMs > 0 ? ` ${duration(elapsedMs)}` : ''
-      return status('run', `Running${age}`, 'attention', ENDING_GLYPH.live)
+      return status('run', `Running${age}`, 'live', ENDING_GLYPH.live)
     }
     case 'winner':
     case 'solved':

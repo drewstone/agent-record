@@ -1,6 +1,6 @@
 import { createContext, type CSSProperties, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { type Agent, abbr, count, finished, lat, type RunModel, elapsed, type ToolStats, usd } from './model.js'
+import { type Agent, abbr, count, lat, type RunModel, elapsed, type ToolStats, usd } from './model.js'
 
 /** The run page's glyphs, 16 px strokes in the text colour. */
 const PATHS = {
@@ -33,16 +33,6 @@ export function Icon({ name, size = 16, className }: { name: IconName; size?: nu
 }
 
 export const StateDot = ({ tone }: { tone: Agent['state']['tone'] | 'held' }) => <span className={`rp-dot${tone ? ` ${tone}` : ''}`} aria-hidden="true" />
-
-/** Long names keep their start and their end: `records-grap…20261026a.md`. */
-export function middle(text: string, max: number) {
-  if (text.length <= max) return text
-  const head = Math.ceil((max - 1) * 0.55)
-  return `${text.slice(0, head)}…${text.slice(text.length - (max - 1 - head))}`
-}
-
-/** An agent's name in `max` characters: whole when it fits, else what tells it apart (its short name) cut in the middle. */
-export const nameFit = (a: { name: string; short: string }, max: number) => (a.name.length <= max ? a.name : middle(a.short, max))
 
 /** The match in a label, underlined. */
 export function Hilite({ text, query }: { text: string; query: string }) {
@@ -238,32 +228,6 @@ export function AgentCard({ m, a, head }: { m: RunModel; a: Agent; head?: ReactN
   )
 }
 
-/** The totals of a team: its members' tokens, calls and tools. */
-export function TeamCard({ m, team }: { m: RunModel; team: { id: string; label: string; members: string[] } }) {
-  const members = team.members.map((id) => m.byId.get(id)!).filter(Boolean)
-  const tools = new Map<string, ToolStats>()
-  for (const a of members) for (const t of a.tools) {
-    const x = tools.get(t.name) ?? { ...t, calls: 0, failures: 0, ms: 0, durations: [] }
-    tools.set(t.name, { ...x, calls: x.calls + t.calls, failures: x.failures + t.failures, ms: x.ms + t.ms, durations: [...x.durations, ...t.durations] })
-  }
-  const sum = (pick: (a: Agent) => number) => members.reduce((s, a) => s + pick(a), 0)
-  const running = members.filter((a) => a.state.tone === 'live').length
-  return (
-    <>
-      <div className="rp-card-h"><div className="t"><Icon name="users" /><span className="nm">{team.label}</span><span className="v">{members.length} agents</span></div><div className="s">{running} running · {members.filter((a) => finished(a.state.tone)).length} done</div></div>
-      <div className="rp-card-cols two">
-        <section><h6>Team totals</h6><dl>
-          <dt>Tokens</dt><dd>{abbr(sum((a) => a.tokens ?? 0))}</dd>
-          <dt>Model calls</dt><dd>{count(sum((a) => a.modelCalls))}</dd>
-          <dt>Tool calls</dt><dd>{count(sum((a) => a.toolCalls))}<span className="f"> · {sum((a) => a.toolFailures)} failed</span></dd>
-          <dt>Commits</dt><dd>{sum((a) => a.commits ?? 0)}</dd>
-        </dl></section>
-        <section><h6>Tool calls by tool</h6><ToolTable tools={[...tools.values()].sort((a, b) => b.calls - a.calls)} /></section>
-      </div>
-    </>
-  )
-}
-
 // ----------------------------------------------------------------- the picker: one designed, searchable listbox
 
 export type PickerOption = { id: string; label: string; meta?: string; group?: string | null; tone?: Agent['state']['tone']; find?: string }
@@ -313,7 +277,8 @@ function PickerList(props: AnyPicker & { anchor: HTMLElement; onClose: (focus: b
   const box = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLDivElement>(null)
   const id = useMemo(() => `pk-${Math.random().toString(36).slice(2, 8)}`, [])
-  const selected = (option: string) => (multi ? (props.value as ReadonlySet<string>).has(option) : props.value === option)
+  // A multi-select's empty set means all: every option shows checked under a checked "All", never an unchecked list under it.
+  const selected = (option: string) => (multi ? (props.value as ReadonlySet<string>).size === 0 || (props.value as ReadonlySet<string>).has(option) : props.value === option)
   const rows = useMemo<Row[]>(() => {
     const q = query.trim().toLowerCase()
     const hit = (o: PickerOption) => !q || `${o.label} ${o.find ?? ''}`.toLowerCase().includes(q)
@@ -354,16 +319,15 @@ function PickerList(props: AnyPicker & { anchor: HTMLElement; onClose: (focus: b
       onClose(true)
       return
     }
-    const current = new Set(props.value as ReadonlySet<string>)
     const change = props.onChange as (v: ReadonlySet<string>) => void
     if (row.kind === 'all') return change(new Set())
+    // Unticking from "all" leaves every other option ticked; ticking the last one back returns to "all".
+    const current = new Set((props.value as ReadonlySet<string>).size ? (props.value as ReadonlySet<string>) : options.map((o) => o.id))
     if (row.kind === 'group') {
       const every = row.members.every((m) => current.has(m))
       for (const m of row.members) every ? current.delete(m) : current.add(m)
-      return change(current)
-    }
-    current.has(row.option.id) ? current.delete(row.option.id) : current.add(row.option.id)
-    change(current)
+    } else current.has(row.option.id) ? current.delete(row.option.id) : current.add(row.option.id)
+    change(current.size === options.length ? new Set() : current)
   }
   const keep = (index: number) => {
     const el = list.current
@@ -437,7 +401,7 @@ function PickerList(props: AnyPicker & { anchor: HTMLElement; onClose: (focus: b
       )}
       {multi && (
         <div className="rp-lb-f">
-          <span>{(props.value as ReadonlySet<string>).size ? `${(props.value as ReadonlySet<string>).size} selected` : 'All'}</span>
+          <span>{(props.value as ReadonlySet<string>).size ? `${(props.value as ReadonlySet<string>).size} of ${options.length} selected` : `All ${options.length} selected`}</span>
           <span className="end">
             <button type="button" className="rp-btn sm" onClick={() => (props.onChange as (v: ReadonlySet<string>) => void)(new Set())}>Clear</button>
             <button type="button" className="rp-btn sm framed" onClick={() => onClose(true)}>Done</button>

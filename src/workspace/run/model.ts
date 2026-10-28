@@ -78,8 +78,6 @@ export interface Agent {
   id: string
   /** The name people use: its role, else its label. */
   name: string
-  /** The name without the run's shared prefix (`peer-director-3-battery3-poll2` → `3-battery3-poll2`): what tells it apart. */
-  short: string
   node: Node
   parent: string | null
   children: string[]
@@ -160,7 +158,8 @@ function stateOf(node: Node, live: boolean, steps: number): Agent['state'] {
   if (node.status === 'succeeded') return { label: 'Done', tone: 'done' }
   if (node.status === 'failed') return { label: 'Failed', tone: 'fail' }
   if (!steps && (!node.start || !node.usage)) return { label: 'Never ran', tone: 'none' }
-  return { label: node.status === 'idle' ? 'Idle' : 'Stopped', tone: '' }
+  // An idle agent of a live run is waiting for work; once the run ends it stopped like the rest: one word per state.
+  return node.status === 'idle' && live ? { label: 'Waiting', tone: 'live' } : { label: 'Stopped', tone: '' }
 }
 
 export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; durationMs?: number | null }): RunModel {
@@ -216,7 +215,6 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
     return {
       id: node.id,
       name: node.role ?? node.label,
-      short: node.role ?? node.label,
       node,
       parent: parentOf(node),
       children: [],
@@ -264,12 +262,6 @@ export function buildModel(ws: WorkspaceDoc, run: { startedAt?: string | null; d
   }
   for (const a of agents.filter((x) => !x.parent).sort((x, y) => (x.start ?? 0) - (y.start ?? 0))) walk(a, 0)
   for (const a of agents) if (!seen.has(a.id)) walk(a, 0)
-  // The longest name prefix (ending at a '-') that half the agents share and at least three: a cut label keeps what
-  // tells the agents apart, not the prefix they share.
-  const prefixes = new Map<string, number>()
-  for (const a of agents) for (let i = a.name.indexOf('-'); i > 0; i = a.name.indexOf('-', i + 1)) prefixes.set(a.name.slice(0, i + 1), (prefixes.get(a.name.slice(0, i + 1)) ?? 0) + 1)
-  const shared = [...prefixes].filter(([, n]) => n >= 3 && n * 2 >= agents.length).sort((x, y) => y[0].length - x[0].length)[0]?.[0] ?? ''
-  for (const a of agents) a.short = shared && a.name.startsWith(shared) && a.name.length > shared.length ? a.name.slice(shared.length) : a.name
   // A lead with more than eight spawned agents is a team: every agent-scaled view groups its members.
   const teams = agents.filter((a) => a.children.length > 8).map((a) => ({ id: a.id, label: `${a.name} team`, members: a.children }))
   for (const t of teams) for (const m of t.members) byId.get(m)!.team = t.id

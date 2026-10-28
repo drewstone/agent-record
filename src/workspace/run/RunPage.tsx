@@ -7,7 +7,7 @@ import { shortRun } from '../play-standing.js'
 import { viewChip } from '../view.js'
 import { reloadOnce } from '../lazy-pages.js'
 import { buildModel, abbr, count, type RunModel, elapsed, usd, type WorkspaceDoc } from './model.js'
-import { CardLayer, Picker } from './ui.js'
+import { CardLayer, Icon, Picker } from './ui.js'
 
 /**
  * The run page (Drew 2026-10-26): one header (the run, its status and the few numbers that matter), then a tab bar where
@@ -106,11 +106,25 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
   const agent = m ? (agentFromParam(m, id, route.params.get('agent')) ?? m.root?.id ?? null) : null
   const selectAgent = useCallback((node: string | null, next?: RunTabId) => route.go(next ?? tab, { agent: node ? agentParam(id, node) : null }), [route, tab, id])
   const tabsRef = useRef<HTMLElement>(null)
+  // On a phone the tab strip scrolls: the open tab scrolls into view, and while more tabs sit past the edge a chevron says so
+  // and steps to them (judges 10-27: "Conversat" was cut at 390 px with no cue).
+  const [more, setMore] = useState(false)
+  useEffect(() => {
+    const nav = tabsRef.current
+    if (!nav) return
+    const check = () => setMore(nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4)
+    nav.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    check()
+    nav.addEventListener('scroll', check, { passive: true })
+    const r = new ResizeObserver(check)
+    r.observe(nav)
+    return () => { nav.removeEventListener('scroll', check); r.disconnect() }
+  }, [tab, run.data])
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
   if (!run.data) return <p className="ws-status" role="status">Loading…</p>
   const doc = run.data
   const counts: Partial<Record<RunTabId, string>> = m ? {
-    conversations: count(m.agents.filter((a) => a.steps.length || a.turns).length),
+    conversations: count(m.agents.length),
     traces: count(m.totals.steps),
     checks: count((doc.run as unknown as { check?: { counts?: { checks?: number } } }).check?.counts?.checks ?? m.releases.length),
   } : {}
@@ -134,6 +148,7 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
           description={doc.view ? <StatusPill status={viewChip(doc.view.status)} title={doc.view.status.reason ?? undefined} /> : undefined}
           actions={m ? <HeaderStats m={m} doc={doc} /> : undefined}
         />
+        <div className="rp-tabs-wrap" data-more={more || undefined}>
         <nav ref={tabsRef} className="rp-tabs" role="tablist" aria-label="Run" onKeyDown={keys}>
           {RUN_PAGE_TABS.map((t) => (
             <a key={t} role="tab" data-tab={t} href={route.href(t)} aria-selected={!legacyBody && t === tab} tabIndex={t === tab ? 0 : -1} aria-controls="rp-panel"
@@ -148,6 +163,8 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
             </Picker>
           </span>
         </nav>
+        {more && <button type="button" className="rp-tabs-next" aria-label="More tabs" onClick={() => tabsRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}><Icon name="chevron" /></button>}
+        </div>
         <main id="rp-panel" className="rp-work" role="tabpanel" aria-label={legacyBody ? section ?? undefined : LABEL[tab]}>
           {legacyBody ?? (!props ? (
             <p className="ws-status" role={ws.error ? 'alert' : 'status'}>{ws.error ? `The run's agents are unavailable: ${ws.error}` : 'Reading the run…'}</p>

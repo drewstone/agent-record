@@ -1,8 +1,8 @@
-import { type FocusEvent, type PointerEvent, type ReactNode, useMemo, useRef, useState } from 'react'
+import { type FocusEvent, type PointerEvent, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SegmentedControl } from '@tangle-network/ui/primitives'
 import type { TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, count, lat, mergeTools, percentile, type RunModel, elapsed, usd } from './model.js'
-import { AgentCard, agentGroups, agentOptions, nameFit, StateDot, Picker, useCard, useRows } from './ui.js'
+import { AgentCard, agentGroups, agentOptions, StateDot, Picker, useCard, useNarrow } from './ui.js'
 
 /**
  * Where time, tokens and failures went. One multi-select agent picker scopes every chart; each chart keeps its numbers
@@ -56,29 +56,50 @@ function Kpis({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Retur
 
 // ----- Tool calls by agent and tool: a heatmap with ✕ failure counts, row totals and an "N more" column
 
-const HM_NAME = 168, HM_COL = 76, HM_TOTAL = 88
+const HM_NAME = 232, HM_COL = 76, HM_TOTAL = 88
+/** The rows a card shows before "Show all": the page scrolls, no card scrolls inside (judges 10-27: four nested scrollers). */
+const ROWS_SHOWN = 14
+function ShowAll({ n, all, set }: { n: number; all: boolean; set: (all: boolean) => void }) {
+  return n > ROWS_SHOWN ? <button type="button" className="rp-more-row" onClick={() => set(!all)}>{all ? `Show the first ${ROWS_SHOWN}` : `Show all ${n}`}</button> : null
+}
+/** An element's size, measured: a grid folds the columns it cannot hold, and a chart draws in its own pixels (no stretched text). */
+function useSize() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const read = () => setSize({ w: el.clientWidth, h: el.clientHeight })
+    const r = new ResizeObserver(read)
+    r.observe(el)
+    read()
+    return () => r.disconnect()
+  }, [])
+  return [ref, size] as const
+}
 function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: ReturnType<typeof mergeTools> }) {
   const [sort, setSort] = useState<'calls' | 'fails' | 'name'>('calls')
   const card = useCard()
-  const wrap = useRef<HTMLDivElement>(null)
+  const narrow = useNarrow()
+  const [wrap, { w: width }] = useSize()
+  const [all, setAll] = useState(false)
   const rows = useMemo(() => {
     const withTools = agents.filter((a) => a.toolCalls > 0)
     const key = sort === 'calls' ? (a: Agent) => -a.toolCalls : sort === 'fails' ? (a: Agent) => -a.toolFailures * 1e6 - a.toolCalls : null
     return key ? [...withTools].sort((a, b) => key(a) - key(b)) : [...withTools].sort((a, b) => a.name.localeCompare(b.name))
   }, [agents, sort])
-  const ROW = 28
-  const win = useRows(wrap, rows.length, ROW, 6)
+  const name = narrow ? 120 : HM_NAME
   // As many tool columns as the card holds beside the name and total columns; the rest fold into one "N more" column, so
-  // no column is ever cut by the card's edge (25b showed 8 and a cut 9th at 1512 px).
-  const room = Math.floor(((win.width || 1e4) - 32 - HM_NAME - HM_TOTAL) / HM_COL)
-  const fit = tools.length <= room ? tools.length : Math.max(1, room - 1)
+  // no column is ever cut by the card's edge (25b showed 8 and a cut 9th at 1512 px; a phone holds none and folds them all).
+  const room = Math.floor(((width || 1e4) - 32 - name - HM_TOTAL) / HM_COL)
+  const fit = tools.length <= room ? tools.length : Math.max(0, room - 1)
   const cols = tools.slice(0, fit)
   const rest = tools.slice(fit)
   const max = Math.max(1, ...rows.flatMap((a) => a.tools.map((t) => t.calls)))
   const maxTotal = Math.max(1, ...rows.map((a) => a.toolCalls))
   const shade = (n: number) => (n ? `color-mix(in oklab, var(--rp-tool) ${Math.round(14 + 86 * Math.sqrt(n / max))}%, hsl(var(--hsl-card)))` : undefined)
   const ink = (n: number) => (n && Math.sqrt(n / max) > 0.55 ? 'on' : '')
-  const grid = { gridTemplateColumns: `minmax(${HM_NAME}px, 1.3fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(${HM_COL}px, 1fr)) ${HM_TOTAL}px` }
+  const grid = { gridTemplateColumns: `minmax(${name}px, 2fr) repeat(${cols.length + (rest.length ? 1 : 0)}, minmax(${narrow ? 64 : HM_COL}px, 1fr)) ${HM_TOTAL}px` }
   const cell = (a: Agent, t: { name: string; calls: number; failures: number; p50: number | null; p90: number | null; p99: number | null; ms: number } | null, label: string, target: Element) =>
     card.show({ rect: target.getBoundingClientRect(), wide: false, content: (
       <>
@@ -98,15 +119,14 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
           <div className="rp-hm" style={grid}>
             <span className="ch c0" />
             {cols.map((t) => <span key={t.name} className="ch" title={t.name}><span>{t.name.replace(/^agent-runtime-coordination_/, '').replaceAll('_', ' ')}</span></span>)}
-            {rest.length > 0 && <span className="ch"><span>{rest.length} more</span></span>}
+            {rest.length > 0 && <span className="ch" title={rest.map((t) => t.name).join(', ')}><span>{cols.length ? `${rest.length} more` : `${rest.length} tools`}</span></span>}
             <span className="ch tot">Total</span>
-            <div className="gap" style={{ height: win.before }} />
-            {rows.slice(win.first, win.last).map((a) => {
+            {(all ? rows : rows.slice(0, ROWS_SHOWN)).map((a) => {
               const has = new Map(a.tools.map((t) => [t.name, t]))
               const other = a.tools.filter((t) => !cols.some((c) => c.name === t.name))
               const otherCalls = other.reduce((s, t) => s + t.calls, 0), otherFails = other.reduce((s, t) => s + t.failures, 0)
               return [
-                <span key={`${a.id}:n`} className="rh" title={a.name}><StateDot tone={a.state.tone} /><span className="nm">{nameFit(a, 22)}</span></span>,
+                <span key={`${a.id}:n`} className="rh" title={a.name}><StateDot tone={a.state.tone} /><span className="nm">{a.name}</span></span>,
                 ...cols.map((c) => {
                   const t = has.get(c.name)
                   const n = t?.calls ?? 0
@@ -121,9 +141,9 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
                 <span key={`${a.id}:t`} className="tot"><b style={{ width: `${(a.toolCalls / maxTotal) * 56}px` }} />{count(a.toolCalls)}</span>,
               ]
             })}
-            <div className="gap" style={{ height: win.after }} />
           </div>
         </div>
+        <ShowAll n={rows.length} all={all} set={setAll} />
         <div className="rp-hm-foot"><span className="ramp"><span>1</span><i /><span>{count(max)}</span></span><span><span className="x">✕</span> failed calls in the cell</span>{agents.length > rows.length && <span className="end">{agents.length - rows.length} agents made no tool calls</span>}</div>
       </div>
     </section>
@@ -140,7 +160,8 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const first = steps.length ? Math.min(...steps.map((s) => s.t)) : 0
   const last = steps.length ? Math.max(...steps.map((s) => s.t + s.d)) : 1
   const bin = BINS.find((b) => (last - first) / b <= 36) ?? 14_400_000
-  const start = Math.floor(first / bin) * bin
+  // Bins sit on the wall clock (an hour bin starts at :00), so the axis reads 04:00, 08:00, never the run's 02:37, 06:37.
+  const start = Math.floor((m.t0 + first) / bin) * bin - m.t0
   const n = Math.max(1, Math.ceil((last - start) / bin))
   const bins = useMemo(() => {
     const out = Array.from({ length: n }, () => ({ model: 0, tool: 0, failed: 0, tokens: 0 }))
@@ -152,28 +173,34 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
     }
     return out
   }, [steps, n, start, bin])
+  // Only the three worst bins print their failure count; every failure is still drawn as the red base of its bar.
+  const loudest = useMemo(() => new Set(bins.map((b, i) => [b.failed, i] as const).filter(([f]) => f > 0).sort((x, y) => y[0] - x[0]).slice(0, 3).map(([, i]) => i)), [bins])
   const value = (b: (typeof bins)[number]) => (measure === 'calls' ? b.model + b.tool : b.tokens)
   const peak = Math.max(1, ...bins.map(value))
-  const W = 600, H = 240, L = 40, B = 24, T = 18
+  const [box, size] = useSize()
+  const W = size.w || 600, H = size.h || 240, L = 40, B = 24, T = 18
   const bw = (W - L) / n
   // The scale tops out at the rounded maximum, so the top gridline is the plot's top edge, never above it.
   const nice = niceMax(peak)
   const y = (v: number) => H - B - (v / nice) * (H - B - T)
   const clock = clockOf(m.t0)
   const label = bin === 60_000 ? 'minute' : bin === 3_600_000 ? 'hour' : bin > 3_600_000 ? `${bin / 3_600_000} h` : `${bin / 60_000} min`
-  const ticks = Math.max(1, Math.ceil(n / 6))
+  // A tick every k bins, k chosen so the ticks land on round clock times (every 1, 2, 3, 4, 6 or 12 bins).
+  const ticks = [1, 2, 3, 4, 6, 12, 24].find((k) => n / k <= 7) ?? Math.ceil(n / 6)
+  const tickAt = (i: number) => Math.round((m.t0 + start + i * bin) / bin) % ticks === 0
   return (
     <section className="rp-card w5" aria-label={measure === 'calls' ? 'Calls over time' : 'Tokens over time'}>
       <div className="rp-hd sm"><h3>{measure === 'calls' ? `Calls per ${label}` : `Metered tokens per ${label}`}</h3>
         <span className="end"><SegmentedControl aria-label="Measure" value={measure} onValueChange={setMeasure} options={[{ value: 'calls', label: 'Calls' }, { value: 'tokens', label: 'Tokens' }]} /></span></div>
       <div className="rp-chart">
-        <div className="rp-legend sm">{measure === 'calls' ? <><span className="rp-key"><i className="model" />Model call</span><span className="rp-key"><i className="tool" />Tool call</span><span className="rp-key"><span className="x">✕</span>failed</span></> : <span className="rp-key"><i className="model" />Tokens on calls that recorded them</span>}</div>
-        <svg className="rp-cpm" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`${measure} per ${label}, peak ${count(peak)}`}>
+        <div className="rp-legend sm">{measure === 'calls' ? <><span className="rp-key"><i className="model" />Model call</span><span className="rp-key"><i className="tool" />Tool call</span><span className="rp-key"><i className="fail" />Failed</span></> : <span className="rp-key"><i className="model" />Tokens on calls that recorded them</span>}</div>
+        <div className="rp-cpm-box" ref={box}><svg className="rp-cpm" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${measure} per ${label}, peak ${count(peak)}`}>
           {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={y(nice * f)} y2={y(nice * f)} className="grid" /><text x={L - 6} y={y(nice * f) + 4} textAnchor="end">{measure === 'calls' ? count(Math.round(nice * f)) : abbr(nice * f)}</text></g>)}
           {bins.map((b, i) => {
             const x = L + i * bw + 1, w = Math.max(1, bw - 2)
             const hm = measure === 'calls' ? (b.model / nice) * (H - B - T) : (b.tokens / nice) * (H - B - T)
             const ht = measure === 'calls' ? (b.tool / nice) * (H - B - T) : 0
+            const hf = measure === 'calls' ? Math.min(hm + ht, (b.failed / nice) * (H - B - T)) : 0
             const show = (e: PointerEvent<SVGGElement> | FocusEvent<SVGGElement>) => card.show({ rect: e.currentTarget.getBoundingClientRect(), content: (
               <><div className="rp-card-h"><div className="t"><span className="nm">{clock(start + i * bin)}–{clock(start + (i + 1) * bin)} UTC</span></div></div>
                 <div className="rp-card-cols"><section><dl><dt>Model calls</dt><dd>{count(b.model)}</dd><dt>Tool calls</dt><dd>{count(b.tool)}</dd><dt>Failed</dt><dd>{b.failed ? <span className="f">{b.failed} ✕</span> : '0'}</dd><dt>Metered tokens</dt><dd>{b.tokens ? abbr(b.tokens) : 'not recorded'}</dd></dl></section></div></>
@@ -183,12 +210,13 @@ function PerMinute({ m, agents }: { m: RunModel; agents: Agent[] }) {
                 <rect x={L + i * bw} y={T} width={bw} height={H - B - T} className="hit" />
                 {hm > 0 && <rect x={x} y={H - B - hm} width={w} height={hm} rx={Math.min(2, w / 2)} className="model" />}
                 {ht > 0 && <rect x={x} y={H - B - hm - ht - (hm > 0 ? 1.5 : 0)} width={w} height={ht} rx={Math.min(2, w / 2)} className="tool" />}
-                {b.failed > 0 && measure === 'calls' && <text x={x + w / 2} y={H - B - hm - ht - 6} textAnchor="middle" className="xf">✕{b.failed}</text>}
-                {i % ticks === 0 && <text x={x + w / 2} y={H - 6} textAnchor="middle">{clock(start + i * bin)}</text>}
+                {hf > 0 && <rect x={x} y={H - B - Math.max(1.5, hf)} width={w} height={Math.max(1.5, hf)} className="fail" />}
+                {loudest.has(i) && measure === 'calls' && <text x={x + w / 2} y={H - B - hm - ht - 6} textAnchor="middle" className="xf">✕{b.failed}</text>}
+                {tickAt(i) && <text x={x + w / 2} y={H - 6} textAnchor="middle">{clock(start + i * bin)}</text>}
               </g>
             )
           })}
-        </svg>
+        </svg></div>
       </div>
     </section>
   )
@@ -204,11 +232,9 @@ type SortKey = 'tokens' | 'model' | 'tool' | 'failed' | 'restarts' | 'spawns' | 
 function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const [sort, setSort] = useState<{ k: SortKey; d: 1 | -1 }>({ k: 'tokens', d: -1 })
   const card = useCard()
-  const wrap = useRef<HTMLDivElement>(null)
+  const [all, setAll] = useState(false)
   const value = (a: Agent): number | string => ({ tokens: a.tokens ?? -1, model: a.modelCalls, tool: a.toolCalls, failed: a.failedSteps, restarts: a.restarts.length, spawns: a.children.length, cost: a.listUsd ?? a.billedUsd ?? -1, name: a.name })[sort.k]
   const rows = useMemo(() => [...agents].sort((a, b) => { const x = value(a), y = value(b); return (typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number)) * sort.d }), [agents, sort]) // eslint-disable-line react-hooks/exhaustive-deps
-  const ROW = 28
-  const win = useRows(wrap, rows.length, ROW)
   const maxTok = Math.max(1, ...agents.map((a) => a.tokens ?? 0))
   // A count column shows only when some agent has one: 26a has no restarts, so no empty Restarts column takes the width.
   const counts = (['failed', 'restarts', 'spawns'] as const).filter((k) => agents.some((a) => (k === 'failed' ? a.failedSteps : k === 'restarts' ? a.restarts.length : a.children.length) > 0))
@@ -221,14 +247,13 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
   return (
     <section className="rp-card w5" aria-label="Agents">
       <div className="rp-hd sm"><h3>Agents<span className="ct">{agents.length}</span></h3></div>
-      <div className="rp-at-wrap" ref={wrap} role="table" aria-label="Agents" aria-rowcount={rows.length}>
+      <div className="rp-at-wrap" role="table" aria-label="Agents" aria-rowcount={rows.length}>
         <div className="rp-at th" role="row" style={grid}>{head('name', 'Agent')}{head('tokens', 'Tokens', 'tk')}{head('model', 'Model', 'r')}{head('tool', 'Tool', 'r')}{counts.map((k) => head(k, { failed: 'Failed', restarts: 'Restarts', spawns: 'Spawns' }[k], 'r'))}{head('cost', 'Cost', 'r')}</div>
-        <div style={{ height: win.before }} />
-        {rows.slice(win.first, win.last).map((a) => (
+        {(all ? rows : rows.slice(0, ROWS_SHOWN)).map((a) => (
           <div key={a.id} className="rp-at" role="row" tabIndex={0} style={grid}
             onPointerEnter={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onPointerLeave={() => card.hide()}
             onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onBlur={() => card.hide()}>
-            <span className="nm" role="cell" title={a.name}>{nameFit(a, 20)}</span>
+            <span className="nm" role="cell" title={a.name}>{a.name}</span>
             <span className="tk" role="cell"><b style={{ width: `${((a.tokens ?? 0) / maxTok) * 48}px` }} /><span>{abbr(a.tokens)}</span></span>
             <span className="r" role="cell">{count(a.modelCalls)}</span>
             <span className="r" role="cell">{count(a.toolCalls)}</span>
@@ -236,8 +261,8 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
             <span className="r" role="cell">{a.listUsd !== null ? usd(a.listUsd) : a.billedUsd !== null ? usd(a.billedUsd) : '—'}</span>
           </div>
         ))}
-        <div style={{ height: win.after }} />
       </div>
+      <ShowAll n={rows.length} all={all} set={setAll} />
     </section>
   )
 }
@@ -341,7 +366,7 @@ function Failures({ agents, tools }: { m: RunModel; agents: Agent[]; tools: Retu
         {!byTool.length && !byAgent.length ? <p className="ws-status">No step failed.</p> : (
           <>
             {byTool.length > 0 && <><h5>By tool · {byTool.length}</h5>{byTool.slice(0, 6).map((t) => share(t.name.replace(/^agent-runtime-coordination_/, ''), t.failures, t.calls, t.name, `${t.name}: ${t.failures} of ${t.calls} calls failed`))}</>}
-            {byAgent.length > 0 && <><h5>By agent · {byAgent.length}</h5>{byAgent.slice(0, 6).map((a) => share(nameFit(a, 22), a.failedSteps, a.steps.length, a.id, `${a.name}: ${a.failedSteps} of ${a.steps.length} steps failed`))}</>}
+            {byAgent.length > 0 && <><h5>By agent · {byAgent.length}</h5>{byAgent.slice(0, 6).map((a) => share(a.name, a.failedSteps, a.steps.length, a.id, `${a.name}: ${a.failedSteps} of ${a.steps.length} steps failed`))}</>}
           </>
         )}
       </div>

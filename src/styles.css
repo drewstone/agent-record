@@ -86,10 +86,11 @@
 .ar-ws b, .ar-ws strong { font-weight: 600; }
 }
 /* All styles are scoped. The --ar-* names are Brand tokens under the renderer's own names, so the page has one palette, Brand's,
-   in both themes (Brand switches them on data-theme); type is Brand's scale, 14 px for anything read. */
+   in both themes (Brand switches them on data-theme). Type has a step between each tier: 14 metadata, 15 body, 18 section,
+   28 page title (judges 10-27: s and m were both 14, so hierarchy rested on weight and grey alone). */
 .agent-record {
   --ar-text-s: 14px;
-  --ar-text-m: 14px;
+  --ar-text-m: 15px;
   --ar-text-l: 18px;
   --ar-bg: hsl(var(--hsl-background));
   --ar-bg-alt: hsl(var(--hsl-secondary));
@@ -101,9 +102,10 @@
   --ar-border-strong: var(--border-strong);
   --ar-c-action: var(--accent-text);
   --ar-c-info: var(--surface-info-text);
-  /* Status tones (design-system section 1): pass only for passed, run (attention) for running or blocked, fail only for
-     "a person must act now", neutral for the rest; each is Brand's matched text token. */
+  /* Status tones (design-system section 1): pass only for passed, live for running (the accent, as every live dot, pill and lane
+     draws it), run (attention) only for what needs someone, fail only for "a person must act now", neutral for the rest. */
   --ar-c-ok: var(--surface-success-text);
+  --ar-c-live: var(--accent-text);
   --ar-c-run: var(--surface-warning-text);
   --ar-c-fail: var(--surface-danger-text);
   --ar-c-neutral: hsl(var(--hsl-muted-foreground));
@@ -131,7 +133,7 @@
   min-width: 0;
 }
 .agent-record .ui-label {
-  font: 0.72rem var(--ar-font-body);
+  font: var(--ar-text-s) var(--ar-font-body);
   color: var(--ar-fg-muted);
 }
 /* A disabled control keeps readable text (4.5:1, design-system section 1): muted ink and a dashed border, not fading. */
@@ -1217,7 +1219,7 @@
 .ar-ws .ws-facts { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); align-items: center; }
 .ar-ws .ws-facts b { font-weight: 600; color: var(--ar-fg-muted); margin-right: 4px; font-size: var(--ar-text-s); }
 .ar-ws .ws-facts span { color: var(--ar-fg); }
-.ar-ws .ws-facts .live { color: var(--ar-c-run); }
+.ar-ws .ws-facts .live { color: var(--ar-c-live); }
 .ar-ws .state-pill {
   display: inline-flex; align-items: center; gap: 8px; padding: 0 8px; border-radius: 999px;
   /* Monospace is for identifiers, hashes and paths only (disco UI brief): a status word is UI text. */
@@ -1230,10 +1232,12 @@
    so no state outweighs another by its frame; `.tone-neutral` is the same ink for labels that are not statuses. */
 .ar-ws [data-status$=':pass'] { color: var(--ar-c-ok); }
 .ar-ws [data-status$=':attention'] { color: var(--ar-c-run); }
+.ar-ws [data-status$=':live'] { color: var(--ar-c-live); }
 .ar-ws [data-status$=':fail'] { color: var(--ar-c-fail); }
 .ar-ws [data-status$=':neutral'], .ar-ws .tone-neutral { color: var(--ar-c-neutral); }
 .ar-ws .state-pill[data-status$=':pass'] { border-color: transparent; background: color-mix(in srgb, var(--ar-c-ok) 14%, transparent); }
 .ar-ws .state-pill[data-status$=':attention'] { border-color: transparent; background: color-mix(in srgb, var(--ar-c-run) 14%, transparent); }
+.ar-ws .state-pill[data-status$=':live'] { border-color: transparent; background: color-mix(in srgb, var(--ar-c-live) 12%, transparent); }
 .ar-ws .state-pill[data-status$=':fail'] { border-color: transparent; background: color-mix(in srgb, var(--ar-c-fail) 14%, transparent); }
 .ar-ws .status-shape { font-style: normal; line-height: 1; }
 /* Every status mark keeps its shape and an outline when the system forces colours. */
@@ -1477,7 +1481,7 @@
 .ar-ws .event-detail .verbatim .activity-code { max-height: none; }
 
 .ar-ws .spend-value .unknown { color: var(--ar-fg-muted); }
-.ar-ws .plays-filters { padding: 0; }
+.ar-ws .plays-filters { padding: 0; border-bottom: 0; }
 .ar-ws .plays-filters input[type="search"] { min-width: 260px; }
 /* The transcript (viewer/ConversationRowView) is the kit's chat in one AgentTimelineColumn: prompts as the reader's
    bubbles, prose, and the kit's one-line reasoning and tool rows, spaced by the kit. Rows add no chrome of their own; a
@@ -1614,11 +1618,6 @@
 /* Graph rows select as a whole: a transparent hit area behind each node's dot and label. */
 /* The selected profile's detail beside its graph, kept in view while the graph scrolls. */
 /* The default filter: what it hides, counted where it is seen first; failures lead in the failure colour. */
-.ar-ws .hidden-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 12px 16px; border-radius: 8px; background: var(--ws-raised); color: var(--ar-fg); }
-.ar-ws .ws-content > .hidden-summary { border: 1px solid var(--ar-border); background: var(--ws-panel); }
-.ar-ws .hidden-summary b { font-weight: 600; }
-.ar-ws .hidden-filter { color: var(--ar-fg); }
-.ar-ws .hidden-filter input { width: 18px; height: 18px; accent-color: var(--ws-frame); }
 /* An agent with nothing recorded says so, in place of an empty conversation. */
 
 /* Small print stays on the scale: the browser's own `small` would be a fourth size. */
@@ -2506,7 +2505,7 @@
      outcome (quota, rate limit) is a category in a chart, not a status: quota takes a series violet, never amber, so an
      ended run's history draws no attention hue. The package's own palette is plan item D6. */
   --chart-breach:var(--ar-c-neutral); --chart-live-danger:var(--ar-c-neutral); --chart-live-warning:var(--ar-c-neutral);
-  --chart-ending-solved:var(--ar-c-ok); --chart-ending-live:var(--ar-c-run); --chart-ending-not-solved:var(--ar-c-neutral);
+  --chart-ending-solved:var(--ar-c-ok); --chart-ending-live:var(--ar-c-live); --chart-ending-not-solved:var(--ar-c-neutral);
   --chart-ending-died:color-mix(in srgb, var(--ar-c-neutral) 75%, var(--ar-bg)); --chart-ending-stalled:color-mix(in srgb, var(--ar-c-neutral) 55%, var(--ar-bg));
   --chart-ending-cancelled:color-mix(in srgb, var(--ar-c-neutral) 40%, var(--ar-bg));
   --chart-outcome-quota:#9b59b6; --chart-outcome-rate-limit:color-mix(in srgb, #9b59b6 55%, var(--ar-bg));
@@ -2782,15 +2781,19 @@
 }
 @media (prefers-reduced-motion: reduce) { .ar-ws .td * { transition: none !important; } }
 /* Plays: one toolbar (views, search, program, order) above the table; the table's first row sits in the first screen. */
-.ar-ws .plays-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }
+.ar-ws .plays-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 16px; }
 .ar-ws .plays-filters .as-of { align-self: center; white-space: nowrap; }
 
 .ar-ws .plays-bar .plays-filters { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .ar-ws .plays-bar input[type="search"] { flex: 1; min-width: 160px; }
 /* Plays sits on the same page grid as Today and Fleet: no gutter of its own, the title where theirs is. */
 .ar-ws .ws-page.ws-plays { padding: 8px 0 48px; }
-.ar-ws .ws-plays .hidden-summary { margin: 0 0 12px; padding: 0; background: none; color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
-.ar-ws .ws-plays .hidden-summary b { color: var(--ar-fg); }
+.ar-ws .plays-bar .hidden-filter[aria-pressed='true'] { background: var(--ix-sel-bg); color: var(--accent-text); }
+.ar-ws .hidden-row { display: flex; margin: 0 0 12px; }
+.ar-ws .hidden-row .hidden-filter[aria-pressed='true'] { background: var(--ix-sel-bg); color: var(--accent-text); }
+.ar-ws .plays-page { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 16px 0 0; color: var(--ar-fg-muted); font-size: var(--ar-text-s); }
+.ar-ws .plays-best .rel { font-weight: 600; }
+.ar-ws .plays-best .score { font-variant-numeric: tabular-nums; color: var(--ar-fg-muted); }
 .ar-ws .plays-table .plays-name a { color: var(--ar-fg); font-weight: 500; }
 .ar-ws .plays-table tr:hover .plays-name a { color: var(--accent-text); }
 .ar-ws .plays-table td { padding-top: 8px; padding-bottom: 8px; }
@@ -2969,7 +2972,7 @@
 .ar-ws .wp-num { font-variant-numeric: tabular-nums; color: var(--ar-fg-muted); text-align: right; }
 .ar-ws .wp-k { font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
 .ar-ws .wp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
-.ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start; }
+.ar-ws .wp-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: stretch; }
 .ar-ws .wp-split > section { padding: 16px 20px 20px; border-radius: 8px; background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ar-border); min-width: 0; }
 .ar-ws .wp-split > section > h2 { margin-top: 0; }
 .ar-ws .wp-back { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; font-size: 14px; } .ar-ws .wp-back li { display: contents; }
@@ -2992,6 +2995,8 @@
 .ar-ws .wp-rows li b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .ar-ws .wp-rows li > span, .ar-ws .wp-step > summary { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ar-ws .wp-step { min-width: 0; color: var(--ar-fg-muted); } .ar-ws .wp-step > summary { cursor: pointer; list-style: none; } .ar-ws .wp-step[open] > summary { white-space: normal; }
+/* The step is text that wraps on a click; the details chevron drew as a stray caret before it (judges 10-27). */
+.ar-ws .wp-step > summary::before { content: none; }
 .ar-ws .wp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .ar-ws .wp-stat { display: grid; gap: 4px; align-content: start; padding: 16px; border-radius: 8px; background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ar-border); font-size: var(--ar-text-s); }
 .ar-ws .wp-stat b { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -3023,9 +3028,12 @@
   
 }
 /* A host's open issues are chips: a quiet tint each, an alarm in the danger tint. */
-.ar-ws .wp-over { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
-.ar-ws .wp-over > li { padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ar-c-neutral) 11%, transparent); }
-.ar-ws .wp-over > li[data-alarm] { color: var(--ar-c-fail); background: color-mix(in srgb, var(--ar-c-fail) 12%, transparent); }
+.ar-ws .wp { --wp-ink: hsl(var(--hsl-foreground) / 0.55); }
+.ar-ws .wp-alarm { display: block; padding: 8px 12px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ar-c-fail) 9%, transparent); box-shadow: inset 2px 0 0 var(--ar-c-fail); color: var(--ar-fg); font-size: var(--ar-text-s); line-height: 20px; }
+.ar-ws .wp-alarm b { color: var(--ar-c-fail); font-weight: 600; }
+.ar-ws .wp-watch { display: block; margin: 0; font-size: var(--ar-text-s); color: var(--ar-fg-muted); }
+.ar-ws .wp-seats > summary b { color: var(--ar-fg); font-weight: 600; }
+.ar-ws .wp-seats > .wp-back { margin: 4px 0 8px 22px; }
 .ar-ws .wp-hosts .ar-tip-anchor { min-width: 0; }
 @media (max-width: 760px) {
   .ar-ws .wp-hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

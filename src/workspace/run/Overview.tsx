@@ -1,10 +1,10 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@tangle-network/ui/primitives'
 import { shortRun } from '../play-standing.js'
 import { goalText } from '../plain-words.js'
 import { agentParam, type TabProps } from './RunPage.js'
 import { type Agent, type CheckDoc, checkVerdict, clockOf, abbr, count, finished, type RunModel, elapsed, stampOf } from './model.js'
-import { AgentCard, StateDot, Icon, type IconName, useHoverTarget, useRows } from './ui.js'
+import { AgentCard, StateDot, Icon, useHoverTarget } from './ui.js'
 
 /**
  * The first clause of a host message, without the program prefixes, host paths and commit hashes
@@ -62,22 +62,18 @@ export function Overview(props: TabProps) {
   const why = clause(run.ending?.reason ?? view?.blocker?.why ?? view?.blocker?.sentence, 26)
   const failed = execution?.failedAttempts ?? 0
   const lede = [why && `${why}.`, failed && m.totals.lastStep !== null ? `Agents worked for ${elapsed(working)}; ${failed} later tries failed${execution?.lastAttempt?.error ? `, the last on “${clause(execution.lastAttempt.error, 8)}”` : ''}.` : ''].filter(Boolean).join(' ')
-  const icon: IconName = m.live ? 'clock' : solved ? 'check' : 'stop'
-  const story: { at: string | null; title: string; sub: string; tone: string }[] = [
-    { at: doc.run.startedAt, title: 'Run started', sub: `${m.agents.length} agents${m.root?.model ? ` on ${m.root.model}` : ''}`, tone: '' },
-    ...(m.totals.lastStep !== null ? [{ at: new Date(m.t0 + m.totals.lastStep).toISOString(), title: m.live ? 'Latest agent step' : 'Last agent step', sub: `+${elapsed(m.totals.lastStep)} into the run`, tone: m.duration - m.totals.lastStep > 1_800_000 ? 'warn' : '' }] : []),
-    ...(execution?.lastAttempt?.error ? [{ at: execution.lastAttempt.at ?? null, title: 'Last try failed', sub: clause(execution.lastAttempt.error, 10), tone: 'fail' }] : []),
-    m.live ? { at: new Date().toISOString(), title: 'Running now', sub: `${m.agents.filter((a) => a.state.tone === 'live').length} agents live`, tone: 'next' }
-      : { at: run.ending?.at ?? doc.run.settledAt, title: status, sub: newer ? `continued in run ${shortRun(doc.run.play, newer.id)}` : clause(run.ending?.sentence, 8), tone: 'next' },
-  ]
+  // When it ran, on one line under the verdict (the milestone strip repeated the header and the verdict, judges 10-27).
+  const ended = m.live ? null : run.ending?.at ?? doc.run.settledAt ?? null
+  const span = [doc.run.startedAt ? stampOf(doc.run.startedAt, days).replace(' UTC', '') : null, m.live ? 'now' : ended ? stampOf(ended, days) : null].filter(Boolean).join(' → ')
+  const meta = [span, `${m.agents.length} agents${m.root?.model ? ` on ${m.root.model}` : ''}`, m.live ? `${m.agents.filter((a) => a.state.tone === 'live').length} working now` : newer ? `continued in run ${shortRun(doc.run.play, newer.id)}` : null].filter(Boolean).join(' · ')
   return (
     <div className="rp-ov">
       <section className="rp-card rp-vd" aria-label="Verdict">
         <div className="rp-vd-top">
-          <div className="rp-vd-ic"><Icon name={icon} size={22} /></div>
           <div>
             <h2 className="rp-verdict">{verdict}</h2>
             {lede && <p className="rp-lede">{lede}</p>}
+            <p className="rp-vd-meta">{meta}</p>
           </div>
           <div className="rp-vd-act">
             {/* Every verdict has a next step: follow a live run, open the run that continued it, read its best release, or its files. */}
@@ -88,11 +84,6 @@ export function Overview(props: TabProps) {
             {(m.live || newer || best) && <a className="rp-btn framed" href={route.href('files')}>Files</a>}
           </div>
         </div>
-        <ol className="rp-story">
-          {story.map((s, i) => (
-            <li key={i}><span className={`sd ${s.tone}`} /><time>{s.at ? stampOf(s.at, days) : '—'}</time><b>{s.title}</b><span title={s.sub}>{s.sub}</span></li>
-          ))}
-        </ol>
       </section>
       <Summary {...props} />
       <div className="rp-ov-b">
@@ -169,8 +160,13 @@ function TimeCard({ m, working, failed }: { m: RunModel; working: number; failed
   // Hour ticks clear the end clocks, which are wider when they name the day.
   const clear = m.duration * (days ? 0.16 : 0.08)
   const step = hours <= 10 ? 1 : Math.ceil(hours / 8), ticks = hours ? Array.from({ length: hours }, (_, i) => i + 1).filter((h) => h % step === 0 && h * 3_600_000 >= clear && (h + step) * 3_600_000 <= m.duration && h * 3_600_000 <= m.duration - clear) : []
-  // Only agents that restarted; a run where none did shows no restart section at all.
-  const restarters = m.tree.filter((a) => a.restarts.length).sort((a, b) => b.restarts.length - a.restarts.length).slice(0, 14)
+  // Only agents that restarted, and agents restarted on the same schedule (the same minutes) as one row: 26a drew six identical
+  // rows of nine evenly spaced marks (judges 10-27). A run where none restarted shows no restart section at all.
+  const restarters = useMemo(() => {
+    const by = new Map<string, Agent[]>()
+    for (const a of m.tree) if (a.restarts.length) { const key = a.restarts.map((t) => Math.round(t / 60_000)).join(','); by.set(key, [...(by.get(key) ?? []), a]) }
+    return [...by.values()].sort((x, y) => y[0]!.restarts.length - x[0]!.restarts.length || y.length - x.length).slice(0, 10)
+  }, [m])
   const clock = (t: number) => (days ? stampOf(new Date(m.t0 + t).toISOString(), true).replace(' UTC', '') : clockOf(m.t0)(t))
   return (
     <section className="rp-card" aria-label="Where the time went">
@@ -199,7 +195,7 @@ function TimeCard({ m, working, failed }: { m: RunModel; working: number; failed
           {restarters.length > 0 && (
             <>
               <div className="rp-tries-h"><b>Restarts by agent</b><span className="end rp-keys"><span className="rp-key"><span className="x">✕</span>Restart</span><span className="rp-key"><span className="rp-dot ok" />Finished</span></span></div>
-              {restarters.map((a) => <RestartRow key={a.id} m={m} a={a} X={X} />)}
+              {restarters.map((group) => <RestartRow key={group[0]!.id} m={m} group={group} X={X} />)}
             </>
           )}
         </div>
@@ -208,25 +204,31 @@ function TimeCard({ m, working, failed }: { m: RunModel; working: number; failed
   )
 }
 
-function RestartRow({ m, a, X }: { m: RunModel; a: Agent; X: (t: number) => string }) {
-  const hover = useHoverTarget(() => <AgentCard m={m} a={a} />, { wide: a.tools.length > 0 })
+function RestartRow({ m, group, X }: { m: RunModel; group: Agent[]; X: (t: number) => string }) {
+  const a = group[0]!
+  const hover = useHoverTarget(() => group.length > 1
+    ? <div className="rp-card-h"><div className="t"><span className="nm">{group.length} agents, one schedule</span><span className="v">{a.restarts.length} restarts each</span></div><div className="s">{group.map((g) => g.name).join(', ')}</div></div>
+    : <AgentCard m={m} a={a} />, { wide: group.length === 1 && a.tools.length > 0 })
+  const name = group.length > 1 ? `${group.length} agents` : a.name
   return (
     <>
-      <span className="nm" title={a.name}>{a.name}</span>
-      <div className="rp-tr-row" tabIndex={0} aria-label={`${a.name}: ${a.restarts.length} restarts`} {...hover}>
+      <span className="nm" title={group.map((g) => g.name).join(', ')}>{name}</span>
+      <div className="rp-tr-row" tabIndex={0} aria-label={`${name}: ${a.restarts.length} restarts${group.length > 1 ? ' each, at the same minutes' : ''}`} {...hover}>
         <span className="life" style={{ left: X(Math.max(0, a.start ?? 0)), right: `calc(100% - ${X(a.end ?? m.duration)})` }} />
         {a.restarts.map((t, i) => <span key={i} className="mk" style={{ left: X(t) }}>✕</span>)}
         {finished(a.state.tone) && a.end !== null && <span className="mk ok" style={{ left: X(a.end) }} />}
       </div>
-      <span className="ct">{a.restarts.length || '—'}</span>
+      <span className="ct">{group.length > 1 ? `${a.restarts.length}× each` : a.restarts.length}</span>
     </>
   )
 }
 
+const AGENTS_SHOWN = 12
 function AgentsCard({ m, route, doc }: TabProps) {
   const rows = useMemo(() => [...m.agents].sort((a, b) => (b.tokens ?? -1) - (a.tokens ?? -1)), [m])
-  const scroller = useRef<HTMLDivElement>(null)
-  const win = useRows(scroller, rows.length, 32)
+  // The card is as tall as its rows: the top agents by tokens, then every agent on request, so no row is cut by an edge.
+  const [all, setAll] = useState(false)
+  const shown = all ? rows : rows.slice(0, AGENTS_SHOWN)
   const end = m.totals.lastStep ?? m.duration
   const bins = 28
   const peak = useMemo(() => {
@@ -242,11 +244,10 @@ function AgentsCard({ m, route, doc }: TabProps) {
     <section className="rp-card" aria-label="Agents">
       <div className="rp-hd sm"><h2>Agents<span className="ct">{m.agents.length}</span></h2><span className="end"><a className="rp-btn sm" href={route.href('topology')}>Topology<Icon name="arrow" size={14} /></a></span></div>
       <div className="rp-agt-h"><span /><span>Agent</span><span className="ph-hide" title={`When each agent worked, over the run's ${elapsed(end)}`}>Activity · {elapsed(end).split(' ')[0]}</span><span>Steps</span><span>Tokens</span></div>
-      <div className="rp-scroll" ref={scroller}>
-        <div style={{ height: win.before }} />
-        {rows.slice(win.first, win.last).map((a) => <AgentRow key={a.id} m={m} a={a} bins={bins} end={end} peak={peak} href={route.href('timeline', { agent: agentParam(doc.run.id, a.id) })} />)}
-        <div style={{ height: win.after }} />
+      <div className="rp-agt-l">
+        {shown.map((a) => <AgentRow key={a.id} m={m} a={a} bins={bins} end={end} peak={peak} href={route.href('timeline', { agent: agentParam(doc.run.id, a.id) })} />)}
       </div>
+      {rows.length > AGENTS_SHOWN && <button type="button" className="rp-more-row" onClick={() => setAll(!all)}>{all ? 'Show the top 12' : `Show all ${rows.length} agents`}</button>}
     </section>
   )
 }

@@ -86,17 +86,18 @@ export function PlaysTable({ rows, sort, onSort, live }: { rows: PlayRow[]; sort
                 )}
               </td>
               <td className="plays-best">
+                {/* One type for the release and its score (mono rc1 beside an italic 5/6 read as two systems, judges 10-27). */}
                 {best ? (
                   <span title={`${best.runId ? `${runOf(best.runId)} ` : ''}${best.release}: ${best.sentence}`}>
-                    <span className="mono">{best.release}</span>
+                    <b className="rel">{best.release}</b>
                     <span className="td-steps" aria-label={best.sentence}>
                       {best.steps.map((step, i) => <i key={i} data-step={step.state} />)}
-                      <em>{best.passed}/{best.total}</em>
                     </span>
+                    <span className="score">{best.passed}/{best.total}</span>
                   </span>
                 ) : legacy?.tag || legacy?.run ? (
                   <span title={[legacy.checker ? `under ${legacy.checker}` : null, legacy.verdict ? verdictWord(legacy.verdict) : null].filter(Boolean).join(' · ') || undefined}>
-                    <span className="mono">{shortTag(legacy.tag) ?? 'workspace'}</span>
+                    {shortTag(legacy.tag) ? <b className="rel">{shortTag(legacy.tag)}</b> : <span className="faint">untagged</span>}
                   </span>
                 ) : (
                   <span className="faint">—</span>
@@ -109,13 +110,14 @@ export function PlaysTable({ rows, sort, onSort, live }: { rows: PlayRow[]; sort
                     {runOf(lastId)}
                   </a>
                 ) : '—'}
-                <span title={short(lastStatus?.at ?? play.latestRun?.startedAt) ?? undefined}>{lastStatus ? <> <StatusPill status={viewChip(lastStatus)} className="ending-word" /></> : lastWord ? <> <StatusPill status={endingStatus(lastWord)} className="ending-word" /></> : null}</span>
+                {/* The last run's state only when it differs from the play's own (a second "▶ Running" beside the first said nothing). */}
+                {(() => { const word = lastStatus ? lastStatus.label : lastWord ? endingStatus(lastWord).word : null; return word && word !== view?.status.label ? <span className="faint ending-word" title={short(lastStatus?.at ?? play.latestRun?.startedAt) ?? undefined}> {word}</span> : null })()}
               </td>
               <td className="num">{play.runCount}</td>
               <td className="num" title={cost?.priced !== null && cost?.priced !== undefined ? `${cost.priced} of ${cost.started ?? '?'} started runs priced${cost.provenance ? ` (${cost.provenance})` : ''}` : undefined}>
                 {cost?.apiEquivalentUsd !== null && cost?.apiEquivalentUsd !== undefined && cost.priced ? (
                   <>
-                    {money(cost.apiEquivalentUsd)}{cost.priced !== cost.started ? '+' : ''}
+                    {cost.priced !== cost.started ? '≥' : ''}{money(cost.apiEquivalentUsd)}
                   </>
                 ) : (
                   <span className="faint" title="API-equivalent not priced">—</span>

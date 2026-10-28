@@ -108,20 +108,16 @@ const shortRun = (play: string, run: string) => (run.startsWith(play + '-') ? ru
  * What the default filter holds back, said where it is seen first: failed runs are a health signal, not noise, so the
  * failed count leads in the failure colour. `noun` names what is counted (plays or runs).
  */
-function HiddenSummary({ counts, total, noun, showHidden, onChange }: { counts: Record<HiddenReason, number>; total: number; noun: string; showHidden: boolean; onChange: (all: boolean) => void }) {
+/** What the default filter holds back, as one toggle in the filter bar (a loose "190 of 480 hidden ☐ Show them" line read as
+ * stray text, judges 10-27); its reasons are the toggle's tooltip. */
+function HiddenToggle({ counts, noun, showHidden, onChange }: { counts: Record<HiddenReason, number>; noun: string; showHidden: boolean; onChange: (all: boolean) => void }) {
   const hidden = HIDDEN_ORDER.reduce((sum, reason) => sum + counts[reason], 0)
   if (!hidden) return null
   return (
-    <div className="hidden-summary" data-hidden-summary>
-      {/* The count alone; the reasons are its tooltip (the line was 20 words above the table). */}
-      <span title={HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason) => `${counts[reason]} ${reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}`).join(' · ')}>
-        <b>{hidden}</b> of {total} {noun} {showHidden ? 'shown that the default view hides' : 'hidden'}
-      </span>
-      <label className="toggle hidden-filter">
-        <input type="checkbox" checked={showHidden} onChange={(event) => onChange(event.target.checked)} data-show-hidden />
-        Show them
-      </label>
-    </div>
+    <button type="button" className="rp-btn framed hidden-filter" aria-pressed={showHidden} data-show-hidden data-hidden-summary onClick={() => onChange(!showHidden)}
+      title={HIDDEN_ORDER.filter((reason) => counts[reason] > 0).map((reason) => `${counts[reason]} ${reason === 'failed' && noun === 'plays' ? 'retired plays never ran clean' : HIDDEN_LABEL[reason]}`).join(' · ')}>
+      {showHidden ? `Hide ${hidden} retired` : `Show ${hidden} hidden`}
+    </button>
   )
 }
 
@@ -181,6 +177,7 @@ function PlaysPage({ api }: { api: string }) {
       {program || 'All programs'}
     </Picker>
     {order}
+    {home === 'plays' && <HiddenToggle counts={hidden.counts} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />}
   </div>
   const frontiers = !plays.data?.frontiers?.length ? null : <details className="research-frontiers" aria-label="Frontier statements">
     <summary className="faint">Frontier statements ({plays.data.frontiers.length}, as of {plays.data.frontiers.map((item) => item.asOf).filter(Boolean).sort().at(-1) ?? 'an unrecorded date'})</summary>
@@ -192,7 +189,7 @@ function PlaysPage({ api }: { api: string }) {
   </details>
   const playsHeader = (
     <PageHeader className="rp-head" title="Plays"
-      actions={plays.data ? <ul className="rp-stats"><li><b>{plays.data.plays.length}</b> plays</li><li><b>{runningPlays(plays.data)}</b> running</li>{plays.data.builtAt && <li title="when the host built this list">built <b>{plays.data.builtAt.slice(11, 16)}</b> UTC</li>}</ul> : undefined} />
+      actions={plays.data ? <ul className="rp-stats"><li><b>{plays.data.plays.length}</b> plays</li><li><b>{runningPlays(plays.data)}</b> running</li></ul> : undefined} />
   )
   const homeTabs = (
     <SegmentedControl aria-label="Research views" className="ws-views" value={home} onValueChange={(value) => update({ view: value === 'plays' ? undefined : value })}
@@ -234,13 +231,12 @@ function PlaysPage({ api }: { api: string }) {
       <div className="ws-page ws-plays" data-plays>
         {playsHeader}
         <div className="plays-bar">{homeTabs}{sharedFilters}</div>
-        <HiddenSummary counts={hidden.counts} total={hidden.total} noun="plays" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
         <section className="ws-section">
           <div className="table-scroll">
             <PlaysTable rows={rows.slice(0, shownRows)} sort={sort} onSort={(next) => update({ sort: next ?? undefined })} live={live} />
           </div>
           {rows.length > shownRows && (
-            <button type="button" className="plays-more" onClick={() => setShownRows(rows.length)}>Show all {rows.length} plays</button>
+            <div className="plays-page"><span>Showing {shownRows} of {rows.length} plays</span><button type="button" className="rp-btn sm framed" onClick={() => setShownRows(rows.length)}>Show all</button></div>
           )}
           {!rows.length && <p className="chat-empty">No {hidden.plays && !showHidden ? 'shown ' : ''}play matches.</p>}
         </section>
@@ -362,7 +358,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                   )} />
                 ) : (
                   <>
-                    <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
+                    <div className="hidden-row"><HiddenToggle counts={split.counts} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} /></div>
                     <section className="ws-section">
                       <RunsTable play={view!} latestDigest={latestDigest} headlines={headlines} headline={dimensions.data ? new Set(dimensions.data.dimensions.filter((item) => item.headline).map((item) => item.id)) : null} onOpen={open} />
                     </section>
@@ -406,7 +402,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                     <InputView compact input={input} api={api} changed={!!input && !!latestDigest && input.digest !== latestDigest} more={<>
                         <section className="input-block" data-section="versions">
                           <h4>Profile versions</h4>
-                          <HiddenSummary counts={split.counts} total={doc.runs.length} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} />
+                          <div className="hidden-row"><HiddenToggle counts={split.counts} noun="runs" showHidden={showHidden} onChange={(all) => update({ show: all ? 'all' : undefined })} /></div>
                           <div className="lineage-layout">
                             <section className="lineage-pane" aria-label="Version graph">
                               {profiles.loading && !graph ? <p className="ws-status" role="status">Loading profile versions…</p> : null}
