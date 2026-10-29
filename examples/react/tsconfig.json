@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": "../..",
     "noEmit": true,
+    "resolveJsonModule": true,
     "types": [
       "vite/client"
     ],
