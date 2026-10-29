@@ -7,7 +7,7 @@ Screenshots and recordings left this public tree on October 6, 2026; the links b
 ## Sources and preservation
 
 The five publications are read directly from their original research repository at the immutable revision in [sources.json](sources.json), with every byte checked against its recorded digest. The former example copies remain in [the retained archive](https://github.com/drewstone/agent-record/tree/archive/record-examples-20261029/examples/react/public/records).
-Their SHA-256 hashes and the checked source hashes are in [sources.json](sources.json).
+Their SHA-256 hashes and historical release source hashes are in [sources.json](sources.json); those paths describe the checked release. The current agent tree lives in [Sandbox UI’s record surface](https://github.com/tangle-network/sandbox-ui/blob/main/src/run/record/AgentTree.tsx).
 All 1,054 original event objects and all source references survive conversion unchanged.
 The adapter translates node identity fields and retains the original metadata.
 [Import and server-rendering receipt](import.json).
