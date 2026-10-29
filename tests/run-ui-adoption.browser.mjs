@@ -68,7 +68,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
     for (theme of ['dark', 'light']) for (const width of [1280, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 900 } } } : {}) })
       const page = await context.newPage(), errors = []
-      const cardNamed = name => page.locator('.ag-live-card,.ag-agent-card').filter({ has: page.locator('.ag-live-name, .ag-agent-card .font-semibold').filter({ hasText: new RegExp(`\\b${name}$`) }) })
+      const cardNamed = name => page.locator('.ag-live-card,.ag-agent-card').filter({ has: page.locator('.ag-live-name, .font-semibold').filter({ hasText: new RegExp(`\\b${name}$`) }) })
       const choose = async name => {
         await page.getByRole('button', { name: 'Go to agent', exact: true }).click()
         await page.locator('.rp-lb input').fill(name)
