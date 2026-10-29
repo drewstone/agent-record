@@ -70,7 +70,7 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
         await reset()
         const point=page.locator('[data-tokens] .tgc-series-observation:visible,[data-tokens] circle[data-id]:visible').first()
         await point.waitFor();assert.equal(await point.getAttribute('role'),'button','an activated point exposes its action to assistive technology')
-        if(action==='click')await point.click();else{await point.focus();await page.keyboard.press(action)}
+        if(action==='click'){await point.scrollIntoViewIfNeeded();const box=await point.boundingBox();assert.ok(box);await page.mouse.click(box.x+box.width/2,box.y+box.height/2)}else{await point.focus();await page.keyboard.press(action)}
         await page.waitForFunction(()=>window.chosen?.view==='source')
         const chosen=await page.evaluate(()=>window.chosen)
         assert.equal(chosen.eventId,firstUsage.id,'each activation opens the original retained event, including duplicate-time/zero-valued channels')
