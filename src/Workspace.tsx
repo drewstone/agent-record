@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { PageHeader, SegmentedControl } from '@tangle-network/ui/primitives'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@tangle-network/sandbox-ui/primitives'
 import { Icon, Picker } from './workspace/run/ui.js'
 import type { AssessmentsDocument, DimensionsDocument } from './assessment.js'
 import type { RecordGap } from './record.js'
@@ -60,38 +61,6 @@ export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme === 'auto' ? undefined : theme}>
       {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <Suspense fallback={null}><LazyRunPage api={api} id={id} legacy={() => <LegacyRunSection api={api} id={id} />} /></Suspense>}
-    </div>
-  )
-}
-
-function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs: readonly (readonly [T, string])[]; value: T; onChange: (tab: T) => void; label: string }) {
-  const refs = useRef(new Map<T, HTMLButtonElement>())
-  return (
-    <div className="ui-tabs ws-tabs" role="tablist" aria-label={label}>
-      {tabs.map(([tab, title], i) => (
-        <button
-          key={tab}
-          ref={(element) => {
-            if (element) refs.current.set(tab, element)
-          }}
-          type="button"
-          role="tab"
-          data-tab={tab}
-          aria-selected={value === tab}
-          tabIndex={value === tab ? 0 : -1}
-          onClick={() => onChange(tab)}
-          onKeyDown={(event) => {
-            const next = event.key === 'ArrowRight' ? tabs[(i + 1) % tabs.length] : event.key === 'ArrowLeft' ? tabs[(i - 1 + tabs.length) % tabs.length] : undefined
-            if (next) {
-              event.preventDefault()
-              onChange(next[0])
-              refs.current.get(next[0])?.focus()
-            }
-          }}
-        >
-          {title}
-        </button>
-      ))}
     </div>
   )
 }
@@ -333,19 +302,17 @@ function PlayPage({ api, id }: { api: string; id: string }) {
       {doc && (
         <div className="ws-page ws-play" data-play={doc.id}>
           <PlayHeader play={doc} linked={tab !== 'standing'} />
-          <Tabs
-            label="Play"
-            value={tab}
-            onChange={(next) => update({ tab: next === 'standing' ? undefined : next, judged: undefined })}
-            tabs={[
-              ['standing', 'Standing'],
-              ['releases', releaseCount ? `Releases ${releaseCount}` : 'Releases'],
-              ['runs', `Runs ${runCount}`],
-              ['findings', findingCount ? `Findings ${doc?.runs.some((run) => run.findings === null) ? '≥' : ''}${findingCount}` : 'Findings'],
-              ['setup', 'Setup'],
-            ] as const}
-          />
-          <div className="ws-content" role="tabpanel">
+          <Tabs value={tab} onValueChange={(next) => update({ tab: next === 'standing' ? undefined : next, judged: undefined })}>
+            <TabsList className="ui-tabs ws-tabs" variant="underline" aria-label="Play">
+              {([
+                ['standing', 'Standing'],
+                ['releases', releaseCount ? `Releases ${releaseCount}` : 'Releases'],
+                ['runs', `Runs ${runCount}`],
+                ['findings', findingCount ? `Findings ${doc.runs.some((run) => run.findings === null) ? '≥' : ''}${findingCount}` : 'Findings'],
+                ['setup', 'Setup'],
+              ] as const).map(([value, label]) => <TabsTrigger key={value} value={value}>{label}</TabsTrigger>)}
+            </TabsList>
+            <TabsContent className="ws-content mt-0" value={tab}>
             {tab === 'standing' && <PlayJourney play={doc} />}
             {tab === 'releases' && <PlayReleases play={doc} />}
             {tab === 'findings' && (doc.findings?.length ? <PlayFindings play={doc} /> : <p className="ws-status">No result or claim has been written by this play&rsquo;s runs yet.</p>)}
@@ -425,7 +392,8 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 </section>
               </div>
             )}
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </Status>
