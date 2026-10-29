@@ -92,6 +92,8 @@ Session projection event IDs use `shared-session.v1`, not publication `anchor.v1
 
 ### Live native activity
 
+Browser hosts import the existing `projectPartEvents` projection from `@drewstone/agent-record/record`. It shares retained ingest's native-part interpretation; the host supplies source anchors, clipping, classification and the event sink. The record entry uses no Node APIs.
+
 `node tools/ingest.mjs <home> --activity --since <ISO> --out activity.json` reads Codex account session roots and the default Codex/Claude homes. Resolved roots and recorded session identities are deduplicated. The importer writes `agent-record.activity.v1`: sessions grouped by native identity, with classified tool/model/idle intervals, mixed activities, edit method and target category, and capture coverage. Command text and tool output are used for static classification but omitted from this metadata export; lane names, cwd and seat still require review before public use.
 
 The model interval immediately before an action is charged to that action. Codex per-step `token_usage_record` values support an **estimated** split into overhead, reading uncached context, writing and reasoning. The fitted weights and their limitations are recorded once at `modelSplitMethod`; parts sum to the observed interval. Missing per-step usage, including Claude's unavailable reasoning breakdown, stays unknown. This is elapsed capture time, not a measurement of cognition.
