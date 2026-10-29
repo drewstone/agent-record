@@ -65,7 +65,11 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
       currentPage = page
       page.on('pageerror', error => errors.push(error.message))
       const base = `http://127.0.0.1:${server.address().port}/run/${captured.runId}?section=agents&node=${encodeURIComponent(actor)}&event=${encodeURIComponent(first.id)}`
-      const capture = async name => { if (evidence) await page.screenshot({ path: `${evidence}/${name}-${width}-${theme}.png`, fullPage: true }) }
+      const capture = async name => {
+        const [title, pill, elapsed] = await Promise.all(['h1 > span:last-child', 'p', '.rp-elapsed'].map(selector => page.locator(`.rp-head ${selector}`).boundingBox()))
+        assert.ok(title && pill && elapsed && title.x + title.width <= pill.x + 0.5 && pill.x + pill.width <= elapsed.x + 0.5, `${name}: the title, status and elapsed time never overlap (${JSON.stringify({ title, pill, elapsed })})`)
+        if (evidence) await page.screenshot({ path: `${evidence}/${name}-${width}-${theme}.png`, fullPage: true })
+      }
       for (location of ['archive', 'none', 'dir']) {
         await page.goto(`${base}&case=${location}`)
         await page.getByRole('tab', { name: /^Conversations/ }).waitFor()
