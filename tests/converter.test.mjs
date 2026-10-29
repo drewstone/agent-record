@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -273,4 +273,48 @@ test('a metered journal window becomes scoped usage the usage view can chart cum
   assert.equal(metered[0].detail.usageScope, 'metered')
   // Scoped usage is cumulative by meaning: never presented as a per-response measurement.
   assert.equal(record.events.filter((event) => event.detail.usage && event.detail.usageScope === undefined).length, 0)
+})
+
+
+// Real captured SQLite stores through the public converter, including committed rows still in a WAL.
+for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkpointed'} bytes stay intact across repeated conversions`, (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter sqlite #'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const { run, native } = writeNativeRun(root, { settled: true })
+  const hex = 'b'.repeat(64), session = '.local/share/opencode/opencode.db'
+  const store = join(native, hex, 'workspace/__retention__/sessions/sess/native/exec/session-home', session)
+  mkdirSync(dirname(store), { recursive: true })
+  const { DatabaseSync } = process.getBuiltinModule('node:sqlite')
+  const writer = new DatabaseSync(join(root, 'writer.db'))
+  writer.exec(`
+    PRAGMA journal_mode=WAL;
+    CREATE TABLE session(id TEXT, time_created INTEGER);
+    CREATE TABLE message(id TEXT, session_id TEXT, time_created INTEGER, data TEXT);
+    CREATE TABLE part(id TEXT, message_id TEXT, session_id TEXT, time_created INTEGER, data TEXT);
+  `)
+  writer.prepare('INSERT INTO session VALUES (?, ?)').run('native-root', ms(0))
+  writer.prepare('INSERT INTO message VALUES (?, ?, ?, ?)').run('m1', 'native-root', ms(1), JSON.stringify({ role: 'assistant', modelID: 'recorded-model', providerID: 'recorded-provider' }))
+  const part = writer.prepare('INSERT INTO part VALUES (?, ?, ?, ?, ?)')
+  part.run('p1', 'm1', 'native-root', ms(2), JSON.stringify({ type: 'text', text: 'Checkpointed evidence.', time: { start: ms(2) } }))
+  if (wal) {
+    writer.exec('PRAGMA wal_checkpoint(TRUNCATE)')
+    part.run('p2', 'm1', 'native-root', ms(3), JSON.stringify({ type: 'text', text: 'WAL-only evidence.', time: { start: ms(3) } }))
+  }
+  if (!wal) writer.close() // Real completed captures retain the WAL header after checkpoint/removal.
+  for (const suffix of ['', '-wal', '-shm']) if (existsSync(join(root, 'writer.db') + suffix)) copyFileSync(join(root, 'writer.db') + suffix, store + suffix)
+  if (wal) writer.close()
+  writeFileSync(join(run, 'evidence/native-index.jsonl'), jsonl([{
+    schema: 'disco.native-capture.v1', runId: 'run-n', at: at(5), nodeId: 'run-n:s0', harness: 'opencode',
+    snapshot: { archive: `sha256:${hex}` },
+    native: { harness: 'opencode', sessions: [{ sandboxSessionId: 'sess', sourceId: 'exec', rootScope: 'session-home', path: session, nativeSessionId: 'native-root' }] },
+  }]))
+  const original = new Map(readdirSync(dirname(store)).map(name => [name, readFileSync(join(dirname(store), name))]))
+  const files = createFileCache(), options = { runId: 'run-n', native, files }
+  const first = ingestRun(run, options), second = ingestRun(run, options)
+  assert.equal(second.json, first.json)
+  assert.deepEqual(childEvents(first.record).map(e => e.detail.publicText), wal ? ['Checkpointed evidence.', 'WAL-only evidence.'] : ['Checkpointed evidence.'])
+  assert.ok(childEvents(first.record).every(e => e.source.path.startsWith(`native:${hex}/`) && e.source.pointer.startsWith('/part/')))
+  assert.deepEqual(readdirSync(dirname(store)).sort(), [...original.keys()].sort())
+  for (const [name, bytes] of original) assert.deepEqual(readFileSync(join(dirname(store), name)), bytes, `cached input ${name} is unchanged`)
+  t.diagnostic(JSON.stringify({ wal, recordDigest: first.summary.recordDigest }))
 })
