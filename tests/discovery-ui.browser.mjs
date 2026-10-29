@@ -1,4 +1,4 @@
-import { observeArrivalMotion, proveArrivalMotion } from './conversation-ui-journey.mjs'
+import { observeArrivalMotion, proveArrivalMotion, proveFailedToolSummary } from './conversation-ui-journey.mjs'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { readFile, mkdir } from 'node:fs/promises'
@@ -24,7 +24,7 @@ const rows = [
   { seq: 8, at: iso(183), attempt: 5, event: { kind: 'tool_result', toolCallId: 'check', result: { error: 'Proof verification failed: witness mismatch' } } },
 ]
 const tail = rows.slice(3).map(row => ({ ...row, seq: row.seq + 200 }))
-const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` : runId, label: i ? `Worker ${i}` : 'root', parent: i ? runId : null, kind: 'agent', status: 'running', start: iso(0), end: null, model: 'Recorded model', harness: 'codex', usage: { calls: 1, tokens: 12, tools: { read: { calls: 1, failures: 0, ms: 1 } }, steps: [{ kind: 'tool', startMs: start, endMs: start + 1, tool: 'read', failed: false }] } }))
+const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` : runId, label: i ? `Worker ${i}` : 'root', parent: i ? runId : null, kind: 'agent', status: 'running', start: iso(0), end: null, model: 'Recorded model', harness: ['opencode', 'claude-code', 'codex', 'glm', 'kimi', 'grok'][i % 6], usage: { calls: 1, tokens: 12, tools: { read: { calls: 1, failures: 0, ms: 1 } }, steps: [{ kind: 'tool', startMs: start, endMs: start + 1, tool: 'read', failed: false }] } }))
 
 // Recorded totals deliberately differ from the bounded display steps.
 nodes[0].usage = { listUsd: 1.25, listComplete: false, billedUsd: null, billedComplete: false, calls: 413, tokens: 100000, byClass: { input: 70000, output: 20000, cacheRead: 10000 }, latencyMs: { p50: 9000, p90: 20000 }, failures: { model: 3, tool: 2 }, retries: { model: 7, tool: 1 }, tools: { read: { calls: 321, failures: 2, ms: 321000 } }, steps: [...nodes[0].usage.steps, { kind: 'model', startMs: start + 1, endMs: start + 1001, failed: false, byClass: { input: 1, output: 1, cacheRead: 0 } }] }
@@ -153,6 +153,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       if (evidence) await page.screenshot({ path: `${evidence}/overview-${width}-${theme}.png` })
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await open()
+      await proveFailedToolSummary(page)
       const initialReads = requests.length
       await page.waitForTimeout(3200)
       console.log('Live transcript transport', JSON.stringify({ theme, width, periodicHttpReads: requests.length - initialReads, activeAgentStreams: agentStreams.size }))

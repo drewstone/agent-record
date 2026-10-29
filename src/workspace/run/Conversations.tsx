@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { HarnessLogo, ProviderMark, type HarnessType } from '@tangle-network/sandbox-ui/dashboard'
+import { HarnessLogo } from '@tangle-network/sandbox-ui/dashboard'
 import { VirtualList } from '@tangle-network/sandbox-ui/run/record'
 import { LiveTranscript } from '../LiveTranscript.js'
 import { AgentConversation, useRecordPart } from '../record-part.js'
@@ -57,7 +57,7 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
             <div key={`t:${r.id}`} className="ag" style={{ height: ROW }}><Icon name="users" size={14} />{r.label}<span className="ct">{r.n}</span></div>
           ) : (
             <button key={r.a.id} type="button" role="listitem" aria-current={r.a.id === selected?.id} style={{ height: ROW }} onClick={() => selectAgent(r.a.id)}>
-              <span className="rp-agent-logos"><HarnessLogo type={(r.a.harness === 'claude' ? 'claude-code' : r.a.harness ?? 'cli-base') as HarnessType} size={18} /><ProviderMark provider={r.a.model ?? undefined} size="xs" /></span>
+              <span className="rp-agent-logos"><HarnessLogo type={r.a.harness ?? r.a.model ?? 'cli-base'} model={r.a.model ?? undefined} size={28} /></span>
               <span className="nm" title={r.a.name}><StateDot tone={r.a.state.tone} /><Hilite text={r.a.name} query={query} /></span>
               <span className="sb">{r.a.steps.length || r.a.turns ? `${plural(r.a.steps.length, 'step')}${r.a.first !== null ? ` · ${spanOf(m.t0, r.a.first, r.a.state.tone === 'live' ? 'now' : r.a.last ?? r.a.first)}` : ''}` : r.a.state.label}</span>
               <span className="n">{r.a.tokens === null ? '' : abbr(r.a.tokens)}</span>

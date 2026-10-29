@@ -216,7 +216,7 @@ test('same-account navigation resets a finished API while same-API frames preser
   await writeFile(entry, `import { createElement, useState } from 'react'; import { createRoot } from 'react-dom/client'; import { Workspace } from '@drewstone/agent-record'; function Host(){ const [api,setApi]=useState('/a'); return createElement('div',{},createElement('button',{onClick:()=>setApi('/b')},'Open run B'),createElement(Workspace,{api,mode:'live',id:api})); } createRoot(document.getElementById('navigation')).render(createElement(Host));`)
   let browser, bResponse, admitB
   const bReady = new Promise(resolve => { admitB = resolve })
-  const module = await build({ configFile: false, logLevel: 'silent', define: { 'process.env.NODE_ENV': JSON.stringify('production') }, build: { write: false, lib: { entry, formats: ['es'], fileName: () => 'navigation.js' }, rollupOptions: { output: { chunkFileNames: 'navigation/[name]-[hash].js' } } } })
+  const module = await build({ configFile: false, logLevel: 'silent', define: { 'process.env.NODE_ENV': JSON.stringify('production') }, build: { write: false, lib: { entry, formats: ['es'], fileName: () => 'navigation.js', cssFileName: 'navigation' }, rollupOptions: { output: { chunkFileNames: 'navigation/[name]-[hash].js' } } } })
   const chunks = new Map((Array.isArray(module) ? module : [module]).flatMap(output => output.output).map(output => [output.fileName, output.type === 'chunk' ? output.code : output.source]))
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://localhost').pathname
