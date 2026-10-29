@@ -40,8 +40,9 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
     for(theme of ['light','dark'])for(const width of [1512,390]){
       const context=await browser.newContext({viewport:{width,height:982},colorScheme:theme,...(evidence?{recordVideo:{dir:evidence,size:{width,height:982}}}:{})})
       const page=await context.newPage(), errors=[], began=Date.now(), captions={}
-      page.on('pageerror',error=>errors.push(error.message))
+      page.on('pageerror',error=>{errors.push(error.message);console.error('usage host:',error.message)})
       await page.goto(`http://127.0.0.1:${server.address().port}/?theme=${theme}`)
+      await page.getByRole('button',{name:'Return to full usage',exact:true}).waitFor({timeout:10_000}).catch(async error=>{if(evidence)await page.screenshot({path:`${evidence}/host-failure-${theme}-${width}.png`,fullPage:true});throw new Error(JSON.stringify({errors,chunks:[...chunks.keys()]}),{cause:error})})
       const reset=async()=>{await page.getByRole('button',{name:'Return to full usage',exact:true}).click();await page.getByRole('tab',{name:'Usage',exact:true}).waitFor()}
       for(const metric of ['cumulative','response','tool-time'])for(const axis of ['time','order']){
         await reset()
