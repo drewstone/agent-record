@@ -1,3 +1,4 @@
+import { duration } from '@tangle-network/charts'
 import { ENDING_GLYPH, hostWords } from './play-standing.js'
 
 export type StatusTone = 'pass' | 'live' | 'attention' | 'fail' | 'neutral'
@@ -21,22 +22,6 @@ export type StatusInput =
    * stages no known-good fixture passed, named by `held`: never Passed, never failing.
    */
   | { axis: 'result'; verdict: string | null | undefined; current?: boolean; checker?: string | null; waiting?: boolean; passed?: number | null; total?: number | null; held?: readonly string[] | null }
-  /**
-   * Something that may need a person: an overview `attention[]` tone, or a blocker's severity on a run that is or is not
-   * live. The tone is the host's: a page never raises it.
-   */
-  | { axis: 'alert'; tone?: string | null; severity?: string | null; live: boolean }
-  /** An agent row: its recorded status while its run is or is not live. */
-  | { axis: 'agent'; status: string | null | undefined; live: boolean }
-  /** A release tag's state. */
-  | { axis: 'release'; state: string | null | undefined }
-  /**
-   * Why a driver turn ended (the receipt's `system.attempts.causes`). `live` is a run still going; `actNow` names who
-   * must act when a live run's blocker is red, the only time a turn lost to the platform needs a person.
-   */
-  | { axis: 'cause'; cause: string; label?: string | null; live: boolean; actNow?: string | null }
-  /** A measured value against its play's bar (`barSide` in play-standing.ts), toned by its own comparison only. */
-  | { axis: 'measure'; side: 'within' | 'past' | 'short' | null }
 
 const status = (axis: StatusAxis, word: string, tone: StatusTone, shape: string): Status => ({ axis, word, tone, shape })
 const OPERATOR = /operator|cancel/
@@ -121,58 +106,8 @@ function resultAxis(input: Extract<StatusInput, { axis: 'result' }>): Status {
   return status('result', `No pass yet${current ? '' : under}${count}`, 'neutral', ENDING_GLYPH.ended)
 }
 
-function causeAxis({ cause, label, live, actNow = null }: Extract<StatusInput, { axis: 'cause' }>): Status {
-  switch (cause) {
-    case 'stopped':
-      return status('cause', 'Stopped by Lab or operator', 'neutral', ENDING_GLYPH.cancelled)
-    case 'budget-exhausted':
-      return status('cause', 'Stopped by Lab (budget)', 'neutral', ENDING_GLYPH.stalled)
-    case 'rate-limited':
-      return status('cause', 'Quota hit', live ? 'attention' : 'neutral', live ? ENDING_GLYPH.attention : ENDING_GLYPH.stalled)
-    case 'platform-lost':
-      // A hollow △, against act-now's filled ■: attention while a live run is losing turns (it is blocked), red only when
-      // that run's blocker is red, and a past fact once the run has ended (v2: amber only for running or blocked).
-      return !live
-        ? status('cause', 'Platform lost the turn', 'neutral', ENDING_GLYPH.lost)
-        : actNow
-          ? status('cause', `Platform lost the turn · act now: ${actNow}`, 'fail', ENDING_GLYPH.lost)
-          : status('cause', 'Platform lost the turn', 'attention', ENDING_GLYPH.lost)
-    default:
-      return status('cause', label ?? cause.replaceAll('-', ' '), 'neutral', ENDING_GLYPH.ended)
-  }
-}
-
-/** The one place a status chooses its word, tone and shape. */
-export function statusOf(input: StatusInput): Status {
-  switch (input.axis) {
-    case 'run':
-      return runAxis(input)
-    case 'result':
-      return resultAxis(input)
-    case 'alert':
-      if (input.tone === 'crit' || (input.live && input.severity === 'red')) return status('alert', 'act now', 'fail', ENDING_GLYPH.fail)
-      if (input.live && input.severity) return status('alert', 'Blocked', 'attention', ENDING_GLYPH.attention)
-      if (!input.live && input.severity) return status('alert', 'past', 'neutral', ENDING_GLYPH.ended)
-      return status('alert', input.tone === 'info' ? 'cleared' : 'not urgent', 'neutral', ENDING_GLYPH.ended)
-    case 'agent':
-      if (!input.live || input.status === 'done' || input.status === 'ended') return status('agent', 'Ended', 'neutral', ENDING_GLYPH.ended)
-      // Down is red only while its run is live: someone must restart it. On an ended run it is "Ended" above.
-      if (input.status === 'down') return status('agent', `Down · act now: ${DEFAULT_OWNER}`, 'fail', ENDING_GLYPH.fail)
-      if (input.status === 'running' || input.status === 'working' || !input.status) return status('agent', 'Working', 'neutral', ENDING_GLYPH.live)
-      return status('agent', 'Waiting', 'neutral', ENDING_GLYPH.stalled)
-    case 'cause':
-      return causeAxis(input)
-    case 'measure':
-      return input.side === 'within' || input.side === 'past'
-        ? status('measure', input.side === 'within' ? 'within the bar' : 'past the bar', 'pass', '●')
-        : status('measure', input.side === 'short' ? 'short of the bar' : 'no bar comparison', 'neutral', '○')
-    case 'release':
-      return input.state === 'published' || !input.state
-        ? status('release', 'Published', 'neutral', ENDING_GLYPH.ended)
-        : input.state === 'withheld'
-          ? status('release', 'not published', 'neutral', ENDING_GLYPH.ended)
-          : status('release', input.state === 'superseded' ? 'superseded' : 'state unknown', 'neutral', ENDING_GLYPH.unknown)
-  }
+function statusOf(input: StatusInput): Status {
+  return input.axis === 'run' ? runAxis(input) : resultAxis(input)
 }
 
 const ENDING_STATE: Record<string, string> = { solved: 'winner', died: 'failed', live: 'running', 'never started': 'never-started' }
