@@ -90,9 +90,9 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
         await page.locator('.conversation-scroll').waitFor()
       }
       await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/overview`)
-      await page.locator('.rj-ladder li').first().waitFor()
-      assert.equal(await page.locator('.rj-ladder li').count(), 2)
-      assert.equal(await page.locator('.rj-ladder [aria-current="step"]').innerText(), '2\nVerify proof')
+      await page.locator('.ov-meter-steps li').first().waitFor()
+      assert.equal(await page.locator('.ov-meter-steps li').count(), 2)
+      assert.equal(await page.locator('.ov-meter-steps [aria-current="step"]').innerText(), '2\nVerify proof')
       assert.match(await page.locator('.rj-releases').innerText(), /rc1–rc2: all 1\/2/)
       assert.equal(await page.locator('.rp-stats').count(), 0, 'only identity, status and elapsed precede the tabs')
       assert.ok(await page.locator('.ov-gantt [data-lane]').count() < 40)
@@ -103,7 +103,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       const updated = { ...workspace(), releases: [...releases, { ...releases[1], release: 'rc3', taggedAt: iso(250), passed: 2, steps: releases[1].steps.map(step => ({ ...step, state: 'pass' })) }], best: 'rc3' }
       emit(updated)
       await page.getByText('every step passes', { exact: false }).waitFor()
-      assert.equal(await page.locator('.rj-ladder [aria-current]').count(), 0, 'SSE updates the actual ladder without a reload')
+      assert.equal(await page.locator('.ov-meter-steps [aria-current]').count(), 0, 'SSE updates the actual ladder without a reload')
       if (evidence) await page.screenshot({ path: `${evidence}/overview-${width}-${theme}.png` })
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await open()

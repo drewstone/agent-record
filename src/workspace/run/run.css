@@ -187,11 +187,10 @@
 /* Approved run journey; the plot and motion belong to Charts. */
 .rp .rp-journey { display: flex; flex-direction: column; gap: 16px; }
 .rp .rj-hero p { margin: 12px 0 0; }
-.rp .rj-ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; padding: 0; margin: 0; list-style: none; }
-.rp .rj-ladder li { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-height: 104px; padding: 16px; border-radius: var(--radius-lg); background: var(--rp-raised); }
-.rp .rj-ladder strong { font-size: 26px; line-height: 30px; }
-.rp .rj-ladder [data-state='pass'] { background: var(--surface-success-bg); }
-.rp .rj-ladder [aria-current='step'] { background: var(--surface-warning-bg); color: var(--surface-warning-text); }
+ .rp .rj-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.rp .rj-main[data-picked] { grid-template-columns: minmax(0, 1fr) 340px; }
+.rp .rj-drill { align-self: start; max-height: 530px; overflow: auto; }
+.rj-agent-sheet { max-height: 80dvh; overflow: auto; }
 .rp .rj-next { color: var(--text-muted); }
 .rp .rj-next b { color: var(--text-primary); }
 .rp .rj-releases { display: flex; gap: 12px; flex-wrap: wrap; color: var(--text-muted); font-variant-numeric: tabular-nums; }
@@ -489,8 +488,6 @@
   .agent-record .rp-run .rp-head h1 { font-size: 13px; line-height: 22px; gap: 5px; min-width: 0; }
   .agent-record .rp-run .rp-head h1 a { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
   .agent-record .rp-run .rp-elapsed { font-size: 13px; }
-  .rp .rj-ladder { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .rp .rj-ladder li { padding: 12px; min-height: 94px; }
   .rp .rp-tabs-wrap { position: sticky; top: 44px; z-index: 5; margin: 0 -16px; background: hsl(var(--hsl-background)); }
   .rp .rp-tabs { margin: 0; padding: 0 4px; }
   .rp .rp-work { overflow: visible; padding-top: 12px; }
