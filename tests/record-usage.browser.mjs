@@ -7,6 +7,7 @@ import { createRequire } from 'node:module'
 import test from 'node:test'
 import { build } from 'vite'
 import { chromium } from 'playwright'
+import { readPublication } from '../examples/react/publications.ts'
 
 // A retained Discovery projection with real per-response counters, metered windows and tool returns.
 test('record usage keeps original source actions and measured semantics through the shared figure', { timeout: 150_000 }, async () => {
@@ -18,18 +19,21 @@ test('record usage keeps original source actions and measured semantics through 
   assert.ok(record.events.some(event => event.detail?.usageScope), 'the retained projection includes aggregate windows')
   const firstUsage = record.events.find(event => event.node === 'root' && event.detail?.usage && event.detail.usageScope === undefined)
   assert.ok(firstUsage)
+  const stoppedBytes=Buffer.from(await readPublication('ftqc-zips-2026-08-05-r1')), stoppedRecord=JSON.parse(stoppedBytes)
+  const stoppedActors=stoppedRecord.nodes.filter(node=>node.status==='down')
+  assert.equal(stoppedActors.length,2,'the immutable real publication retains two stopped actors')
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
   const scratch = await mkdtemp(resolve('.usage-host-')), entry = resolve(scratch, 'host.js')
   await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,parseRecord}from${JSON.stringify(resolve(assets,'index.js'))};
-const record=parseRecord(await fetch('/retained-record').then(response=>response.json()));const initial={runId:record.runId,nodeId:'root',view:'usage'};
+const record=parseRecord(await fetch('/retained-record'+location.search).then(response=>response.json()));const initial={runId:record.runId,nodeId:'root',view:'usage'};
 function Host(){const[selection,set]=useState(initial);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
   const built = await build({ configFile:false, logLevel:'silent', resolve:{dedupe:['react','react-dom']}, define:{'process.env.NODE_ENV':JSON.stringify('production')}, build:{write:false,lib:{entry,formats:['es'],fileName:()=> 'host.js'},rollupOptions:{output:{chunkFileNames:'usage/[name]-[hash].js'}}} })
   const chunks = new Map((Array.isArray(built)?built:[built]).flatMap(result=>result.output).map(item=>[item.fileName,item.type==='chunk'?item.code:item.source]))
   let theme='light'
   const server=createServer(async(req,res)=>{
     const path=new URL(req.url,'http://localhost').pathname
-    if(path==='/retained-record'){res.setHeader('content-type','application/json');return res.end(bytes)}
+    if(path==='/retained-record'){res.setHeader('content-type','application/json');return res.end(new URL(req.url,'http://localhost').searchParams.has('stopped')?stoppedBytes:bytes)}
     if(path==='/styles.css'){res.setHeader('content-type','text/css');return res.end(await readFile(resolve(assets,'styles.css')))}
     const chunk=chunks.get(path.slice(1));if(chunk!==undefined){res.setHeader('content-type',path.endsWith('.css')?'text/css':'text/javascript');return res.end(chunk)}
     res.setHeader('content-type','text/html');res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><div id="host"></div><script type="module" src="/host.js"></script></html>`)
@@ -52,11 +56,13 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
       await page.waitForFunction(()=>document.querySelector('[data-cursor]')?.value==='0')
       const child=tree.locator('[data-node="echo"]')
       assert.match(await child.getAttribute('aria-label'),/Not yet started/)
+      assert.equal(await child.locator('[data-run-status]').getAttribute('data-run-status'),'unknown','a future actor stays unknown')
       await child.focus();await page.keyboard.press('Enter')
       assert.equal(await page.locator('[data-agent]').inputValue(),'echo','keyboard selection keeps canonical agent identity')
       await page.getByRole('button',{name:'Full run',exact:true}).click()
       await tree.locator('[data-node="root"]').click()
       assert.equal(await page.locator('[data-agent]').inputValue(),'root')
+      assert.equal(await tree.locator('[data-node="root"] [data-run-status]').getAttribute('data-run-status'),'stopped','known no-winner is terminal, not unknown')
       if(evidence)await page.screenshot({path:evidence+'/tree-'+theme+'-'+width+'.png',fullPage:true})
       for(const metric of ['cumulative','response','tool-time'])for(const axis of ['time','order']){
         await reset()
@@ -95,6 +101,17 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
       await page.locator('[data-tokens]').scrollIntoViewIfNeeded()
       if(evidence)await page.screenshot({path:`${evidence}/usage-${theme}-${width}.png`,fullPage:true})
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
+      await page.goto('http://127.0.0.1:'+server.address().port+'/?theme='+theme+'&stopped')
+      await page.getByRole('button',{name:'Full run',exact:true}).click()
+      for(const node of stoppedActors){
+        const button=page.locator('[data-graph] [data-node]').filter({has:page.locator('[data-run-status="stopped"]')}).filter({hasText:node.label})
+        assert.equal(await button.count(),1,'each stopped publication actor is retained once')
+        assert.match(await button.getAttribute('aria-label'),/Stopped/)
+        assert.equal(await button.locator('[data-run-status]').getAttribute('data-run-status'),'stopped')
+        await button.focus();await page.keyboard.press('Enter')
+        assert.equal(await page.locator('[data-agent]').inputValue(),node.id,'stopped actor selection preserves original identity')
+      }
+      if(evidence)await page.screenshot({path:evidence+'/stopped-'+theme+'-'+width+'.png',fullPage:true})
       assert.deepEqual(errors,[])
       checks.push({theme,width,retainedEvents:record.events.length,recordSha256:digest,captions,sourceActions})
       await page.waitForTimeout(Math.max(0,10_100-(Date.now()-began)))
