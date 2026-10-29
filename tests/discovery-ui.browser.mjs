@@ -140,6 +140,8 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('button', { name: /3 idle turns/ }).click()
       await page.getByRole('button', { name: 'Beginning', exact: true }).click()
       await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
+      const history = await page.locator('.transcript-edge').first().locator('button').evaluateAll(buttons => buttons.map(button => { const r = button.getBoundingClientRect(); return { left: r.left, right: r.right } }))
+      const historyGap = history.length > 1 ? history[1].left - history[0].right : null
       const requestCount = requests.length
       await page.waitForTimeout(3200)
       assert.equal(requests.length, requestCount, 'reading the beginning does not poll or drain history')
@@ -153,6 +155,19 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.locator('[data-idle-group="3"]').waitFor()
       await page.getByRole('button', { name: /Shell.*check proof/i }).click()
       await page.getByText('Proof verification failed: witness mismatch', { exact: true }).last().waitFor()
+      const contrast = await page.locator('[data-testid="command-preview"] pre[role="region"]').evaluateAll(regions => regions.map(region => {
+        const context = document.createElement('canvas').getContext('2d')
+        const rgba = value => { context.clearRect(0, 0, 1, 1); context.fillStyle = value; context.fillRect(0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data] }
+        const luminance = channels => channels.slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, i) => sum + value * [.2126, .7152, .0722][i], 0)
+        let surface = region
+        while (surface.parentElement && rgba(getComputedStyle(surface).backgroundColor)[3] < 255) surface = surface.parentElement
+        const foreground = getComputedStyle(region).color, background = getComputedStyle(surface).backgroundColor
+        const a = luminance(rgba(foreground)), b = luminance(rgba(background))
+        return { label: region.getAttribute('aria-label'), foreground, background, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05) }
+      }))
+      console.log('Transcript style geometry', JSON.stringify({ theme, width, historyGap, contrast }))
+      assert.ok(historyGap === null || historyGap >= 12, `history controls need separate hit areas: gap ${historyGap}px`)
+      assert.ok(contrast.length > 0 && contrast.every(region => region.ratio >= 4.5), `tool output must remain readable: ${JSON.stringify(contrast)}`)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'long play/run header and transcript fit the phone')
       assert.ok(await page.locator('.virtual-row').count() < 100)
       if (evidence) await page.screenshot({ path: `${evidence}/chat-${width}-${theme}.png` })
