@@ -434,20 +434,12 @@ export function UsageChart({
     formatX: axis === 'time' ? value => interval(value - index.start) : String,
     formatY: metric === 'tool-time' ? value => value.toFixed(3) : fmt,
   }), [plotted, axis, metric, index.start, cutoff, points.length])
-  const activatePoint = (target: EventTarget) => {
-    const key = target instanceof Element ? target.closest('[data-point]')?.getAttribute('data-point') : null
-    const event = key === null ? undefined : plotted.sourceEvents[Number(key)]
-    if (!event) return false
-    inspect(event, true)
-    return true
-  }
   return (
     <>
-      <div data-tokens onClick={event => activatePoint(event.target)} onKeyDown={event => {
-        if ((event.key === 'Enter' || event.key === ' ') && activatePoint(event.target)) event.preventDefault()
+      <div data-tokens onKeyDown={event => {
         if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && event.target instanceof Element && event.target.closest('svg')) { event.preventDefault(); navigate(event.key === 'ArrowLeft' ? -1 : 1) }
       }}>
-        {points.length ? metric !== 'tool-time' && !visible.length ? <p className="chat-empty">All token channels are hidden. Select a channel to show its recorded values.</p> : <FigureView figure={figure} /> : <p className="chat-empty">{metric === 'tool-time' ? 'No matched tool timing at this time' : 'No measured usage at this time'}</p>}
+        {points.length ? metric !== 'tool-time' && !visible.length ? <p className="chat-empty">All token channels are hidden. Select a channel to show its recorded values.</p> : <FigureView figure={figure} onPointSelect={point => { const event = plotted.sourceEvents[point]; if (event) inspect(event, true) }} /> : <p className="chat-empty">{metric === 'tool-time' ? 'No matched tool timing at this time' : 'No measured usage at this time'}</p>}
       </div>
       {metric !== 'tool-time' && (
         <div className="usage-legend">
