@@ -103,8 +103,9 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
       await page.goto('http://127.0.0.1:'+server.address().port+'/?theme='+theme+'&stopped')
       await page.getByRole('button',{name:'Full run',exact:true}).click()
+      await page.locator('.topology > summary').click()
       for(const node of stoppedActors){
-        const button=page.locator('[data-graph] [data-node]').filter({has:page.locator('[data-run-status="stopped"]')}).filter({hasText:node.label})
+        const button=page.locator('[data-graph] [data-node='+JSON.stringify(node.id)+']')
         assert.equal(await button.count(),1,'each stopped publication actor is retained once')
         assert.match(await button.getAttribute('aria-label'),/Stopped/)
         assert.equal(await button.locator('[data-run-status]').getAttribute('data-run-status'),'stopped')
