@@ -56,6 +56,14 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
       await page.getByRole('button',{name:'Hide Input',exact:true}).click()
       await page.getByRole('button',{name:'Show Input',exact:true}).click()
       assert.equal(await page.getByRole('button',{name:'Hide Input',exact:true}).getAttribute('aria-pressed'),'true')
+      if(await page.locator('[data-tokens] .tgc-data').count()){
+        const rows=await page.locator('[data-tokens] .tgc-data tbody tr').evaluateAll(nodes=>nodes.map(node=>[...node.children].map(cell=>cell.textContent.trim())))
+        assert.ok(rows.some(row=>row[0]==='Cache read'&&/^0(?: tokens)?$/.test(row[2])),'a recorded zero remains a measured zero')
+        if(record.events.some(event=>event.node==='root'&&event.detail?.usage&&Object.values(event.detail.usage).length<4))assert.ok(rows.some(row=>row[2]==='not measured'),'an absent counter remains unmeasured')
+        for(const label of ['Input','Output','Cache read','Cache write'])await page.getByRole('button',{name:`Hide ${label}`,exact:true}).click()
+        await page.getByText('All token channels are hidden. Select a channel to show its recorded values.',{exact:true}).waitFor()
+        for(const label of ['Input','Output','Cache read','Cache write'])await page.getByRole('button',{name:`Show ${label}`,exact:true}).click()
+      }
       const sourceActions=[]
       for(const action of ['click','Enter','Space']){
         await reset()
