@@ -16,10 +16,9 @@ export async function proveToolPreview(page, evidence, width, theme) {
   assert.ok(await logo.evaluate(element => element.firstElementChild.getBoundingClientRect().width >= 16), 'the actual mark is at least sixteen pixels')
   if (width === 390) {
     await page.locator('.rp-alist [role="listitem"]').filter({ has: page.getByText('root', { exact: true }) }).click()
-    await page.getByRole('button', { name: 'Beginning', exact: true }).click()
-    await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
   }
   const row = page.locator('.record-tool-row').filter({ has: page.getByRole('button', { name: /Read.*proof.txt/i }) }).first()
+  await row.waitFor()
   const summary = row.locator('[data-record-tool-summary]')
   assert.match(await summary.innerText(), /1s.*Returned/s)
   assert.ok(await summary.evaluate(element => getComputedStyle(element).opacity === '1' && element.getBoundingClientRect().width > 40))
