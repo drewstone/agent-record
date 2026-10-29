@@ -32,7 +32,8 @@
     },
     "./adapters/research-publication": {
       "types": "./dist/adapters/research-publication.d.ts",
-      "import": "./dist/research-publication.js"
+      "import": "./dist/research-publication.js",
+      "default": "./dist/research-publication.js"
     },
     "./styles.css": "./dist/styles.css",
     "./workspace-viewer.js": "./dist/workspace-viewer.js",
@@ -42,23 +43,27 @@
     },
     "./adapters/agent-runtime": {
       "types": "./dist/adapters/agent-runtime.d.ts",
-      "import": "./dist/agent-runtime.js"
+      "import": "./dist/agent-runtime.js",
+      "default": "./dist/agent-runtime.js"
     },
     "./adapters/harness-sessions": {
       "types": "./dist/adapters/harness-sessions.d.ts",
-      "import": "./dist/harness-sessions.js"
+      "import": "./dist/harness-sessions.js",
+      "default": "./dist/harness-sessions.js"
     },
     "./adapters/trace-spans": {
       "types": "./dist/adapters/trace-spans.d.ts",
-      "import": "./dist/trace-spans.js"
+      "import": "./dist/trace-spans.js",
+      "default": "./dist/trace-spans.js"
     },
     "./publication": {
       "types": "./dist/publication.d.ts",
       "import": "./dist/publication.js"
     },
     "./workspace": {
-      "types": "./dist/workspace.d.ts",
-      "import": "./dist/workspace.js"
+      "types": "./dist/workspace-model.d.ts",
+      "import": "./dist/workspace.js",
+      "default": "./dist/workspace.js"
     },
     "./assessment": {
       "types": "./dist/assessment.d.ts",
