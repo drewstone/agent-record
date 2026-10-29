@@ -14,7 +14,7 @@ export function clause(text: string | null | undefined, words = Infinity): strin
   return cut.length > words ? `${cut.slice(0, words).join(' ').replace(/[.;,:]+$/, '')}…` : t.replace(/[.;,:]$/, '')
 }
 
-const passed = (r: RunRelease) => r.checked && r.total !== null && r.total > 0 && r.passed === r.total
+const passed = (r: RunRelease) => r.checked && typeof r.total === 'number' && r.total > 0 && r.passed === r.total
 export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
   const phone = usePhone()
   const best = m.best
