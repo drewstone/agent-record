@@ -75,7 +75,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
         await page.getByRole('option', { name: `${name} —`, exact: true }).click()
         await cardNamed(name).waitFor()
       }
-      const fit = async () => { const button = page.locator('.react-flow__controls-fitview'); if (await button.count()) await button.click() }
+      const fit = async () => { await page.locator('.react-flow__controls-fitview, .ag-phone-select').first().waitFor(); const button = page.getByRole('button', { name: 'Fit View', exact: true }); if (await button.count()) await button.click() }
       const capture = async name => { if (!evidence) return; await page.evaluate(async () => { const finite = document.getAnimations().filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime)); await Promise.allSettled(finite.map(animation => animation.finished)) }); await page.screenshot({ path: `${evidence}/${name}-${theme}-${width}.png`, fullPage: true }) }
       const countIn = (inspector, label) => inspector.locator('.rp-stat3 > div').filter({ has: page.getByText(new RegExp(`^${label.replace(/s$/, 's?')}$`)) }).locator('b')
       page.on('pageerror', error => errors.push(error.message))
@@ -174,7 +174,15 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       console.log('Runtime Hub header geometry', JSON.stringify({ theme, width, ...hubHeader }))
       assert.ok(hubHeader.metrics.every(metric => metric.width > 0 && metric.left >= hubHeader.header.left && metric.right <= hubHeader.header.right && metric.top >= hubHeader.header.top && metric.bottom <= hubHeader.header.bottom && metric.bottom <= hubHeader.canvas.top), 'Every Hub metric must remain visible inside the wrapped header above the canvas')
       await page.getByLabel('Graph layout', { exact: true }).selectOption('tree')
-      await page.locator('.ws-live .ag-live-card[data-status="failed"]').waitFor()
+      await fit() // The layout change retains the focused agent; inspect the complete graph explicitly.
+      try { await page.locator('.ws-live .ag-live-card[data-status="failed"]').waitFor() } catch (error) {
+        if (evidence) {
+          await page.screenshot({ path: `${evidence}/tree-return-failure-${theme}-${width}.png`, fullPage: true })
+          await (await import('node:fs/promises')).writeFile(`${evidence}/tree-return-failure-${theme}-${width}.html`, await page.content())
+        }
+        console.log('Tree return diagnosis', JSON.stringify(await page.evaluate(() => ({ layout: document.querySelector('[aria-label="Graph layout"]')?.value, camera: document.querySelector('.react-flow__viewport')?.getAttribute('style'), selected: [...document.querySelectorAll('[data-agent-id][aria-pressed="true"],.react-flow__node.selected')].map(node => node.getAttribute('data-agent-id') ?? node.getAttribute('data-id')), nodes: [...document.querySelectorAll('.ws-live .react-flow__node')].map(node => ({ id: node.dataset.id, text: node.textContent, status: node.querySelector('[data-status]')?.getAttribute('data-status'), className: node.className })), caption: document.querySelector('.ws-live')?.textContent?.slice(0, 500) }))))
+        throw error
+      }
       await capture('runtime-sse-fixture')
       await page.getByRole('radio', { name: 'Agents', exact: true }).click()
       await page.locator('.fw-root').waitFor()
@@ -193,6 +201,68 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       await context.close()
     }
   } finally { await browser?.close(); await new Promise(resolve => server.close(resolve)) }
+})
+
+
+test('same-account navigation resets a finished API while same-API frames preserve selection', { timeout: 60_000 }, async () => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises')
+  const { build } = await import('vite')
+  const evidence = process.env.RUN_UI_EVIDENCE_DIR
+  if (evidence) await mkdir(evidence, { recursive: true })
+  const scratch = await mkdtemp(resolve('.navigation-consumer-'))
+  const clients = new Set()
+  const frame = (id, status, sequence) => `event: snapshot\ndata: ${JSON.stringify({ sequence, observedAt: now, reset: sequence === 1, snapshots: [{ root: id, generatedAt: now, completeness: 'complete', diagnostics: [], supervisors: [{ id, status, task: `Inspect ${id}`, startedAt: iso(start), workers: [{ id: `${id}-worker`, label: `${id} worker`, status, startedAt: iso(start), runtime: 'codex', liveTail: ['Actual HTTP fixture input'] }] }] }] })}\n\n`
+  const entry = resolve(scratch, 'navigation.js')
+  await writeFile(entry, `import { createElement, useState } from 'react'; import { createRoot } from 'react-dom/client'; import { Workspace } from '@drewstone/agent-record'; function Host(){ const [api,setApi]=useState('/a'); return createElement('div',{},createElement('button',{onClick:()=>setApi('/b')},'Open run B'),createElement(Workspace,{api,mode:'live',id:api})); } createRoot(document.getElementById('navigation')).render(createElement(Host));`)
+  let browser, bResponse, admitB
+  const bReady = new Promise(resolve => { admitB = resolve })
+  const module = await build({ configFile: false, logLevel: 'silent', define: { 'process.env.NODE_ENV': JSON.stringify('production') }, build: { write: false, lib: { entry, formats: ['es'], fileName: () => 'navigation.js' }, rollupOptions: { output: { chunkFileNames: 'navigation/[name]-[hash].js' } } } })
+  const chunks = new Map((Array.isArray(module) ? module : [module]).flatMap(output => output.output).map(output => [output.fileName, output.type === 'chunk' ? output.code : output.source]))
+  const server = createServer(async (req, res) => {
+    const path = new URL(req.url, 'http://localhost').pathname
+    if (path === '/a/events' || path === '/b/events') {
+      res.setHeader('content-type', 'text/event-stream'); res.setHeader('cache-control', 'no-cache'); res.flushHeaders()
+      if (path === '/a/events') return res.end(frame('run-A', 'succeeded', 1) + 'event: end\ndata: {}\n\n')
+      clients.add(res); bResponse = res; admitB(res); res.write(': connected\n\n'); res.on('close', () => clients.delete(res)); return
+    }
+    if (path.endsWith('/stream')) { res.setHeader('content-type', 'text/event-stream'); return res.end('event: end\ndata: {}\n\n') }
+    if (/^\/[ab]\/agents\//.test(path)) { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify({ coverage: { status: 'missing', source: 'actual-http-fixture', reason: 'No native transcript is supplied' } })) }
+    if (path === '/assets/styles.css') { res.setHeader('content-type', 'text/css'); return res.end(await readFile(resolve(assets, 'styles.css'))) }
+    const chunk = chunks.get(path.slice(1)); if (chunk !== undefined) { res.setHeader('content-type', path.endsWith('.css') ? 'text/css' : 'text/javascript'); return res.end(chunk) }
+    res.setHeader('content-type', 'text/html'); res.end('<!doctype html><html class="dark" data-theme="dark"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/styles.css"><div id="navigation"></div><script type="module" src="/navigation.js"></script></html>')
+  })
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  try {
+    browser = await chromium.launch({ headless: true })
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, ...(evidence ? { recordVideo: { dir: evidence, size: { width: 1280, height: 900 } } } : {}) })
+    const page = await context.newPage()
+    await page.goto(`http://127.0.0.1:${server.address().port}/navigation`)
+    await page.getByText('Finished · viewer closed', { exact: true }).waitFor()
+    await page.getByText('Inspect run-A', { exact: true }).waitFor()
+    if (evidence) await page.screenshot({ path: `${evidence}/navigation-a-finished.png`, fullPage: true })
+    await page.getByRole('button', { name: 'Open run B', exact: true }).click()
+    const liveB = page.locator('main.ws-live[data-api="/b"]')
+    await liveB.waitFor()
+    assert.equal(await liveB.getByText('Finished · viewer closed', { exact: true }).count(), 0, 'New API must not retain the previous run terminal state')
+    assert.equal(await liveB.getByText('Inspect run-A', { exact: true }).count(), 0, 'New API must not retain the previous run snapshot')
+    if (evidence) await page.screenshot({ path: `${evidence}/navigation-b-before-frame.png`, fullPage: true })
+    await bReady
+    assert.ok(bResponse, 'The actual B event stream must be connected')
+    bResponse.write(frame('run-B', 'running', 1))
+    await page.getByText('Inspect run-B', { exact: true }).waitFor()
+    const node = page.locator('.react-flow__node[data-id="run-B-worker"]')
+    await node.waitFor(); await node.click()
+    await page.getByRole('complementary', { name: 'run-B worker conversation', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Close conversation', exact: true }).click()
+    const camera = await page.locator('.react-flow__viewport').getAttribute('style')
+    bResponse.write(frame('run-B', 'running', 2))
+    await page.waitForFunction(() => document.querySelector('main.ws-live')?.getAttribute('data-top-sequence') === '2')
+    assert.equal(await page.locator('.react-flow__node[data-id="run-B-worker"]').getAttribute('aria-pressed'), 'true')
+    assert.equal(await page.locator('.react-flow__viewport').getAttribute('style'), camera, 'Same API updates preserve the existing graph camera')
+    assert.equal(await page.getByText('Inspect run-A', { exact: true }).count(), 0)
+    if (evidence) await page.screenshot({ path: `${evidence}/navigation-b-live.png`, fullPage: true })
+    await context.close()
+  } finally { await browser?.close(); for (const response of clients) response.end(); await new Promise(resolve => server.close(resolve)); await rm(scratch, { recursive: true, force: true }) }
 })
 
 

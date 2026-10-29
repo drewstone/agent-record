@@ -27,7 +27,7 @@ const PAGES = {
 }
 export type LazyMode = keyof typeof PAGES
 export const isLazyMode = (mode: string): mode is LazyMode => mode in PAGES
-export const LazyPage = ({ mode, api, transport }: { mode: LazyMode; api: string; transport?: LiveRunTransport }) => mode === 'live' ? createElement(PAGES.live, { api, transport }) : createElement(PAGES[mode], { api })
+export const LazyPage = ({ mode, api, transport }: { mode: LazyMode; api: string; transport?: LiveRunTransport }) => mode === 'live' ? createElement(PAGES.live, { key: api, api, transport }) : createElement(PAGES[mode], { api })
 // The run's outputs drawer and a version's output changes read files through sandbox-ui's previews and diffs.
 export const LazyOutputsView = lazy(() => import('./Outputs.js').catch(reloadOnce).then((module) => ({ default: module.OutputsView })))
 export const LazyOutputChanges = lazy(() => import('./Outputs.js').catch(reloadOnce).then((module) => ({ default: module.OutputChanges })))
