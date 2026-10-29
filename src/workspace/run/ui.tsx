@@ -187,8 +187,8 @@ export function Bar({ ok, failed = 0, max }: { ok: number; failed?: number; max:
   )
 }
 
-export const agentCost = (a: { billedUsd: number | null; listUsd: number | null }) =>
-  a.listUsd !== null ? `${usd(a.listUsd)} list · ${usd(a.billedUsd ?? 0)} billed` : a.billedUsd !== null ? `${usd(a.billedUsd)} billed` : 'not recorded'
+export const agentCost = (a: Agent) =>
+  a.listUsd !== null ? `${a.node.usage?.listComplete === false ? '≥' : ''}${usd(a.listUsd)} list · ${a.billedUsd !== null && a.node.usage?.billedComplete === false ? '≥' : ''}${usd(a.billedUsd)} billed` : a.billedUsd !== null ? `${a.node.usage?.billedComplete === false ? '≥' : ''}${usd(a.billedUsd)} billed` : 'not recorded'
 
 /** An agent's whole-run metrics, with tool calls by tool beside them: the card every agent mark opens. */
 export function AgentCard({ m, a, head }: { m: RunModel; a: Agent; head?: ReactNode }) {

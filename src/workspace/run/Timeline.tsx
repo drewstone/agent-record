@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { FlowMarker, FlowOutcome, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, clockOf, abbr, count, lat, type RunModel, elapsed } from './model.js'
+import { type Agent, clockOf, abbr, agentFacts, count, lat, type RunModel, elapsed } from './model.js'
 import { Bar, agentCost, StateDot, Icon } from './ui.js'
 
 /** Each state tone as the waterfall draws it: the same hue and shape as the page's own StateDot. */
@@ -23,7 +23,6 @@ const OUTCOME: Record<Agent['state']['tone'], (label: string) => FlowOutcome> = 
  * and retried steps. An agent the reader picked shows its whole-run numbers below; the page's default root does not (round 28).
  */
 export function flowTrace(m: RunModel): FlowTrace {
-  const root = m.root?.model ?? null
   const spans: FlowSpan[] = []
   for (const a of m.agents) {
     if (a.start === null) continue
@@ -34,7 +33,7 @@ export function flowTrace(m: RunModel): FlowTrace {
       ...(a.parent ? { parentId: a.parent } : {}),
       kind: 'pipeline',
       name: a.name,
-      ...(a.model && a.model !== root ? { detail: a.model } : {}),
+      detail: a.model ?? 'Not recorded',
       startMs: Math.max(0, a.start),
       endMs: end,
       status: a.status === 'succeeded' ? 'done' : a.status,
@@ -42,15 +41,13 @@ export function flowTrace(m: RunModel): FlowTrace {
       outcome: OUTCOME[a.state.tone](a.state.label),
       activityAt: a.lastActivityAt === undefined ? [] : [a.lastActivityAt - m.t0],
       medianEventGapMs: a.medianEventGapMs,
-      ...(a.listUsd !== null ? { costUsd: a.listUsd } : a.billedUsd !== null ? { costUsd: a.billedUsd } : {}),
+      ...(a.listUsd !== null ? { costUsd: a.listUsd, costBound: a.node.usage?.listComplete === false ? 'lower' as const : undefined } : a.billedUsd !== null ? { costUsd: a.billedUsd, costBound: a.node.usage?.billedComplete === false ? 'lower' as const : undefined } : {}),
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
       marks: a.restarts.map((at) => ({ at, kind: 'restart', label: `Restarted ${clockOf(m.t0)(at)} UTC` })),
       facts: [
-        ...(a.tokens !== null && !a.byClass ? [{ label: 'Tokens (split not recorded)', value: abbr(a.tokens) }] : []),
         ...(a.node.failureReason ? [{ label: 'Failure', value: a.node.failureReason }] : []),
-        { label: 'Commits', value: a.commits === null ? '—' : String(a.commits) },
-        { label: 'Restarts', value: String(a.restarts.length) },
-        ...(a.turns !== null ? [{ label: 'Turns', value: String(a.turns) }] : []),
+        { label: 'Cost basis', value: a.listUsd !== null ? 'Catalog estimate' : a.billedUsd !== null ? 'Recorded bill' : 'Not recorded' },
+        ...agentFacts(m, a).filter(fact => fact.label !== 'Cost' || (a.listUsd === null && a.billedUsd === null)),
         ...(a.harness ? [{ label: 'Harness', value: a.harness }] : []),
       ],
     })

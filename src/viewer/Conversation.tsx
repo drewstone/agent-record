@@ -11,7 +11,7 @@ import {
   toolKey,
 } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
-import { anchorsOf, answeredBy, collapseHollowTurns, collapsePolls, quietThinking, thinkingMarkers } from './conversation-rows.js'
+import { anchorsOf, answeredBy, collapseHollowTurns, collapseIdleTurns, collapsePolls, quietThinking, thinkingMarkers } from './conversation-rows.js'
 import type { ConversationRow } from './conversation-rows.js'
 
 export interface EventFlag {
@@ -37,6 +37,8 @@ interface ConversationProps {
   lifecycle?: boolean
   /** The agent can still act: a call without a result is pending, not uncaptured. */
   live?: boolean
+  /** Suspend following while the reader browses earlier pages of a live agent. */
+  follow?: boolean
   /** The prompt the agent was started with, when its record holds no prompt of its own (a root's run input). */
   opening?: { text: string; at: string }
 }
@@ -53,6 +55,7 @@ export function Conversation({
   onFlag,
   lifecycle = false,
   live = false,
+  follow = live,
   opening,
 }: ConversationProps) {
   // The opening prompt starts open (who asked what comes first) but stays collapsible like every other row.
@@ -134,13 +137,13 @@ export function Conversation({
   )
   // A root's record starts at its first step; the prompt it was started with opens the chat, as the reader's bubble.
   const shown = useMemo(() => {
-    if (!opening?.text || query || category !== 'all' || items.some((event) => event.detail.role === 'user')) return items
+    if (!opening?.text || query || category !== 'all' || items.some((event) => event.detail.role === 'user' && event.detail.promptKind !== 'steering')) return items
     const first = items[0]?.at ?? opening.at
     return [{ id: `${actor}:opening`, node: actor, at: first < opening.at ? first : opening.at, kind: 'message', category: 'other', label: 'prompt', detail: { role: 'user', publicText: opening.text, promptKind: 'initial' } } as RecordEvent, ...items]
   }, [items, opening, actor, query, category])
   const rows = useMemo(
     () =>
-      collapseHollowTurns(
+      collapseIdleTurns(collapseHollowTurns(
         collapsePolls(shown, {
           callsOf,
           answered: (event, id) => answeredBy(index.results.get(toolKey(event.node, id))),
@@ -152,7 +155,7 @@ export function Conversation({
             (index.results.get(toolKey(event.node, id)) ?? []).some((result) => textOf(result)),
           keyOf: anchor,
         },
-      ),
+      ), callsOf),
     [shown, index, anchor],
   )
   // How long each withheld-thinking turn took: the time since this agent's previous event.
@@ -170,8 +173,7 @@ export function Conversation({
   const rowOf = useMemo(() => {
     const map = new Map<string, string>()
     for (const row of rows)
-      if (row.kind === 'polls') for (const event of row.events) map.set(event.id, row.key)
-      else if (row.kind === 'hollow') for (const event of row.events) map.set(event.id, row.key)
+      if (row.kind !== 'event') for (const event of row.events) map.set(event.id, row.key)
       else map.set(row.event.id, row.key)
     return map
   }, [rows])
@@ -184,16 +186,19 @@ export function Conversation({
   // Follow the tail only while the reader is at the bottom: new rows of a live record keep them there; anywhere
   // else, the rows above keep their measured heights and the reading place does not move.
   const following = useRef(false)
+  const followRef = useRef(follow)
+  followRef.current = follow
   useLayoutEffect(() => {
     // A live conversation opens at its newest event and follows it; a recorded one opens at its first message.
-    following.current = live && !targetRef.current
-    if (scroll.current && !targetRef.current) scroll.current.scrollTop = live ? scroll.current.scrollHeight : 0
+    following.current = follow && !targetRef.current
+    if (scroll.current && !targetRef.current) scroll.current.scrollTop = follow ? scroll.current.scrollHeight : 0
   }, [actor])
+  useLayoutEffect(() => { if (!follow) following.current = false }, [follow])
   useEffect(() => {
     const element = scroll.current
     if (!element) return
     const track = () => {
-      following.current = element.scrollHeight - element.scrollTop - element.clientHeight < 24
+      following.current = followRef.current && element.scrollHeight - element.scrollTop - element.clientHeight < 24
     }
     element.addEventListener('scroll', track, { passive: true })
     return () => element.removeEventListener('scroll', track)
@@ -250,11 +255,9 @@ export function Conversation({
   const keyOf = useCallback((row: ConversationRow) => row.key, [])
   const estimate = useCallback(
     (row: ConversationRow) =>
-      row.kind === 'polls'
+      row.kind !== 'event'
         ? 36
-        : row.kind === 'hollow'
-          ? 26
-          : isLifecycle(row.event)
+        : isLifecycle(row.event)
             ? 26
             : !textOf(row.event) && callsOf(row.event).length
               ? 16 + 36 * callsOf(row.event).length
@@ -264,7 +267,18 @@ export function Conversation({
   const context = { index, cutoff, selected, opened, anchor, opener, setOpen, flagMarks, paired, thinkingSpan, flags, live }
   // Each row's kit items, built once per change: a row's first gap follows the kind of the row above it.
   const itemsOf = useMemo(() => rows.map((row) => rowItems(row, context)), [rows, opened, cutoff, selected, live, index, thinkingSpan]) // eslint-disable-line react-hooks/exhaustive-deps
-  const render = (row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i ? lastKind(itemsOf[i - 1] ?? []) : undefined} context={context} />
+  const turns = useMemo(() => {
+    let previous: RecordEvent | undefined
+    return rows.map(row => {
+      const event = row.kind === 'event' ? row.event : row.events[0]!
+      const assistant = event.detail.role === 'assistant' && !isLifecycle(event)
+      const turn = assistant && (!previous || previous.detail.role === 'user' ||
+        (event.detail.attempt !== undefined ? event.detail.attempt !== previous.detail.attempt : ms(event.at) - ms(previous.at) > 120_000))
+      previous = row.kind === 'event' ? event : row.events.at(-1)
+      return turn
+    })
+  }, [rows])
+  const render = (row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i ? lastKind(itemsOf[i - 1] ?? []) : undefined} turn={turns[i]} context={context} />
   return (
     <>
       <div

@@ -412,3 +412,22 @@ export function checkVerdict(check: CheckDoc | null | undefined): CheckVerdict {
   if (latest.known) return { word: 'Not solved', tone: 'fail', note: null }
   return { word: 'No verdict', tone: 'none', note: null }
 }
+
+/** Authoritative whole-run facts shared by topology and waterfall cards; absent aggregates stay unknown. */
+export function agentFacts(m: RunModel, a: Agent) {
+  return [
+    { label: 'Tokens', value: a.byClass ? `${count(a.byClass.input)} in / ${count(a.byClass.output)} out / ${count(a.byClass.cacheRead)} cached` : a.tokens !== null ? `${count(a.tokens)} total · split not recorded` : 'Not recorded' },
+    { label: 'Cost', value: a.listUsd !== null ? `${a.node.usage?.listComplete === false ? '≥' : ''}${usd(a.listUsd)} catalog` : a.billedUsd !== null ? `${a.node.usage?.billedComplete === false ? '≥' : ''}${usd(a.billedUsd)} billed` : 'Not recorded' },
+    { label: 'Billed cost', value: a.billedUsd !== null ? `${a.node.usage?.billedComplete === false ? '≥' : ''}${usd(a.billedUsd)}` : 'Not recorded' },
+    { label: 'Model calls', value: count(a.modelCalls) },
+    { label: 'Model latency', value: `${lat(a.latency.p50)} p50 / ${lat(a.latency.p90)} p90 / ${lat(a.latency.p99)} p99` },
+    { label: 'Tool calls', value: count(a.toolCalls) },
+    { label: 'Tool failures', value: a.node.usage?.tools || a.node.usage?.failures ? count(a.toolFailures) : 'Not recorded' },
+    { label: 'Failures', value: a.node.usage?.failures ? `${count(a.failedSteps)} failed steps` : 'Not recorded' },
+    { label: 'Retries', value: `${a.node.usage?.retries ? count(a.retries) : '—'} retried steps · ${a.node.restarts ? count(a.restarts.length) : '—'} restarts` },
+    { label: 'Observed work / run duration', value: `${elapsed(a.busy)} / ${elapsed(m.duration)}` },
+    { label: 'Spawned / commits', value: `${a.children.length} / ${count(a.commits)}` },
+    ...(a.turns !== null ? [{ label: 'Turns', value: count(a.turns) }] : []),
+    ...a.tools.map(tool => ({ label: tool.name, value: `${count(tool.calls)} calls · ${count(tool.failures)} failures · ${lat(tool.p50)} / ${lat(tool.p90)} / ${lat(tool.p99)} p50/p90/p99` })),
+  ]
+}

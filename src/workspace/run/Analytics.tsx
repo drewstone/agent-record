@@ -57,10 +57,17 @@ function Kpis({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Retur
 // ----- Tool calls by agent and tool: a heatmap with ✕ failure counts, row totals and an "N more" column
 
 const HM_NAME = 232, HM_COL = 76, HM_TOTAL = 88
-/** The rows a card shows before "Show all": the page scrolls, no card scrolls inside (judges 10-27: four nested scrollers). */
+/** Bounded pages keep all agents reachable without nested scrolling or unbounded DOM rows. */
 const ROWS_SHOWN = 14
-function ShowAll({ n, all, set }: { n: number; all: boolean; set: (all: boolean) => void }) {
-  return n > ROWS_SHOWN ? <button type="button" className="rp-more-row" onClick={() => set(!all)}>{all ? `Show the first ${ROWS_SHOWN}` : `Show all ${n}`}</button> : null
+function usePage<T>(rows: T[]) {
+  const [asked, set] = useState(0)
+  const page = Math.min(asked, Math.max(0, Math.ceil(rows.length / ROWS_SHOWN) - 1)), start = page * ROWS_SHOWN
+  return { rows: rows.slice(start, start + ROWS_SHOWN), controls: rows.length > ROWS_SHOWN ?
+    <nav className="rp-more-row" aria-label="Agent pages" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <button className="rp-link" type="button" disabled={!page} onClick={() => set(page - 1)}>Previous</button>
+      <span>{start + 1}–{Math.min(start + ROWS_SHOWN, rows.length)} of {rows.length}</span>
+      <button className="rp-link" type="button" disabled={start + ROWS_SHOWN >= rows.length} onClick={() => set(page + 1)}>Next</button>
+    </nav> : null }
 }
 /** An element's size, measured: a grid folds the columns it cannot hold, and a chart draws in its own pixels (no stretched text). */
 function useSize() {
@@ -82,12 +89,12 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
   const card = useCard()
   const narrow = useNarrow()
   const [wrap, { w: width }] = useSize()
-  const [all, setAll] = useState(false)
   const rows = useMemo(() => {
     const withTools = agents.filter((a) => (a.toolCalls ?? 0) > 0)
     const key = sort === 'calls' ? (a: Agent) => -(a.toolCalls ?? 0) : sort === 'fails' ? (a: Agent) => -a.toolFailures * 1e6 - (a.toolCalls ?? 0) : null
     return key ? [...withTools].sort((a, b) => key(a) - key(b)) : [...withTools].sort((a, b) => a.name.localeCompare(b.name))
   }, [agents, sort])
+  const page = usePage(rows)
   const name = narrow ? 120 : HM_NAME
   // As many tool columns as the card holds beside the name and total columns; the rest fold into one "N more" column, so
   // no column is ever cut by the card's edge (25b showed 8 and a cut 9th at 1512 px; a phone holds none and folds them all).
@@ -121,7 +128,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
             {cols.map((t) => <span key={t.name} className="ch" title={t.name}><span>{t.name.replace(/^agent-runtime-coordination_/, '').replaceAll('_', ' ')}</span></span>)}
             {rest.length > 0 && <span className="ch" title={rest.map((t) => t.name).join(', ')}><span>{cols.length ? `${rest.length} more` : `${rest.length} tools`}</span></span>}
             <span className="ch tot">Total</span>
-            {(all ? rows : rows.slice(0, ROWS_SHOWN)).map((a) => {
+            {page.rows.map((a) => {
               const has = new Map(a.tools.map((t) => [t.name, t]))
               const other = a.tools.filter((t) => !cols.some((c) => c.name === t.name))
               const otherCalls = other.reduce((s, t) => s + t.calls, 0), otherFails = other.reduce((s, t) => s + t.failures, 0)
@@ -143,7 +150,7 @@ function Heatmap({ m, agents, tools }: { m: RunModel; agents: Agent[]; tools: Re
             })}
           </div>
         </div>
-        <ShowAll n={rows.length} all={all} set={setAll} />
+        {page.controls}
         <div className="rp-hm-foot"><span className="ramp"><span>1</span><i /><span>{count(max)}</span></span><span><span className="x">✕</span> failed calls in the cell</span>{agents.some(a => a.toolCalls === 0) && <span className="end">{agents.filter(a => a.toolCalls === 0).length} agents made no tool calls</span>}</div>
       </div>
     </section>
@@ -232,9 +239,9 @@ type SortKey = 'tokens' | 'model' | 'tool' | 'failed' | 'restarts' | 'spawns' | 
 function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
   const [sort, setSort] = useState<{ k: SortKey; d: 1 | -1 }>({ k: 'tokens', d: -1 })
   const card = useCard()
-  const [all, setAll] = useState(false)
   const value = (a: Agent): number | string => ({ tokens: a.tokens ?? -1, model: a.modelCalls ?? -1, tool: a.toolCalls ?? -1, failed: a.failedSteps, restarts: a.restarts.length, spawns: a.children.length, cost: a.listUsd ?? a.billedUsd ?? -1, name: a.name })[sort.k]
   const rows = useMemo(() => [...agents].sort((a, b) => { const x = value(a), y = value(b); return (typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number)) * sort.d }), [agents, sort]) // eslint-disable-line react-hooks/exhaustive-deps
+  const page = usePage(rows)
   const maxTok = Math.max(1, ...agents.map((a) => a.tokens ?? 0))
   // A count column shows only when some agent has one: 26a has no restarts, so no empty Restarts column takes the width.
   const counts = (['failed', 'restarts', 'spawns'] as const).filter((k) => agents.some((a) => (k === 'failed' ? a.failedSteps : k === 'restarts' ? a.restarts.length : a.children.length) > 0))
@@ -249,7 +256,7 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
       <div className="rp-hd sm"><h3>Agents<span className="ct">{agents.length}</span></h3></div>
       <div className="rp-at-wrap" role="table" aria-label="Agents" aria-rowcount={rows.length}>
         <div className="rp-at th" role="row" style={grid}>{head('name', 'Agent')}{head('tokens', 'Tokens', 'tk')}{head('model', 'Model', 'r')}{head('tool', 'Tool', 'r')}{counts.map((k) => head(k, { failed: 'Failed', restarts: 'Restarts', spawns: 'Spawns' }[k], 'r'))}{head('cost', 'Cost', 'r')}</div>
-        {(all ? rows : rows.slice(0, ROWS_SHOWN)).map((a) => (
+        {page.rows.map((a) => (
           <div key={a.id} className="rp-at" role="row" tabIndex={0} style={grid}
             onPointerEnter={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onPointerLeave={() => card.hide()}
             onFocus={(e) => card.show({ content: <AgentCard m={m} a={a} />, rect: e.currentTarget.getBoundingClientRect(), wide: a.tools.length > 0 })} onBlur={() => card.hide()}>
@@ -262,7 +269,7 @@ function AgentsTable({ m, agents }: { m: RunModel; agents: Agent[] }) {
           </div>
         ))}
       </div>
-      <ShowAll n={rows.length} all={all} set={setAll} />
+      {page.controls}
     </section>
   )
 }

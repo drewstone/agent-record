@@ -1,8 +1,8 @@
 import { toolGlyph } from '@tangle-network/charts/react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AgentGraph, type AgentGraphNode } from '@tangle-network/sandbox-ui/workflows'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, abbr, count, lat, type RunModel, stampOf } from './model.js'
+import { type Agent, abbr, agentFacts, count, lat, type RunModel, stampOf } from './model.js'
 import { Bar, agentCost, StateDot, Icon, Picker, agentOptions, agentGroups } from './ui.js'
 
 /** The host's recorded identities, status and event clocks feed the shared graph. */
@@ -12,6 +12,7 @@ export function graphNodes(m: RunModel): AgentGraphNode[] {
     return {
       id: a.id, label: a.name, status: a.status, model: a.model, harness: a.harness,
       costUsd: a.listUsd ?? a.billedUsd, tokens: a.tokens, commits: a.commits,
+      facts: agentFacts(m, a),
       startedAt: Number.isFinite(Date.parse(a.node.start ?? '')) ? Date.parse(a.node.start!) : undefined, lastActivityAt: a.lastActivityAt, medianEventGapMs: a.medianEventGapMs, turn: a.node.turn, events,
       result: a.status === 'failed' ? a.node.failureReason || `Failure cause not recorded${events.at(-1)?.label ? `. Last event: ${events.at(-1)!.label}` : ''}` : a.commits ? `${a.commits} commits shipped` : a.state.label,
     }
@@ -21,27 +22,29 @@ export function graphNodes(m: RunModel): AgentGraphNode[] {
 export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
   const nodes = useMemo(() => graphNodes(m), [m])
   const edges = useMemo(() => m.agents.flatMap(a => a.parent ? [{ from: a.parent, to: a.id, kind: 'spawn' as const }] : []), [m])
+  const [selection, setSelection] = useState(0)
+  const revealAgent = (id: string) => { selectAgent(id); setSelection(value => value + 1) }
   const selected = agent ?? m.root?.id ?? null
   const sel = selected ? m.byId.get(selected) ?? null : null
   return <div className="rp-topo">
     <section className="rp-card" aria-label="Spawn tree">
       <div className="rp-hd rp-hd-tools">
         <h2>Agents</h2>
-        <span className="end"><Picker label="Go to agent" options={agentOptions(m)} groups={agentGroups(m)} value={selected} placeholder={`Search ${m.agents.length} agents`} width={340} onChange={id => { if (id) selectAgent(id) }}><span className="dim">Go to agent</span></Picker></span>
+        <span className="end"><Picker label="Go to agent" options={agentOptions(m)} groups={agentGroups(m)} value={selected} placeholder={`Search ${m.agents.length} agents`} width={340} onChange={id => { if (id) revealAgent(id) }}><span className="dim">Go to agent</span></Picker></span>
       </div>
-      <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={selectAgent} live title="Agents" className="rp-topo-graph" />
+      <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={revealAgent} live={m.live} showLatestEvents={false} title="Agents" className="rp-topo-graph" />
     </section>
-    {sel && <TopoInspector m={m} a={sel} reveal={route.params.has('agent')} onSelect={selectAgent} href={route.href('conversations', { agent: agentParam(doc.run.id, sel.id) })} />}
+    {sel && <TopoInspector m={m} a={sel} reveal={route.params.has('agent')} selection={selection} onSelect={revealAgent} href={route.href('conversations', { agent: agentParam(doc.run.id, sel.id) })} />}
   </div>
 }
 
-function TopoInspector({ m, a, reveal, onSelect, href }: { m: RunModel; a: Agent; reveal: boolean; onSelect: (id: string) => void; href: string }) {
+function TopoInspector({ m, a, reveal, selection, onSelect, href }: { m: RunModel; a: Agent; reveal: boolean; selection: number; onSelect: (id: string) => void; href: string }) {
   const panel = useRef<HTMLElement>(null)
   useEffect(() => {
     if (!reveal || !matchMedia('(max-width: 720px)').matches) return
     panel.current?.focus({ preventScroll: true })
     panel.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
-  }, [a.id, reveal])
+  }, [a.id, reveal, selection])
   // A run longer than a day, or one that crosses a UTC midnight, names the day on every clock ("02:37 to 02:39" read as minutes).
   const days = m.duration > 20 * 3_600_000 || new Date(m.t0).toISOString().slice(0, 10) !== new Date(m.t0 + m.duration).toISOString().slice(0, 10)
   const clock = (value: string | null | undefined) => Number.isFinite(Date.parse(value ?? '')) ? stampOf(value!, days) : '—'

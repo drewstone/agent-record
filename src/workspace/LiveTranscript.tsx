@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RecordEvent, RunRecord } from '../record.js'
 import { Conversation } from '../viewer/Conversation.js'
 import { indexRecord } from '../viewer/model.js'
+import { withPrompts } from '../viewer/prompts.js'
 import { projectPartEvents } from '../adapters/part-events.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }
@@ -27,19 +28,20 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
     const id = `${node}:${row.attempt ?? 1}:${row.seq}`
     const callId = `${row.stream ?? node}:${row.attempt ?? 1}:${value.toolCallId ?? row.seq}`
     const base = { id, node, at: row.at, kind: 'message', category: 'other', label: 'assistant' }
+    const turn = { attempt: row.attempt ?? 1 }
     if (value.kind === 'text_delta' || value.kind === 'reasoning_delta') {
       const field = value.kind === 'text_delta' ? 'publicText' : 'reasoning'
       const previous = events.at(-1)
       // The first sequence stays the identity as more deltas arrive, preserving expanded rows and reading position.
       if (previous?.detail.streamKind === value.kind && previous.detail.attempt === (row.attempt ?? 1)) {
         previous.detail[field] = `${previous.detail[field] ?? ''}${value.text ?? ''}`
-      } else events.push({ ...base, detail: { role: 'assistant', [field]: value.text ?? '', streamKind: value.kind, attempt: row.attempt ?? 1 } })
+      } else events.push({ ...base, detail: { ...turn, role: 'assistant', [field]: value.text ?? '', streamKind: value.kind, attempt: row.attempt ?? 1 } })
     } else if (value.kind === 'tool_call') {
-      events.push({ ...base, label: value.toolName ?? 'Tool call', detail: { role: 'assistant', publicToolCalls: [{ id: callId, name: value.toolName ?? 'Tool call', ...(value.args == null ? {} : { input: typeof value.args === 'string' ? value.args : JSON.stringify(value.args) }) }] } })
+      events.push({ ...base, label: value.toolName ?? 'Tool call', detail: { ...turn, role: 'assistant', publicToolCalls: [{ id: callId, name: value.toolName ?? 'Tool call', ...(value.args == null ? {} : { input: typeof value.args === 'string' ? value.args : JSON.stringify(value.args) }) }] } })
     } else if (value.kind === 'tool_result') {
       const result = value.result
-      events.push({ ...base, kind: 'tool-result', detail: { role: 'toolResult', toolCallId: callId, publicText: typeof result === 'string' ? result : JSON.stringify(result ?? null), isError: !!result && typeof result === 'object' && ('error' in result || ('isError' in result && result.isError === true)) } })
-    } else events.push({ ...base, kind: value.kind, category: 'lifecycle', label: value.kind.replaceAll('_', ' '), detail: { lifecycle: value.kind, ...(value.text ? { publicText: value.text } : {}) } })
+      events.push({ ...base, kind: 'tool-result', detail: { ...turn, role: 'toolResult', toolCallId: callId, publicText: typeof result === 'string' ? result : JSON.stringify(result ?? null), isError: !!result && typeof result === 'object' && ('error' in result || ('isError' in result && result.isError === true)) } })
+    } else events.push({ ...base, kind: value.kind, category: 'lifecycle', label: value.kind.replaceAll('_', ' '), detail: { ...turn, lifecycle: value.kind, ...(value.text ? { publicText: value.text } : {}) } })
   }
   for (const [stream, group] of native) {
     projectPartEvents({
@@ -69,6 +71,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
   const node = selected ?? runId
   const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; more: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, more: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
   const [reload, setReload] = useState(0)
+  const [beginning, setBeginning] = useState(false)
   const older = useRef<(() => void) | null>(null)
   const newer = useRef<(() => void) | null>(null)
   const wasAlive = useRef(alive)
@@ -90,7 +93,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     let forwardPending = false
     let olderPending = false
     // A settled agent reads from its start; its pages arrive when the reader asks for more.
-    const fromHead = !alive && !retain
+    const fromHead = beginning || (!alive && !retain)
     setState((prior) => ({ ...prior, rows, earlier, more: false, loading: true, error: null, trimmed: retain && prior.trimmed, history: false, emptyTail: false }))
     const load = async (direction: 'tail' | 'head' | 'after' | 'before') => {
       if (cancelled || (direction === 'before' ? olderPending : forwardPending)) return
@@ -125,11 +128,11 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
         setState((prior) => ({ rows, nodes: page.nodes, earlier, more: direction === 'before' ? prior.more : more, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: !page.alive && rows.length === 0 && first === null && last === null }))
         // A live window drains bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
         if (!fromHead && direction !== 'before' && page.hasMore && last !== cursor) timer = window.setTimeout(() => void load('after'), 0)
-        else if (direction !== 'before' && page.alive && alive) timer = window.setTimeout(() => void load('after'), 3_000)
+        else if (!fromHead && direction !== 'before' && page.alive && alive) timer = window.setTimeout(() => void load('after'), 3_000)
       } catch (error) {
         if (!cancelled && !controller.signal.aborted) {
           setState((prior) => ({ ...prior, loading: false, error: error instanceof Error ? error.message : 'Transcript unavailable' }))
-          if (alive && direction !== 'before') timer = window.setTimeout(() => void load('after'), 3_000)
+          if (!fromHead && alive && direction !== 'before') timer = window.setTimeout(() => void load('after'), 3_000)
         }
       } finally {
         if (direction === 'before') olderPending = false
@@ -140,25 +143,26 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     newer.current = () => void load('after')
     void load(retain && last !== null ? 'after' : fromHead ? 'head' : 'tail')
     return () => { cancelled = true; controller.abort(); window.clearTimeout(timer); older.current = null; newer.current = null }
-  }, [runUrl, node, alive, reload])
+  }, [runUrl, node, alive, reload, beginning])
   useEffect(() => { if (state.emptyTail && onEmpty) onEmpty() }, [state.emptyTail, onEmpty])
   const nodes = state.nodes.some((item) => item.id === node) ? state.nodes : [...state.nodes, { id: node, label: node === runId ? 'Root' : node, parent: null }]
-  const index = useMemo(() => indexRecord(streamRecord(runId, node, nodes, state.rows)), [runId, node, state.nodes, state.rows])
+  const index = useMemo(() => indexRecord(withPrompts(streamRecord(runId, node, nodes, state.rows))), [runId, node, state.nodes, state.rows])
   return <section className="run-panel live-transcript" aria-label="Conversations">
     {(chooser || onRecorded) && <div className="message-filters">
       {chooser && <label>Agent <select aria-label="Agent conversation" value={node} onChange={(event) => onSelect(event.target.value)}>{nodes.map((item) => <option key={item.id} value={item.id}>{item.label}{item.parent ? ' (child)' : ' (root)'}</option>)}</select></label>}
       {onRecorded && <button type="button" className="ui-button" onClick={onRecorded}>Timeline and usage</button>}
     </div>}
     {/* Only the window's edges speak: older messages exist, or the reader left the live tail. */}
-    {(state.earlier || state.history) && <p className="transcript-edge">
+    {(state.earlier || state.history || beginning) && <p className="transcript-edge">
+      {alive && !beginning && state.earlier && <button type="button" className="link-button" onClick={() => setBeginning(true)}>Beginning</button>}
       {state.earlier && <button type="button" className="link-button" disabled={state.loading} onClick={() => older.current?.()}>Load older</button>}
-      {state.history && <button type="button" className="link-button" onClick={() => setReload((value) => value + 1)}>Latest</button>}
+      {(state.history || beginning) && <button type="button" className="link-button" onClick={() => { setBeginning(false); setReload(value => value + 1) }}>Latest</button>}
     </p>}
     {state.loading && <p role="status">Loading transcript…</p>}
     {state.error && <p role="alert">{state.error}</p>}
     {state.rows.filter((row) => row.event?.kind === 'capture_gap' && (!row.at || !Number.isFinite(Date.parse(row.at)))).map((row) => <p className="faint" key={row.seq}>{row.event?.text ?? 'A stream record could not be displayed.'}</p>)}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
-    {(!state.loading || state.rows.length > 0) && <Conversation index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive} opening={state.earlier ? undefined : opening} />}
+    {(!state.loading || state.rows.length > 0) && <Conversation key={`${node}:${beginning}`} index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive} follow={alive && !beginning && !state.history} opening={state.earlier ? undefined : opening} />}
     {state.more && <p className="transcript-edge"><button type="button" className="link-button" disabled={state.loading} onClick={() => newer.current?.()}>Load more</button></p>}
   </section>
 }
