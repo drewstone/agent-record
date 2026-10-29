@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -32,7 +32,8 @@
     },
     "./adapters/research-publication": {
       "types": "./dist/adapters/research-publication.d.ts",
-      "import": "./dist/research-publication.js"
+      "import": "./dist/research-publication.js",
+      "default": "./dist/research-publication.js"
     },
     "./styles.css": "./dist/styles.css",
     "./workspace-viewer.js": "./dist/workspace-viewer.js",
@@ -42,23 +43,27 @@
     },
     "./adapters/agent-runtime": {
       "types": "./dist/adapters/agent-runtime.d.ts",
-      "import": "./dist/agent-runtime.js"
+      "import": "./dist/agent-runtime.js",
+      "default": "./dist/agent-runtime.js"
     },
     "./adapters/harness-sessions": {
       "types": "./dist/adapters/harness-sessions.d.ts",
-      "import": "./dist/harness-sessions.js"
+      "import": "./dist/harness-sessions.js",
+      "default": "./dist/harness-sessions.js"
     },
     "./adapters/trace-spans": {
       "types": "./dist/adapters/trace-spans.d.ts",
-      "import": "./dist/trace-spans.js"
+      "import": "./dist/trace-spans.js",
+      "default": "./dist/trace-spans.js"
     },
     "./publication": {
       "types": "./dist/publication.d.ts",
       "import": "./dist/publication.js"
     },
     "./workspace": {
-      "types": "./dist/workspace.d.ts",
-      "import": "./dist/workspace.js"
+      "types": "./dist/workspace-model.d.ts",
+      "import": "./dist/workspace.js",
+      "default": "./dist/workspace.js"
     },
     "./assessment": {
       "types": "./dist/assessment.d.ts",
@@ -89,9 +94,9 @@
     "@nanostores/react": "^1.0.0",
     "@tangle-network/agent-interface": "^5.7.1",
     "@tangle-network/brand": "^1.31.1",
-    "@tangle-network/charts": "^2.0.12",
+    "@tangle-network/charts": "^2.0.15",
     "@tangle-network/harness-sessions": "^0.1.0",
-    "@tangle-network/sandbox-ui": "^2.0.8",
+    "@tangle-network/sandbox-ui": "^2.0.12",
     "@tangle-network/ui": "^11.51.1",
     "@xterm/addon-fit": "~0.11.0",
     "@xterm/addon-web-links": "~0.12.0",

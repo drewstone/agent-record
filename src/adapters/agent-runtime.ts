@@ -38,6 +38,7 @@ import { createHash } from 'node:crypto'
 import { closeSync, copyFileSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { recordSchema } from '../record.js'
 import { projectPartEvents } from './part-events.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
@@ -1139,11 +1140,8 @@ export class Ingest {
     return true
   }
 
-  /**
-   * An OpenCode store from the native index, as the rows a trajectory holds: its root sessions, their messages and
-   * parts. The store is opened from a private copy, because opening it can checkpoint its write-ahead log and so change
-   * the cached bytes the record cites. Each part's anchor names its row (`/part/<id>/data`).
-   */
+  /** Read captured root-session rows without changing their bytes; part anchors name `/part/<id>/data`.
+   * A WAL needs a private copy; a checkpointed database can be opened as immutable. */
   readOpenCodeStore(node: NodeDraft, store: { rel: string; abs: string; sessionIds: string[] }) {
     const entry = this.file(store.rel, store.abs)
     if (!store.sessionIds.length || !this.claim(entry.sha256, node.id, store.rel)) return false
@@ -1152,11 +1150,11 @@ export class Ingest {
       this.gaps.push({ nodeId: node.id, code: 'no-transcript:opencode-store-unreadable', detail: 'this Node has no node:sqlite' })
       return false
     }
-    const copy = mkdtempSync(join(tmpdir(), 'agent-record-opencode-'))
+    const copy = existsSync(`${store.abs}-wal`) ? mkdtempSync(join(tmpdir(), 'agent-record-opencode-')) : null
     let doc: Json
     try {
-      for (const suffix of ['', '-wal', '-shm']) if (existsSync(store.abs + suffix)) copyFileSync(store.abs + suffix, join(copy, `opencode.db${suffix}`))
-      const db = new sqlite.DatabaseSync(join(copy, 'opencode.db'), { readOnly: true })
+      if (copy) for (const suffix of ['', '-wal', '-shm']) if (existsSync(store.abs + suffix)) copyFileSync(store.abs + suffix, join(copy, `opencode.db${suffix}`))
+      const db = new sqlite.DatabaseSync(copy ? join(copy, 'opencode.db') : `${pathToFileURL(store.abs).href}?immutable=1`, { readOnly: true })
       try {
         const ids = JSON.stringify(store.sessionIds)
         const where = 'session_id IN (SELECT value FROM json_each(?))'
@@ -1172,7 +1170,7 @@ export class Ingest {
       this.gaps.push({ nodeId: node.id, code: 'no-transcript:opencode-store-unreadable', detail: `${this.sourcePath(store.rel)}: ${String((error as Error)?.message ?? error).slice(0, 200)}` })
       return false
     } finally {
-      rmSync(copy, { recursive: true, force: true })
+      if (copy) rmSync(copy, { recursive: true, force: true })
     }
     this.fileSource(store.rel, store.abs)
     this.projectOpenCode(node, doc, store.rel, entry.sha256, (part) => pointerOf('part', str(part.id), 'data'))

@@ -2468,16 +2468,7 @@
   --chart-live-font-mono:var(--ar-font-body); --chart-live-surface:var(--ar-bg);
   /* A hovered bar row takes the page's hover tone; the package default (#eee) turned a dark-theme row white over light text. */
   --chart-live-hover:var(--ix-hover-bg);
-  /* The chart package's status roles take this renderer's tones (design-system section 1): a breach, a failed check, a
-     died mark and a meter near its cap are history or a research miss, so neutral; red is never a chart default. Run
-     endings: solved is pass, live is attention, every other ending is neutral and told apart by its shape. An attempt's
-     outcome (quota, rate limit) is a category in a chart, not a status: quota takes a series violet, never amber, so an
-     ended run's history draws no attention hue. The package's own palette is plan item D6. */
-  --chart-breach:var(--ar-c-neutral); --chart-live-danger:var(--ar-c-neutral); --chart-live-warning:var(--ar-c-neutral);
-  --chart-ending-solved:var(--ar-c-ok); --chart-ending-live:var(--ar-c-live); --chart-ending-not-solved:var(--ar-c-neutral);
-  --chart-ending-died:color-mix(in srgb, var(--ar-c-neutral) 75%, var(--ar-bg)); --chart-ending-stalled:color-mix(in srgb, var(--ar-c-neutral) 55%, var(--ar-bg));
-  --chart-ending-cancelled:color-mix(in srgb, var(--ar-c-neutral) 40%, var(--ar-bg));
-  --chart-outcome-quota:#9b59b6; --chart-outcome-rate-limit:color-mix(in srgb, #9b59b6 55%, var(--ar-bg));
+
 }
 
 /* Behavior-battery lane under the timeline: one tick per cited yes-verdict. */
