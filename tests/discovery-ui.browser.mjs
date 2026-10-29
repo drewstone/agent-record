@@ -36,7 +36,10 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
     if (path.endsWith('/transcript')) {
       requests.push(url.search)
       const head = url.searchParams.has('before'), after = url.searchParams.has('after')
-      const events = after ? [] : head || !alive ? rows : tail
+      const events = url.searchParams.get('node')?.endsWith(':s123') ? [
+        { seq: 0, at: iso(10), stream: 'native', type: 'message.updated', data: { info: { id: 'steer-1', role: 'user' } } },
+        { seq: 1, at: iso(10), stream: 'native', type: 'message.part.updated', data: { part: { id: 'steer-text', messageID: 'steer-1', type: 'text', text: 'Retain the failing witness and investigate it.', time: { start: start + 10000 } } } },
+      ] : after ? [] : head || !alive ? rows : tail
       return json({ runId, node: runId, generation: 'fixture', alive, events, nodes, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: !head && alive, hasMore: false })
     }
     if (path.endsWith('/workspace')) return json({ schema: 'agent-workspace.run-workspace.v1', runId, live: alive, nodes, edges: nodes.slice(1).map(node => ({ from: runId, to: node.id, kind: 'spawn' })), releases: [], best: null, code: { available: false, reason: 'No code fixture' } })
@@ -99,6 +102,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('textbox', { name: 'Search agents', exact: true }).fill('Worker 123')
       await page.getByRole('listitem').filter({ has: page.getByText('Worker 123', { exact: true }) }).click()
       await page.locator('.conversation-scroll').waitFor()
+      await page.locator('[data-timeline-step="user"]').getByText('Retain the failing witness and investigate it.', { exact: true }).waitFor()
       assert.ok(requests.some(query => query.includes('s123')), 'selection fetches the selected agent')
       alive = false
       await open()

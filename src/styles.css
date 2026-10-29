@@ -1478,9 +1478,10 @@
 .ar-ws .spend-value .unknown { color: var(--ar-fg-muted); }
 .ar-ws .plays-filters { padding: 0; border-bottom: 0; }
 .ar-ws .plays-filters input[type="search"] { min-width: 260px; }
-/* The transcript (viewer/ConversationRowView) is the kit's chat in one AgentTimelineColumn: prompts as the reader's
-   bubbles, prose, and the kit's one-line reasoning and tool rows, spaced by the kit. Rows add no chrome of their own; a
-   selected row keeps a rule. A windowed row contains its children's margins, so its measured height is its real one. */
+/* Shared chat steps; only transcript turn grouping and source annotations are local. */
+.agent-record .ar-turn { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; padding-top: 12px; border-top: 1px solid var(--ar-border); }
+.agent-record .ar-turn time, .agent-record .ar-idle-event time { flex: none; color: var(--ar-fg-muted); font: var(--ar-text-s)/1.5 var(--ar-font-body); }
+.agent-record .ar-idle-event { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 4px 0; }
 .agent-record .virtual-row { display: flow-root; }
 .agent-record .chat-row.selected { box-shadow: -10px 0 0 -8px var(--accent-text); }
 .agent-record .chat-row.flagged { box-shadow: -10px 0 0 -8px var(--ar-c-neutral); }

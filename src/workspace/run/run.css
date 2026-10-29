@@ -493,7 +493,8 @@
 @media (max-width: 720px) {
   .rp-run { height: auto; }
   .agent-record .rp-head { padding: 16px 0 12px; }
-  .agent-record .rp-head h1 { font-size: 24px; line-height: 30px; }
+  .agent-record .rp-head h1 { font-size: 24px; line-height: 30px; flex-wrap: wrap; white-space: normal; min-width: 0; }
+  .agent-record .rp-head h1 a { min-width: 0; overflow-wrap: anywhere; }
   .agent-record .rp-stats { width: 100%; gap: 2px 16px; flex-wrap: nowrap; overflow: hidden; }
   .agent-record .rp-stats li { padding: 0; }
   /* A phone's header is one line of facts: time, agents and steps; tokens and cost are on Overview and Analytics. */

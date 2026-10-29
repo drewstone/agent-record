@@ -12,6 +12,7 @@ export function projectPartEvents(context: Json, node: Json, rel: string, entry:
     let produced = 0
     // Final state per part id, in first-seen order, with the carried clock at first sight.
     const order: string[] = []
+    const roles = new Map<string, string>()
     const final = new Map<string, { part: Json; index: number; firstMs: number | null }>()
     const codex = new Map<string, { item: Json; index: number; firstMs: number | null }>()
     const codexOrder: string[] = []
@@ -21,7 +22,9 @@ export function projectPartEvents(context: Json, node: Json, rel: string, entry:
     const extras: { index: number; at: number | null; kind: string; data: Json }[] = []
     events.forEach((event, index) => {
       const data = event?.data ?? {}
-      if (event?.type === 'message.part.updated' && data.part?.id) {
+      if (event?.type === 'message.updated' && data.info?.id && data.info?.role) {
+        roles.set(data.info.id, data.info.role)
+      } else if (event?.type === 'message.part.updated' && data.part?.id) {
         const part = data.part
         const time = num(part.state?.time?.start) ?? num(part.time?.start)
         if (time !== undefined) clock = Math.max(clock ?? 0, time)
@@ -49,7 +52,8 @@ export function projectPartEvents(context: Json, node: Json, rel: string, entry:
     for (const id of order) {
       const { part, index } = final.get(id)!
       const firstMs = final.get(id)!.firstMs
-            if (part.type === 'text' || part.type === 'reasoning') {
+      const role = roles.get(part.messageID) === 'user' ? 'user' : 'assistant'
+      if (part.type === 'text' || part.type === 'reasoning') {
         const text = str(part.text)
         if (!text) continue
         const shown = context.clip(text, () => loc.full(index, ['data', 'part', 'text'], text))
@@ -60,12 +64,12 @@ export function projectPartEvents(context: Json, node: Json, rel: string, entry:
           at,
           kind: 'message',
           category: 'reasoning',
-          label: 'assistant',
+          label: role,
           source: { path: rel, sha256: entry.sha256, ...loc.where(index) },
-          detail: { role: 'assistant', nativeRecordId: id, ...(part.type === 'text' ? { publicText: shown.text } : { reasoning: shown.text }), ...(shown.clip ? { clip: shown.clip } : {}), ...(part.time?.start ? {} : { atBasis: 'carried' }) },
+          detail: { role, nativeRecordId: id, ...(part.type === 'text' ? { publicText: shown.text } : { reasoning: shown.text }), ...(shown.clip ? { clip: shown.clip } : {}), ...(part.time?.start ? {} : { atBasis: 'carried' }) },
         })
         produced++
-        lastText = context.events.at(-1)
+        if (role === 'assistant') lastText = context.events.at(-1)
       } else if (part.type === 'tool') {
         const state = part.state ?? {}
         const name = str(part.tool)

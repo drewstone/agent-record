@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AgentTimelineStep, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat'
+import { AgentTimelineStep, SpeakerHeader, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat'
 import { InlineThinkingItem, RunRowShell, type ToolCallType } from '@tangle-network/ui/run'
 import type { ToolPart } from '@tangle-network/ui/types'
 import { getToolDisplayMetadata } from '@tangle-network/ui/utils'
@@ -11,15 +11,7 @@ import type { CallState, ConversationRow } from './conversation-rows.js'
 import type { EventFlag } from './Conversation.js'
 import { promptText } from './prompt-text.js'
 
-/**
- * Every transcript is the kit's chat (Drew 2026-10-27: "make it look like a chat, like how agent-apps look"): the
- * prompts an agent received are the reader's right-aligned bubbles, the agent's words read as prose on the left, and its
- * reasoning and tool calls are the kit's one-line rows (InlineThinkingItem, InlineToolItem), collapsed until opened, a
- * failure marked on its row's glyph. A transcript is windowed, so each record row renders its items as the kit's
- * `AgentTimelineStep`s inside the one `AgentTimelineColumn` the Conversation draws: rows keep the chat's rhythm (tight
- * tool runs, a wide gap at each prompt) and one edge. Time is the row's hover title; no row carries an author line, a
- * timestamp row or a Details link.
- */
+/** Shared chat bubbles, speaker headers and timeline steps; source rows retain virtualization and provenance. */
 
 /** A run-lifecycle event (start, stop, restart), drawn as a thin marker row. */
 export const isLifecycle = (event: RecordEvent) =>
@@ -170,6 +162,12 @@ const hollowItem = (row: Extract<ConversationRow, { kind: 'hollow' }>): AgentTim
 export function rowItems(row: ConversationRow, context: ConversationRenderContext): AgentTimelineItem[] {
   if (row.kind === 'polls') return [pollItem(row)]
   if (row.kind === 'hollow') return [hollowItem(row)]
+  if (row.kind === 'idle') return [{
+    id: `${row.key}:${context.selected ?? ''}`, kind: 'fold',
+    summary: `${row.events.length} idle turns · ${textOf(row.events[0]!)}`,
+    defaultOpen: row.events.some(event => event.id === context.selected),
+    items: row.events.map(event => ({ id: event.id, kind: 'custom', content: <div className="ar-idle-event" data-message={event.id}><time dateTime={event.at}>{utcTime(event.at)}</time><AgentTimelineStep item={{ id: event.id, kind: 'message', role: 'assistant', content: textOf(event) }} /></div> })),
+  }]
   const { index, cutoff, anchor, thinkingSpan, opened, paired, live } = context
   const event = row.event
   if (isLifecycle(event)) {
@@ -223,16 +221,16 @@ export function rowItems(row: ConversationRow, context: ConversationRenderContex
 /** The kind of a row's last item, which sets the gap above the next row. */
 export const lastKind = (items: readonly AgentTimelineItem[]): AgentTimelineStepKind | undefined => (items.length ? agentTimelineStepKind(items[items.length - 1]!) : undefined)
 
-export function ConversationRowView({ row, items, previous, context }: { row: ConversationRow; items: readonly AgentTimelineItem[]; previous?: AgentTimelineStepKind; context: ConversationRenderContext }) {
+export function ConversationRowView({ row, items, previous, turn, context }: { row: ConversationRow; items: readonly AgentTimelineItem[]; previous?: AgentTimelineStepKind; turn?: boolean; context: ConversationRenderContext }) {
   const { selected, opened, anchor, setOpen, flagMarks, opener, flags } = context
   const events = row.kind === 'event' ? [row.event] : row.events
   const event = events[0]!
-  const steps = items.map((item, i) => <AgentTimelineStep key={item.id} item={item} previous={i ? agentTimelineStepKind(items[i - 1]!) : previous} renderToolActions={toolNote} />)
+  const steps = <>{turn && <div className="ar-turn" data-turn-start><SpeakerHeader speaker={{ id: event.node, name: context.index.nodes.get(event.node)?.label ?? 'Agent' }} /><time dateTime={event.at} title={event.at}>{utcTime(event.at)}</time></div>}{items.map((item, i) => <AgentTimelineStep key={item.id} item={item} previous={i ? agentTimelineStepKind(items[i - 1]!) : previous} renderToolActions={toolNote} />)}</>
   const rowProps = {
     className: ['chat-row', events.some((e) => e.id === selected) && 'selected', row.kind === 'event' && flags?.has(event.id) && 'flagged'].filter(Boolean).join(' '),
     'data-entry': event.id,
     title: utcTime(event.at),
-    ...(row.kind === 'polls' ? { 'data-poll-group': row.events.length } : row.kind === 'hollow' ? { 'data-hollow-group': row.events.length } : { 'data-message': event.id, 'data-message-node': event.node }),
+    ...(row.kind === 'event' ? { 'data-message': event.id, 'data-message-node': event.node } : { [`data-${row.kind === 'polls' ? 'poll' : row.kind}-group`]: row.events.length }),
   }
   if (row.kind !== 'event' || isLifecycle(event)) return <div {...rowProps}>{steps}{row.kind === 'event' && flagMarks(event)}</div>
   const message = textOf(event)
