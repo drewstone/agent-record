@@ -300,7 +300,7 @@
 .rp .rp-fbar .rp-field { height: 32px; }
 .rp .rp-alist { flex: 1; min-height: 0; overflow: auto; }
 .rp .rp-alist .ag { display: flex; align-items: center; gap: 8px; padding: 0 16px; font: 600 14px/20px var(--font-sans); color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-alist button { width: 100%; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; align-content: center; column-gap: 12px; row-gap: 1px; padding: 0 16px; border: 0; border-radius: 0; background: transparent; text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); }
+.rp .rp-alist button { width: 100%; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; align-content: center; column-gap: 12px; row-gap: 1px; padding: 0 16px; border: 0; border-radius: 0; background: transparent; text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); }
 .rp .rp-alist button:hover { background: var(--ix-hover-bg); }
 .rp .rp-alist button[aria-current='true'] { background: var(--ix-sel-bg); }
 .rp .rp-alist button[aria-current='true'] .nm { color: var(--accent-text); }
