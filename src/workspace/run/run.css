@@ -315,6 +315,7 @@
 .rp .rp-tx > :is(.run-panel, .rp-steplog) { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 0; padding: 0; margin: 0; background: none; box-shadow: none; }
 .rp .rp-tx .conversation-scroll { flex: 1; min-height: 0; height: auto; max-height: none; overflow: auto; padding: 8px 8px 48px; }
 .rp .rp-tx .ar-chat { max-width: 960px; margin-left: 0; padding-left: 24px; }
+.ar-ws .live-transcript .transcript-edge { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; }
 .rp .rp-tx .transcript-edge { flex: none; margin: 0; height: 40px; align-items: center; box-shadow: inset 0 -1px 0 var(--rp-line); font-size: 14px; }
 .rp .rp-tx .conversation-scroll + .transcript-edge { box-shadow: inset 0 1px 0 var(--rp-line); }
 .rp .rp-tx > :is(.run-panel, .rp-steplog) > [role='status'], .rp .rp-tx > .ws-status { margin: 0; padding: 16px 24px; }
