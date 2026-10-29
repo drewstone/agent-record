@@ -99,7 +99,7 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
       send('workspace', 'workspace', { workspace: workspace(), run: run() })
       send('agent', 'end', { lastSeq: 0 })
       await page.locator('.live-transcript').waitFor({ state: 'hidden' })
-      await page.locator('.record-conversation').getByText(lateText, { exact: true }).waitFor()
+      await page.locator('.record-conversation').getByText(lateText, { exact: true }).scrollIntoViewIfNeeded()
       const settledReads = requests.length, settledConnections = connections.length
       await page.waitForTimeout(3500)
       assert.equal(requests.length, settledReads, 'a settled capture has no transcript polling')
