@@ -2007,7 +2007,11 @@
 }
 
 /* Version graph: one drawing for a run's deliverables.git and a play's versions (VersionGraph). */
-.ar-ws .version-graph { display: grid; gap: 12px; padding: 0 0 16px; min-width: 0; }
+.ar-ws .version-graph {
+  display: grid; gap: 12px; padding: 0 0 16px; min-width: 0;
+  --chart-live-surface: var(--ws-panel); --chart-live-raised: var(--ws-raised);
+  --chart-live-border: var(--ws-frame); --chart-live-accent: var(--ws-accent);
+}
 .ar-ws .vg-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ar-ws .vg-lane-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 1.8rem; padding: 2px 8px; border: 1px solid var(--ar-border); border-radius: 999px; background: var(--ws-panel); color: var(--ar-fg-muted); font: var(--ar-text-s)/1.4 var(--ar-font-body); cursor: pointer; }
 .ar-ws .vg-lane-chip:hover, .ar-ws .vg-lane-chip:focus-visible { border-color: var(--ws-accent); }
