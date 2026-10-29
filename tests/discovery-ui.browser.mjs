@@ -39,7 +39,13 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
   let theme = 'light', alive = true
-  const requests = [], streams = new Set()
+  const requests = [], streams = new Set(), agentStreams = new Map(), connections = [], suffixes = new Map(), generations = new Map(), ended = new Set()
+  const publish = (node, event, data) => {
+    if (event === 'reset') { suffixes.set(node, []); generations.set(node, data.generation) }
+    if (event === 'rows') suffixes.set(node, [...(suffixes.get(node) ?? []), ...data.events])
+    if (event === 'end') ended.add(node)
+    for (const [response, connection] of agentStreams) if (connection.node === node) { response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); if (event === 'end') response.end() }
+  }
   const releases = [1, 2].map(n => ({ release: `rc${n}`, commit: String(n).repeat(12), taggedAt: iso(n * 100), checked: true, passed: 1, total: 2, steps: [{ label: 'Offline build', state: 'pass' }, { label: 'Verify proof', state: 'fail' }], files: { [runId]: ['a-checksum.sha', 'b-notes.md', 'answer.ts', 'src/verifier.rs', 'proof.log', ...Array.from({ length: 120 }, (_, i) => i === 119 ? 'z-evidence-119.log' : `z-evidence-${String(i).padStart(3, '0')}/${'nested/'.repeat(12)}receipt.log`)] } }))
   const workspace = () => ({ schema: 'agent-workspace.run-workspace.v1', runId, live: alive, nodes, edges: nodes.slice(1).map(node => ({ from: runId, to: node.id, kind: 'spawn' })), releases, best: 'rc2', code: { available: false, reason: 'No code fixture' } })
   const runDocument = () => ({ schema: 'agent-workspace.run.v1', run: { id: runId, play: 'magnetar-rust-sandbox', state: alive ? 'running' : 'stopped', startedAt: iso(0), location: { kind: 'dir', path: null }, record: { status: 'missing', digest: null } }, input: { objective: prompt, instruction: '' }, spend: { nodes: {} }, versions: [], live: { polling: alive }, execution: { alive } })
@@ -54,7 +60,21 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
         { seq: 0, at: iso(10), stream: 'native', type: 'message.updated', data: { info: { id: 'steer-1', role: 'user' } } },
         { seq: 1, at: iso(10), stream: 'native', type: 'message.part.updated', data: { part: { id: 'steer-text', messageID: 'steer-1', type: 'text', text: 'Retain the failing witness and investigate it.', time: { start: start + 10000 } } } },
       ] : after ? [] : head || !alive ? rows : tail
-      return json({ runId, node: runId, generation: 'fixture', alive, events, nodes, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: !head && alive, hasMore: false })
+      const node = url.searchParams.get('node') ?? runId, suffix = (suffixes.get(node) ?? []).filter(row => !head && (!after || row.seq > after))
+      const selected = [...events, ...suffix]
+      return json({ runId, node, generation: generations.get(node) ?? 'fixture', alive: alive && !ended.has(node), events: selected, nodes, firstSeq: selected[0]?.seq ?? null, lastSeq: selected.at(-1)?.seq ?? null, hasEarlier: !head && alive, hasMore: false })
+    }
+    if (path.endsWith('/stream') && url.searchParams.get('workspace') !== '1') {
+      const node = decodeURIComponent(path.split('/').at(-2)), generation = generations.get(node) ?? 'fixture'
+      const connection = { node, after: url.searchParams.get('after'), generation: url.searchParams.get('generation') }
+      connections.push(connection); agentStreams.set(res, connection)
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' }); res.write(': connected\n\n')
+      res.on('close', () => agentStreams.delete(res))
+      const reset = connection.generation && connection.generation !== generation
+      if (reset) res.write(`event: reset\ndata: ${JSON.stringify({ generation })}\n\n`)
+      const pending = (suffixes.get(node) ?? []).filter(row => reset || row.seq > Number(connection.after ?? -1))
+      if (pending.length) res.write(`event: rows\ndata: ${JSON.stringify({ generation, events: pending, lastSeq: pending.at(-1).seq, alive: !ended.has(node) })}\n\n`)
+      return
     }
     if (path.endsWith('/stream') && url.searchParams.get('workspace') === '1') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
@@ -82,7 +102,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
   try {
     browser = await chromium.launch({ headless: true })
     for (theme of ['light', 'dark']) for (const width of [1512, 390]) {
-      alive = true
+      alive = true; suffixes.clear(); generations.clear(); ended.clear()
       const context = await browser.newContext({ viewport: { width, height: 982 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 982 } } } : {}) })
       const page = await context.newPage(), errors = []
       page.on('pageerror', error => errors.push(error.message))
@@ -132,13 +152,32 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       if (evidence) await page.screenshot({ path: `${evidence}/overview-${width}-${theme}.png` })
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await open()
+      const initialReads = requests.length
+      await page.waitForTimeout(3200)
+      console.log('Live transcript transport', JSON.stringify({ theme, width, periodicHttpReads: requests.length - initialReads, activeAgentStreams: agentStreams.size }))
+      assert.equal(requests.length, initialReads, 'the live tail has no periodic transcript HTTP fetches')
+      assert.equal(agentStreams.size, 1, 'only the selected agent has a native SSE connection')
+      const navigation = await page.evaluate(() => performance.getEntriesByType('navigation').length)
+      publish(runId, 'rows', { generation: 'fixture', events: [{ seq: 209, at: iso(184), attempt: 6, event: { kind: 'text_delta', text: 'Native SSE arrival.' } }], lastSeq: 209, alive: true })
+      await page.getByText('Native SSE arrival.', { exact: true }).waitFor()
+      assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation').length), navigation)
+      const beforeReconnect = connections.length
+      for (const response of agentStreams.keys()) response.end()
+      const reconnectDeadline = Date.now() + 5000
+      while (connections.length === beforeReconnect && Date.now() < reconnectDeadline) await new Promise(resolve => setTimeout(resolve, 25))
+      assert.ok(connections.length > beforeReconnect, 'a bounded stream closure reconnects')
+      assert.equal(connections.at(-1).after, '209', 'reconnect uses the last received sequence')
+      assert.equal(connections.at(-1).generation, 'fixture', 'reconnect carries the corresponding generation')
       await page.locator('[data-idle-group="3"]').waitFor()
       assert.equal(await page.getByText('Waiting on worker; ending the turn.', { exact: true }).count(), 0, 'duplicates are folded, never discarded')
       assert.ok(await page.locator('[data-turn-start] time').count() > 0, 'turn boundaries carry actual times')
       await page.getByRole('button', { name: /3 idle turns/ }).click()
       assert.equal(await page.getByText('Waiting on worker; ending the turn.', { exact: true }).count(), 3)
       await page.getByRole('button', { name: /3 idle turns/ }).click()
+      const historyClosed = new Promise(resolve => [...agentStreams.keys()][0].once('close', resolve))
       await page.getByRole('button', { name: 'Beginning', exact: true }).click()
+      await historyClosed
+      assert.equal(agentStreams.size, 0, 'browsing history suspends the live connection')
       await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
       const requestCount = requests.length
       await page.waitForTimeout(3200)
@@ -177,6 +216,18 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('listitem').filter({ has: page.getByText('Worker 123', { exact: true }) }).click()
       await page.locator('.conversation-scroll').waitFor()
       await page.locator('[data-timeline-step="user"]').getByText('Retain the failing witness and investigate it.', { exact: true }).waitFor()
+      const worker = `${runId}:s123`
+      const workerDeadline = Date.now() + 5000
+      while (![...agentStreams.values()].some(connection => connection.node === worker) && Date.now() < workerDeadline) await new Promise(resolve => setTimeout(resolve, 25))
+      assert.deepEqual([...agentStreams.values()].map(connection => connection.node), [worker], 'selection closes the previous agent stream')
+      publish(worker, 'reset', { generation: 'next-generation' })
+      publish(worker, 'rows', { generation: 'next-generation', events: [{ seq: 0, at: iso(190), attempt: 1, event: { kind: 'text_delta', text: 'Generation changed without navigation.' } }], lastSeq: 0, alive: true })
+      await page.getByText('Generation changed without navigation.', { exact: true }).waitFor()
+      assert.equal(await page.getByText('Retain the failing witness and investigate it.', { exact: true }).count(), 0, 'a generation reset replaces stale rows, including sequence zero')
+      publish(worker, 'end', { lastSeq: 0 })
+      const endedConnections = connections.length
+      await page.waitForTimeout(1100)
+      assert.equal(agentStreams.size, 0); assert.equal(connections.length, endedConnections, 'an explicit end closes without reconnecting')
       assert.ok(requests.some(query => query.includes('s123')), 'selection fetches the selected agent')
       const liveConnection = page.waitForResponse(response => response.url().includes('/stream') && new URL(response.url()).searchParams.get('workspace') === '1')
       await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/timeline`)
