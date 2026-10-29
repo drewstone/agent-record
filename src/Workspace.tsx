@@ -310,7 +310,7 @@ function PlayPage({ api, id }: { api: string; id: string }) {
                 ['runs', `Runs ${runCount}`],
                 ['findings', findingCount ? `Findings ${doc.runs.some((run) => run.findings === null) ? '≥' : ''}${findingCount}` : 'Findings'],
                 ['setup', 'Setup'],
-              ] as const).map(([value, label]) => <TabsTrigger key={value} value={value}>{label}</TabsTrigger>)}
+              ] as const).map(([value, label]) => <TabsTrigger key={value} value={value} data-tab={value}>{label}</TabsTrigger>)}
             </TabsList>
             <TabsContent className="ws-content mt-0" value={tab}>
             {tab === 'standing' && <PlayJourney play={doc} />}
