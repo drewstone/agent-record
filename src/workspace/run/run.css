@@ -295,16 +295,16 @@
 .rp .rp-tbars.four { margin-bottom: 18px; }
 .rp .rp-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: var(--radius-tag); background: var(--rp-raised); color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); cursor: pointer; }
 
-/* Conversations */
 .rp .rp-conv { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; }
 .rp .rp-fbar { flex: none; padding: 8px; border-bottom: 1px solid var(--rp-line); }
 .rp .rp-fbar .rp-field { height: 32px; }
 .rp .rp-alist { flex: 1; min-height: 0; overflow: auto; }
 .rp .rp-alist .ag { display: flex; align-items: center; gap: 8px; padding: 0 16px; font: 600 14px/20px var(--font-sans); color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-alist button { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; align-content: center; column-gap: 12px; row-gap: 1px; padding: 0 16px; border: 0; border-radius: 0; background: transparent; text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); }
+.rp .rp-alist button { width: 100%; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; align-content: center; column-gap: 12px; row-gap: 1px; padding: 0 16px; border: 0; border-radius: 0; background: transparent; text-align: left; cursor: pointer; color: hsl(var(--hsl-foreground)); font: 400 14px/20px var(--font-sans); }
 .rp .rp-alist button:hover { background: var(--ix-hover-bg); }
 .rp .rp-alist button[aria-current='true'] { background: var(--ix-sel-bg); }
 .rp .rp-alist button[aria-current='true'] .nm { color: var(--accent-text); }
+.rp .rp-alist .nm .rp-dot { display: inline-block; margin-right: 6px; } .rp .rp-agent-logos { display: flex; align-items: center; gap: 2px; }
 .rp .rp-alist .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp .rp-alist .sb { grid-column: 2; font-size: 14px; line-height: 18px; color: hsl(var(--hsl-muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp .rp-alist .n { grid-row: 1 / span 2; grid-column: 3; font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }

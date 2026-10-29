@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { HarnessLogo, ProviderMark, type HarnessType } from '@tangle-network/sandbox-ui/dashboard'
 import { LiveTranscript } from '../LiveTranscript.js'
 import { AgentConversation, useRecordPart } from '../record-part.js'
 import type { TabProps } from './RunPage.js'
@@ -7,8 +8,6 @@ import { StateDot, Hilite, Icon, useRows } from './ui.js'
 
 type Row = { kind: 'team'; id: string; label: string; n: number } | { kind: 'agent'; a: Agent }
 
-/** The agent list: every agent of the run (the header's count), grouped by team, filtered by the search; one that never ran
- * says so in place, so the list never counts fewer agents than the header (26a: "10 agents" above a list of 9). */
 function rowsOf(m: RunModel, query: string): Row[] {
   const q = query.trim().toLowerCase()
   const list = m.tree.filter((a) => !q || `${a.name} ${a.node.label}`.toLowerCase().includes(q))
@@ -59,8 +58,8 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
             <div key={`t:${r.id}`} className="ag" style={{ height: ROW }}><Icon name="users" size={14} />{r.label}<span className="ct">{r.n}</span></div>
           ) : (
             <button key={r.a.id} type="button" role="listitem" aria-current={r.a.id === selected?.id} style={{ height: ROW }} onClick={() => selectAgent(r.a.id)}>
-              <StateDot tone={r.a.state.tone} />
-              <span className="nm" title={r.a.name}><Hilite text={r.a.name} query={query} /></span>
+              <span className="rp-agent-logos"><HarnessLogo type={(r.a.harness === 'claude' ? 'claude-code' : r.a.harness ?? 'cli-base') as HarnessType} size={18} /><ProviderMark provider={r.a.model ?? undefined} size="xs" /></span>
+              <span className="nm" title={r.a.name}><StateDot tone={r.a.state.tone} /><Hilite text={r.a.name} query={query} /></span>
               <span className="sb">{r.a.steps.length || r.a.turns ? `${plural(r.a.steps.length, 'step')}${r.a.first !== null ? ` · ${spanOf(m.t0, r.a.first, r.a.state.tone === 'live' ? 'now' : r.a.last ?? r.a.first)}` : ''}` : r.a.state.label}</span>
               <span className="n">{r.a.tokens === null ? '' : abbr(r.a.tokens)}</span>
             </button>
