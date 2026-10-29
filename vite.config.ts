@@ -10,7 +10,6 @@ export default defineConfig({
         record: 'src/record.ts',
         report: 'src/report.ts',
         workspace: 'src/workspace-model.ts',
-        receipt: 'src/receipt.tsx',
         assessment: 'src/assessment.ts',
         'research-publication': 'src/adapters/research-publication.ts',
         'agent-runtime': 'src/adapters/agent-runtime.ts',

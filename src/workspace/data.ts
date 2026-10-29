@@ -1,56 +1,5 @@
-import { createElement, Fragment, type ReactNode } from 'react'
-import type { RunRecord } from '../record.js'
-import type { Spend } from '../workspace-model.js'
 import { ENDING_GLYPH, hostWords } from './play-standing.js'
 
-export { useDocument } from '@tangle-network/sandbox-ui/hooks/use-document'
-
-/**
- * The workspace receives records from its own converter, which validated them at ingest. A full Zod pass over
- * a 20,000-event record costs seconds on a wall display, so the viewer checks the shape it relies on.
- */
-export function readRecord(value: unknown): RunRecord {
-  const record = value as RunRecord
-  if (!record || record.schema !== 'agent-record.v1' || !Array.isArray(record.nodes) || !Array.isArray(record.events))
-    throw new Error('Not an agent-record.v1 record')
-  for (const node of record.nodes) node.parent ??= null
-  for (const event of record.events) {
-    event.detail ??= {}
-    event.category ??= 'other'
-  }
-  record.sources ??= []
-  return record
-}
-
-// ----- formatting -----
-export const money = (value: number | null | undefined) =>
-  value === null || value === undefined
-    ? 'unknown'
-    : `$${value >= 100 ? value.toFixed(0) : value >= 1 ? value.toFixed(2) : value === 0 ? '0.00' : value.toFixed(value < 0.01 ? 4 : 2)}`
-export const tokens = (value: number | null | undefined) =>
-  value === null || value === undefined ? 'unknown' : new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
-export const duration = (value: number | null | undefined) => {
-  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
-  if (value < 1000) return `${Math.round(value)} ms`
-  if (value < 60_000) return `${(value / 1000).toFixed(1)} s`
-  if (value < 3_600_000) return `${(value / 60_000).toFixed(1)} min`
-  return `${(value / 3_600_000).toFixed(1)} h`
-}
-export const when = (value: string | null | undefined, withDate = true) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (!Number.isFinite(date.valueOf())) return '—'
-  const iso = date.toISOString()
-  return withDate ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : `${iso.slice(11, 19)} UTC`
-}
-/**
- * One status grammar (design-system section 1, v2 tone rule). Five tones, each with one meaning: neutral; the accent for
- * data series and links (never a status); pass only for passed under the current check; attention only for running or
- * blocked; fail only for "a person must act now", which is an `attention[]` item the host marks crit or a live run's
- * blocker with severity red, or a Needs you line for a pass held for stages with no known-good fixture (the person adds the
- * fixture that settles it; the held verdict itself stays neutral). Red has no default: a past crash, an operator or Lab stop, a research miss, a verdict under
- * a retired check and an unknown are all neutral, and keep their meaning through their word and shape.
- */
 export type StatusTone = 'pass' | 'live' | 'attention' | 'fail' | 'neutral'
 export type StatusAxis = 'run' | 'result' | 'alert' | 'agent' | 'release' | 'cause' | 'measure'
 export interface Status {
@@ -226,83 +175,8 @@ export function statusOf(input: StatusInput): Status {
   }
 }
 
-const LEAD_VERDICT: Record<string, string> = { 'NOT SOLVED': 'not-solved', SOLVED: 'solved', UNDECIDED: 'undecided' }
-
-/**
- * The host's standing sentence in this grammar: its leading verdict clause as a result status (`NOT SOLVED` reads "No
- * pass yet") and a gate-held release as "not published". The host still composes the old words until tangle-tools
- * changes them; the rest of the sentence is printed as composed, with those words in this grammar (`hostWords`).
- */
-export function standingSentence(text: string): { lead: Status | null; rest: string } {
-  const head = /^(NOT SOLVED|SOLVED|UNDECIDED)\b/.exec(text)?.[0]
-  return head ? { lead: statusOf({ axis: 'result', verdict: LEAD_VERDICT[head] }), rest: hostWords(text.slice(head.length)) } : { lead: null, rest: hostWords(text) }
-}
-
-/** The `data-status` every status mark carries: checks query meaning instead of pixels, and styles.css colours a status only
- * through it, so no component chooses a status hue. */
-export const dataStatus = (s: Status) => `${s.axis}:${s.word}:${s.tone}`
-
-/** A status as a pill: its shape, then its word, toned and carrying `data-status`. */
-export function StatusPill({ status, title, children, className = 'state-pill' }: { status: Status; title?: string; children?: ReactNode; className?: string }) {
-  return createElement(
-    'span',
-    { className, 'data-status': dataStatus(status), title },
-    createElement('i', { className: 'status-shape', 'aria-hidden': true }, status.shape),
-    ' ',
-    children ?? status.word,
-  )
-}
-
-/** A standing sentence with its verdict clause as the status word; the plays table prints it inline. */
-export function StandingText({ text }: { text: string }) {
-  const { lead, rest } = standingSentence(text)
-  return createElement(Fragment, null, lead && createElement('b', { 'data-status': dataStatus(lead) }, `${lead.shape} ${lead.word}`), rest)
-}
-
 const ENDING_STATE: Record<string, string> = { solved: 'winner', died: 'failed', live: 'running', 'never started': 'never-started' }
 
 /** A host ending word (`died`, `not solved`, `cancelled`: @tangle-network/charts RunEnding) in this grammar. */
 export const endingStatus = (word: string | null | undefined): Status =>
   word === 'not solved' ? statusOf({ axis: 'result', verdict: 'not-solved' }) : statusOf({ axis: 'run', state: word ? (ENDING_STATE[word] ?? word) : word })
-
-/**
- * Whether a newer run of the same play has started than `run`, from a served run list (the catalog's or a play's). Undefined
- * when `run` has no start time, so its crash reads as past.
- */
-export function newerStarted(run: { id: string; play?: string | null; startedAt?: string | null }, runs: ReadonlyArray<{ id: string; play?: string | null; startedAt?: string | null }>) {
-  const start = run.startedAt ? Date.parse(run.startedAt) : NaN
-  if (!Number.isFinite(start)) return undefined
-  return runs.some((other) => other.id !== run.id && (other.play ?? null) === (run.play ?? null) && !!other.startedAt && Date.parse(other.startedAt) > start)
-}
-
-/** A run's status word with its ending time when it stopped: `Stopped by Lab (stall) 03:27Z`. */
-export function runStatus(
-  run: { state: string | null | undefined; reason?: string | null; stopCause?: string | null; settledAt?: string | null; ending?: { at?: string | null } | null },
-  newerStarted?: boolean,
-): Status {
-  const at = run.ending?.at ?? run.settledAt
-  const base = statusOf({ axis: 'run', state: run.state, reason: run.reason, stopCause: run.stopCause, endedAt: at, newerStarted })
-  return base.tone === 'neutral' && at && base.word.startsWith('Stopped') ? { ...base, word: `${base.word} ${at.slice(11, 16)}Z` } : base
-}
-
-/** Navigate the host page; the wall shells are separate documents. */
-export function go(href: string) {
-  window.location.assign(href)
-}
-
-export function readSearch() {
-  return new URLSearchParams(window.location.search)
-}
-export function writeSearch(patch: Record<string, string | undefined | null>, replace = false) {
-  const params = readSearch()
-  for (const [key, value] of Object.entries(patch))
-    if (value === undefined || value === null || value === '') params.delete(key)
-    else params.set(key, value)
-  const search = params.toString()
-  const next = window.location.pathname + (search ? `?${search}` : '')
-  if (next === window.location.pathname + window.location.search) return
-  if (replace) window.history.replaceState(null, '', next)
-  else window.history.pushState(null, '', next)
-  // pushState and replaceState emit no event: tell every useSearch, so two readers of the URL cannot disagree.
-  window.dispatchEvent(new PopStateEvent('popstate'))
-}
