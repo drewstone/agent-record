@@ -18,7 +18,7 @@ export async function proveTopology(page, width, theme, evidence, { nodes, works
   assert.ok(await mark.evaluate(element => element.firstElementChild.getBoundingClientRect().width >= 16))
   const cards = page.locator('.ag-agent-card')
   assert.ok(await cards.count() < 100, '124 agents keep a bounded rendered window')
-  const sizes = await cards.evaluateAll(nodes => nodes.flatMap(node => [...node.querySelectorAll('span,p')].filter(child => child.textContent.trim()).map(child => parseFloat(getComputedStyle(child).fontSize))))
+  const sizes = await page.locator('.ag-topology').evaluateAll(nodes => nodes.flatMap(node => [...node.querySelectorAll('span,p')].filter(child => child.textContent.trim()).map(child => parseFloat(getComputedStyle(child).fontSize))))
   assert.ok(sizes.length && sizes.every(size => size >= 13), `actual consumer type floor: ${sizes}`)
   if (width !== 390) {
     const a = await root.boundingBox(), b = await page.locator('.react-flow__node-agentFrame').boundingBox()
