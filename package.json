@@ -77,7 +77,7 @@
     "build:example": "vite build --config examples/react/vite.config.ts",
     "prepack": "pnpm build",
     "test": "pnpm build && node --test tests/*.test.mjs",
-    "test:run-ui": "node --test tests/run-ui-adoption.browser.mjs",
+    "test:run-ui": "node --test tests/run-ui-adoption.browser.mjs tests/discovery-ui.browser.mjs",
     "report": "node tools/render-report.mjs",
     "ingest": "node tools/ingest.mjs"
   },
