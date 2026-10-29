@@ -23,7 +23,7 @@ const rows = [
   { seq: 8, at: iso(183), attempt: 5, event: { kind: 'tool_result', toolCallId: 'check', result: { error: 'Proof verification failed: witness mismatch' } } },
 ]
 const tail = rows.slice(3).map(row => ({ ...row, seq: row.seq + 200 }))
-const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` : runId, label: i ? `Worker ${i}` : 'root', parent: i ? runId : null, kind: 'agent', status: 'running', start: iso(0), end: null, model: 'Recorded model', harness: 'codex', usage: null }))
+const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` : runId, label: i ? `Worker ${i}` : 'root', parent: i ? runId : null, kind: 'agent', status: 'running', start: iso(0), end: null, model: 'Recorded model', harness: 'codex', usage: { calls: 1, tokens: 12, tools: { read: { calls: 1, failures: 0, ms: 1 } }, steps: [{ kind: 'tool', startMs: start, endMs: start + 1, tool: 'read', failed: false }] } }))
 
 test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures and navigates 124 agents', { timeout: 120_000 }, async () => {
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
@@ -104,6 +104,14 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.locator('.conversation-scroll').waitFor()
       await page.locator('[data-timeline-step="user"]').getByText('Retain the failing witness and investigate it.', { exact: true }).waitFor()
       assert.ok(requests.some(query => query.includes('s123')), 'selection fetches the selected agent')
+      await page.getByRole('tab', { name: 'Analytics', exact: true }).click()
+      const agentsTable = page.locator('section[aria-label="Agents"]')
+      await agentsTable.getByRole('button', { name: 'Next', exact: true }).click()
+      await agentsTable.getByText('Worker 14', { exact: true }).waitFor()
+      assert.ok(await agentsTable.getByRole('row').count() <= 15, 'analytics pages keep 124 agents reachable with bounded rows')
+      const heatmap = page.locator('section[aria-label="Tool calls by agent and tool"]')
+      await heatmap.getByRole('button', { name: 'Next', exact: true }).click()
+      assert.ok(await heatmap.locator('.rh').count() <= 14)
       alive = false
       await open()
       await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()

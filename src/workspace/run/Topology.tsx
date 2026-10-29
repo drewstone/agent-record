@@ -2,7 +2,7 @@ import { toolGlyph } from '@tangle-network/charts/react'
 import { useEffect, useMemo, useRef } from 'react'
 import { AgentGraph, type AgentGraphNode } from '@tangle-network/sandbox-ui/workflows'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, abbr, count, lat, type RunModel, stampOf } from './model.js'
+import { type Agent, abbr, count, elapsed, lat, type RunModel, stampOf } from './model.js'
 import { Bar, agentCost, StateDot, Icon, Picker, agentOptions, agentGroups } from './ui.js'
 
 /** The host's recorded identities, status and event clocks feed the shared graph. */
@@ -12,6 +12,16 @@ export function graphNodes(m: RunModel): AgentGraphNode[] {
     return {
       id: a.id, label: a.name, status: a.status, model: a.model, harness: a.harness,
       costUsd: a.listUsd ?? a.billedUsd, tokens: a.tokens, commits: a.commits,
+      facts: [
+        { label: 'Input / output / cached', value: a.byClass ? `${abbr(a.byClass.input)} / ${abbr(a.byClass.output)} / ${abbr(a.byClass.cacheRead)} tokens` : 'Not recorded' },
+        { label: 'Model calls', value: count(a.modelCalls) },
+        { label: 'Model latency p50 / p90 / p99', value: `${lat(a.latency.p50)} / ${lat(a.latency.p90)} / ${lat(a.latency.p99)}` },
+        { label: 'Tool calls / failures', value: `${count(a.toolCalls)} / ${count(a.toolFailures)}` },
+        { label: 'Retried steps / restarts', value: `${count(a.retries)} / ${a.restarts.length}` },
+        { label: 'Busy / run duration', value: `${elapsed(a.busy)} / ${elapsed(m.duration)}` },
+        { label: 'Spawned / commits', value: `${a.children.length} / ${count(a.commits)}` },
+        ...a.tools.map(tool => ({ label: tool.name, value: `${count(tool.calls)} calls · ${count(tool.failures)} failures · ${lat(tool.p50)} / ${lat(tool.p90)} / ${lat(tool.p99)} p50/p90/p99` })),
+      ],
       startedAt: Number.isFinite(Date.parse(a.node.start ?? '')) ? Date.parse(a.node.start!) : undefined, lastActivityAt: a.lastActivityAt, medianEventGapMs: a.medianEventGapMs, turn: a.node.turn, events,
       result: a.status === 'failed' ? a.node.failureReason || `Failure cause not recorded${events.at(-1)?.label ? `. Last event: ${events.at(-1)!.label}` : ''}` : a.commits ? `${a.commits} commits shipped` : a.state.label,
     }
@@ -29,7 +39,7 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
         <h2>Agents</h2>
         <span className="end"><Picker label="Go to agent" options={agentOptions(m)} groups={agentGroups(m)} value={selected} placeholder={`Search ${m.agents.length} agents`} width={340} onChange={id => { if (id) selectAgent(id) }}><span className="dim">Go to agent</span></Picker></span>
       </div>
-      <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={selectAgent} live title="Agents" className="rp-topo-graph" />
+      <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={selectAgent} live={m.live} showLatestEvents={false} title="Agents" className="rp-topo-graph" />
     </section>
     {sel && <TopoInspector m={m} a={sel} reveal={route.params.has('agent')} onSelect={selectAgent} href={route.href('conversations', { agent: agentParam(doc.run.id, sel.id) })} />}
   </div>
