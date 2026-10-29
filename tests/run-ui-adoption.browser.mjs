@@ -133,7 +133,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       const loops = await page.evaluate(() => document.getAnimations().filter(animation => animation.effect?.getTiming().iterations === Infinity).map(animation => { const box = animation.effect.target.getBoundingClientRect(); return { name: animation.animationName, width: box.width, height: box.height, keys: Object.keys(animation.effect.getKeyframes()[0]) } }))
       assert.ok(loops.length, 'Essential opacity activity survives reduced motion')
       for (const loop of loops) { assert.equal(loop.name, 'tangle-breathe'); assert.ok(loop.width <= 6 && loop.height <= 6); assert.ok(!loop.keys.includes('transform')) }
-      await page.getByRole('tab', { name: 'Timeline', exact: true }).click()
+      await page.getByRole('tab', { name: 'Waterfall', exact: true }).click()
       await page.locator('.fw-root').waitFor()
       assert.equal(await page.evaluate(() => document.getAnimations().filter(animation => animation.effect?.target?.matches?.('.fw-state-live') && !animation.effect.pseudoElement && animation.effect.getTiming().iterations === Infinity).length), 0, 'Reduced motion keeps the Live badge static while its inner dot remains essential')
       assert.doesNotMatch(await page.locator('.fw-headline').evaluate(node => getComputedStyle(node, '::before').content), /Â/, 'The stylesheet uses the host UTF-8 encoding')

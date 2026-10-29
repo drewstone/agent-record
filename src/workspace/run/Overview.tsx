@@ -37,7 +37,7 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
   const drill = picked ? <section className="rp-card rj-drill" aria-label={`${picked.name}: what it did`}>
       <div className="rp-hd"><h2>{picked.name}</h2><a className="rp-btn end" href={route.href('conversations', { agent: agentParam(doc.run.id, picked.id) })}>Conversation →</a></div>
       <dl><dt>Task</dt><dd>{plainSummary(picked.node.assignment) || 'Not recorded'}</dd><dt>Result</dt><dd>{plainSummary(picked.node.turn) || 'No result recorded yet'}</dd><dt>Changed</dt><dd>{changed.length ? `${changed.length} files in released work` : 'No files in released work'}</dd></dl>
-      {!!changed.length && <ul>{changed.map(path => <li key={path}><a href={route.href('files', { agent: agentParam(doc.run.id, picked.id), file: path, ref: best?.release })}>{path}</a></li>)}</ul>}
+      {!!changed.length && <ul>{changed.map(path => <li key={path}><code>{path}</code></li>)}</ul>}
     </section> : null
   return <section className="rp-journey" aria-label="Run overview">
     <section className="rj-hero" aria-label="How close the best release is">
