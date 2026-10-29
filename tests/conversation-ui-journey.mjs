@@ -62,9 +62,15 @@ export async function proveFailedToolSummary(page) {
   const row = page.locator('.record-tool-row[data-tool-status="error"]').last()
   const result = row.locator('[data-record-tool-result]')
   assert.equal(await result.innerText(), 'Failed')
-  const visible = await row.locator('[data-record-tool-summary]').evaluate(element => {
-    const box = element.getBoundingClientRect(), color = getComputedStyle(element).color.match(/[\d.]+/g).map(Number)
-    return box.width > 40 && box.right <= innerWidth && getComputedStyle(element).opacity === '1' && color[0] > color[1] * 1.2 && color[0] > color[2] * 1.2
+  const facts = await row.locator('[data-record-tool-summary]').evaluate(element => {
+    const probe = document.createElement('span'); element.append(probe)
+    probe.style.color = 'var(--surface-danger-text)'; const failedColor = getComputedStyle(probe).color
+    probe.style.color = 'hsl(var(--muted-foreground))'; const mutedColor = getComputedStyle(probe).color; probe.remove()
+    const box = element.getBoundingClientRect(), style = getComputedStyle(element)
+    return { width: box.width, right: box.right, viewport: innerWidth, opacity: style.opacity, color: style.color, failedColor, mutedColor }
   })
-  assert.ok(visible, 'failed duration and result remain visible in the failed color without hover')
+  console.log('Persistent failed tool summary', JSON.stringify(facts))
+  assert.ok(facts.width > 40 && facts.right <= facts.viewport && facts.opacity === '1', 'failed duration and result remain visible without hover')
+  assert.equal(facts.color, facts.failedColor, 'failure uses the actual Brand failed token in each theme')
+  assert.notEqual(facts.color, facts.mutedColor, 'failure remains distinct from the normal result color')
 }
