@@ -1,12 +1,13 @@
 import { runStatus } from '@tangle-network/ui/run'
 import { useEffect, useMemo, useState } from 'react'
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
-import { TraceWorkspace } from '@tangle-network/sandbox-ui/run'
+import { TraceWorkspace, type AgentStreamOpener } from '@tangle-network/sandbox-ui/run'
 import { type AgentGraphNode, type AgentGraphStatus } from '@tangle-network/sandbox-ui/workflows'
+import { useLiveInspection } from './LiveInspection.js'
 
 // A display-only subset of Runtime's TopSnapshot wire contract. Runtime owns all lifecycle/accounting projection.
 type Spend = { usd: number; usdKnown?: boolean }
-type Worker = { id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; verdict?: string; reason?: string; liveTail?: string[]; lastActivityAt?: number; medianEventGapMs?: number; spend?: Spend; metered?: Spend }
+type Worker = { materialization?: { status: string; backend?: string; model?: { status: string; id?: string } }; id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; verdict?: string; reason?: string; liveTail?: string[]; lastActivityAt?: number; medianEventGapMs?: number; spend?: Spend; metered?: Spend }
 type Node = { id: string; runId: string; parentId?: string; label?: string; runtime?: string; status?: string; settledAt?: number; timing?: { startedAt: number; settledAt?: number }; model?: string; backend?: string }
 type Snapshot = { pursuit?: { nodes: Node[] }; root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; task?: string; startedAt?: string; completedAt?: string; reason?: string; lastActivityAt?: number; medianEventGapMs?: number; driverSpend?: Spend; totals?: { tokensKnown?: boolean; tokensInput?: number; tokensOutput?: number }; workers: Worker[] }[] }
 const time = (value?: string) => { const ms = value ? Date.parse(value) : Number.NaN; return Number.isFinite(ms) ? ms : undefined }
@@ -24,8 +25,13 @@ const graphStatus = (status: string): AgentGraphStatus => { const state = flowSt
 const isOpen = (status: string) => ['running', 'waiting', 'needs-you'].includes(flowStatus(status))
 type Frame = { sequence: number; observedAt: number; reset: boolean; snapshots: Snapshot[] }
 
+export interface LiveRunTransport {
+  fetch?: typeof globalThis.fetch
+  openEventSource?: AgentStreamOpener
+}
+
 /** Both the Discovery host and agent-runtime-top mount this same stream consumer and shared run workspace. */
-export function LiveRun({ api }: { api: string }) {
+export function LiveRun({ api, transport }: { api: string; transport?: LiveRunTransport }) {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
@@ -33,8 +39,9 @@ export function LiveRun({ api }: { api: string }) {
   const [selected, setSelected] = useState('')
   const [rendered, setRendered] = useState(0)
   const [agent, setAgent] = useState<string>()
+  const [conversationOpen, setConversationOpen] = useState(true)
   useEffect(() => {
-    const source = new EventSource(`${api}/events`)
+    const source = transport?.openEventSource ? transport.openEventSource(`${api}/events`, setConnected) : new EventSource(`${api}/events`)
     source.addEventListener('snapshot', (message) => {
       try {
         const frame = JSON.parse((message as MessageEvent<string>).data) as Frame
@@ -50,13 +57,13 @@ export function LiveRun({ api }: { api: string }) {
     source.addEventListener('unavailable', () => setError('The run snapshot is unavailable'))
     // Runtime ends the stream when its server closes; the run is then final, not reconnecting.
     source.addEventListener('end', () => { source.close(); setEnded(true) })
-    source.onerror = () => setConnected(false)
+    if (!transport?.openEventSource) (source as EventSource).onerror = () => setConnected(false)
     return () => source.close()
-  }, [api])
+  }, [api, transport?.openEventSource])
   const runs = snapshots.flatMap((snapshot, root) => snapshot.supervisors.map((run) => ({ snapshot, root, run, key: JSON.stringify([snapshot.root, run.id]) })))
   const active = runs.find((run) => run.key === selected) ?? runs[0]
   const facts = active?.snapshot.pursuit?.nodes.filter((node) => node.runId === active.run.id) ?? []
-  const detail = (id: string) => { const node = facts.find((node) => node.id === id); return [node?.model, node?.backend].filter(Boolean).join(' · ') || undefined }
+  const detail = (id: string) => { const node = facts.find((node) => node.id === id), receipt = active?.run.workers.find((worker) => worker.id === id)?.materialization; return [node?.model ?? (receipt?.model?.status === 'known' ? receipt.model.id : undefined), node?.backend ?? receipt?.backend].filter(Boolean).join(' · ') || undefined }
   const run = active && { ...active.run, workers: withNodes(active.run, facts) }
   const startedAt = run ? Math.min(...[run.startedAt, ...run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
   const trace = useMemo((): FlowTrace => {
@@ -79,13 +86,14 @@ export function LiveRun({ api }: { api: string }) {
     { id: run.id, label: 'root', status: graphStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: run.status === 'cancelled' ? 'Cancelled' : graphStatus(run.status) === 'failed' ? run.reason || 'Failure cause not recorded' : undefined },
     ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: graphStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.status === 'cancelled' ? 'Cancelled' : graphStatus(worker.status) === 'failed' ? worker.reason || 'Failure cause not recorded' : worker.verdict })),
   ] : []
+  const selectedAgent = agent
+  const inspection = useLiveInspection(active && selectedAgent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(selectedAgent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)
   const known = new Set(nodes.map((node) => node.id))
   const edges = workers.map((worker) => ({ from: worker.parent && worker.parent !== worker.id && known.has(worker.parent) ? worker.parent : run!.id, to: worker.id, kind: 'spawn' as const }))
   const agentCards = Object.fromEntries(nodes.map(({ id, label, harness, model, turn, events, result, status, costUsd, startedAt, lastActivityAt, medianEventGapMs }) => [id, { label, harness, model, turn, events, result, ...(startedAt === undefined ? { status, costUsd, lastActivityAt, medianEventGapMs } : {}) }]))
   return (
-    <main className="ws-live" data-top-sequence={rendered}>
+    <main className="ws-live" data-api={api} data-top-sequence={rendered}>
       <header>
-        <h1>Live agents</h1>
         <label>Run<select aria-label="Run" value={active?.key ?? ''} onChange={(event) => { setSelected(event.target.value); setAgent(undefined) }}>{runs.map((item) => <option key={item.key} value={item.key}>{item.run.id}</option>)}</select></label>
         <span role="status">{ended ? 'Finished · viewer closed' : connected ? '● Connected' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
       </header>
@@ -94,7 +102,7 @@ export function LiveRun({ api }: { api: string }) {
       {/* With no run to show, every root's diagnostics say why; an unreadable root is never "no agents". */}
       {(active ? [active.snapshot] : snapshots).filter((snapshot) => snapshot.completeness === 'partial').map((snapshot) => <p key={snapshot.root} role="alert">Partial capture: {snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>)}
       {active ? (
-        <TraceWorkspace key={active.key} trace={trace} label={active.run.id} selectedAgentId={agent} onSelectAgent={setAgent} live={isOpen(active.run.status) || run!.workers.some((worker) => isOpen(worker.status))} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} agentGraph={{ defaultLayout: 'tree', edges, title: active.run.id }} defaultView="graph" maxHeight={650} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
+        <TraceWorkspace key={active.key} trace={trace} label="Run" selectedAgentId={selectedAgent} conversationOpen={conversationOpen} openEventSource={transport?.openEventSource} onSelectAgent={(id) => { if (id) setAgent(id); setConversationOpen(id !== undefined) }} live={isOpen(active.run.status) || run!.workers.some((worker) => isOpen(worker.status))} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} agentGraph={{ defaultLayout: 'tree', edges }} defaultView="graph" maxHeight={650} files={inspection.files} scoreboard={inspection.scoreboard} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
       ) : connected && !snapshots.some((snapshot) => snapshot.completeness === 'partial') && <p role="status">No recorded agents in these roots.</p>}
     </main>
   )

@@ -14,7 +14,7 @@ const NETWORK_RETRIES = 4
  * the document. With `keepPrevious`, a new URL (a record's next digest) keeps showing the previous document until the
  * new one arrives, so a run being written never blanks between versions. A response marked stale is refetched until it is current.
  */
-export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false) {
+export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false, fetcher = globalThis.fetch) {
   // `stale`: the server sent its last composed copy while it recomposes (X-Workspace-Stale); a page says how old it is,
   // and `failing` why its last compose failed when it did (X-Workspace-Compose-Error, audit F11).
   // State is tagged with its URL: a changed ref or version never shows the previous payload under the new label.
@@ -39,7 +39,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
     const load = async () => {
       lost = false
       try {
-        const response = await fetch(url, {
+        const response = await fetcher(url, {
           credentials: 'same-origin',
           signal: controller.signal,
           headers: etag.current ? { 'If-None-Match': etag.current } : {},
@@ -90,7 +90,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
       controller.abort()
       window.clearTimeout(timer)
     }
-  }, [url, poll]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [url, poll, fetcher]) // eslint-disable-line react-hooks/exhaustive-deps
   return keepPrevious || state.url === url ? state : { url, loading: !!url }
 }
 

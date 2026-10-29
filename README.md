@@ -27,6 +27,9 @@ export function RunPage() {
 }
 ```
 
+Load the renderer stylesheet in the host's main stylesheet before its Tailwind utilities, rather than from a lazy route, so the host's responsive layout keeps precedence.
+
+
 Your application loads the data and decides which content may be displayed.
 The component makes no network requests, stores no data, starts no agents, and does not change your URL.
 It can render on the server; hydration enables the interactive controls.
