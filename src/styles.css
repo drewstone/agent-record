@@ -1,5 +1,5 @@
 @layer theme, base, ar-base, components, utilities;
-@import '@tangle-network/sandbox-ui/styles';
+@import '@tangle-network/sandbox-ui/styles'; @import '@tangle-network/charts/react/agent-graph.css';
 @import '@tangle-network/charts/react/live.css';
 @import '@tangle-network/charts/figure.css';
 @import '@tangle-network/charts/react/flow-waterfall.css';
