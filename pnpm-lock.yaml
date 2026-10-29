@@ -24,8 +24,8 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0
       '@tangle-network/sandbox-ui':
-        specifier: ^2.0.10
-        version: 2.0.10(10ad12e20f25f1b3a89e35236b6595cc)
+        specifier: ^2.0.12
+        version: 2.0.12(10ad12e20f25f1b3a89e35236b6595cc)
       '@tangle-network/ui':
         specifier: ^11.51.1
         version: 11.51.1(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/brand@1.31.1(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(nanostores@1.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -866,14 +866,14 @@ packages:
     engines: {node: '>=22.13.0'}
     hasBin: true
 
-  '@tangle-network/sandbox-ui@2.0.10':
-    resolution: {integrity: sha512-qvraaWfdvvhaHp5oQaPvAtYZfAbHqoRh3jq9jU8Iw0zRbiuJz3poqzV42NY0Xg5K8aHY/dozVwhjn/iwU7Ud9A==}
+  '@tangle-network/sandbox-ui@2.0.12':
+    resolution: {integrity: sha512-H38QdD9TkKz8YvcYQvP2ZBUmPB6GB62Z7evhO4IvvIlw5SB0Gcg+TfTlGUUDW3ihAnUcEF+THXEecFyVgsZQGQ==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <2.0.0'
       '@tangle-network/agent-interface': ^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0
       '@tangle-network/brand': ^1.31.1
-      '@tangle-network/charts': ^2.0.9
+      '@tangle-network/charts': ^2.0.14
       '@tangle-network/ui': ^11.51.1
       '@tanstack/react-query': ^5.0.0
       '@tiptap/core': '>=3.20.4 <4.0.0'
@@ -2743,7 +2743,7 @@ snapshots:
     dependencies:
       '@tangle-network/agent-trace-contract': 2.0.0
 
-  '@tangle-network/sandbox-ui@2.0.10(10ad12e20f25f1b3a89e35236b6595cc)':
+  '@tangle-network/sandbox-ui@2.0.12(10ad12e20f25f1b3a89e35236b6595cc)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
