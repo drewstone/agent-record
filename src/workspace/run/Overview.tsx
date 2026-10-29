@@ -1,7 +1,8 @@
 import { Gantt, Meter, type ChartMark, type TimelineLane } from '@tangle-network/charts/react'
+import { detectFileFormat } from '@tangle-network/sandbox-ui/files'
 import { type TabProps, agentParam } from './RunPage.js'
 import { elapsed, type RunRelease } from './model.js'
-import { plainSummary, sinceLabel } from '../plain-words.js'
+import { goalText, plainSummary, sinceLabel } from '../plain-words.js'
 import { usePhone } from '../use-phone.js'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@tangle-network/sandbox-ui/primitives'
 
@@ -30,13 +31,13 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
   }
   const blocker = doc.view?.blocker as { owner?: string; action?: string; since?: string; why?: string } | null | undefined
   const picked = route.params.has('agent') && agent ? m.byId.get(agent) : null
-  const changed = [...new Set(releases.flatMap(r => picked ? r.files?.[picked.id] ?? [] : []))].sort((a, b) => Number(/\.(log|jsonl?|txt|csv|bin|out)$/.test(a)) - Number(/\.(log|jsonl?|txt|csv|bin|out)$/.test(b)) || a.localeCompare(b))
+  const changed = [...new Set(releases.flatMap(r => picked ? r.files?.[picked.id] ?? [] : []))].sort((a, b) => Number(detectFileFormat(b) === 'code') - Number(detectFileFormat(a) === 'code') || a.localeCompare(b))
   const lanes: TimelineLane[] = m.tree.filter(a => a.start !== null).map(a => ({ id: a.id, label: a.name, spans: [{ start: m.t0 + Math.max(0, a.start!), end: m.live && ['running', 'waiting', 'needs-you'].includes(a.status) ? null : m.t0 + Math.max(a.start!, a.end ?? a.last ?? a.start!), state: a.state.tone || 'none' }] }))
   const marks: ChartMark[] = releases.map(r => ({ at: Date.parse(r.taggedAt!), kind: 'release', label: r.release, verdict: passed(r) ? 'pass' : 'unknown' }))
   const clock = (t: number) => new Date(t).toISOString().slice(5, 16).replace('T', ' ')
   const drill = picked ? <section className="rp-card rj-drill" aria-label={`${picked.name}: what it did`}>
       <div className="rp-hd"><h2>{picked.name}</h2><a className="rp-btn end" href={route.href('conversations', { agent: agentParam(doc.run.id, picked.id) })}>Conversation →</a></div>
-      <dl><dt>Task</dt><dd>{plainSummary(picked.node.assignment) || 'Not recorded'}</dd><dt>Result</dt><dd>{plainSummary(picked.node.turn) || 'No result recorded yet'}</dd><dt>Changed</dt><dd>{changed.length ? `${changed.length} files in released work` : 'No files in released work'}</dd></dl>
+      <dl><dt>Task</dt><dd>{plainSummary(picked.node.assignment) || (picked.id === doc.run.id && plainSummary(goalText(doc.input?.objective))) || 'Not recorded'}</dd><dt>Result</dt><dd>{plainSummary(picked.node.turn) || 'No result recorded yet'}</dd><dt>Changed</dt><dd>{changed.length ? `${changed.length} files in released work` : 'No files in released work'}</dd></dl>
       {!!changed.length && <ul>{changed.map(path => <li key={path}><code>{path}</code></li>)}</ul>}
     </section> : null
   return <section className="rp-journey" aria-label="Run overview">
