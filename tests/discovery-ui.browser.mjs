@@ -36,7 +36,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
   if (evidence) await mkdir(evidence, { recursive: true })
   let theme = 'light', alive = true
   const requests = [], streams = new Set()
-  const releases = [1, 2].map(n => ({ release: `rc${n}`, commit: String(n).repeat(12), taggedAt: iso(n * 100), checked: true, passed: 1, total: 2, steps: [{ label: 'Offline build', state: 'pass' }, { label: 'Verify proof', state: 'fail' }], files: { [runId]: ['answer.ts', 'proof.log'] } }))
+  const releases = [1, 2].map(n => ({ release: `rc${n}`, commit: String(n).repeat(12), taggedAt: iso(n * 100), checked: true, passed: 1, total: 2, steps: [{ label: 'Offline build', state: 'pass' }, { label: 'Verify proof', state: 'fail' }], files: { [runId]: ['a-checksum.sha', 'b-notes.md', 'answer.ts', 'src/verifier.rs', 'proof.log', ...Array.from({ length: 120 }, (_, i) => `z-evidence-${String(i).padStart(3, '0')}.log`)] } }))
   const workspace = () => ({ schema: 'agent-workspace.run-workspace.v1', runId, live: alive, nodes, edges: nodes.slice(1).map(node => ({ from: runId, to: node.id, kind: 'spawn' })), releases, best: 'rc2', code: { available: false, reason: 'No code fixture' } })
   const runDocument = () => ({ schema: 'agent-workspace.run.v1', run: { id: runId, play: 'magnetar-rust-sandbox', state: alive ? 'running' : 'stopped', startedAt: iso(0), location: { kind: 'dir', path: null }, record: { status: 'missing', digest: null } }, input: { objective: prompt, instruction: '' }, spend: { nodes: {} }, versions: [], live: { polling: alive }, execution: { alive } })
   const emit = document => { for (const stream of streams) stream.write(`event: workspace\ndata: ${JSON.stringify({ workspace: document, run: runDocument() })}\n\n`) }
@@ -99,7 +99,15 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('button', { name: 'root', exact: true }).click()
       await page.locator('.rj-drill').waitFor()
       assert.match(page.url(), /agent=root/)
-      assert.deepEqual(await page.locator('.rj-drill li code').allTextContents(), ['answer.ts', 'proof.log'])
+      assert.deepEqual((await page.locator('.rj-drill code').allTextContents()).slice(0, 2), ['answer.ts', 'src/verifier.rs'], 'source files precede checksum, Markdown and log artifacts')
+      assert.ok((await page.locator('.rj-drill dd').first().innerText()).startsWith('Build the complete prover'), 'root Task retains the recorded run objective')
+      const files = page.locator('.rj-files')
+      assert.ok(await files.getByRole('listitem').count() < 100, '125 changed files render a bounded window')
+      await files.evaluate(el => { el.scrollTop = el.scrollHeight })
+      await files.getByText('z-evidence-119.log', { exact: true }).waitFor()
+      assert.ok(await files.getByRole('listitem').count() < 100, 'the last changed file is reachable without expanding the DOM')
+      await files.evaluate(el => { el.scrollTop = 0 })
+      await files.getByText('answer.ts', { exact: true }).waitFor()
       const updated = { ...workspace(), releases: [...releases, { ...releases[1], release: 'rc3', taggedAt: iso(250), passed: 2, steps: releases[1].steps.map(step => ({ ...step, state: 'pass' })) }], best: 'rc3' }
       emit(updated)
       await page.getByText('every step passes', { exact: false }).waitFor()
