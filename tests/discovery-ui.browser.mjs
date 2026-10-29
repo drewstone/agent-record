@@ -128,6 +128,13 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.equal(await metric('Cost basis').innerText(), 'Catalog estimate')
       assert.equal(await metric('Billed cost').innerText(), 'Not recorded', 'an absent bill is never fabricated as zero')
       await page.mouse.move(1, 1)
+      nodes[0].usage.billedUsd = 0.75
+      nodes[0].usage.billedComplete = false
+      await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/timeline?agent=root`)
+      await page.locator('section[aria-label="root: whole run"]').getByText('≥$1.25 list · ≥$0.75 billed', { exact: true }).waitFor()
+      if (evidence) await page.screenshot({ path: `${evidence}/partial-billing-${width}-${theme}.png` })
+      nodes[0].usage.billedUsd = null
+      delete nodes[0].usage.billedComplete
       await page.getByRole('tab', { name: 'Analytics', exact: true }).click()
       const agentsTable = page.locator('section[aria-label="Agents"]')
       await agentsTable.getByRole('button', { name: 'Next', exact: true }).click()

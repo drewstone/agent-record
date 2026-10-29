@@ -18,14 +18,14 @@ importers:
         specifier: ^1.31.1
         version: 1.31.1(react@19.3.0)
       '@tangle-network/charts':
-        specifier: 2.0.5
-        version: 2.0.5(react@19.3.0)
+        specifier: 2.0.9
+        version: 2.0.9(react@19.3.0)
       '@tangle-network/harness-sessions':
         specifier: ^0.1.0
         version: 0.1.0
       '@tangle-network/sandbox-ui':
-        specifier: 2.0.4
-        version: 2.0.4(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/agent-interface@5.7.1)(@tangle-network/brand@1.31.1(react@19.3.0))(@tangle-network/charts@2.0.5(react@19.3.0))(@tangle-network/ui@11.51.1(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/brand@1.31.1(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(nanostores@1.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@xterm/addon-fit@0.11.0)(@xterm/addon-web-links@0.12.0)(@xterm/addon-webgl@0.19.0)(@xterm/xterm@6.0.0)(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(elkjs@0.12.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: 2.0.5
+        version: 2.0.5(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/agent-interface@5.7.1)(@tangle-network/brand@1.31.1(react@19.3.0))(@tangle-network/charts@2.0.9(react@19.3.0))(@tangle-network/ui@11.51.1(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/brand@1.31.1(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(nanostores@1.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@xterm/addon-fit@0.11.0)(@xterm/addon-web-links@0.12.0)(@xterm/addon-webgl@0.19.0)(@xterm/xterm@6.0.0)(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(elkjs@0.12.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tangle-network/ui':
         specifier: ^11.51.1
         version: 11.51.1(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/brand@1.31.1(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(nanostores@1.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -844,8 +844,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/charts@2.0.5':
-    resolution: {integrity: sha512-lT9fm0hulfiatJWNTXVHOr4yZaklIJB96vIXLrf7f6XVxOoijLW82jQmRMZMatMAi52Xrrx3f06/tzom+KSzuw==}
+  '@tangle-network/charts@2.0.9':
+    resolution: {integrity: sha512-UUZYPfCktN6co2oL5hXfScPbE+w56OHAvltQ+V9/Si9shrpTgIJq9GbnMynd0f+QHHJw4hFEjZe+DVIMmwQVtA==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -857,8 +857,8 @@ packages:
     engines: {node: '>=22.13.0'}
     hasBin: true
 
-  '@tangle-network/sandbox-ui@2.0.4':
-    resolution: {integrity: sha512-8G4H9Sno6UnQU9fjjf84pK4HQ+pTycL1iR4rmfh0CAIH341dITJ1sOJCyzngmKRp4md43WCnZg6qYwAtcnBaCg==}
+  '@tangle-network/sandbox-ui@2.0.5':
+    resolution: {integrity: sha512-zmK1785xBlccnUK8vJ8HlyD8WRLm8TjR1mZ0acRR0s768OdMP9+KkNVkxj/eMsz7JqO07VLTy4NuOFxXWOJdQw==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <2.0.0'
@@ -2723,7 +2723,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.0
 
-  '@tangle-network/charts@2.0.5(react@19.3.0)':
+  '@tangle-network/charts@2.0.9(react@19.3.0)':
     optionalDependencies:
       react: 19.3.0
 
@@ -2731,7 +2731,7 @@ snapshots:
     dependencies:
       '@tangle-network/agent-trace-contract': 2.0.0
 
-  '@tangle-network/sandbox-ui@2.0.4(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/agent-interface@5.7.1)(@tangle-network/brand@1.31.1(react@19.3.0))(@tangle-network/charts@2.0.5(react@19.3.0))(@tangle-network/ui@11.51.1(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/brand@1.31.1(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(nanostores@1.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@xterm/addon-fit@0.11.0)(@xterm/addon-web-links@0.12.0)(@xterm/addon-webgl@0.19.0)(@xterm/xterm@6.0.0)(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(elkjs@0.12.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@tangle-network/sandbox-ui@2.0.5(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/agent-interface@5.7.1)(@tangle-network/brand@1.31.1(react@19.3.0))(@tangle-network/charts@2.0.9(react@19.3.0))(@tangle-network/ui@11.51.1(@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.3.0))(@shikijs/themes@4.5.0)(@tangle-network/brand@1.31.1(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(nanostores@1.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@xterm/addon-fit@0.11.0)(@xterm/addon-web-links@0.12.0)(@xterm/addon-webgl@0.19.0)(@xterm/xterm@6.0.0)(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(elkjs@0.12.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2751,7 +2751,7 @@ snapshots:
       yaml: 2.9.1
     optionalDependencies:
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.0)
-      '@tangle-network/charts': 2.0.5(react@19.3.0)
+      '@tangle-network/charts': 2.0.9(react@19.3.0)
       '@xterm/addon-fit': 0.11.0
       '@xterm/addon-web-links': 0.12.0
       '@xterm/addon-webgl': 0.19.0
