@@ -158,8 +158,10 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.equal(requests.length, initialReads, 'the live tail has no periodic transcript HTTP fetches')
       assert.equal(agentStreams.size, 1, 'only the selected agent has a native SSE connection')
       const navigation = await page.evaluate(() => performance.getEntriesByType('navigation').length)
+      await observeArrivalMotion(page)
       publish(runId, 'rows', { generation: 'fixture', events: [{ seq: 209, at: iso(184), attempt: 6, event: { kind: 'text_delta', text: 'Native SSE arrival.' } }], lastSeq: 209, alive: true })
       await page.getByText('Native SSE arrival.', { exact: true }).waitFor()
+      await proveArrivalMotion(page)
       assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation').length), navigation)
       const beforeReconnect = connections.length
       for (const response of agentStreams.keys()) response.end()

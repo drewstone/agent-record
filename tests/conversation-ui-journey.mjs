@@ -21,3 +21,25 @@ export async function proveToolPreview(page, evidence, width, theme) {
   await page.mouse.move(1, 1)
   await preview.waitFor({ state: 'hidden' })
 }
+
+export async function observeArrivalMotion(page) {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.evaluate(() => {
+    window.__recordArrivals = []
+    const original = Element.prototype.animate
+    Element.prototype.animate = function (...args) {
+      const animation = original.apply(this, args)
+      if (this.closest('.conversation-scroll')) window.__recordArrivals.push({ text: this.textContent, frames: animation.effect.getKeyframes(), duration: animation.effect.getTiming().duration, state: animation.playState })
+      return animation
+    }
+  })
+}
+
+export async function proveArrivalMotion(page) {
+  await page.waitForFunction(() => window.__recordArrivals.some(item => item.text.includes('Native SSE arrival.')))
+  const arrivals = await page.evaluate(() => window.__recordArrivals.filter(item => item.text.includes('Native SSE arrival.')))
+  assert.equal(arrivals.length, 1, 'one native SSE turn animates once')
+  assert.deepEqual(arrivals[0].frames.map(frame => frame.opacity), ['0', '1'])
+  assert.ok(arrivals[0].duration > 0)
+  assert.equal(arrivals[0].state, 'running')
+}
