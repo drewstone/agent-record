@@ -168,6 +168,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await liveConnection
       const tree = page.getByRole('treegrid', { name: 'Trace timeline', exact: true })
       await tree.waitFor()
+      await page.getByRole('button', { name: 'Expand Worker', exact: true }).click()
       assert.ok(Number(await tree.getAttribute('aria-rowcount')) >= 124)
       assert.ok(await tree.getByRole('row').count() < 60, '124 agents retain a bounded Waterfall window')
       assert.equal(await page.locator('.fw-kind-rule').count(), 0)
