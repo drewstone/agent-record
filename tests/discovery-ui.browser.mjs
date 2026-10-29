@@ -99,7 +99,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('button', { name: 'root', exact: true }).click()
       await page.locator('.rj-drill').waitFor()
       assert.match(page.url(), /agent=root/)
-      assert.deepEqual(await page.locator('.rj-drill li a').allTextContents(), ['answer.ts', 'proof.log'])
+      assert.deepEqual(await page.locator('.rj-drill li code').allTextContents(), ['answer.ts', 'proof.log'])
       const updated = { ...workspace(), releases: [...releases, { ...releases[1], release: 'rc3', taggedAt: iso(250), passed: 2, steps: releases[1].steps.map(step => ({ ...step, state: 'pass' })) }], best: 'rc3' }
       emit(updated)
       await page.getByText('every step passes', { exact: false }).waitFor()
@@ -142,7 +142,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       const bar = page.locator('.fw-bar').first()
       await bar.waitFor()
       const bounds = await bar.boundingBox()
-      await page.mouse.move(bounds.x + Math.min(6, bounds.width - 1), bounds.y + bounds.height / 2)
+      await bar.hover({ position: { x: Math.min(6, bounds.width - 1), y: bounds.height / 2 } })
       const card = page.locator('.fw-card')
       await card.waitFor()
       const metric = label => card.locator('.fw-card-table > div').filter({ has: page.getByText(label, { exact: true }) }).locator('dd')
