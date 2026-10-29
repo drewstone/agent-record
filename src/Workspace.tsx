@@ -1,4 +1,4 @@
-import type { LiveRunTransport } from './workspace/LiveRun.js'
+import type { LiveRunTransport } from '@tangle-network/sandbox-ui/run/live'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { PageHeader, SegmentedControl } from '@tangle-network/ui/primitives'
