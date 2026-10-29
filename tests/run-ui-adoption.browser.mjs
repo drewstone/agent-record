@@ -82,6 +82,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       await page.goto(`http://127.0.0.1:${server.address().port}/run/lane-g/topology`)
       assert.equal(await page.evaluate(() => document.characterSet), 'UTF-8')
       await page.locator('.rp-topo').waitFor()
+      await page.getByRole('button').filter({ hasText: /^1 failed/ }).click()
       await page.locator('.ag-agent-card[data-status="failed"]').waitFor()
       if (width === 1280) {
         await page.setViewportSize({ width: 1322, height: 900 })
@@ -118,6 +119,8 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       await choose('Agent 1')
       await page.locator('.ag-agent-card[data-status="needs-you"] button').filter({ hasText: 'Respond' }).waitFor()
       const respond = page.locator('.ag-agent-card[data-status="needs-you"] button').filter({ hasText: 'Respond' })
+      const footer = await respond.evaluate(button => { const row = button.parentElement, box = row.getBoundingClientRect(); return [...row.children].map(child => {const r=child.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,inside:r.left>=box.left&&r.right<=box.right}}) })
+      assert.ok(footer.every(item => item.inside), 'Unknown usage and Respond fit within the actual compact card')
       await capture('before-respond')
       await respond.click({ timeout: 5000 })
       await page.locator('aside[aria-label="Agent 1"]').waitFor()

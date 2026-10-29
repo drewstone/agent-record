@@ -6,7 +6,7 @@ export async function proveTopology(page, width, theme, evidence, { nodes, works
   const choose = async name => {
     await page.getByRole('button', { name: 'Go to agent', exact: true }).click()
     await page.locator('.rp-lb input').fill(name)
-    await page.getByRole('option', { name: `${name} —`, exact: true }).click()
+    await page.getByRole('option').filter({ has: page.locator('.nm').getByText(name, { exact: true }) }).click()
   }
   await choose('root')
   const root = page.locator(width === 390 ? '.ag-phone-select[data-agent-id]' : '.react-flow__node[data-id]').filter({ has: page.getByText('root', { exact: true }) })
