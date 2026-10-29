@@ -1,3 +1,4 @@
+import { proveTopology } from './topology-ui-journey.mjs'
 import { observeArrivalMotion, proveArrivalMotion, proveFailedToolSummary } from './conversation-ui-journey.mjs'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -36,7 +37,7 @@ nodes[3].status = 'succeeded'; nodes[3].end = iso(300); nodes[3].shipped = 8
 nodes[0].restarts = []
 const fullRootUsage = nodes[0].usage
 
-test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures and navigates 124 agents', { timeout: 120_000 }, async () => {
+test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures and navigates 124 agents', { timeout: 180_000 }, async () => {
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
   let theme = 'light', alive = true
@@ -351,6 +352,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       const heatmap = page.locator('section[aria-label="Tool calls by agent and tool"]')
       await heatmap.getByRole('button', { name: 'Next', exact: true }).click()
       assert.ok(await heatmap.locator('.rh').count() <= 14)
+      await proveTopology(page, width, theme, evidence, { nodes, workspace, emit })
       alive = false
       await open()
       await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
