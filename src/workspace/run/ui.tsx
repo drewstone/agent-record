@@ -1,6 +1,7 @@
 import { RunStatusIcon } from '@tangle-network/ui/run'
-import { createContext, type CSSProperties, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createContext, type CSSProperties, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { usePhone } from '../use-phone.js'
 import { type Agent, abbr, count, lat, type RunModel, elapsed, type ToolStats, usd } from './model.js'
 
 /** The run page's glyphs, 16 px strokes in the text colour. */
@@ -441,20 +442,4 @@ export function useRows(scroller: RefObject<HTMLElement | null>, count: number, 
   return { first, last, before: first * row, after: Math.max(0, (count - last) * row), width: view.width }
 }
 
-export function useNarrow() {
-  const query = '(max-width: 720px)'
-  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
-  useEffect(() => {
-    const list = window.matchMedia(query)
-    const change = () => setNarrow(list.matches)
-    list.addEventListener('change', change)
-    return () => list.removeEventListener('change', change)
-  }, [])
-  return narrow
-}
-
-export const useStable = <T,>(fn: T) => {
-  const ref = useRef(fn)
-  ref.current = fn
-  return useCallback((...args: unknown[]) => (ref.current as unknown as (...a: unknown[]) => unknown)(...args), []) as unknown as T
-}
+export const useNarrow = () => usePhone('(max-width: 720px)')
