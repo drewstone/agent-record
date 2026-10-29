@@ -1,4 +1,3 @@
-import { duration } from '@tangle-network/charts'
 import { ENDING_GLYPH, hostWords } from './play-standing.js'
 
 export type StatusTone = 'pass' | 'live' | 'attention' | 'fail' | 'neutral'
@@ -11,11 +10,11 @@ export interface Status {
 }
 export type StatusInput =
   /**
-   * A run, from the catalog's `state`, Runtime's `reason` and the Lab's `stopCause`; `elapsedMs` adds a running run's age.
+   * A run, from the catalog's `state`, Runtime's `reason` and the Lab's `stopCause`; the report supplies the ending word.
    * A crash needs a person only while it is fresh: `endedAt` under 24 h before `now` and `newerStarted` known false (no
    * newer run of the same play has started). A caller that cannot tell leaves `newerStarted` out, and the crash is past.
    */
-  | { axis: 'run'; state: string | null | undefined; reason?: string | null; stopCause?: string | null; elapsedMs?: number | null; endedAt?: string | null; newerStarted?: boolean; now?: number }
+  | { axis: 'run'; state: string | null | undefined; reason?: string | null; stopCause?: string | null; endedAt?: string | null; newerStarted?: boolean; now?: number }
   /**
    * A verdict against a check. `current: false` is a verdict under a retired check version, named by `checker`;
    * `waiting` is a live run waiting on an undecided check; `passed`/`total` are workloads. Verdict `held` is a pass through
@@ -36,15 +35,13 @@ function freshCrash({ endedAt, newerStarted, now = Date.now() }: Extract<StatusI
 }
 
 function runAxis(input: Extract<StatusInput, { axis: 'run' }>): Status {
-  const { state, reason, stopCause, elapsedMs } = input
+  const { state, reason, stopCause } = input
   const why = `${stopCause ?? ''} ${reason ?? ''}`
   switch (state) {
     case 'running':
     case 'building':
-    case 'live': {
-      const age = elapsedMs !== null && elapsedMs !== undefined && elapsedMs > 0 ? ` ${duration(elapsedMs)}` : ''
-      return status('run', `Running${age}`, 'live', ENDING_GLYPH.live)
-    }
+    case 'live':
+      return status('run', 'Running', 'live', ENDING_GLYPH.live)
     case 'winner':
     case 'solved':
       return status('result', 'Passed', 'pass', ENDING_GLYPH.solved)
