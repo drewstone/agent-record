@@ -417,7 +417,7 @@ export function checkVerdict(check: CheckDoc | null | undefined): CheckVerdict {
 export function agentFacts(m: RunModel, a: Agent) {
   return [
     { label: 'Tokens', value: a.byClass ? `${count(a.byClass.input)} in / ${count(a.byClass.output)} out / ${count(a.byClass.cacheRead)} cached` : a.tokens !== null ? `${count(a.tokens)} total · split not recorded` : 'Not recorded' },
-    { label: 'Cost', value: a.listUsd !== null ? `${a.node.usage?.listComplete === false ? '≥' : ''}${usd(a.listUsd)} catalog` : a.billedUsd !== null ? `${usd(a.billedUsd)} billed` : 'Not recorded' },
+    { label: 'Cost', value: a.listUsd !== null ? `${a.node.usage?.listComplete === false ? '≥' : ''}${usd(a.listUsd)} catalog` : a.billedUsd !== null ? `${a.node.usage?.billedComplete === false ? '≥' : ''}${usd(a.billedUsd)} billed` : 'Not recorded' },
     { label: 'Billed cost', value: a.billedUsd !== null ? `${a.node.usage?.billedComplete === false ? '≥' : ''}${usd(a.billedUsd)}` : 'Not recorded' },
     { label: 'Model calls', value: count(a.modelCalls) },
     { label: 'Model latency', value: `${lat(a.latency.p50)} p50 / ${lat(a.latency.p90)} p90 / ${lat(a.latency.p99)} p99` },
