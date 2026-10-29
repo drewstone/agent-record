@@ -212,7 +212,7 @@ pnpm typecheck
 pnpm test
 pnpm build:example
 pnpm exec playwright install chromium
-pnpm test:run-ui
+node --test tests/record-usage.browser.mjs tests/example.browser.mjs
 pnpm pack
 ```
 

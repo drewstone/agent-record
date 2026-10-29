@@ -263,6 +263,16 @@
   margin: 2px 0;
 }
 
+.agent-record .ui-plot-tooltip .tooltip-status.tooltip-error {
+  color: var(--ar-c-neutral);
+  font-weight: 600;
+}
+.agent-record .ui-plot-tooltip .tooltip-status.tooltip-ok {
+  color: var(--ar-c-ok);
+}
+.agent-record .ui-plot-tooltip .tooltip-status.tooltip-warn {
+  color: var(--ar-c-run);
+}
 .agent-record .ui-plot-tooltip .tooltip-usage {
   font: var(--ar-text-s)/1.3 var(--ar-font-body);
   color: var(--ar-c-action);
@@ -1120,7 +1130,14 @@
 .ar-ws .graph-node:hover { transform: translateY(-1px); border-color: var(--ar-fg-faint); }
 .ar-ws .graph-node.dim { opacity: .35; }
 .agent-record.ar-ws .graph-node.on { border-color: var(--ws-accent); box-shadow: 0 0 0 1px var(--ws-accent); }
-
+.ar-ws .graph-node.kind-result { border-left: 3px solid var(--ws-accent); }
+.ar-ws .graph-node.kind-claim { border-left: 3px solid color-mix(in srgb, var(--ws-accent) 60%, transparent); }
+.ar-ws .graph-node.kind-check { border-left: 3px solid var(--ar-fg); }
+.ar-ws .graph-node.kind-source { border-left: 3px solid var(--ar-c-info); }
+.ar-ws .graph-node.kind-run, .ar-ws .graph-node.kind-agent, .ar-ws .graph-node.kind-session { border-left: 3px solid var(--ar-fg-muted); }
+.ar-ws .graph-node.kind-artifact, .ar-ws .graph-node.kind-finding { border-left: 3px solid var(--ar-c-info); }
+.ar-ws .graph-node.kind-verdict { border-left: 3px solid var(--ar-c-neutral); }
+.ar-ws .graph-node.kind-publication, .ar-ws .graph-node.kind-profile { border-left: 3px solid var(--ar-fg-muted); }
 .ar-ws .graph-node-title { width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 14px/1.3 var(--ar-font-body); }
 .ar-ws .graph-node-sub { display: block; width: 100%; font: var(--ar-text-s)/1.3 var(--ar-font-body); color: var(--ar-fg-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ar-ws .graph-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--ar-fg-muted); }
