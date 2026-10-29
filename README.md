@@ -31,7 +31,7 @@ Load the renderer stylesheet in the host's main stylesheet before its Tailwind u
 
 
 Your application loads the data and decides which content may be displayed.
-The component makes no network requests, stores no data, starts no agents, and does not change your URL.
+Sandbox UI owns the retained agent hierarchy and conversation. The host owns record selection and URLs. The component makes no network requests, stores no data, or starts agents.
 It can render on the server; hydration enables the interactive controls.
 Use a client component when embedding it in a React Server Components application.
 

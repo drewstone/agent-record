@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { parseRecord, type RunRecord } from '@drewstone/agent-record/record'
 import { fromResearchPublication } from '@drewstone/agent-record/adapters/research-publication'
 import { Gantt, LIVE_SERIES } from '@tangle-network/charts/react'
-import { Conversation, indexRecord, withPrompts } from '@tangle-network/sandbox-ui/run/record'
+import { AgentTree, Conversation, indexRecord, withPrompts } from '@tangle-network/sandbox-ui/run/record'
 import './style.css'
 import { publicationIds, readPublication } from './publications.js'
 
@@ -20,7 +20,7 @@ function Viewer({ record }: { record: RunRecord }) {
   const colors = Object.fromEntries([...new Set(events.map(event => event.category))].map((category, i) => [category, LIVE_SERIES[i % LIVE_SERIES.length]!]))
   const lanes = events.map(event => ({ id: event.id, label: event.label, spans: [{ start: Date.parse(event.at), end: Date.parse(event.end ?? event.at), state: event.category, note: `${event.category} · ${event.at}` }] }))
   return <section className="demo-viewer" aria-label="Recorded activity">
-    <label>Agent <select aria-label="Agent" value={actor} onChange={event => { choose(event.target.value); select(undefined) }}>{index.actors.map(node => <option key={node.id} value={node.id}>{node.label}</option>)}</select></label>
+    <AgentTree index={index} actor={actor} cutoff={index.end} select={id => { choose(id); select(undefined) }} />
     <p>Recorded timestamps are points; only events with a recorded end have duration. Select an event to open its conversation and source.</p>
     <Gantt lanes={lanes} colors={colors} axis={clock} span={(start, end) => end === start ? 'Timestamp only' : `${((end - start) / 1000).toFixed(2)} s`} selectedId={selected} onSelect={select} maxHeight={360} />
     <Conversation index={index} actor={actor} cutoff={index.end} query="" category="all" selected={selected} />
