@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+import { publicationIds, readPublication } from '../examples/react/publications.ts'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ResearchReport } from '../dist/index.js'
@@ -92,26 +93,9 @@ test('duplicate identities and inverted reporting windows are rejected', () => {
 })
 
 test('all published events and source references survive attached report validation', async () => {
-  const ids = [
-    'ftqc-zips-2026-08-05-r1',
-    'fc-audit-smoke-a',
-    'q-conj-entropy-bcww-repair',
-    'q-q36-lw6-unbounded-ladder',
-    'q-ca-bcww-shareable-pkg',
-  ]
   let count = 0
-  for (const id of ids) {
-    const record = fromResearchPublication(
-      JSON.parse(
-        await readFile(
-          new URL(
-            '../examples/react/public/records/' + id + '.json',
-            import.meta.url,
-          ),
-          'utf8',
-        ),
-      ),
-    )
+  for (const id of publicationIds) {
+    const record = fromResearchPublication(JSON.parse(await readPublication(id)))
     const data = raw()
     data.plays[0].record = record
     const parsed = parseResearchReport(data)

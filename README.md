@@ -264,7 +264,7 @@ pnpm build
 pnpm dev
 ```
 
-The example uses reviewed records from the research site.
+The example and publication checks read the original research repository at the immutable revision and digests in [sources.json](docs/evidence/sources.json). The duplicate captures are retained in the [archive](https://github.com/drewstone/agent-record/tree/archive/record-examples-20261029/examples/react/public/records). Local uploads and the report CLI continue to read supplied files.
 Redactions and excerpts are labeled; the original discovery capture is incomplete.
 Open a record file to inspect your own data entirely in the browser.
 
