@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { versionGraphDocumentSchema } from '../workspace-model.js'
 import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
@@ -7,7 +7,7 @@ import { flagLabel, layoutVersionGraph, pagesVersion, PICKED, runGraphModel, sco
 import { RunRoles } from './RoleScorecards.js'
 import { Lines, VersionGraph as SharedVersionGraph } from '@tangle-network/charts/react'
 import type { RunWorkspaceDocument } from './RunWorkspace.js'
-import type { GraphModel, GraphNode } from './version-graph.js'
+import type { GraphModel } from './version-graph.js'
 import { Picker } from './run/ui.js'
 
 /** Discovery owns the lane filter and inspector; Charts owns the version drawing. */
@@ -17,7 +17,7 @@ export function VersionGraph({ model, selected, onSelect, label }: { model: Grap
   const hasMerges = model.nodes.some(node => node.kind === 'integrate')
   const allLanes = useMemo(() => layoutVersionGraph(model).lanes, [model])
   const colorOf = new Map(allLanes.map((item, i) => [item.id, i % 8]))
-  return <div className="version-graph">
+  return <div className="version-graph tgc-version-graph">
       <div className="vg-toolbar" role="group" aria-label={`${label}: lanes`}>
         {/* Many lanes read as one control, not a row of chips (REVIEW-8: 17 chips were chrome words on Built). */}
         {allLanes.length > 5 ? (
