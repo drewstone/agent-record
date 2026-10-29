@@ -1,3 +1,4 @@
+import { observeArrivalMotion, proveArrivalMotion } from './conversation-ui-journey.mjs'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { readFile, mkdir } from 'node:fs/promises'
@@ -158,8 +159,10 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.equal(requests.length, initialReads, 'the live tail has no periodic transcript HTTP fetches')
       assert.equal(agentStreams.size, 1, 'only the selected agent has a native SSE connection')
       const navigation = await page.evaluate(() => performance.getEntriesByType('navigation').length)
+      await observeArrivalMotion(page)
       publish(runId, 'rows', { generation: 'fixture', events: [{ seq: 209, at: iso(184), attempt: 6, event: { kind: 'text_delta', text: 'Native SSE arrival.' } }], lastSeq: 209, alive: true })
       await page.getByText('Native SSE arrival.', { exact: true }).waitFor()
+      await proveArrivalMotion(page)
       assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation').length), navigation)
       const beforeReconnect = connections.length
       for (const response of agentStreams.keys()) response.end()
@@ -186,6 +189,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.ok(await bubble.count(), 'initial prompt uses the shared right-aligned user message')
       await page.getByRole('button', { name: 'Full prompt', exact: true }).click()
       assert.ok((await page.locator('[data-timeline-step="user"]').innerText()).includes(prompt.trim()))
+      await (await import('./conversation-ui-journey.mjs')).proveToolPreview(page, evidence, width, theme)
       await page.getByRole('button', { name: /Read.*proof.txt/i }).click()
       await page.getByText('Exact retained evidence, with source provenance.', { exact: true }).waitFor()
       await page.getByRole('button', { name: 'Latest', exact: true }).click()
@@ -233,11 +237,20 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByText('Retained native row 0005.', { exact: true }).waitFor()
       assert.equal(await page.getByText('Retained native row 0004.', { exact: true }).count(), 0, 'the bounded window evicts the oldest five rows')
       assert.ok(await page.locator('.virtual-row').count() < 100, 'two thousand retained rows keep a bounded DOM')
-      const anchor = await page.getByText('Retained native row 0005.', { exact: true }).boundingBox()
+      await conversation.hover(); await page.mouse.wheel(0, 500)
+      await page.waitForTimeout(250)
+      const anchor = await conversation.locator('[data-entry]').evaluateAll(elements => {
+        const pane = elements[0].closest('.conversation-scroll').getBoundingClientRect()
+        const element = elements.find(item => { const box = item.getBoundingClientRect(); return box.top > pane.top + 80 && box.bottom < pane.bottom - 40 })
+        return element && { id: element.dataset.entry, top: element.getBoundingClientRect().top }
+      })
+      assert.ok(anchor, 'a retained reader row is visible above the live tail')
       publish(worker, 'rows', { generation: 'bounded-window', events: [{ seq: 2005, at: iso(2196), attempt: 2006, event: { kind: 'text_delta', text: 'New tail while reading history.' } }], lastSeq: 2005, alive: true })
       await page.waitForTimeout(250)
       assert.equal(await page.getByText('New tail while reading history.', { exact: true }).count(), 0, 'a reader scrolled above the tail is not pulled to a new arrival')
-      assert.ok(anchor, 'the retained head is reachable by keyboard')
+      const afterAnchor = await conversation.locator(`[data-entry=${JSON.stringify(anchor.id)}]`).boundingBox()
+      console.log('Reader position across native append', JSON.stringify({ theme, width, anchor, afterAnchor, scroll: await conversation.evaluate(element => ({ top: element.scrollTop, height: element.clientHeight, anchor: getComputedStyle(element).overflowAnchor, ancestors: [...(function* () { let node=element; while(node) { yield { name: node.className, anchor: getComputedStyle(node).overflowAnchor }; node=node.parentElement } })()] })) }))
+      assert.ok(afterAnchor && Math.abs(afterAnchor.y - anchor.top) < 2, 'an SSE append preserves the visible reader row within two pixels')
       await conversation.focus(); await page.keyboard.press('End')
       await page.getByText('New tail while reading history.', { exact: true }).waitFor()
       publish(worker, 'end', { lastSeq: 2005 })
