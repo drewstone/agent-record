@@ -147,6 +147,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.ok(await bubble.count(), 'initial prompt uses the shared right-aligned user message')
       await page.getByRole('button', { name: 'Full prompt', exact: true }).click()
       assert.ok((await page.locator('[data-timeline-step="user"]').innerText()).includes(prompt.trim()))
+      await (await import('./conversation-ui-journey.mjs')).proveToolPreview(page, evidence, width, theme)
       await page.getByRole('button', { name: /Read.*proof.txt/i }).click()
       await page.getByText('Exact retained evidence, with source provenance.', { exact: true }).waitFor()
       await page.getByRole('button', { name: 'Latest', exact: true }).click()
