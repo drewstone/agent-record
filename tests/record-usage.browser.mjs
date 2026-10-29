@@ -21,8 +21,8 @@ test('record usage keeps original source actions and measured semantics through 
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
   const scratch = await mkdtemp(resolve('.usage-host-')), entry = resolve(scratch, 'host.js')
-  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord}from${JSON.stringify(resolve(assets,'index.js'))};
-const record=await fetch('/retained-record').then(response=>response.json());const initial={runId:record.runId,nodeId:'root',view:'usage'};
+  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,parseRecord}from${JSON.stringify(resolve(assets,'index.js'))};
+const record=parseRecord(await fetch('/retained-record').then(response=>response.json()));const initial={runId:record.runId,nodeId:'root',view:'usage'};
 function Host(){const[selection,set]=useState(initial);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
   const built = await build({ configFile:false, logLevel:'silent', resolve:{dedupe:['react','react-dom']}, define:{'process.env.NODE_ENV':JSON.stringify('production')}, build:{write:false,lib:{entry,formats:['es'],fileName:()=> 'host.js'},rollupOptions:{output:{chunkFileNames:'usage/[name]-[hash].js'}}} })
   const chunks = new Map((Array.isArray(built)?built:[built]).flatMap(result=>result.output).map(item=>[item.fileName,item.type==='chunk'?item.code:item.source]))
@@ -42,7 +42,7 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
       const page=await context.newPage(), errors=[], began=Date.now(), captions={}
       page.on('pageerror',error=>{errors.push(error.message);console.error('usage host:',error.message)})
       await page.goto(`http://127.0.0.1:${server.address().port}/?theme=${theme}`)
-      await page.getByRole('button',{name:'Return to full usage',exact:true}).waitFor({timeout:10_000}).catch(async error=>{if(evidence)await page.screenshot({path:`${evidence}/host-failure-${theme}-${width}.png`,fullPage:true});throw new Error(JSON.stringify({errors,chunks:[...chunks.keys()]}),{cause:error})})
+      await page.getByRole('button',{name:'Return to full usage',exact:true}).waitFor({timeout:10_000}).catch(async error=>{if(evidence)await page.screenshot({path:`${evidence}/host-failure-${theme}-${width}.png`,fullPage:true});throw new Error(JSON.stringify({errors}),{cause:error})})
       const reset=async()=>{await page.getByRole('button',{name:'Return to full usage',exact:true}).click();await page.getByRole('tab',{name:'Usage',exact:true}).waitFor()}
       for(const metric of ['cumulative','response','tool-time'])for(const axis of ['time','order']){
         await reset()
