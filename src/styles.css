@@ -614,17 +614,6 @@
   font-size: var(--ar-text-s);
   padding: 0.4rem 0.65rem;
 }
-.agent-record .conversation-scroll {
-  height: 29rem;
-  overflow: auto;
-  scroll-behavior: auto;
-  overscroll-behavior: contain;
-}
-.agent-record .conversation-scroll .chat-empty {
-  padding: 1rem;
-  font: var(--ar-text-m)/1.5 var(--ar-font-body);
-  color: var(--ar-fg-muted);
-}
 .agent-record .navigation {
   display: flex;
   flex-wrap: wrap;
@@ -1478,22 +1467,6 @@
 .ar-ws .spend-value .unknown { color: var(--ar-fg-muted); }
 .ar-ws .plays-filters { padding: 0; border-bottom: 0; }
 .ar-ws .plays-filters input[type="search"] { min-width: 260px; }
-/* Shared chat steps; only transcript turn grouping and source annotations are local. */
-.agent-record .ar-turn { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; padding-top: 12px; border-top: 1px solid var(--ar-border); }
-.agent-record .ar-turn time, .agent-record .ar-idle-event time { flex: none; color: var(--ar-fg-muted); font: var(--ar-text-s)/1.5 var(--ar-font-body); }
-.agent-record .ar-idle-event { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 4px 0; }
-.agent-record .virtual-row { display: flow-root; }
-.agent-record .chat-row.selected { box-shadow: -10px 0 0 -8px var(--accent-text); }
-.agent-record .chat-row.flagged { box-shadow: -10px 0 0 -8px var(--ar-c-neutral); }
-.agent-record .chat-row > :is(.publication-note, .clip-note, .event-flags) { margin: 4px 0 8px; }
-.agent-record .ar-prompt-more { display: flex; justify-content: flex-end; margin: 4px 0 0; }
-.agent-record .tool-note { font: var(--ar-text-s)/20px var(--ar-font-body); color: var(--ar-fg-muted); white-space: nowrap; }
-.agent-record .lifecycle-note { display: flex; gap: 8px; align-items: baseline; margin: 8px 0; padding: 0 12px; font: var(--ar-text-s)/1.5 var(--ar-font-body); color: var(--ar-fg-muted); }
-.agent-record .lifecycle-note > span { min-width: 0; overflow-wrap: anywhere; }
-.agent-record .poll-calls { margin: 0; padding: 4px 12px 8px; list-style: none; max-height: 18rem; overflow: auto; }
-.agent-record .poll-calls li { display: flex; gap: 12px; padding: 2px 0; font: var(--ar-text-s)/1.5 var(--ar-font-body); color: var(--ar-fg-muted); }
-.agent-record .poll-calls .mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.agent-record .transcript-edge { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; }
 /* Final output: what the run was asked to deliver, first on the run page. */
 .ar-ws .ws-final { background: var(--ws-panel); border: 1px solid var(--ar-border); border-radius: 10px; padding: 12px 16px; min-width: 0; }
 .ar-ws .ws-final-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }

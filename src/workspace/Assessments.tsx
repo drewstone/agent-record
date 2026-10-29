@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { AssessmentRow, AssessmentsDocument, Dimension, DimensionsDocument } from '../assessment.js'
-import type { EventFlag } from '../viewer/Conversation.js'
+import type { EventFlag } from '@tangle-network/sandbox-ui/run'
 import type { RecordIndex } from '../viewer/model.js'
 import { utcTime } from '../viewer/model.js'
 import type { PlayDocument } from '../workspace-model.js'

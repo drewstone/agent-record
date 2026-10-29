@@ -5,7 +5,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { FinalOutputPanel, finalOutputSchema } from '../dist/index.js'
-import { externalHref, judgeBasis, questionLabel, scoreLabel, verdictView } from '../src/workspace/final-output.ts'
+import { externalHref, judgeBasis, questionLabel, scoreLabel, verdictView, byteSize, sameOriginHref } from '../src/workspace/final-output.ts'
 
 const readout = {
   status: 'complete',
@@ -110,4 +110,17 @@ test('the run page shows the latest trace review in plain words, and nothing whe
 test('trace review questions and scores read as plain words', () => {
   assert.equal(questionLabel('coordination-waste'), 'Agents coordinate without waste')
   assert.equal(questionLabel('some_new-question'), 'Some new question')
+})
+
+test('final output sizes and links never invent a value', () => {
+  assert.equal(byteSize(null), 'size unknown')
+  assert.equal(byteSize(undefined), 'size unknown')
+  assert.equal(byteSize(0), '0 B')
+  assert.equal(byteSize(12_700), '12.4 KB')
+  assert.equal(byteSize(5 * 1024 * 1024), '5.0 MB')
+  const page = 'https://lab.example.com/run/x'
+  assert.equal(sameOriginHref('/api/discovery/runs/x/file/a.md', page), '/api/discovery/runs/x/file/a.md')
+  assert.equal(sameOriginHref('https://example.com/a.md', page), null)
+  assert.equal(sameOriginHref('javascript:alert(1)', page), null)
+  assert.equal(sameOriginHref(null, page), null)
 })
