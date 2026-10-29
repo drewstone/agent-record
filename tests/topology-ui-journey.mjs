@@ -9,7 +9,7 @@ export async function proveTopology(page, width, theme, evidence, { nodes, works
     await page.getByRole('option', { name: `${name} —`, exact: true }).click()
   }
   await choose('root')
-  const root = page.locator(width === 390 ? '.ag-phone-select[data-agent-id]').filter({ has: page.getByText('root', { exact: true }) }) : page.locator('.react-flow__node[data-id]').filter({ has: page.getByText('root', { exact: true }) })
+  const root = page.locator(width === 390 ? '.ag-phone-select[data-agent-id]' : '.react-flow__node[data-id]').filter({ has: page.getByText('root', { exact: true }) })
   await root.locator('.ag-agent-card').waitFor()
   await root.scrollIntoViewIfNeeded()
   const identity = root.locator('[data-agent-identity]')
