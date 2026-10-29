@@ -380,9 +380,9 @@ export function offset(ms: number): string {
   const m = Math.floor((s % 3600) / 60)
   return `+${h ? `${h}:${pad(m)}` : m}:${pad(s % 60)}`
 }
-export const count = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n.toLocaleString('en-US'))
-export const abbr = (n: number | null | undefined) =>
-  n === null || n === undefined ? '—' : new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: n >= 1e8 ? 0 : n >= 1e6 ? 2 : 1 }).format(n)
+const numberFormat = new Intl.NumberFormat('en-US'), compactFormats = [0, 1, 2].map(maximumFractionDigits => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits }))
+export const count = (n: number | null | undefined) => n == null ? '—' : numberFormat.format(n)
+export const abbr = (n: number | null | undefined) => n == null ? '—' : compactFormats[n >= 1e8 ? 0 : n >= 1e6 ? 2 : 1]!.format(n)
 export const usd = (v: number | null | undefined) => (v === null || v === undefined ? '—' : v >= 100 ? `$${v.toFixed(0)}` : `$${v.toFixed(2)}`)
 
 /** The play check as the run document carries it (`run.check`). */
