@@ -69,7 +69,7 @@ function streamRecord(runId: string, node: string, nodes: StreamNode[], rows: St
 /** `chooser` false: the page around it already chooses the agent (the run page's agent list), so no picker of its own. */
 export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRecorded, onEmpty, chooser = true, opening }: { runUrl: string; runId: string; alive: boolean; selected: string | null; onSelect: (node: string) => void; onRecorded?: () => void; onEmpty?: () => void; chooser?: boolean; opening?: { text: string; at: string } }) {
   const node = selected ?? runId
-  const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; more: boolean; loading: boolean; error: string | null; trimmed: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, more: false, loading: true, error: null, trimmed: false, history: false, emptyTail: false })
+  const [state, setState] = useState<{ rows: StreamRow[]; nodes: StreamNode[]; earlier: boolean; more: boolean; loading: boolean; error: string | null; generation?: string; ended: boolean; history: boolean; emptyTail: boolean }>({ rows: [], nodes: [], earlier: false, more: false, loading: true, error: null, ended: false, history: false, emptyTail: false })
   const [reload, setReload] = useState(0)
   const [beginning, setBeginning] = useState(false)
   const older = useRef<(() => void) | null>(null)
@@ -77,28 +77,56 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
   const wasAlive = useRef(alive)
   const windowState = useRef({ node, rows: [] as StreamRow[], earlier: false, generation: undefined as string | undefined, first: null as number | null, last: null as number | null })
   useEffect(() => {
-    let cancelled = false
-    let timer = 0
+    let cancelled = false, retry = 0, source: EventSource | undefined
     const controller = new AbortController()
-    const sameNode = windowState.current.node === node
-    // When the run settles, retain the displayed window and fetch the final suffix once.
-    const retain = sameNode && wasAlive.current && !alive
+    const retain = windowState.current.node === node && wasAlive.current && !alive
     wasAlive.current = alive
-    let rows: StreamRow[] = retain ? windowState.current.rows : []
-    let earlier = retain ? windowState.current.earlier : false
-    let generation = retain ? windowState.current.generation : undefined
-    let first = retain ? windowState.current.first : null
-    let last = retain ? windowState.current.last : null
-    let readingHistory = false
-    let forwardPending = false
-    let olderPending = false
-    // A settled agent reads from its start; its pages arrive when the reader asks for more.
+    let { rows, earlier, generation, first, last } = retain ? windowState.current : { rows: [] as StreamRow[], earlier: false, generation: undefined, first: null as number | null, last: null as number | null }
+    let readingHistory = false, pending = false
     const fromHead = beginning || (!alive && !retain)
-    setState((prior) => ({ ...prior, rows, earlier, more: false, loading: true, error: null, trimmed: retain && prior.trimmed, history: false, emptyTail: false }))
+    const close = () => { source?.close(); source = undefined; window.clearTimeout(retry) }
+    const fail = (error: unknown) => { if (!cancelled) setState(prior => ({ ...prior, loading: false, error: error instanceof Error ? error.message : String(error) })) }
+    setState(prior => ({ ...prior, rows, earlier, more: false, loading: true, error: null, history: false, emptyTail: false, ended: false }))
+    const receive = (page: Partial<StreamPage> & { events: StreamRow[] }, direction: 'tail' | 'head' | 'after' | 'before') => {
+      if (cancelled) return
+      const fresh = !rows.length || direction === 'tail' || direction === 'head' || page.reset || (page.generation !== undefined && generation !== undefined && page.generation !== generation)
+      const merged = fresh ? page.events : direction === 'before' ? [...page.events, ...rows] : [...rows, ...page.events]
+      generation = page.generation ?? generation
+      if (fresh) { first = page.firstSeq ?? page.events[0]?.seq ?? null; last = page.lastSeq ?? page.events.at(-1)?.seq ?? null }
+      else if (direction === 'before') first = page.firstSeq ?? first
+      else last = page.lastSeq ?? page.events.at(-1)?.seq ?? last
+      rows = [...new Map(merged.map(row => [row.seq, row])).values()].sort((a, b) => a.seq - b.seq)
+      const trimmed = rows.length > RETAIN
+      if (trimmed) rows = readingHistory ? rows.slice(0, RETAIN) : rows.slice(-RETAIN)
+      if (trimmed && !readingHistory) first = rows[0]?.seq ?? first
+      if (direction !== 'after' || fresh) earlier = page.hasEarlier ?? (first !== null && first > 0)
+      if (trimmed && direction !== 'before') earlier = true
+      windowState.current = { node, rows, earlier, generation, first, last }
+      setState(prior => ({ rows, nodes: page.nodes ?? prior.nodes, earlier, generation, more: direction === 'before' ? prior.more : fromHead && !!page.hasMore, loading: false, error: null, history: readingHistory, emptyTail: page.alive === false && !rows.length && first === null && last === null, ended: page.alive === false }))
+    }
+    const connect = () => {
+      if (cancelled || !alive || fromHead || readingHistory) return
+      close()
+      const query = new URLSearchParams()
+      if (last !== null) query.set('after', String(last))
+      if (generation) query.set('generation', generation)
+      const current = source = new EventSource(`${runUrl}/agents/${encodeURIComponent(node)}/stream?${query}`)
+      current.onopen = () => { if (!cancelled) setState(prior => ({ ...prior, error: null })) }
+      for (const event of ['rows', 'reset']) current.addEventListener(event, message => {
+        if (cancelled || readingHistory || source !== current) return
+        try {
+          const frame = JSON.parse((message as MessageEvent<string>).data)
+          if (event === 'rows' && !Array.isArray(frame.events)) throw new Error('Invalid live transcript frame')
+          receive({ ...frame, events: event === 'reset' ? [] : frame.events, reset: event === 'reset' }, 'after')
+        } catch (error) { fail(error) }
+      })
+      current.addEventListener('end', () => { if (source === current) { close(); setState(prior => ({ ...prior, loading: false, ended: true, emptyTail: !prior.rows.length && first === null && last === null })) } })
+      current.addEventListener('unavailable', () => fail('Live updates are temporarily unavailable'))
+      current.onerror = () => { if (source === current) { close(); if (!cancelled && !readingHistory) retry = window.setTimeout(connect, 1000) } }
+    }
     const load = async (direction: 'tail' | 'head' | 'after' | 'before') => {
-      if (cancelled || (direction === 'before' ? olderPending : forwardPending)) return
-      if (direction === 'before') olderPending = true
-      else forwardPending = true
+      if (cancelled || pending) return
+      pending = true
       const cursor = direction === 'after' ? last : direction === 'before' ? first : direction === 'head' ? LIMIT : null
       try {
         const query = new URLSearchParams({ node, limit: String(LIMIT) })
@@ -108,41 +136,19 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
         if (!response.ok) throw new Error(`Transcript unavailable (HTTP ${response.status})`)
         const page = await response.json() as StreamPage
         if (cancelled) return
-        // A stream that does not start near seq 0 has no head page: read its tail.
-        if (direction === 'head' && !page.events.length) { timer = window.setTimeout(() => void load('tail'), 0); return }
-        const fresh = direction === 'tail' || direction === 'head' || page.reset
-        const merged = fresh ? page.events : direction === 'before' ? [...page.events, ...rows] : [...rows, ...page.events]
-        generation = page.generation
-        if (fresh) { first = page.firstSeq; last = page.lastSeq }
-        else if (direction === 'before') first = page.firstSeq ?? first
-        else last = page.lastSeq ?? last
-        const seen = new Map(merged.map((row) => [row.seq, row]))
-        rows = [...seen.values()].sort((a, b) => a.seq - b.seq)
-        const trimmed = rows.length > RETAIN
-        if (trimmed) rows = readingHistory ? rows.slice(0, RETAIN) : rows.slice(-RETAIN)
-        if (trimmed && !readingHistory) first = rows[0]?.seq ?? first
-        if (direction !== 'after' || page.reset) earlier = page.hasEarlier
-        if (trimmed && direction !== 'before') earlier = true
-        windowState.current = { node, rows, earlier, generation, first, last }
-        const more = fromHead && direction !== 'before' ? page.hasMore : false
-        setState((prior) => ({ rows, nodes: page.nodes, earlier, more: direction === 'before' ? prior.more : more, loading: false, error: null, trimmed: trimmed || prior.trimmed, history: readingHistory, emptyTail: !page.alive && rows.length === 0 && first === null && last === null }))
-        // A live window drains bounded pages before waiting. No periodic requests remain once the endpoint reports settlement.
-        if (!fromHead && direction !== 'before' && page.hasMore && last !== cursor) timer = window.setTimeout(() => void load('after'), 0)
-        else if (!fromHead && direction !== 'before' && page.alive && alive) timer = window.setTimeout(() => void load('after'), 3_000)
-      } catch (error) {
-        if (!cancelled && !controller.signal.aborted) {
-          setState((prior) => ({ ...prior, loading: false, error: error instanceof Error ? error.message : 'Transcript unavailable' }))
-          if (!fromHead && alive && direction !== 'before') timer = window.setTimeout(() => void load('after'), 3_000)
+        if (direction === 'head' && !page.events.length) { queueMicrotask(() => void load('tail')); return }
+        receive(page, direction)
+        if (!fromHead && direction !== 'before') {
+          if (!alive && page.hasMore && last !== cursor) queueMicrotask(() => void load('after'))
+          else connect()
         }
-      } finally {
-        if (direction === 'before') olderPending = false
-        else forwardPending = false
-      }
+      } catch (error) { if (!cancelled && !controller.signal.aborted) { fail(error); connect() } }
+      finally { pending = false }
     }
-    older.current = () => { readingHistory = true; setState((prior) => ({ ...prior, history: !fromHead })); void load('before') }
+    older.current = () => { close(); readingHistory = true; setState(prior => ({ ...prior, history: !fromHead })); void load('before') }
     newer.current = () => void load('after')
     void load(retain && last !== null ? 'after' : fromHead ? 'head' : 'tail')
-    return () => { cancelled = true; controller.abort(); window.clearTimeout(timer); older.current = null; newer.current = null }
+    return () => { cancelled = true; controller.abort(); close(); older.current = null; newer.current = null }
   }, [runUrl, node, alive, reload, beginning])
   useEffect(() => { if (state.emptyTail && onEmpty) onEmpty() }, [state.emptyTail, onEmpty])
   const nodes = state.nodes.some((item) => item.id === node) ? state.nodes : [...state.nodes, { id: node, label: node === runId ? 'Root' : node, parent: null }]
@@ -162,7 +168,7 @@ export function LiveTranscript({ runUrl, runId, alive, selected, onSelect, onRec
     {state.error && <p role="alert">{state.error}</p>}
     {state.rows.filter((row) => row.event?.kind === 'capture_gap' && (!row.at || !Number.isFinite(Date.parse(row.at)))).map((row) => <p className="faint" key={row.seq}>{row.event?.text ?? 'A stream record could not be displayed.'}</p>)}
     {!state.loading && !state.rows.length && !state.error && <p>No stream events have been retained for this agent.</p>}
-    {(!state.loading || state.rows.length > 0) && <Conversation key={`${node}:${beginning}`} index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive} follow={alive && !beginning && !state.history} opening={state.earlier ? undefined : opening} />}
+    {(!state.loading || state.rows.length > 0) && <Conversation key={`${node}:${beginning}:${state.generation ?? ""}`} index={index} actor={node} cutoff={Infinity} query="" category="all" lifecycle live={alive && !state.ended} follow={alive && !state.ended && !beginning && !state.history} opening={state.earlier ? undefined : opening} />}
     {state.more && <p className="transcript-edge"><button type="button" className="link-button" disabled={state.loading} onClick={() => newer.current?.()}>Load more</button></p>}
   </section>
 }
