@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { VirtualList } from './VirtualList.js'
+import { VirtualList } from '@tangle-network/sandbox-ui/run/record'
 import { AgentTimelineColumn } from '@tangle-network/ui/chat'
 import { ConversationRowView, isLifecycle, lastKind, rowItems } from './ConversationRowView.js'
 import type { RecordEvent } from '../record.js'

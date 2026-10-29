@@ -28,6 +28,10 @@ const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` 
 // Recorded totals deliberately differ from the bounded display steps.
 nodes[0].usage = { listUsd: 1.25, listComplete: false, billedUsd: null, billedComplete: false, calls: 413, tokens: 100000, byClass: { input: 70000, output: 20000, cacheRead: 10000 }, latencyMs: { p50: 9000, p90: 20000 }, failures: { model: 3, tool: 2 }, retries: { model: 7, tool: 1 }, tools: { read: { calls: 321, failures: 2, ms: 321000 } }, steps: [...nodes[0].usage.steps, { kind: 'model', startMs: start + 1, endMs: start + 1001, failed: false, byClass: { input: 1, output: 1, cacheRead: 0 } }] }
 
+nodes[0].shipped = 190
+nodes[1].status = 'failed'; nodes[1].end = iso(200)
+nodes[2].status = 'succeeded'; nodes[2].end = iso(300); nodes[2].shipped = 0
+nodes[3].status = 'succeeded'; nodes[3].end = iso(300); nodes[3].shipped = 8
 nodes[0].restarts = []
 const fullRootUsage = nodes[0].usage
 
@@ -92,21 +96,28 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/overview`)
       await page.locator('.ov-meter-steps li').first().waitFor()
       assert.equal(await page.locator('.ov-meter-steps li').count(), 2)
-      assert.equal(await page.locator('.ov-meter-steps [aria-current="step"]').innerText(), '2\nVerify proof')
+      assert.equal(await page.locator('.ov-meter-steps [aria-current="step"] > span').innerText(), 'Verify proof')
+      assert.equal(await page.locator('.ov-meter-steps [aria-current="step"] .ov-step-state').innerText(), 'Stuck')
       assert.match(await page.locator('.rj-releases').innerText(), /rc1–rc2: all 1\/2/)
       assert.equal(await page.locator('.rp-stats').count(), 0, 'only identity, status and elapsed precede the tabs')
       assert.ok(await page.locator('.ov-gantt [data-lane]').count() < 40)
+      assert.ok((await page.locator(`[data-lane="${runId}"] .ov-gantt-count`).textContent()).includes('190'), 'the authoritative recorded count is retained')
+      const failedColor = await page.locator(`[data-lane="${runId}:s1"] [data-state=fail] rect`).evaluate(node => getComputedStyle(node).fill)
+      const rgb = failedColor.match(/[\d.]+/g).map(Number)
+      assert.ok(rgb[0] > rgb[1] * 1.5 && rgb[0] > rgb[2] * 1.5, `failed work is visibly red in ${theme}: ${failedColor}`)
       await page.getByRole('button', { name: 'root', exact: true }).click()
       await page.locator('.rj-drill').waitFor()
+      assert.ok((await page.locator(`[data-lane="${runId}"] .ov-gantt-end title`).textContent()).includes('≥$1.25'), 'selected span retains the recorded duration and cost')
       assert.match(page.url(), /agent=root/)
       assert.deepEqual((await page.locator('.rj-drill code').allTextContents()).slice(0, 2), ['answer.ts', 'src/verifier.rs'], 'source files precede checksum, Markdown and log artifacts')
       assert.ok((await page.locator('.rj-drill dd').first().innerText()).startsWith('Build the complete prover'), 'root Task retains the recorded run objective')
       const files = page.locator('.rj-files')
       assert.ok(await files.getByRole('listitem').count() < 100, '125 changed files render a bounded window')
-      await files.evaluate(el => { el.scrollTop = el.scrollHeight })
+      await files.focus()
+      await page.keyboard.press('End')
       await files.getByText('z-evidence-119.log', { exact: true }).waitFor()
       assert.ok(await files.getByRole('listitem').count() < 100, 'the last changed file is reachable without expanding the DOM')
-      await files.evaluate(el => { el.scrollTop = 0 })
+      await page.keyboard.press('Home')
       await files.getByText('answer.ts', { exact: true }).waitFor()
       const updated = { ...workspace(), releases: [...releases, { ...releases[1], release: 'rc3', taggedAt: iso(250), passed: 2, steps: releases[1].steps.map(step => ({ ...step, state: 'pass' })) }], best: 'rc3' }
       emit(updated)
