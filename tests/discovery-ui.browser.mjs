@@ -237,7 +237,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByText('Retained native row 0005.', { exact: true }).waitFor()
       assert.equal(await page.getByText('Retained native row 0004.', { exact: true }).count(), 0, 'the bounded window evicts the oldest five rows')
       assert.ok(await page.locator('.virtual-row').count() < 100, 'two thousand retained rows keep a bounded DOM')
-      await conversation.evaluate(element => { element.scrollTop = 500 })
+      await conversation.hover(); await page.mouse.wheel(0, 500)
       await page.waitForTimeout(250)
       const anchor = await conversation.locator('[data-entry]').evaluateAll(elements => {
         const pane = elements[0].closest('.conversation-scroll').getBoundingClientRect()
