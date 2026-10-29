@@ -1,5 +1,5 @@
-import { type KeyboardEvent, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PageHeader } from '@tangle-network/sandbox-ui/primitives'
+import { type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PageHeader, Tabs, TabsList, TabsTrigger, TabsContent } from '@tangle-network/sandbox-ui/primitives'
 import type { RunDocument } from '../../workspace-model.js'
 import type { Play } from '../answers.js'
 import { StatusPill, useDocument } from '../data.js'
@@ -10,7 +10,7 @@ import { buildModel, count, type RunModel, elapsed, type WorkspaceDoc } from './
 import { CardLayer, Icon, Picker } from './ui.js'
 
 /**
- * The run page (Drew 2026-10-26): one header (the run, its status and the few numbers that matter), then a tab bar where
+ * The run page (Drew 2026-10-26): one line (play / run, status and elapsed), then a tab bar where
  * each tab is a route, `/run/<id>/<tab>`, and one workspace that fills the screen below it. The selected agent and file
  * live in the query (`?agent=`, `?file=`), so a reload or a shared link restores the tab, the agent and the file.
  */
@@ -123,7 +123,7 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
   const tab: RunTabId = route.tab ?? 'overview'
   const agent = m ? (agentFromParam(m, id, route.params.get('agent')) ?? m.root?.id ?? null) : null
   const selectAgent = useCallback((node: string | null, next?: RunTabId) => route.go(next ?? tab, { agent: node ? agentParam(id, node) : null }), [route, tab, id])
-  const tabsRef = useRef<HTMLElement>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
   // On a phone the tab strip scrolls: the open tab scrolls into view, and while more tabs sit past the edge a chevron says so
   // and steps to them (judges 10-27: "Conversat" was cut at 390 px with no cue).
   const [more, setMore] = useState(false)
@@ -145,20 +145,11 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
     traces: count(m.totals.steps),
     checks: count((doc.run as unknown as { check?: { counts?: { checks?: number } } }).check?.counts?.checks ?? m.releases.length),
   } : {}
-  const keys = (event: KeyboardEvent) => {
-    const at = RUN_PAGE_TABS.indexOf(tab)
-    const to = ({ ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: RUN_PAGE_TABS.length - 1 } as Record<string, number>)[event.key]
-    if (to === undefined) return
-    event.preventDefault()
-    const next = RUN_PAGE_TABS[(to + RUN_PAGE_TABS.length) % RUN_PAGE_TABS.length]!
-    route.go(next)
-    requestAnimationFrame(() => tabsRef.current?.querySelector<HTMLElement>(`[data-tab="${next}"]`)?.focus())
-  }
   const legacyBody = section && !mapped && legacy ? legacy(section) : null
   const props: TabProps | null = m ? { api, runUrl, doc, play: play.data ?? null, m, route: { ...route, tab }, agent, selectAgent } : null
   return (
     <CardLayer>
-      <div className="rp rp-run" data-run={id} data-tab={legacyBody ? undefined : tab}>
+      <Tabs value={tab} onValueChange={value => route.go(value as RunTabId)} className="rp rp-run" data-run={id} data-tab={legacyBody ? undefined : tab}>
         <PageHeader
           className="rp-head"
           title={<><a href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a><span className="sep" aria-hidden="true">/</span><span>Run {shortRun(doc.run.play, doc.run.id)}</span></>}
@@ -166,12 +157,12 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
           actions={m ? <time className="rp-elapsed" aria-label="Elapsed">{elapsed(m.duration)}</time> : undefined}
         />
         <div className="rp-tabs-wrap" data-more={more || undefined}>
-        <nav ref={tabsRef} className="rp-tabs" role="tablist" aria-label="Run" onKeyDown={keys}>
+        <TabsList ref={tabsRef} variant="underline" className="rp-tabs" aria-label="Run">
           {RUN_PAGE_TABS.map((t) => (
-            <a key={t} role="tab" data-tab={t} href={route.href(t)} aria-selected={!legacyBody && t === tab} tabIndex={t === tab ? 0 : -1} aria-controls="rp-panel"
+            <TabsTrigger key={t} value={t} variant="underline" asChild><a data-tab={t} href={route.href(t)}
               onClick={(event) => { if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return; event.preventDefault(); route.go(t) }}>
               {LABEL[t]}{counts[t] ? <span className="ct">{counts[t]}</span> : null}
-            </a>
+            </a></TabsTrigger>
           ))}
           <span className="rp-more">
             <Picker label="More run sections" options={MORE.map(([value, label]) => ({ id: value, label }))} value={legacyBody ? section : null} width={260} placeholder="Find a section"
@@ -179,10 +170,10 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
               {legacyBody ? MORE.find(([value]) => value === section)?.[1] ?? 'More' : 'More'}
             </Picker>
           </span>
-        </nav>
+        </TabsList>
         {more && <button type="button" className="rp-tabs-next" aria-label="More tabs" onClick={() => tabsRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}><Icon name="chevron" /></button>}
         </div>
-        <main id="rp-panel" className="rp-work" role="tabpanel" aria-label={legacyBody ? section ?? undefined : LABEL[tab]}>
+        <TabsContent value={tab} forceMount asChild><main className="rp-work" aria-label={legacyBody ? section ?? undefined : LABEL[tab]}>
           {legacyBody ?? (!props ? (
             <p className="ws-status" role={ws.error ? 'alert' : 'status'}>{ws.error ? `The run's agents are unavailable: ${ws.error}` : 'Reading the run…'}</p>
           ) : (
@@ -197,8 +188,8 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
               {tab === 'checks' && <Checks {...props} />}
             </Suspense>
           ))}
-        </main>
-      </div>
+        </main></TabsContent>
+      </Tabs>
     </CardLayer>
   )
 }
