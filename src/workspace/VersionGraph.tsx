@@ -1,90 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { usePhone } from './use-phone.js'
 import { versionGraphDocumentSchema } from '../workspace-model.js'
 import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
 import { money, useDocument, when } from './data.js'
 import { flagLabel, layoutVersionGraph, pagesVersion, PICKED, runGraphModel, scoreLine } from './version-graph.js'
 import { RunRoles } from './RoleScorecards.js'
-import { Lines } from '@tangle-network/charts/react'
+import { Lines, VersionGraph as SharedVersionGraph } from '@tangle-network/charts/react'
 import type { RunWorkspaceDocument } from './RunWorkspace.js'
 import type { GraphModel, GraphNode } from './version-graph.js'
 import { Picker } from './run/ui.js'
 
-// Geometry, in CSS pixels at the workspace's type scale; a phone gets narrower lanes so the text keeps its room.
-const WIDE = { column: 16, gutter: 14 }
-const NARROW = { column: 5, gutter: 4 }
-const LINE = 30
-const TALL = 54
-const BEND = 22
-const COLORS = 8
-
-const tall = (node: GraphNode) => (node.chips ?? []).some((chip) => chip.tone && chip.tone !== 'muted')
-
-/** Bring a row into its scrolling pane's view, vertically only: the lanes at the left must stay in sight. */
-function revealVertically(element: HTMLElement) {
-  let pane: HTMLElement | null = element.parentElement
-  while (pane && !(pane.scrollHeight > pane.clientHeight && /auto|scroll/.test(getComputedStyle(pane).overflowY))) pane = pane.parentElement
-  if (!pane) return
-  const row = element.getBoundingClientRect()
-  const box = pane.getBoundingClientRect()
-  if (row.top < box.top) pane.scrollTop -= box.top - row.top + 8
-  else if (row.bottom > box.bottom) pane.scrollTop += row.bottom - box.bottom + 8
-}
-
-/**
- * Lanes of versions, newest at the top: one column per lane, a dot per version, a line to each parent (a merge draws two),
- * and the chips each page puts on a version (a release tag with its score and flags, a run's state and judges). Lanes can
- * be narrowed to one, and merge commits hidden; a hidden version passes its parents on, so lines stay connected.
- */
-export function VersionGraph({
-  model,
-  selected,
-  onSelect,
-  label,
-}: {
-  model: GraphModel
-  selected: string | null
-  onSelect: (id: string) => void
-  label: string
-}) {
+/** Discovery owns the lane filter and inspector; Charts owns the version drawing. */
+export function VersionGraph({ model, selected, onSelect, label }: { model: GraphModel; selected: string | null; onSelect: (id: string) => void; label: string }) {
   const [lane, setLane] = useState<string | null>(null)
   const [hideMerges, setHideMerges] = useState(false)
-  const hasMerges = model.nodes.some((node) => node.kind === 'integrate')
-  const laid = useMemo(
-    () => layoutVersionGraph(model, (node) => (lane === null || node.lane === lane) && !(hideMerges && node.kind === 'integrate')),
-    [model, lane, hideMerges],
-  )
-  const tops = useMemo(() => {
-    const out: number[] = []
-    let y = 0
-    for (const row of laid.rows) {
-      out.push(y)
-      y += tall(row.node) ? TALL : LINE
-    }
-    out.push(y)
-    return out
-  }, [laid])
-  const height = tops.at(-1) ?? 0
-  const { column: COLUMN, gutter: GUTTER } = usePhone('(max-width: 700px)') ? NARROW : WIDE
-  const width = GUTTER + laid.lanes.length * COLUMN
-  const x = (column: number) => GUTTER / 2 + column * COLUMN + COLUMN / 2
-  const y = (row: number) => tops[row]! + LINE / 2
-  const path = (fromRow: number, fromColumn: number, toRow: number, toColumn: number) => {
-    const [x1, y1, x2, y2] = [x(fromColumn), y(fromRow), x(toColumn), y(toRow)]
-    if (x1 === x2) return `M${x1},${y1} V${y2}`
-    const bend = Math.min(BEND, y2 - y1)
-    return `M${x1},${y1} C${x1},${y1 + bend * 0.7} ${x2},${y1 + bend * 0.3} ${x2},${y1 + bend} V${y2}`
-  }
-  const selectedRef = useRef<HTMLButtonElement | null>(null)
-  useEffect(() => {
-    if (selectedRef.current) revealVertically(selectedRef.current)
-  }, [selected])
+  const hasMerges = model.nodes.some(node => node.kind === 'integrate')
   const allLanes = useMemo(() => layoutVersionGraph(model).lanes, [model])
-  const colorOf = new Map(allLanes.map((item, i) => [item.id, i % COLORS]))
-
-  return (
-    <div className="version-graph" data-version-graph={label}>
+  const colorOf = new Map(allLanes.map((item, i) => [item.id, i % 8]))
+  return <div className="version-graph">
       <div className="vg-toolbar" role="group" aria-label={`${label}: lanes`}>
         {/* Many lanes read as one control, not a row of chips (REVIEW-8: 17 chips were chrome words on Built). */}
         {allLanes.length > 5 ? (
@@ -119,70 +52,8 @@ export function VersionGraph({
           </label>
         )}
       </div>
-      {laid.rows.length === 0 ? (
-        <p className="faint">Nothing to show with these filters.</p>
-      ) : (
-        <div className="vg-scroll">
-        <div className="vg-host" style={{ height }}>
-          <svg className="vg-lines" width={width} height={height} aria-hidden="true">
-            {laid.edges.map((edge) => (
-              <path
-                key={`${edge.from}>${edge.to}`}
-                className={`vg-c${colorOf.get(laid.lanes[edge.toColumn]!.id)} ${selected === edge.from || selected === edge.to ? 'hot' : ''}`}
-                d={path(edge.fromRow, edge.fromColumn, edge.toRow, edge.toColumn)}
-              />
-            ))}
-            {laid.rows.map((row) => (
-              <circle
-                key={row.node.id}
-                className={`vg-dot vg-c${colorOf.get(row.node.lane)} kind-${row.node.kind} ${selected === row.node.id ? 'on' : ''}`}
-                cx={x(row.column)}
-                cy={y(row.row)}
-                r={row.node.kind === 'integrate' ? 3 : 5}
-              />
-            ))}
-          </svg>
-          <ol className="vg-rows" aria-label={label} style={{ paddingLeft: width }}>
-            {laid.rows.map((row) => {
-              const node = row.node
-              const on = selected === node.id
-              const loud = (node.chips ?? []).filter((chip) => chip.tone && chip.tone !== 'muted')
-              const quiet = (node.chips ?? []).filter((chip) => !chip.tone || chip.tone === 'muted')
-              return (
-                <li key={node.id} style={{ height: tops[row.row + 1]! - tops[row.row]! }}>
-                  <button
-                    ref={on ? selectedRef : undefined}
-                    type="button"
-                    className={`vg-row kind-${node.kind} ${on ? 'on' : ''}`}
-                    aria-pressed={on}
-                    disabled={node.kind === 'ghost'}
-                    data-node={node.id}
-                    onClick={() => onSelect(node.id)}
-                  >
-                    <span className="vg-line">
-                      <b className="vg-title clip" title={node.title}>{node.title}</b>
-                      {node.detail && <span className="vg-detail clip">{node.detail}</span>}
-                      {quiet.map((chip, i) => (
-                        <span key={i} className="vg-chip tone-muted" title={chip.title}>{chip.label}</span>
-                      ))}
-                    </span>
-                    {loud.length > 0 && (
-                      <span className="vg-line vg-tags">
-                        {loud.map((chip, i) => (
-                          <span key={i} className={`vg-chip tone-${chip.tone}`} title={chip.title}>{chip.label}</span>
-                        ))}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ol>
-        </div>
-        </div>
-      )}
+      <SharedVersionGraph model={model} label={label} selected={selected} onSelect={onSelect} shown={node => (lane === null || node.lane === lane) && !(hideMerges && node.kind === 'integrate')} />
     </div>
-  )
 }
 
 // ------------------------------------------------------------------------------------------------- the run page
