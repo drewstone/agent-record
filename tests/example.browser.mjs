@@ -4,13 +4,14 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { resolve, extname } from 'node:path'
 import test from 'node:test'
 import { chromium } from 'playwright'
+import { readPublication } from '../examples/react/publications.ts'
 import { fromResearchPublication } from '../dist/research-publication.js'
 
 // Exercise the deployed Pages layout with real publication bytes and public components.
 test('the Charts example reads every retained publication, selects source events and keeps uploads local', { timeout: 120_000 }, async () => {
   const root = resolve('dist-example'), evidence = process.env.EXAMPLE_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
-  const fixture = await readFile(resolve('examples/react/public/records/fc-audit-smoke-a.json'))
+  const fixture = Buffer.from(await readPublication('fc-audit-smoke-a'))
   const record = fromResearchPublication(JSON.parse(fixture))
   const canonical = new Map(record.nodes.map(node => [node.id, node.agentId ?? node.id]))
   const first = record.events[0], actor = canonical.get(first.node)

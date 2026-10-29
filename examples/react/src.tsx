@@ -5,8 +5,8 @@ import { fromResearchPublication } from '@drewstone/agent-record/adapters/resear
 import { Gantt, LIVE_SERIES } from '@tangle-network/charts/react'
 import { Conversation, indexRecord, withPrompts } from '@tangle-network/sandbox-ui/run/record'
 import './style.css'
+import { publicationIds, readPublication } from './publications.js'
 
-const files = ['ftqc-zips-2026-08-05-r1', 'fc-audit-smoke-a', 'q-conj-entropy-bcww-repair', 'q-q36-lw6-unbounded-ladder', 'q-ca-bcww-shareable-pkg']
 const readRecord = (value: unknown): RunRecord => value && typeof value === 'object' && 'schema' in value && value.schema === 'research-publication.events.v1' ? fromResearchPublication(value) : parseRecord(value)
 const clock = (at: number) => new Date(at).toISOString().slice(11, 19)
 
@@ -36,11 +36,9 @@ function App() {
   useEffect(() => { document.documentElement.dataset.theme = theme; document.documentElement.classList.toggle('dark', theme === 'dark') }, [theme])
   useEffect(() => {
     const controller = new AbortController()
-    Promise.all(files.map(async id => {
-      const response = await fetch(`${import.meta.env.BASE_URL}records/${id}.json`, { signal: controller.signal })
-      if (!response.ok) throw new Error(`Could not load ${id}: HTTP ${response.status}`)
-      return readRecord(await response.json())
-    })).then(setRecords).catch(error => { if (!controller.signal.aborted) setError(String(error)) })
+    Promise.all(publicationIds.map(async id => readRecord(JSON.parse(await readPublication(id, controller.signal)))))
+      .then(value => { if (!controller.signal.aborted) setRecords(value) })
+      .catch(error => { if (!controller.signal.aborted) setError(String(error)) })
     return () => controller.abort()
   }, [])
   async function load(file?: File) {

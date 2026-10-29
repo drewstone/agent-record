@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
+import { readPublication } from '../examples/react/publications.ts'
 import { fromResearchPublication } from '../dist/research-publication.js'
 
 const playwright = process.env.PLAYWRIGHT_MODULE
@@ -123,7 +124,7 @@ test('run HTTP page reads bounded root and child streams and stops polling after
 
 test('settled archives keep captured Messages and an empty directory stream falls back to the same record', { skip: !playwright, timeout: 45_000 }, async () => {
   const { chromium } = await import(playwright)
-  const captured = fromResearchPublication(JSON.parse(await readFile(new URL('../examples/react/public/records/ftqc-zips-2026-08-05-r1.json', import.meta.url), 'utf8')))
+  const captured = fromResearchPublication(JSON.parse(await readPublication('ftqc-zips-2026-08-05-r1')))
   const first = captured.events.find((event) => event.detail.publicText?.startsWith('Seven zip archives are in'))
   assert.ok(first, 'the published August 5 conversation is retained')
   const actor = captured.nodes.find((node) => node.id === first.node)?.agentId ?? first.node
