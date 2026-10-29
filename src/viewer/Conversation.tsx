@@ -255,11 +255,9 @@ export function Conversation({
   const keyOf = useCallback((row: ConversationRow) => row.key, [])
   const estimate = useCallback(
     (row: ConversationRow) =>
-      row.kind === 'polls'
+      row.kind !== 'event'
         ? 36
-        : row.kind === 'hollow'
-          ? 26
-          : isLifecycle(row.event)
+        : isLifecycle(row.event)
             ? 26
             : !textOf(row.event) && callsOf(row.event).length
               ? 16 + 36 * callsOf(row.event).length
