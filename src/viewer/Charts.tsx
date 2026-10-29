@@ -327,7 +327,6 @@ export function UsageChart({
   index,
   cutoff,
   inspect,
-  hideTooltip,
   navigate,
   actor,
   metric,
@@ -390,7 +389,7 @@ export function UsageChart({
       if (!usage) continue
       // Scoped usage (metered windows, execution totals) is cumulative by
       // meaning: it charts only in the cumulative metric, never as a
-      // per-response value, and keeps its own dashed series.
+      // per-response value, and keeps its own secondary series.
       const scoped = event.detail.usageScope !== undefined
       if (metric !== 'cumulative' && scoped) continue
       if (channels.some((channel) => usage[channel] === undefined)) incomplete++
@@ -412,14 +411,15 @@ export function UsageChart({
   const { points, totals, counts } = measured
   const plotted = useMemo(() => {
     const sourceEvents: RecordEvent[] = []
+    const position = new Map(points.map((point, i) => [point, i + 1]))
     const series = (id: string, label: string, colorIndex: number, scoped: boolean, channel?: Channel): TimeSeriesRow => ({
       id, label, colorIndex, secondary: scoped,
       points: points.filter(point => !!point.scoped === scoped).map(point => {
         const y = metric === 'tool-time' ? point.elapsed! : point.values[channel!] ?? null
         if (y !== null) sourceEvents.push(point.event)
-        return { x: axis === 'time' ? point.at : points.indexOf(point) + 1, y, label: point.event.label,
+        return { x: axis === 'time' ? point.at : position.get(point)!, y,
           ...(point.event.detail.isError ? { marker: 'triangle' as const } : {}),
-          annotation: [point.event.detail.isError ? 'The tool reported an error.' : '', scoped ? 'Metered window or execution-to-date; not a per-response measurement.' : ''].filter(Boolean).join(' ') || undefined }
+          annotation: [point.event.label, point.event.detail.isError ? 'The tool reported an error.' : '', scoped ? 'Metered window or execution-to-date; not a per-response measurement.' : ''].filter(Boolean).join(' ') || undefined }
       }),
     })
     const rows = metric === 'tool-time' ? [series('tool-return', 'Observed call → result interval', 0, false)]
@@ -432,13 +432,13 @@ export function UsageChart({
     x: { label: axis === 'time' ? 'Recorded elapsed time' : 'Recorded event order', domain: axis === 'time' ? [index.start, Math.max(index.start + 1, cutoff)] : [1, Math.max(2, points.length)] },
     y: { label: metric === 'tool-time' ? 'Observed call → result interval' : metric === 'cumulative' ? 'Cumulative measured tokens' : 'Measured tokens per response', unit: metric === 'tool-time' ? 'seconds' : 'tokens', domain: [0, Math.max(1, ...plotted.rows.flatMap(row => row.points.map(point => point.y ?? 0)))] },
     formatX: axis === 'time' ? value => interval(value - index.start) : String,
-    formatY: metric === 'tool-time' ? value => `${value.toFixed(3)}s` : fmt,
+    formatY: metric === 'tool-time' ? value => value.toFixed(3) : fmt,
   }), [plotted, axis, metric, index.start, cutoff, points.length])
   const activatePoint = (target: EventTarget) => {
     const key = target instanceof Element ? target.closest('[data-point]')?.getAttribute('data-point') : null
     const event = key === null ? undefined : plotted.sourceEvents[Number(key)]
     if (!event) return false
-    hideTooltip(); inspect(event, true)
+    inspect(event, true)
     return true
   }
   return (
@@ -447,7 +447,7 @@ export function UsageChart({
         if ((event.key === 'Enter' || event.key === ' ') && activatePoint(event.target)) event.preventDefault()
         if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && event.target instanceof Element && event.target.closest('svg')) { event.preventDefault(); navigate(event.key === 'ArrowLeft' ? -1 : 1) }
       }}>
-        {points.length ? <FigureView figure={figure} /> : <p className="chat-empty">{metric === 'tool-time' ? 'No matched tool timing at this time' : 'No measured usage at this time'}</p>}
+        {points.length ? metric !== 'tool-time' && !visible.length ? <p className="chat-empty">All token channels are hidden. Select a channel to show its recorded values.</p> : <FigureView figure={figure} /> : <p className="chat-empty">{metric === 'tool-time' ? 'No matched tool timing at this time' : 'No measured usage at this time'}</p>}
       </div>
       {metric !== 'tool-time' && (
         <div className="usage-legend">

@@ -670,43 +670,7 @@
 .agent-record [data-tokens] {
   width: 100%;
 }
-.agent-record svg .usage-line {
-  fill: none;
-  stroke-width: 1.7;
-}
-.agent-record svg .input-line {
-  stroke: var(--ar-c-info);
-}
-.agent-record svg .output-line {
-  stroke: var(--ar-c-ok);
-}
-.agent-record svg .cacheRead-line {
-  stroke: #9b59b6;
-}
-.agent-record svg .usage-point {
-  fill: var(--ar-fg);
-  fill-opacity: 0.15;
-  cursor: pointer;
-}
-.agent-record svg .scoped-line {
-  stroke-dasharray: 4 4;
-}
-.agent-record svg .scoped-point {
-  fill: transparent;
-  stroke: var(--ar-fg);
-  stroke-opacity: 0.55;
-  stroke-width: 1.5;
-}
-.agent-record .usage-legend .scoped-key::before {
-  content: '';
-  display: inline-block;
-  width: 1.1rem;
-  height: 0;
-  border-top: 2px dashed var(--ar-fg);
-  opacity: 0.55;
-  margin-right: 0.35rem;
-  vertical-align: middle;
-}
+
 .agent-record .usage-legend .legend-toggle {
   font: inherit;
   color: inherit;
@@ -723,21 +687,7 @@
 .agent-record .usage-legend .legend-toggle:hover {
   border-color: var(--ar-border);
 }
-.agent-record svg .time-point {
-  fill: var(--ar-c-info);
-  cursor: pointer;
-}
-.agent-record svg .time-error {
-  fill: var(--ar-c-neutral);
-  cursor: pointer;
-}
-.agent-record svg .usage-point:hover,
-.agent-record svg .time-point:hover,
-.agent-record svg .time-error:hover {
-  stroke: var(--ar-fg);
-  stroke-width: 2;
-  fill-opacity: 1;
-}
+
 .agent-record .metric-controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -757,12 +707,8 @@
   font: var(--ar-text-s) var(--ar-font-body);
 }
 
-.agent-record .output-key {
-  color: var(--ar-c-ok);
-}
-.agent-record .cacheRead-key {
-  color: #9b59b6;
-}
+
+
 .agent-record [data-token-caption] {
   font: var(--ar-text-s)/1.5 var(--ar-font-body);
   color: var(--ar-fg-muted);
@@ -1583,7 +1529,6 @@
 }
 
 /* The usage chart draws in a fixed 580-unit viewBox that scales with its panel: its labels are sized in those units. */
-.agent-record svg[data-tokens] .axis-label { font-size: var(--ar-text-s); }
 /* Graph rows select as a whole: a transparent hit area behind each node's dot and label. */
 /* The selected profile's detail beside its graph, kept in view while the graph scrolls. */
 /* The default filter: what it hides, counted where it is seen first; failures lead in the failure colour. */
