@@ -62,8 +62,9 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
     res.writeHead(404).end()
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
-  const browser = await chromium.launch({ headless: true })
+  let browser
   try {
+    browser = await chromium.launch({ headless: true })
     for (theme of ['dark', 'light']) for (const width of [1280, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 900 } } } : {}) })
       const page = await context.newPage(), errors = []
@@ -180,5 +181,5 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       assert.deepEqual(errors, [])
       await context.close()
     }
-  } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }
+  } finally { await browser?.close(); await new Promise(resolve => server.close(resolve)) }
 })
