@@ -72,7 +72,7 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
             <button type="button" className="rp-back" onClick={() => selectAgent(null)} aria-label="All agents"><Icon name="arrow" size={16} /></button>
             <h2><StateDot tone={selected.state.tone} />{selected.name}</h2>
             <span className="muted ph-hide">{[selected.model, selected.harness].filter(Boolean).join(' · ')}</span>
-            {selected.toolFailures > 0 && <span className="rp-pill danger">{selected.toolFailures} tool errors</span>}
+            {selected.toolFailures > 0 && <span className="rp-pill danger">{plural(selected.toolFailures, 'tool error')}</span>}
           </div>
           <div className="rp-scroll rp-tx">
             {!live && recorded ? (
