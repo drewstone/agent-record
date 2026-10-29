@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState } from 'react'
+import { StrictMode, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { parseRecord, type RunRecord } from '@drewstone/agent-record/record'
 import { fromResearchPublication } from '@drewstone/agent-record/adapters/research-publication'
@@ -30,12 +30,14 @@ function Viewer({ record }: { record: RunRecord }) {
 
 function App() {
   const [records, setRecords] = useState<RunRecord[]>([])
+  const bootstrap = useRef<AbortController | undefined>(undefined)
   const [chosen, choose] = useState('')
   const [error, setError] = useState('')
   const [theme, setTheme] = useState<'light' | 'dark'>(() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   useEffect(() => { document.documentElement.dataset.theme = theme; document.documentElement.classList.toggle('dark', theme === 'dark') }, [theme])
   useEffect(() => {
     const controller = new AbortController()
+    bootstrap.current = controller
     Promise.all(publicationIds.map(async id => readRecord(JSON.parse(await readPublication(id, controller.signal)))))
       .then(value => { if (!controller.signal.aborted) setRecords(value) })
       .catch(error => { if (!controller.signal.aborted) setError(String(error)) })
@@ -47,6 +49,7 @@ function App() {
       const value: unknown = JSON.parse(await file.text())
       const next = (Array.isArray(value) ? value : [value]).map(readRecord)
       if (new Set(next.map(record => record.runId)).size !== next.length) throw new Error('Run IDs must be unique')
+      bootstrap.current?.abort()
       setRecords(next); choose(''); setError('')
     } catch (error) { setError(String(error)) }
   }
