@@ -1,3 +1,5 @@
+@import '@tangle-network/sandbox-ui/styles';
+@import '@tangle-network/charts/react/live.css';
 :root {
   color-scheme: light dark;
   font-family: var(--font-sans);

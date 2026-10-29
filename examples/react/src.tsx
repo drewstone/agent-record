@@ -4,8 +4,6 @@ import { parseRecord, type RunRecord } from '@drewstone/agent-record/record'
 import { fromResearchPublication } from '@drewstone/agent-record/adapters/research-publication'
 import { Gantt, LIVE_SERIES } from '@tangle-network/charts/react'
 import { Conversation, indexRecord, withPrompts } from '@tangle-network/sandbox-ui/run/record'
-import '@tangle-network/sandbox-ui/styles'
-import '@tangle-network/charts/react/live.css'
 import './style.css'
 
 const files = ['ftqc-zips-2026-08-05-r1', 'fc-audit-smoke-a', 'q-conj-entropy-bcww-repair', 'q-q36-lw6-unbounded-ladder', 'q-ca-bcww-shareable-pkg']
