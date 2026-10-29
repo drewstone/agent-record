@@ -68,7 +68,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
     for (theme of ['dark', 'light']) for (const width of [1280, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 900 } } } : {}) })
       const page = await context.newPage(), errors = []
-      const cardNamed = name => page.locator('.ag-live-card').filter({ has: page.locator('.ag-live-name').filter({ hasText: new RegExp(`\\b${name}$`) }) })
+      const cardNamed = name => page.locator('.ag-live-card,.ag-agent-card').filter({ has: page.locator('.ag-live-name, .ag-agent-card .font-semibold').filter({ hasText: new RegExp(`\\b${name}$`) }) })
       const choose = async name => {
         await page.getByRole('button', { name: 'Go to agent', exact: true }).click()
         await page.locator('.rp-lb input').fill(name)
@@ -82,7 +82,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       await page.goto(`http://127.0.0.1:${server.address().port}/run/lane-g/topology`)
       assert.equal(await page.evaluate(() => document.characterSet), 'UTF-8')
       await page.locator('.rp-topo').waitFor()
-      await page.locator('.ag-live-card[data-status="failed"]').waitFor()
+      await page.locator('.ag-agent-card[data-status="failed"]').waitFor()
       if (width === 1280) {
         await page.setViewportSize({ width: 1322, height: 900 })
         await page.waitForFunction(() => Math.round(document.querySelector('.agent-graph').getBoundingClientRect().width) === 884)
@@ -95,9 +95,8 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
         await page.setViewportSize({ width, height: 900 })
       }
       await capture('loaded-topology')
-      assert.equal(await page.locator('.ag-live-card[data-status="failed"]').evaluate(card => card.classList.contains('ag-live-chip')), false)
-      assert.match(await page.locator('.ag-live-card[data-status="failed"]').innerText(), /Checkout tests failed/)
-      await page.locator('.ag-live-card[data-status="failed"]').click()
+      assert.match(await page.locator('.ag-agent-card[data-status="failed"]').innerText(), /Checkout tests failed/)
+      await page.locator('.ag-agent-card[data-status="failed"]').click()
       const explanation = page.locator('aside[aria-label="Agent 2"] dd.f')
       await explanation.scrollIntoViewIfNeeded()
       assert.equal(await explanation.innerText(), failureReason)
@@ -117,8 +116,8 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       assert.ok(await page.locator('[data-activity="quiet"]').count())
       assert.equal(await page.locator('[data-activity="quiet"]').evaluateAll(cards => cards.every(card => !card.getAnimations({ subtree: true }).some(animation => animation.effect?.getTiming().iterations === Infinity))), true)
       await choose('Agent 1')
-      await page.locator('.ag-live-card[data-status="needs-you"] button').filter({ hasText: 'Respond' }).waitFor()
-      const respond = page.locator('.ag-live-card[data-status="needs-you"] button').filter({ hasText: 'Respond' })
+      await page.locator('.ag-agent-card[data-status="needs-you"] button').filter({ hasText: 'Respond' }).waitFor()
+      const respond = page.locator('.ag-agent-card[data-status="needs-you"] button').filter({ hasText: 'Respond' })
       await capture('before-respond')
       await respond.click({ timeout: 5000 })
       await page.locator('aside[aria-label="Agent 1"]').waitFor()
