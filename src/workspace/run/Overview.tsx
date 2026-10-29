@@ -46,7 +46,7 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
       <div className="rp-hd"><h2>What the agents did</h2><span className="muted">{m.agents.length} agents</span></div>
       <Gantt lanes={lanes} marks={marks} bestMark={best?.release} selectedId={picked?.id} onSelect={id => selectAgent(id)} maxHeight={420} now={m.live ? m.t0 + m.duration : undefined} colors={{ ok: 'var(--surface-success-text)', done: 'var(--tone-teal-icon)', live: 'var(--accent-text)', fail: 'var(--surface-danger-text)', waiting: 'var(--surface-warning-text)', 'needs-you': 'var(--surface-warning-text)', none: 'var(--text-dim)' }} axis={clock} span={(a, b) => elapsed(b - a)} />
     </section>
-    {phone ? <Sheet open={Boolean(picked)} onOpenChange={open => { if (!open) selectAgent(null) }}><SheetContent side="bottom" className="rj-agent-sheet agent-record rp"><SheetHeader><SheetTitle>{picked?.name}</SheetTitle></SheetHeader>{drill}</SheetContent></Sheet> : drill}
+    {phone ? <Sheet open={Boolean(picked)} onOpenChange={open => { if (!open) selectAgent(null) }}><SheetContent side="bottom" className="rj-agent-sheet agent-record rp"><SheetHeader><SheetTitle>{picked?.name}</SheetTitle>{picked && <a className="rp-btn" href={route.href('conversations', { agent: agentParam(doc.run.id, picked.id) })}>Conversation →</a>}</SheetHeader>{drill}</SheetContent></Sheet> : drill}
     </div>
   </section>
 }

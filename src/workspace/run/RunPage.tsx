@@ -2,7 +2,7 @@ import { type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef
 import { PageHeader, Tabs, TabsList, TabsTrigger, TabsContent } from '@tangle-network/sandbox-ui/primitives'
 import type { RunDocument } from '../../workspace-model.js'
 import type { Play } from '../answers.js'
-import { StatusPill, useDocument } from '../data.js'
+import { StatusPill, statusOf, useDocument } from '../data.js'
 import { shortRun } from '../play-standing.js'
 import { viewChip } from '../view.js'
 import { reloadOnce } from '../lazy-pages.js'
@@ -153,7 +153,7 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
         <PageHeader
           className="rp-head"
           title={<><a href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a><span className="sep" aria-hidden="true">/</span><span>Run {shortRun(doc.run.play, doc.run.id)}</span></>}
-          description={doc.view ? <StatusPill status={viewChip(doc.view.status)} title={doc.view.status.reason ?? undefined} /> : undefined}
+          description={<StatusPill status={doc.view ? viewChip(doc.view.status) : statusOf({ axis: 'run', state: doc.run.state })} title={doc.view?.status.reason ?? undefined} />}
           actions={m ? <time className="rp-elapsed" aria-label="Elapsed">{elapsed(m.duration)}</time> : undefined}
         />
         <div className="rp-tabs-wrap" data-more={more || undefined}>

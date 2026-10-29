@@ -51,7 +51,7 @@
 .rp .rp-tabs > a[aria-selected='true']::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: var(--radius-tag); background: var(--accent-text); }
 .rp .rp-more { margin-left: auto; display: flex; align-items: center; padding-left: 8px; }
 .rp .rp-more .rp-cbx { height: 32px; background: transparent; box-shadow: none; color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-work { flex: 1; min-height: 0; padding-top: 16px; overflow: hidden; }
+.rp .rp-work { margin-top: 0; flex: 1; min-height: 0; padding-top: 16px; overflow: hidden; }
 .rp .rp-work > * { height: 100%; min-height: 0; }
 /* Overview, Analytics and Checks are documents: their cards take their natural height and the work area scrolls, so no card
    cuts a row at its edge and no card nests a scroller of its own (judges 10-27: four nested scroll regions on Analytics). */
@@ -191,6 +191,8 @@
 .rp .rj-main[data-picked] { grid-template-columns: minmax(0, 1fr) 340px; }
 .rp .rj-drill { align-self: start; max-height: 530px; overflow: auto; }
 .rj-agent-sheet { max-height: 80dvh; overflow: auto; }
+.rj-agent-sheet .rj-drill { width: 100%; max-width: none; border: 0; border-radius: 0; background: transparent; }
+.rj-agent-sheet .rj-drill > .rp-hd { display: none; }
 .rp .rj-next { color: var(--text-muted); }
 .rp .rj-next b { color: var(--text-primary); }
 .rp .rj-releases { display: flex; gap: 12px; flex-wrap: wrap; color: var(--text-muted); font-variant-numeric: tabular-nums; }
