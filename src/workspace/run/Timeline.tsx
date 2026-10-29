@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { FlowMarker, FlowOutcome, FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import { agentParam, type TabProps } from './RunPage.js'
-import { type Agent, clockOf, abbr, count, lat, type RunModel, elapsed } from './model.js'
+import { type Agent, clockOf, abbr, agentFacts, count, lat, type RunModel, elapsed } from './model.js'
 import { Bar, agentCost, StateDot, Icon } from './ui.js'
 
 /** Each state tone as the waterfall draws it: the same hue and shape as the page's own StateDot. */
@@ -48,9 +48,8 @@ export function flowTrace(m: RunModel): FlowTrace {
       facts: [
         ...(a.tokens !== null && !a.byClass ? [{ label: 'Tokens (split not recorded)', value: abbr(a.tokens) }] : []),
         ...(a.node.failureReason ? [{ label: 'Failure', value: a.node.failureReason }] : []),
-        { label: 'Commits', value: a.commits === null ? '—' : String(a.commits) },
-        { label: 'Restarts', value: String(a.restarts.length) },
-        ...(a.turns !== null ? [{ label: 'Turns', value: String(a.turns) }] : []),
+        { label: 'Model', value: a.model ?? 'Not recorded' },
+        ...agentFacts(m, a),
         ...(a.harness ? [{ label: 'Harness', value: a.harness }] : []),
       ],
     })

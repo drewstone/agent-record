@@ -412,3 +412,18 @@ export function checkVerdict(check: CheckDoc | null | undefined): CheckVerdict {
   if (latest.known) return { word: 'Not solved', tone: 'fail', note: null }
   return { word: 'No verdict', tone: 'none', note: null }
 }
+
+/** Authoritative whole-run facts shared by topology and waterfall cards; absent aggregates stay unknown. */
+export function agentFacts(m: RunModel, a: Agent) {
+  return [
+    { label: 'Input / output / cached', value: a.byClass ? `${count(a.byClass.input)} / ${count(a.byClass.output)} / ${count(a.byClass.cacheRead)} tokens` : 'Not recorded' },
+    { label: 'Model calls', value: count(a.modelCalls) },
+    { label: 'Model latency p50 / p90 / p99', value: `${lat(a.latency.p50)} / ${lat(a.latency.p90)} / ${lat(a.latency.p99)}` },
+    { label: 'Tool calls / failures', value: `${count(a.toolCalls)} / ${count(a.toolFailures)}` },
+    { label: 'Retried steps / restarts', value: `${count(a.retries)} / ${a.restarts.length}` },
+    { label: 'Busy / run duration', value: `${elapsed(a.busy)} / ${elapsed(m.duration)}` },
+    { label: 'Spawned / commits', value: `${a.children.length} / ${count(a.commits)}` },
+    ...(a.turns !== null ? [{ label: 'Turns', value: count(a.turns) }] : []),
+    ...a.tools.map(tool => ({ label: tool.name, value: `${count(tool.calls)} calls · ${count(tool.failures)} failures · ${lat(tool.p50)} / ${lat(tool.p90)} / ${lat(tool.p99)} p50/p90/p99` })),
+  ]
+}

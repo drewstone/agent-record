@@ -5,7 +5,7 @@ import { dirname, extname, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { test } from 'node:test'
 
-const require = createRequire(import.meta.url)
+const require = createRequire(resolve(process.cwd(), 'package.json'))
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright')
 const assets = dirname(require.resolve('@drewstone/agent-record/workspace-viewer.js'))
 const start = Date.parse('2026-10-28T12:00:00Z'), iso = seconds => new Date(start + seconds * 1000).toISOString()
