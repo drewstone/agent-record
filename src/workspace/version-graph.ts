@@ -1,5 +1,4 @@
 import type { VersionGraphDocument, VersionTag } from '../workspace-model.js'
-import type { StatusTone } from './data.js'
 
 /** The registered rule's pick is bookkeeping, not a pass: no check ran on it for this mark. */
 export const PICKED = '★ picked by rule · not checked'
@@ -9,102 +8,9 @@ export const PICKED = '★ picked by rule · not checked'
  * and a play's registered versions with the profiles the selected version's agents wrote. Each page turns its document
  * into this model; `VersionGraph` draws it as lanes of commits, newest at the top, with merges and tags.
  */
-/** `muted` chips sit beside the title; any other tone gets the second line. */
-/** A status tone from `statusOf`, or a non-status chip: `accent` for a series, `info` and `muted` for plain facts. */
-export type GraphTone = StatusTone | 'accent' | 'info' | 'muted'
-
-export interface GraphChip {
-  readonly label: string
-  readonly tone?: GraphTone
-  readonly title?: string
-}
-
-export interface GraphNode {
-  readonly id: string
-  /** Parents in the model; one that is not in it (or is hidden) is skipped, and a hidden one passes its own on. */
-  readonly parents: readonly string[]
-  readonly lane: string
-  readonly at: string | null
-  readonly title: string
-  readonly detail?: string | null
-  /** A style hook and a filter key: `write`, `integrate`, `profile`, `version`, `authored`, `ghost`. */
-  readonly kind: string
-  readonly chips?: readonly GraphChip[]
-}
-
-export interface GraphLane {
-  readonly id: string
-  readonly label: string
-  readonly detail?: string | null
-}
-
-/** Nodes newest first, every child above its parents. */
-export interface GraphModel {
-  readonly lanes: readonly GraphLane[]
-  readonly nodes: readonly GraphNode[]
-}
-
-export interface LaidRow {
-  readonly node: GraphNode
-  readonly row: number
-  readonly column: number
-}
-
-export interface LaidEdge {
-  readonly from: string
-  readonly to: string
-  readonly fromRow: number
-  readonly fromColumn: number
-  readonly toRow: number
-  readonly toColumn: number
-}
-
-export interface LaidGraph {
-  readonly rows: readonly LaidRow[]
-  readonly edges: readonly LaidEdge[]
-  /** The lanes that hold a shown node, in model order; a lane's column is its index here. */
-  readonly lanes: readonly GraphLane[]
-}
-
-/**
- * Rows in model order, one column per lane that holds a shown node, and one edge from each shown node to each nearest
- * shown ancestor: a hidden node (an integration when integrations are hidden, a commit of a lane filtered out) passes
- * its parents on, so a lane's line stays connected.
- */
-export function layoutVersionGraph(model: GraphModel, shown: (node: GraphNode) => boolean = () => true): LaidGraph {
-  const byId = new Map(model.nodes.map((node) => [node.id, node]))
-  const visible = model.nodes.filter(shown)
-  const visibleIds = new Set(visible.map((node) => node.id))
-  const lanes = model.lanes.filter((lane) => visible.some((node) => node.lane === lane.id))
-  for (const node of visible) if (!lanes.some((lane) => lane.id === node.lane)) lanes.push({ id: node.lane, label: node.lane })
-  const column = new Map(lanes.map((lane, i) => [lane.id, i]))
-  const rowOf = new Map(visible.map((node, i) => [node.id, i]))
-  const nearest = (id: string, seen: Set<string>): string[] => {
-    if (seen.has(id)) return []
-    seen.add(id)
-    if (visibleIds.has(id)) return [id]
-    const node = byId.get(id)
-    return node ? node.parents.flatMap((parent) => nearest(parent, seen)) : []
-  }
-  const edges: LaidEdge[] = []
-  for (const node of visible) {
-    const seen = new Set<string>([node.id])
-    const targets = [...new Set(node.parents.flatMap((parent) => nearest(parent, seen)))]
-    for (const target of targets) {
-      const toRow = rowOf.get(target)!
-      if (toRow <= rowOf.get(node.id)!) continue
-      edges.push({
-        from: node.id,
-        to: target,
-        fromRow: rowOf.get(node.id)!,
-        fromColumn: column.get(node.lane)!,
-        toRow,
-        toColumn: column.get(byId.get(target)!.lane)!,
-      })
-    }
-  }
-  return { rows: visible.map((node, i) => ({ node, row: i, column: column.get(node.lane)! })), edges, lanes }
-}
+export { layoutVersionGraph } from '@tangle-network/charts/react'
+export type { VersionGraphModel as GraphModel, VersionGraphNode as GraphNode, VersionGraphChip as GraphChip, VersionGraphLane as GraphLane, VersionGraphTone as GraphTone } from '@tangle-network/charts/react'
+import type { VersionGraphModel as GraphModel, VersionGraphChip as GraphChip } from '@tangle-network/charts/react'
 
 // ------------------------------------------------------------------------------------------------- a run's versions
 
