@@ -1,6 +1,6 @@
-import { toolGlyph } from '@tangle-network/charts/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AgentGraph, type AgentGraphNode } from '@tangle-network/sandbox-ui/workflows'
+import { HarnessLogo } from '@tangle-network/sandbox-ui/dashboard'
 import { agentParam, type TabProps } from './RunPage.js'
 import { type Agent, abbr, agentFacts, count, lat, type RunModel, stampOf } from './model.js'
 import { Bar, agentCost, StateDot, Icon, Picker, agentOptions, agentGroups } from './ui.js'
@@ -32,7 +32,7 @@ export function Topology({ m, agent, selectAgent, route, doc }: TabProps) {
         <h2>Agents</h2>
         <span className="end"><Picker label="Go to agent" options={agentOptions(m)} groups={agentGroups(m)} value={selected} placeholder={`Search ${m.agents.length} agents`} width={340} onChange={id => { if (id) revealAgent(id) }}><span className="dim">Go to agent</span></Picker></span>
       </div>
-      <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={revealAgent} live={m.live} showLatestEvents={false} title="Agents" className="rp-topo-graph" />
+      <AgentGraph direction="LR" renderAgentMark={(a, _layout, size) => <HarnessLogo type={a.harness ?? a.model ?? 'cli-base'} model={a.model ?? undefined} size={size} />} nodes={nodes} edges={edges} selectedId={selected} onSelect={revealAgent} showLatestEvents={false} title="Agents" className="rp-topo-graph" />
     </section>
     {sel && <TopoInspector m={m} a={sel} reveal={route.params.has('agent')} selection={selection} onSelect={revealAgent} href={route.href('conversations', { agent: agentParam(doc.run.id, sel.id) })} />}
   </div>
