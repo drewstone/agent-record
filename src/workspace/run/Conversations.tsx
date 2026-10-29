@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { HarnessLogo, ProviderMark, type HarnessType } from '@tangle-network/sandbox-ui/dashboard'
+import { VirtualList } from '@tangle-network/sandbox-ui/run/record'
 import { LiveTranscript } from '../LiveTranscript.js'
 import { AgentConversation, useRecordPart } from '../record-part.js'
 import type { TabProps } from './RunPage.js'
 import { type Agent, clockOf, abbr, type RunModel, elapsed, plural, spanOf } from './model.js'
-import { StateDot, Hilite, Icon, useRows } from './ui.js'
+import { StateDot, Hilite, Icon } from './ui.js'
 
 type Row = { kind: 'team'; id: string; label: string; n: number } | { kind: 'agent'; a: Agent }
 
@@ -28,7 +29,6 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
   const rows = useMemo(() => rowsOf(m, query), [m, query])
   const list = useRef<HTMLDivElement>(null)
   const ROW = 52
-  const win = useRows(list, rows.length, ROW)
   const selected = (agent ? m.byId.get(agent) : null) ?? m.root
   const digest = doc.run.record.digest ?? null
   const ready = doc.run.record.status === 'ready' || Boolean(digest)
@@ -52,9 +52,8 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
       <aside className="rp-card" aria-label="Agents">
         <div className="rp-hd"><h2>Agents<span className="ct">{talkers}</span></h2></div>
         <div className="rp-fbar"><label className="rp-field"><Icon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${talkers} agents`} aria-label="Search agents" /></label></div>
-        <div className="rp-alist" ref={list} role="list">
-          <div style={{ height: win.before }} />
-          {rows.slice(win.first, win.last).map((r) => r.kind === 'team' ? (
+        <div className="rp-alist" ref={list} role="list" tabIndex={0} aria-label="Run agents">
+          <VirtualList items={rows} keyOf={r => r.kind === 'team' ? `t:${r.id}` : r.a.id} scroller={list} estimate={() => ROW} target={agent ?? undefined} render={(r) => r.kind === 'team' ? (
             <div key={`t:${r.id}`} className="ag" style={{ height: ROW }}><Icon name="users" size={14} />{r.label}<span className="ct">{r.n}</span></div>
           ) : (
             <button key={r.a.id} type="button" role="listitem" aria-current={r.a.id === selected?.id} style={{ height: ROW }} onClick={() => selectAgent(r.a.id)}>
@@ -63,8 +62,7 @@ export function Conversations({ m, doc, runUrl, agent, selectAgent, route }: Tab
               <span className="sb">{r.a.steps.length || r.a.turns ? `${plural(r.a.steps.length, 'step')}${r.a.first !== null ? ` · ${spanOf(m.t0, r.a.first, r.a.state.tone === 'live' ? 'now' : r.a.last ?? r.a.first)}` : ''}` : r.a.state.label}</span>
               <span className="n">{r.a.tokens === null ? '' : abbr(r.a.tokens)}</span>
             </button>
-          ))}
-          <div style={{ height: win.after }} />
+          )} />
           {!rows.length && <p className="rp-empty">No agent matches “{query}”.</p>}
         </div>
       </aside>

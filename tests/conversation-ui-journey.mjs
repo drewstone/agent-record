@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 
 export async function proveToolPreview(page, evidence, width, theme) {
+  if (width === 1512) {
+    const list = page.getByRole('list', { name: 'Run agents', exact: true })
+    await list.focus(); await page.keyboard.press('End')
+    await list.getByText('Worker 123', { exact: true }).waitFor()
+    assert.ok(await list.getByRole('listitem').count() < 100)
+    await page.keyboard.press('Home'); await list.getByText('root', { exact: true }).waitFor()
+  }
   const row = page.locator('.record-tool-row').filter({ has: page.getByRole('button', { name: /Read.*proof.txt/i }) }).first()
   await row.hover()
   const preview = page.locator('.record-tool-preview')
