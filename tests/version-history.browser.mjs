@@ -7,7 +7,7 @@ import { dirname, extname, resolve } from 'node:path'
 import { doc, sha } from './version-history-fixture.mjs'
 const require = createRequire(resolve(process.cwd(), 'package.json'))
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright')
-const assets = dirname(require.resolve('@drewstone/agent-record/workspace-viewer.js'))
+const assets = process.env.VERSION_HISTORY_ASSETS ?? dirname(require.resolve('@drewstone/agent-record/workspace-viewer.js'))
 const evidence = process.env.VERSION_HISTORY_EVIDENCE
 assert.ok(evidence)
 await mkdir(evidence, { recursive: true })
@@ -43,7 +43,7 @@ try {
       await graph.locator('button[data-node]').first().waitFor()
       assert.equal(await graph.locator('button[data-node]').count(), 6)
       assert.equal(await graph.locator('path').count(), 7)
-      await page.getByText('Steps passed by release', { exact: false }).first().waitFor()
+      await page.getByRole('region', { name: 'Steps passed by each release', exact: true }).waitFor()
       await page.screenshot({ path: `${evidence}/built-${width}-${theme}.png`, fullPage: true })
       await graph.locator(`button[data-node="${sha('e')}"]`).click()
       const inspector = page.getByRole('complementary', { name: 'Inspector', exact: true })
