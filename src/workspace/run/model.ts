@@ -416,11 +416,13 @@ export function checkVerdict(check: CheckDoc | null | undefined): CheckVerdict {
 /** Authoritative whole-run facts shared by topology and waterfall cards; absent aggregates stay unknown. */
 export function agentFacts(m: RunModel, a: Agent) {
   return [
-    { label: 'Input / output / cached', value: a.byClass ? `${count(a.byClass.input)} / ${count(a.byClass.output)} / ${count(a.byClass.cacheRead)} tokens` : 'Not recorded' },
+    { label: 'Tokens', value: a.byClass ? `${count(a.byClass.input)} in / ${count(a.byClass.output)} out / ${count(a.byClass.cacheRead)} cached` : a.tokens !== null ? `${count(a.tokens)} total · split not recorded` : 'Not recorded' },
+    { label: 'Cost', value: a.listUsd !== null ? `${usd(a.listUsd)} catalog` : a.billedUsd !== null ? `${usd(a.billedUsd)} billed` : 'Not recorded' },
     { label: 'Model calls', value: count(a.modelCalls) },
-    { label: 'Model latency p50 / p90 / p99', value: `${lat(a.latency.p50)} / ${lat(a.latency.p90)} / ${lat(a.latency.p99)}` },
-    { label: 'Tool calls / failures', value: `${count(a.toolCalls)} / ${count(a.toolFailures)}` },
-    { label: 'Retried steps / restarts', value: `${count(a.retries)} / ${a.restarts.length}` },
+    { label: 'Model latency', value: `${lat(a.latency.p50)} p50 / ${lat(a.latency.p90)} p90 / ${lat(a.latency.p99)} p99` },
+    { label: 'Tool calls', value: `${count(a.toolCalls)} calls · ${count(a.toolFailures)} failures` },
+    { label: 'Failures', value: `${count(a.failedSteps)} failed steps` },
+    { label: 'Retries', value: `${count(a.retries)} retried steps · ${a.restarts.length} restarts` },
     { label: 'Busy / run duration', value: `${elapsed(a.busy)} / ${elapsed(m.duration)}` },
     { label: 'Spawned / commits', value: `${a.children.length} / ${count(a.commits)}` },
     ...(a.turns !== null ? [{ label: 'Turns', value: count(a.turns) }] : []),

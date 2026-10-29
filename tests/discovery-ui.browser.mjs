@@ -25,6 +25,9 @@ const rows = [
 const tail = rows.slice(3).map(row => ({ ...row, seq: row.seq + 200 }))
 const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` : runId, label: i ? `Worker ${i}` : 'root', parent: i ? runId : null, kind: 'agent', status: 'running', start: iso(0), end: null, model: 'Recorded model', harness: 'codex', usage: { calls: 1, tokens: 12, tools: { read: { calls: 1, failures: 0, ms: 1 } }, steps: [{ kind: 'tool', startMs: start, endMs: start + 1, tool: 'read', failed: false }] } }))
 
+// Recorded totals deliberately differ from the bounded display steps.
+nodes[0].usage = { calls: 413, tokens: 100000, byClass: { input: 70000, output: 20000, cacheRead: 10000 }, latencyMs: { p50: 9000, p90: 20000 }, failures: { model: 3, tool: 2 }, retries: { model: 7, tool: 1 }, tools: { read: { calls: 321, failures: 2, ms: 321000 } }, steps: [...nodes[0].usage.steps, { kind: 'model', startMs: start + 1, endMs: start + 1001, failed: false, byClass: { input: 1, output: 1, cacheRead: 0 } }] }
+
 test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures and navigates 124 agents', { timeout: 120_000 }, async () => {
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
@@ -104,6 +107,22 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.locator('.conversation-scroll').waitFor()
       await page.locator('[data-timeline-step="user"]').getByText('Retain the failing witness and investigate it.', { exact: true }).waitFor()
       assert.ok(requests.some(query => query.includes('s123')), 'selection fetches the selected agent')
+      await page.getByRole('tab', { name: 'Timeline', exact: true }).click()
+      const bar = page.locator('.fw-bar').first()
+      await bar.waitFor()
+      const bounds = await bar.boundingBox()
+      await page.mouse.move(bounds.x + Math.min(6, bounds.width - 1), bounds.y + bounds.height / 2)
+      const card = page.locator('.fw-card')
+      await card.waitFor()
+      const metric = label => card.locator('.fw-card-table > div').filter({ has: page.getByText(label, { exact: true }) }).locator('dd')
+      assert.equal(await metric('Model calls').innerText(), '413', 'full recorded count wins over the one displayed model call')
+      assert.equal(await metric('Tool calls').innerText(), '321 calls · 2 failures')
+      assert.equal(await metric('Model latency').innerText(), '9.0s p50 / 20s p90 / — p99', 'sample latency cannot invent full-stream percentiles')
+      assert.equal(await metric('Tokens').innerText(), '70,000 in / 20,000 out / 10,000 cached')
+      assert.equal(await metric('Failures').innerText(), '5 failed steps')
+      assert.equal(await metric('Retries').innerText(), '8 retried steps · 0 restarts')
+      assert.equal(await metric('Cost').innerText(), 'Not recorded')
+      await page.mouse.move(1, 1)
       await page.getByRole('tab', { name: 'Analytics', exact: true }).click()
       const agentsTable = page.locator('section[aria-label="Agents"]')
       await agentsTable.getByRole('button', { name: 'Next', exact: true }).click()

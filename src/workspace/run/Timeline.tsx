@@ -46,7 +46,6 @@ export function flowTrace(m: RunModel): FlowTrace {
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
       marks: a.restarts.map((at) => ({ at, kind: 'restart', label: `Restarted ${clockOf(m.t0)(at)} UTC` })),
       facts: [
-        ...(a.tokens !== null && !a.byClass ? [{ label: 'Tokens (split not recorded)', value: abbr(a.tokens) }] : []),
         ...(a.node.failureReason ? [{ label: 'Failure', value: a.node.failureReason }] : []),
         { label: 'Model', value: a.model ?? 'Not recorded' },
         ...agentFacts(m, a),
