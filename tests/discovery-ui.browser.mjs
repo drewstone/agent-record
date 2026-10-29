@@ -140,8 +140,6 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.getByRole('button', { name: /3 idle turns/ }).click()
       await page.getByRole('button', { name: 'Beginning', exact: true }).click()
       await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
-      const history = await page.locator('.transcript-edge').first().locator('button').evaluateAll(buttons => buttons.map(button => { const r = button.getBoundingClientRect(); return { left: r.left, right: r.right } }))
-      const historyGap = history.length > 1 ? history[1].left - history[0].right : null
       const requestCount = requests.length
       await page.waitForTimeout(3200)
       assert.equal(requests.length, requestCount, 'reading the beginning does not poll or drain history')
@@ -155,6 +153,8 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.locator('[data-idle-group="3"]').waitFor()
       await page.getByRole('button', { name: /Shell.*check proof/i }).click()
       await page.getByText('Proof verification failed: witness mismatch', { exact: true }).last().waitFor()
+      const history = await page.locator('.transcript-edge').first().locator('button').evaluateAll(buttons => buttons.map(button => { const r = button.getBoundingClientRect(); return { left: r.left, right: r.right } }))
+      const historyGap = history.length > 1 ? history[1].left - history[0].right : null
       const contrast = await page.locator('[data-testid="command-preview"] pre[role="region"]').evaluateAll(regions => regions.map(region => {
         const context = document.createElement('canvas').getContext('2d')
         const rgba = value => { context.clearRect(0, 0, 1, 1); context.fillStyle = value; context.fillRect(0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data] }
