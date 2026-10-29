@@ -72,7 +72,7 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       const choose = async name => {
         await page.getByRole('button', { name: 'Go to agent', exact: true }).click()
         await page.locator('.rp-lb input').fill(name)
-        await page.locator('.rp-lb [role="option"]').filter({ has: page.getByText(name, { exact: true }) }).click()
+        await page.getByRole('option', { name: `${name} —`, exact: true }).click()
         await cardNamed(name).waitFor()
       }
       const fit = async () => { const button = page.locator('.react-flow__controls-fitview'); if (await button.count()) await button.click() }
