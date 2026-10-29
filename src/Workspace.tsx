@@ -1,3 +1,4 @@
+import type { LiveRunTransport } from './workspace/LiveRun.js'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { PageHeader, SegmentedControl } from '@tangle-network/ui/primitives'
@@ -54,13 +55,15 @@ export interface WorkspaceProps {
   mode: 'plays' | 'play' | 'run' | 'receipt' | 'theatre' | 'explore' | LazyMode
   id: string
   theme?: 'light' | 'dark' | 'auto'
+  /** Existing host authentication/session transport for live run inspection. */
+  transport?: LiveRunTransport
 }
 
 /** Play and run pages of a run workspace. Reads only the same-origin API; navigation stays in the host tab. */
-export function Workspace({ api, mode, id, theme = 'auto' }: WorkspaceProps) {
+export function Workspace({ api, mode, id, theme = 'auto', transport }: WorkspaceProps) {
   return (
     <div className="agent-record ar-ws" data-theme={theme === 'auto' ? undefined : theme}>
-      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <Suspense fallback={null}><LazyRunPage api={api} id={id} legacy={() => <LegacyRunSection api={api} id={id} />} /></Suspense>}
+      {mode === 'receipt' ? <ReceiptPage api={api} id={id} /> : mode === 'explore' ? <ExplorePage api={api} /> : isLazyMode(mode) ? <Suspense fallback={null}><LazyPage mode={mode} api={api} transport={transport} /></Suspense> : mode === 'theatre' ? <TheatrePage api={api} id={id} /> : mode === 'plays' ? <PlaysPage api={api} /> : mode === 'play' ? <PlayPage api={api} id={id} /> : <Suspense fallback={null}><LazyRunPage api={api} id={id} legacy={() => <LegacyRunSection api={api} id={id} />} /></Suspense>}
     </div>
   )
 }
