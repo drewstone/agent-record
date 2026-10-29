@@ -28,6 +28,9 @@ const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` 
 // Recorded totals deliberately differ from the bounded display steps.
 nodes[0].usage = { listUsd: 1.25, listComplete: false, billedUsd: null, billedComplete: false, calls: 413, tokens: 100000, byClass: { input: 70000, output: 20000, cacheRead: 10000 }, latencyMs: { p50: 9000, p90: 20000 }, failures: { model: 3, tool: 2 }, retries: { model: 7, tool: 1 }, tools: { read: { calls: 321, failures: 2, ms: 321000 } }, steps: [...nodes[0].usage.steps, { kind: 'model', startMs: start + 1, endMs: start + 1001, failed: false, byClass: { input: 1, output: 1, cacheRead: 0 } }] }
 
+nodes[0].restarts = []
+const fullRootUsage = nodes[0].usage
+
 test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures and navigates 124 agents', { timeout: 120_000 }, async () => {
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
@@ -137,6 +140,18 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       if (evidence) await page.screenshot({ path: `${evidence}/partial-billing-${width}-${theme}.png` })
       nodes[0].usage.billedUsd = null
       nodes[0].usage.billedComplete = false
+      nodes[0].usage = { ...fullRootUsage, tools: null, failures: null, retries: null }
+      await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/timeline`)
+      const unknownBar = page.locator('.fw-bar').first()
+      await unknownBar.waitFor()
+      const unknownBounds = await unknownBar.boundingBox()
+      await page.mouse.move(unknownBounds.x + Math.min(6, unknownBounds.width - 1), unknownBounds.y + unknownBounds.height / 2)
+      await card.waitFor()
+      assert.equal(await metric('Tool failures').innerText(), 'Not recorded')
+      assert.equal(await metric('Failures').innerText(), 'Not recorded', 'a bounded display cannot certify zero full-stream failures')
+      assert.equal(await metric('Retries').innerText(), '— retried steps · 0 restarts')
+      nodes[0].usage = fullRootUsage
+      await page.mouse.move(1, 1)
       await page.getByRole('tab', { name: 'Analytics', exact: true }).click()
       const agentsTable = page.locator('section[aria-label="Agents"]')
       await agentsTable.getByRole('button', { name: 'Next', exact: true }).click()
