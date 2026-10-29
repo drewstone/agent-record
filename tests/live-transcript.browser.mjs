@@ -49,7 +49,7 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
     }
     if (path.startsWith(`/run/${captured.runId}`)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-      return res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/styles.css"><div id="agent-workspace" data-mode="run" data-id="${captured.runId}" data-api="/api"></div><script type="module" src="/assets/workspace-viewer.js"></script></html>`)
+      return res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/styles.css"><style>body{margin:0}#agent-workspace{padding:0 20px 32px}@media(max-width:600px){#agent-workspace{padding-left:16px;padding-right:16px}}</style><div id="agent-workspace" data-mode="run" data-id="${captured.runId}" data-api="/api"></div><script type="module" src="/assets/workspace-viewer.js"></script></html>`)
     }
     res.writeHead(404).end()
   })
