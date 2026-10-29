@@ -425,7 +425,7 @@ export function agentFacts(m: RunModel, a: Agent) {
     { label: 'Tool failures', value: count(a.toolFailures) },
     { label: 'Failures', value: `${count(a.failedSteps)} failed steps` },
     { label: 'Retries', value: `${count(a.retries)} retried steps · ${a.restarts.length} restarts` },
-    { label: 'Busy / run duration', value: `${elapsed(a.busy)} / ${elapsed(m.duration)}` },
+    { label: 'Observed work / run duration', value: `${elapsed(a.busy)} / ${elapsed(m.duration)}` },
     { label: 'Spawned / commits', value: `${a.children.length} / ${count(a.commits)}` },
     ...(a.turns !== null ? [{ label: 'Turns', value: count(a.turns) }] : []),
     ...a.tools.map(tool => ({ label: tool.name, value: `${count(tool.calls)} calls · ${count(tool.failures)} failures · ${lat(tool.p50)} / ${lat(tool.p90)} / ${lat(tool.p99)} p50/p90/p99` })),
