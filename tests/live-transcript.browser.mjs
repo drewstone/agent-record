@@ -19,7 +19,7 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
   const evidence = process.env.LIVE_TRANSCRIPT_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
   const api = `/api/runs/${captured.runId}`, streams = new Map(), requests = [], connections = [], checks = []
-  const lateText = 'The live agent started after an empty tail.'
+  const lateText = 'The live agent started after an empty tail.', gapText = 'A stream record exceeded the payload bound.'
   const lateEvent = { id: 'late-native-row', node: first.node, at: first.at, kind: 'message', category: 'other', label: 'assistant', source: null, detail: { role: 'assistant', publicText: lateText } }
   let location = 'archive', alive = false, finalCapture = false, theme = 'light'
   const nodes = () => [{ id: actor, label: 'Director', parent: null, status: alive ? 'running' : 'succeeded', start: originalNode?.start ?? first.at, end: originalNode?.end ?? null, harness: null, model: null, usage: null }]
@@ -91,14 +91,15 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
       await page.waitForFunction(() => performance.getEntriesByType('resource').filter(item => new URL(item.name).pathname.endsWith('/transcript')).length === 1)
       await connected
       assert.equal(connections.filter(item => item.kind === 'agent').length, 1, 'native SSE owns subsequent arrivals')
-      send('agent', 'rows', { generation: 'fixture', alive: true, events: [{ seq: 0, at: first.at, event: { kind: 'text_delta', text: lateText } }], firstSeq: 0, lastSeq: 0 })
+      send('agent', 'rows', { generation: 'fixture', alive: true, events: [{ seq: 0, at: first.at, event: { kind: 'text_delta', text: lateText } }, { seq: 1, event: { kind: 'capture_gap', text: gapText } }], firstSeq: 0, lastSeq: 1 })
       await page.getByText(lateText, { exact: true }).waitFor()
+      await page.getByText(gapText, { exact: true }).waitFor()
       await capture('native-arrival')
       assert.equal(requests.length, 1)
       // The producer publishes the final retained capture when it settles the run.
       alive = false; finalCapture = true
       send('workspace', 'workspace', { workspace: workspace(), run: run() })
-      send('agent', 'end', { lastSeq: 0 })
+      send('agent', 'end', { lastSeq: 1 })
       await page.locator('.live-transcript').waitFor({ state: 'hidden' })
       await page.locator('.record-conversation').getByText(lateText, { exact: true }).waitFor()
       const settledReads = requests.length, settledConnections = connections.length
@@ -108,7 +109,7 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
       await capture('settled-final-capture')
       assert.deepEqual(errors, [])
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
-      checks.push({ theme, width, retainedLocations: ['archive', 'none', 'dir'], exactAugust5Text: true, liveInitialTailReads: 1, nativeArrival: true, finalCaptureRetainsArrival: true, errors })
+      checks.push({ theme, width, retainedLocations: ['archive', 'none', 'dir'], exactAugust5Text: true, liveInitialTailReads: 1, nativeArrival: true, streamGapVisible: true, finalCaptureRetainsArrival: true, errors })
       const video = page.video()
       await context.close()
       if (evidence && video) await video.saveAs(`${evidence}/archive-conversations-${width}-${theme}.webm`)
