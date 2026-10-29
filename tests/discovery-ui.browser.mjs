@@ -35,7 +35,11 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
   let theme = 'light', alive = true
-  const requests = []
+  const requests = [], streams = new Set()
+  const releases = [1, 2].map(n => ({ release: `rc${n}`, commit: String(n).repeat(12), taggedAt: iso(n * 100), checked: true, passed: 1, total: 2, steps: [{ label: 'Offline build', state: 'pass' }, { label: 'Verify proof', state: 'fail' }], files: { [runId]: ['answer.ts', 'proof.log'] } }))
+  const workspace = () => ({ schema: 'agent-workspace.run-workspace.v1', runId, live: alive, nodes, edges: nodes.slice(1).map(node => ({ from: runId, to: node.id, kind: 'spawn' })), releases, best: 'rc2', code: { available: false, reason: 'No code fixture' } })
+  const runDocument = () => ({ schema: 'agent-workspace.run.v1', run: { id: runId, play: 'magnetar-rust-sandbox', state: alive ? 'running' : 'stopped', startedAt: iso(0), location: { kind: 'dir', path: null }, record: { status: 'missing', digest: null } }, input: { objective: prompt, instruction: '' }, spend: { nodes: {} }, versions: [], live: { polling: alive }, execution: { alive } })
+  const emit = document => { for (const stream of streams) stream.write(`event: workspace\ndata: ${JSON.stringify({ workspace: document, run: runDocument() })}\n\n`) }
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost'), path = url.pathname
     const json = value => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(value)) }
@@ -48,8 +52,15 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       ] : after ? [] : head || !alive ? rows : tail
       return json({ runId, node: runId, generation: 'fixture', alive, events, nodes, firstSeq: events[0]?.seq ?? null, lastSeq: events.at(-1)?.seq ?? null, hasEarlier: !head && alive, hasMore: false })
     }
-    if (path.endsWith('/workspace')) return json({ schema: 'agent-workspace.run-workspace.v1', runId, live: alive, nodes, edges: nodes.slice(1).map(node => ({ from: runId, to: node.id, kind: 'spawn' })), releases: [], best: null, code: { available: false, reason: 'No code fixture' } })
-    if (path === `/api/runs/${runId}`) return json({ schema: 'agent-workspace.run.v1', run: { id: runId, play: 'magnetar-rust-sandbox', state: alive ? 'running' : 'stopped', startedAt: iso(0), location: { kind: 'dir', path: null }, record: { status: 'missing', digest: null } }, input: { objective: prompt, instruction: '' }, spend: { nodes: {} }, versions: [], live: { polling: alive }, execution: { alive } })
+    if (path.endsWith('/stream') && url.searchParams.get('workspace') === '1') {
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
+      res.write(': connected\n\n')
+      streams.add(res)
+      res.on('close', () => streams.delete(res))
+      return
+    }
+    if (path.endsWith('/workspace')) return json(workspace())
+    if (path === `/api/runs/${runId}`) return json(runDocument())
     if (path.startsWith('/api/plays/')) return json({ id: 'magnetar-rust-sandbox', runs: [] })
     if (path.startsWith('/assets/')) {
       const file = resolve(assets, path.slice(8))
@@ -78,6 +89,23 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
         if (width === 390) await root.click()
         await page.locator('.conversation-scroll').waitFor()
       }
+      await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/overview`)
+      await page.locator('.rj-ladder li').first().waitFor()
+      assert.equal(await page.locator('.rj-ladder li').count(), 2)
+      assert.equal(await page.locator('.rj-ladder [aria-current="step"]').innerText(), '2\nVerify proof')
+      assert.match(await page.locator('.rj-releases').innerText(), /rc1–rc2: all 1\/2/)
+      assert.equal(await page.locator('.rp-stats').count(), 0, 'only identity, status and elapsed precede the tabs')
+      assert.ok(await page.locator('.ov-gantt [data-lane]').count() < 40)
+      await page.getByRole('button', { name: 'root', exact: true }).click()
+      await page.locator('.rj-drill').waitFor()
+      assert.match(page.url(), /agent=root/)
+      assert.deepEqual(await page.locator('.rj-drill li a').allTextContents(), ['answer.ts', 'proof.log'])
+      const updated = { ...workspace(), releases: [...releases, { ...releases[1], release: 'rc3', taggedAt: iso(250), passed: 2, steps: releases[1].steps.map(step => ({ ...step, state: 'pass' })) }], best: 'rc3' }
+      emit(updated)
+      await page.getByText('every step passes', { exact: false }).waitFor()
+      assert.equal(await page.locator('.rj-ladder [aria-current]').count(), 0, 'SSE updates the actual ladder without a reload')
+      if (evidence) await page.screenshot({ path: `${evidence}/overview-${width}-${theme}.png` })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await open()
       await page.locator('[data-idle-group="3"]').waitFor()
       assert.equal(await page.getByText('Waiting on worker; ending the turn.', { exact: true }).count(), 0, 'duplicates are folded, never discarded')
