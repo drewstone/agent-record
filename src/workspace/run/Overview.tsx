@@ -22,7 +22,12 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
   const plateau = best ? releases.find(r => r.passed === best.passed) ?? best : null
   const open = best?.steps?.find(s => s.state !== 'pass')
   const stuck = plateau?.taggedAt ? elapsed(Math.max(0, m.t0 + m.duration - Date.parse(plateau.taggedAt))) : null
-  const same = releases.length > 1 && releases.every(r => r.passed === releases[0]!.passed && r.total === releases[0]!.total)
+  const groups: typeof releases[] = []
+  for (const release of releases) {
+    const group = groups.at(-1), previous = group?.at(-1)
+    if (previous && previous.passed === release.passed && previous.total === release.total && previous.checker === release.checker) group!.push(release)
+    else groups.push([release])
+  }
   const blocker = doc.view?.blocker as { owner?: string; action?: string; since?: string; why?: string } | null | undefined
   const picked = route.params.has('agent') && agent ? m.byId.get(agent) : null
   const changed = [...new Set(releases.flatMap(r => picked ? r.files?.[picked.id] ?? [] : []))].sort((a, b) => Number(/\.(log|jsonl?|txt|csv|bin|out)$/.test(a)) - Number(/\.(log|jsonl?|txt|csv|bin|out)$/.test(b)) || a.localeCompare(b))
@@ -38,8 +43,8 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
     <section className="rj-hero" aria-label="How close the best release is">
       {best?.steps?.length ? <Meter total={best.total} used={best.passed} steps={best.steps} text="How close the best release is" /> : <p>No release was checked.</p>}
       {best && <p><b>{best.release}</b> · {open ? `stuck at ${open.label}${stuck ? ` for ${stuck}, since ${plateau?.release}` : ''}` : 'every step passes'}</p>}
-      <p className="rj-next">{doc.view?.paused ? <><b>Next:</b> Decide whether to resume research. <a href="/today">Today →</a></> : blocker?.owner === 'Drew' ? <><b>Next:</b> {blocker.action}</> : <><b>Nothing for you.</b> {blocker?.owner ?? 'Discovery operator'} owns the next action{blocker?.since ? ` since ${sinceLabel(blocker.since)}` : ''}{blocker?.action ? `: ${blocker.action}` : '.'}</>}</p>
-      <p className="rj-releases">{same ? `${releases[0]!.release}–${releases.at(-1)!.release}: all ${releases[0]!.passed}/${releases[0]!.total}${open && stuck ? `, no step gained in ${stuck}` : ''}` : releases.map(r => <a key={r.release} data-pass={r.passed === r.total || undefined} href={route.href('checks', { release: r.release })}>{r.release} {r.passed ?? '?'}/{r.total ?? '?'}</a>)}</p>
+      <p className="rj-next">{doc.view?.paused ? <><b>Next:</b> Decide whether to resume research. <a href="/today">Today →</a></> : blocker?.owner === 'Drew' ? <><b>Next:</b> {blocker.action}</> : <><b>Nothing for you.</b> {blocker?.owner ?? 'Discovery operator'} is on it{blocker?.since ? ` since ${sinceLabel(blocker.since)}` : ''}{blocker?.action ? `: ${blocker.action}` : '.'}</>}</p>
+      <p className="rj-releases">{groups.map(group => { const first = group[0]!, last = group.at(-1)!; return <a key={first.release} data-pass={last.passed === last.total || undefined} href={route.href('checks', { release: last.release })}>{first.release}{group.length > 1 ? `–${last.release}: all` : ''} {last.passed ?? '?'}/{last.total ?? '?'}</a> })}</p>
     </section>
     <div className="rj-main" data-picked={picked && !phone || undefined}>
     <section className="rp-card rj-work" aria-label="What the agents did">
