@@ -27,7 +27,7 @@ export function flowTrace(m: RunModel): FlowTrace {
   for (const a of m.agents) {
     if (a.start === null) continue
     const running = a.status === 'running' || a.status === 'waiting' || a.status === 'needs-you'
-    const end = running ? m.duration : Math.max(a.start, a.end ?? a.last ?? a.start)
+    const end = Math.max(a.start, running ? m.duration : a.end ?? a.last ?? a.start)
     spans.push({
       id: a.id,
       ...(a.parent ? { parentId: a.parent } : {}),
