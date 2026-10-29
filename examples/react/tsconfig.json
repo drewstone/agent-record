@@ -3,11 +3,23 @@
   "compilerOptions": {
     "rootDir": "../..",
     "noEmit": true,
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "paths": {
-      "@drewstone/agent-record": ["../../src/index.ts"],
-      "@drewstone/agent-record/adapters/*": ["../../src/adapters/*.ts"]
+      "@drewstone/agent-record": [
+        "../../src/index.ts"
+      ],
+      "@drewstone/agent-record/adapters/*": [
+        "../../src/adapters/*.ts"
+      ],
+      "@drewstone/agent-record/record": [
+        "../../src/record.ts"
+      ]
     }
   },
-  "include": ["src.tsx", "vite.config.ts"]
+  "include": [
+    "src.tsx",
+    "vite.config.ts"
+  ]
 }
