@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { usePhone } from './use-phone.js'
 import { versionGraphDocumentSchema } from '../workspace-model.js'
 import type { VersionCommit, VersionGraphDocument, VersionTag } from '../workspace-model.js'
 import { CollapsibleValue, ValueControls, ValueScope } from './CollapsibleValue.js'
@@ -19,19 +20,6 @@ const BEND = 22
 const COLORS = 8
 
 const tall = (node: GraphNode) => (node.chips ?? []).some((chip) => chip.tone && chip.tone !== 'muted')
-
-function useNarrow(): boolean {
-  const query = '(max-width: 700px)'
-  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(query).matches === true)
-  useEffect(() => {
-    const media = window.matchMedia?.(query)
-    if (!media) return
-    const changed = () => setNarrow(media.matches)
-    media.addEventListener('change', changed)
-    return () => media.removeEventListener('change', changed)
-  }, [])
-  return narrow
-}
 
 /** Bring a row into its scrolling pane's view, vertically only: the lanes at the left must stay in sight. */
 function revealVertically(element: HTMLElement) {
@@ -78,7 +66,7 @@ export function VersionGraph({
     return out
   }, [laid])
   const height = tops.at(-1) ?? 0
-  const { column: COLUMN, gutter: GUTTER } = useNarrow() ? NARROW : WIDE
+  const { column: COLUMN, gutter: GUTTER } = usePhone('(max-width: 700px)') ? NARROW : WIDE
   const width = GUTTER + laid.lanes.length * COLUMN
   const x = (column: number) => GUTTER / 2 + column * COLUMN + COLUMN / 2
   const y = (row: number) => tops[row]! + LINE / 2
