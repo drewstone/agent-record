@@ -1,4 +1,4 @@
-import { recordModel } from '@tangle-network/sandbox-ui/run'
+import { recordModel } from '@tangle-network/sandbox-ui/run/record'
 import type { RunRecord } from '../record.js'
 
 // Retained UI consumers share the owner projection until their composition moves.

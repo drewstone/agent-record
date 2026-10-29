@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RecordEvent, RunRecord } from '../record.js'
-import { Conversation } from '@tangle-network/sandbox-ui/run'
+import { Conversation } from '@tangle-network/sandbox-ui/run/record'
 import { indexRecord } from '../viewer/model.js'
-import { withPrompts } from '@tangle-network/sandbox-ui/run'
+import { withPrompts } from '@tangle-network/sandbox-ui/run/record'
 import { projectPartEvents } from '../adapters/part-events.js'
 
 type StreamRow = { seq: number; at?: string; stream?: string; attempt?: number; event?: { kind: string; text?: string; toolCallId?: string; toolName?: string; args?: unknown; result?: unknown }; type?: string; data?: unknown }

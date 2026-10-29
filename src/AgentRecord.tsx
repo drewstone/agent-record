@@ -6,7 +6,7 @@ import type { PlaybackMode } from './viewer/playback.js'
 import { useDownload } from './viewer/useDownload.js'
 import { AgentTree } from './viewer/AgentTree.js'
 import { StructuredContent } from './viewer/StructuredContent.js'
-import { Conversation } from '@tangle-network/sandbox-ui/run'
+import { Conversation } from '@tangle-network/sandbox-ui/run/record'
 import {
   categories,
   categoryClass,
