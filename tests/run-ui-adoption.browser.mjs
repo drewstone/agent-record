@@ -5,9 +5,9 @@ import { resolve, extname, dirname } from 'node:path'
 import { createRequire } from 'node:module'
 import { test } from 'node:test'
 
-const require = createRequire(resolve(process.cwd(), 'package.json'))
+const require = createRequire(process.env.AGENT_RECORD_PACKAGE ?? resolve(process.cwd(), 'package.json'))
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright')
-const assets = dirname(require.resolve('@drewstone/agent-record/workspace-viewer.js'))
+const assets = process.env.AGENT_RECORD_ASSETS ?? dirname(require.resolve('@drewstone/agent-record/workspace-viewer.js'))
 const now = Date.now(), start = now - 30 * 60_000, iso = at => new Date(at).toISOString()
 const failureReason = 'Checkout tests failed: ' + 'The retained integration output identifies a mismatched response shape and preserves the complete recorded explanation. '.repeat(4).trimEnd()
 const nodes = Array.from({ length: 17 }, (_, i) => ({
@@ -193,4 +193,206 @@ test('served run adapter uses shared graph statuses, keeps failure evidence and 
       await context.close()
     }
   } finally { await browser?.close(); await new Promise(resolve => server.close(resolve)) }
+})
+
+
+if (process.env.RUNTIME_TUI_MODULE) test('actual retained native bytes cross the product HTTP viewer and preserve selection through capture arrival', { timeout: 120_000 }, async t => {
+  const { pathToFileURL } = await import('node:url')
+  const { mkdtemp, cp, writeFile, appendFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { createHash } = await import('node:crypto')
+  const { join } = await import('node:path')
+  const tui = await import(pathToFileURL(process.env.RUNTIME_TUI_MODULE).href)
+  const kernel = await import(pathToFileURL(process.env.RUNTIME_KERNEL_MODULE).href)
+  const { readSessionInput } = require('@tangle-network/harness-sessions')
+  const fixture = process.env.TANGLE_NATIVE_FIXTURE_DIR
+  assert.ok(fixture, 'Exact private retained fixture is required')
+  const binding = JSON.parse(await readFile(join(fixture, 'binding.json'), 'utf8'))
+  assert.equal(binding.runId, '9e0718af-d78d-4453-951c-b7fca6fb3fc7')
+  assert.equal(binding.nativeSessionId, '01a18306-af45-7c33-85f7-a7d502723948')
+  const raw = await readFile(join(fixture, 'rollout.jsonl'))
+  assert.equal(createHash('sha256').update(raw).digest('hex'), '1696971c00d3950e11e0877320e4cfaad817d0f85af6bff17cb0c819fb200d26')
+  const source = { nativeSessionId: binding.nativeSessionId, files: binding.files.map(file => ({ ...file, nativeSessionId: binding.nativeSessionId })), read: async () => raw, parse: (text, file) => readSessionInput('codex', { text }, { nativeSessionId: file.nativeSessionId, label: file.path }, { corruption: 'strict' }) }
+  const verified = await kernel.readBoundHarnessSessions(source)
+  await assert.rejects(kernel.readBoundHarnessSessions({ ...source, read: async () => Buffer.concat([raw, Buffer.from('\n')]) }), /changed/)
+  const projection = tui.harnessSessionRows(verified.sessions)
+  assert.deepEqual(projection.gaps, [])
+  assert.equal(new Set(projection.rows.map(row => row.id)).size, projection.rows.length)
+  assert.equal(projection.rows.filter(row => row.event.kind === 'user').length, 2)
+  for (const message of verified.sessions[0].messages.filter(message => message.role === 'user')) { const row = projection.rows.find(row => row.id.includes(message.id)); assert.ok(row, 'Canonical native message identity is retained'); assert.equal(row.event.actor, message.actor) }
+  assert.equal(projection.rows.filter(row => row.event.kind === 'tool-call').length, 2)
+  assert.equal(projection.rows.filter(row => row.event.kind === 'tool-result').length, 2)
+  const manifest = JSON.parse(await readFile(join(fixture, 'runtime-manifest.json'), 'utf8'))
+  assert.equal(manifest.files.length, 8)
+  for (const file of manifest.files) {
+    const bytes = await readFile(join(fixture, 'run', file.path))
+    assert.equal(bytes.byteLength, file.byteLength)
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), file.sha256)
+  }
+  const root = await mkdtemp(join(tmpdir(), 'retained-native-viewer-'))
+  const run = join(root, 'run')
+  await cp(join(fixture, 'run'), run, { recursive: true })
+  const journal = await readFile(join(run, 'spawn-journal.jsonl'), 'utf8')
+  const observer = await readFile(join(run, 'observer.jsonl'), 'utf8')
+  const prefix = (text, count) => text.split('\n').slice(0, count).join('\n') + '\n'
+  await writeFile(join(run, 'spawn-journal.jsonl'), prefix(journal, 12))
+  await writeFile(join(run, 'observer.jsonl'), prefix(observer, 2))
+  await rm(join(run, 'result.json'))
+  let captureVisible = false, substituted, decoderCalls = 0
+  const blobs = new kernel.FileResultBlobStore(join(run, 'blobs'))
+  const web = await tui.serveTopWeb({ roots: [run], assets, source: async request => {
+    if (substituted) {
+      const snapshot = await tui.loadTopSnapshot(run, { runDir: run, format: 'journal' })
+      const worker = snapshot.supervisors[0].workers.find(worker => worker.id === request.workerId)
+      assert.ok(worker, 'Substitution probe uses the actual selected journal node')
+      return tui.readTopAgentInspection({ runId: binding.runId, worker: { ...worker, harnessTranscript: substituted }, blobs, signal: request.signal, readSessions: async () => { decoderCalls++; throw new Error('A rejected source must not decode native bytes') } })
+    }
+    return {
+    coverage: { status: captureVisible ? 'partial' : 'missing', source: 'Exact retained9e0718 native bytes', reason: captureVisible ? 'Historical cwd and OTLP attestation; not modern effective-store metadata or fresh production proof' : 'Retained native source not yet attached', ref: 'urn:sha256:1696971c00d3950e11e0877320e4cfaad817d0f85af6bff17cb0c819fb200d26' },
+    ...(captureVisible && request.workerId === binding.workerId ? { rows: projection.rows } : {}),
+    files: { scope: 'none', complete: true, reason: 'Original graph is read-only; no workspace inventory was captured', entries: [] },
+  } } })
+  const evidence = process.env.RUN_UI_EVIDENCE_DIR
+  let browser, retainedPage, measuredState
+  try {
+    browser = await chromium.launch({ headless: true })
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark', ...(evidence ? { recordVideo: { dir: evidence, size: { width: 1440, height: 900 } } } : {}) })
+    const page = await context.newPage(), errors = []
+    retainedPage = page
+    page.on('pageerror', error => errors.push(error.message))
+    await page.goto(web.url)
+    await page.locator('.ws-live .ag-live-card').filter({ hasText: 'root' }).click()
+    await page.getByRole('complementary', { name: 'root conversation', exact: true }).waitFor()
+    await page.locator('.ws-live .ag-live-card').filter({ hasText: 'fetch-pr' }).click()
+    await page.getByRole('complementary', { name: 'fetch-pr conversation', exact: true }).getByText('Request from', { exact: false }).first().waitFor()
+    const main = page.locator('.ws-live')
+    const firstSequence = await main.getAttribute('data-top-sequence')
+    await page.evaluate(url => new Promise((resolve, reject) => {
+      window.retainedFrames = []
+      const source = new EventSource(url)
+      source.addEventListener('reset', message => window.retainedFrames.push({ event: 'reset', ...JSON.parse(message.data) }))
+      source.addEventListener('rows', message => { const frame = JSON.parse(message.data); window.retainedFrames.push({ event: 'rows', generation: frame.generation, ids: frame.events.map(row => row.id), window: frame.window }); resolve() })
+      source.addEventListener('end', () => source.close())
+      source.onerror = () => reject(new Error('Actual selected stream disconnected before its first frame'))
+    }), `${web.url}api/top/agents/0/${binding.runId}/${binding.workerId}/stream`)
+    const viewport = page.locator('.react-flow__viewport').first()
+    await viewport.waitFor()
+    await page.locator('.react-flow__controls-zoomin').click()
+    await page.waitForFunction(() => !document.getAnimations().some(animation => animation.playState === 'running' && Number.isFinite(animation.effect?.getComputedTiming().endTime)))
+    const settleCamera = () => page.waitForFunction(() => { const style = document.querySelector('.react-flow__viewport')?.getAttribute('style'); const current = window.retainedCameraProbe; if (!current || current.style !== style) { window.retainedCameraProbe = { style, at: performance.now() }; return false } return performance.now() - current.at >= 250 })
+    await settleCamera()
+    const camera = await viewport.getAttribute('style')
+    const conversation = page.getByRole('complementary', { name: 'fetch-pr conversation', exact: true })
+    const scroller = conversation.locator('[data-primary-content]')
+    const scrollBefore = await scroller.evaluate(node => ({ top: node.scrollTop, height: node.scrollHeight, client: node.clientHeight, pinned: node.scrollHeight - node.scrollTop - node.clientHeight < 48 }))
+    captureVisible = true
+    await appendFile(join(run, 'spawn-journal.jsonl'), journal.slice(prefix(journal, 12).length))
+    await appendFile(join(run, 'observer.jsonl'), observer.slice(prefix(observer, 2).length))
+    await cp(join(fixture, 'run', 'result.json'), join(run, 'result.json'))
+    await page.waitForFunction(previous => document.querySelector('.ws-live')?.getAttribute('data-top-sequence') !== previous, firstSequence)
+    await page.getByText('Use GitHub Hub to read drewstone/cli-bridge PR296 and return its actual merge evidence as JSON.', { exact: false }).last().waitFor()
+    await page.getByText('Original graph is read-only; no workspace inventory was captured', { exact: false }).waitFor()
+    await settleCamera()
+    measuredState = { source: 'historical9e0718', selectedBefore: 'fetch-pr conversation', selectedAfter: await conversation.getAttribute('aria-label'), cameraBefore: camera, cameraAfter: await viewport.getAttribute('style'), scrollBefore, scrollAfter: await scroller.evaluate(node => ({ top: node.scrollTop, height: node.scrollHeight, client: node.clientHeight, pinned: node.scrollHeight - node.scrollTop - node.clientHeight < 48 })), snapshotBefore: firstSequence, snapshotAfter: await main.getAttribute('data-top-sequence'), productionNative: 'NOT_RUN' }
+    if (evidence) { await writeFile(join(evidence, 'retained-native-state.json'), JSON.stringify(measuredState, null, 2) + '\n'); await page.screenshot({ path: join(evidence, 'retained-native-desktop.png'), fullPage: true }) }
+    assert.equal(measuredState.selectedAfter, measuredState.selectedBefore, 'Actual selected conversation survives the snapshot update')
+    await t.test('the actual native snapshot preserves the reader camera', () => assert.equal(measuredState.cameraAfter, measuredState.cameraBefore, 'Real snapshot update keeps the camera'))
+    if (scrollBefore.pinned) assert.equal(measuredState.scrollAfter.pinned, true, 'Pinned conversation continues following arriving messages')
+    else assert.equal(measuredState.scrollAfter.top, scrollBefore.top, 'An unpinned reading position is preserved')
+    const frames = await page.evaluate(() => window.retainedFrames)
+    const resets = frames.filter(frame => frame.event === 'reset')
+    assert.equal(resets.length, 2, 'The same real selected HTTP stream resets when native evidence arrives')
+    assert.notEqual(resets[0].generation, resets[1].generation)
+    const retainedIds = frames.filter(frame => frame.event === 'rows' && frame.generation === resets[1].generation).flatMap(frame => frame.ids).filter(Boolean)
+    assert.equal(retainedIds.length, new Set(retainedIds).size, 'Retained native rows do not duplicate fallback rows')
+    assert.match(await main.innerText(), /gpt-6\.1-sol/)
+    assert.match(await main.innerText(), /Request from/)
+    assert.equal(await page.locator('[data-capture-status="partial"]').count(), 1)
+    const environment = page.locator('pre.ws-code').filter({ hasText: /^<environment_context>/ })
+    assert.equal(await environment.isVisible(), false, 'Injected environment context is collapsed by default')
+    await page.getByText('Recorded context', { exact: true }).click()
+    await environment.waitFor()
+    await page.getByText('Recorded context', { exact: true }).click()
+    const metadata = await (await fetch(`${web.url}api/top/agents/0/${binding.runId}/${binding.workerId}`)).json()
+    assert.ok(metadata.context.some(row => row.event.actor === 'injected' && row.event.text?.startsWith('<environment_context>')), 'Recorded injected actor and raw context survive disclosure projection')
+    const stream = await (await fetch(`${web.url}api/top/agents/0/${binding.runId}/${binding.workerId}/stream`)).text()
+    assert.match(stream, /"kind":"user"/)
+    assert.match(stream, /"kind":"tool-call"/)
+    assert.match(stream, /"kind":"tool-result"/)
+    assert.match(stream, /event: end/)
+    // Real recorded bytes remain private. These are deliberately forged, hash-valid capture
+    // metadata probes, not evidence that the historical producer emitted a modern binding.
+    const selected = (await tui.loadTopSnapshot(run, { runDir: run, format: 'journal' })).supervisors[0].workers.find(worker => worker.id === binding.workerId)
+    assert.equal(selected.materialization.status, 'known')
+    const node = { rootId: binding.runId, nodeId: selected.id, parentId: selected.parent, attemptId: selected.executionBindings[0].attemptId, identity: selected.identity }
+    const negative = []
+    for (const attack of ['node', 'profile']) {
+      const artifact = { schemaVersion: 1, harness: 'codex', binding: { kind: 'bridge', sessionId: selected.materialization.execution.id, nativeSessionId: binding.nativeSessionId, profileDigest: attack === 'profile' ? 'sha256:' + '0'.repeat(64) : selected.materialization.effectiveProfileDigest, node: { ...node, ...(attack === 'node' ? { nodeId: 'another-recorded-node' } : {}) }, runs: [] }, files: [{ path: binding.files[0].path, bytes: raw.byteLength, content: new TextDecoder('utf-8', { fatal: true }).decode(raw) }], skipped: [] }
+      const ref = kernel.contentAddress(artifact)
+      await blobs.put(ref, artifact)
+      substituted = { status: 'available', harness: 'codex', transcriptRef: ref, fileCount: 1, totalBytes: raw.byteLength, skippedCount: 0, coverageComplete: true }
+      const denied = await (await fetch(`${web.url}api/top/agents/0/${binding.runId}/${binding.workerId}`)).json()
+      assert.equal(denied.coverage.status, 'missing')
+      assert.equal(denied.coverage.code, 'source-mismatch')
+      assert.match(denied.coverage.reason, attack === 'node' ? /nodeId/ : /profile/)
+      negative.push({ attack, coverage: denied.coverage })
+    }
+    substituted = undefined
+    assert.equal(decoderCalls, 0, 'Wrong-node/profile content is refused before native decoding')
+    // Keyboard controls operate the real existing graph and conversation drawer.
+    const close = page.getByRole('button', { name: 'Close conversation', exact: true })
+    await close.focus(); await page.keyboard.press('Escape')
+    await conversation.waitFor({ state: 'hidden' })
+    const retainedCamera = await viewport.getAttribute('style')
+    const rootNode = page.locator(`.react-flow__node[data-id="${binding.runId}"]`)
+    await rootNode.focus(); await page.keyboard.press('Enter')
+    await page.getByRole('complementary', { name: 'root conversation', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Close conversation', exact: true }).click()
+    assert.equal(await viewport.getAttribute('style'), retainedCamera, 'Dismissing and switching agent preserves graph camera')
+    const fetchNode = page.locator(`.react-flow__node[data-id="${binding.workerId}"]`)
+    await fetchNode.focus(); await page.keyboard.press('Enter')
+    await conversation.waitFor()
+    await page.getByRole('radio', { name: 'Agents', exact: true }).click()
+    await page.getByRole('button', { name: 'Restart', exact: true }).click()
+    const prompt = conversation.getByText('Use GitHub Hub to read drewstone/cli-bridge PR296 and return its actual merge evidence as JSON.', { exact: false })
+    await prompt.waitFor({ state: 'hidden' })
+    await page.getByRole('radio', { name: 'Graph', exact: true }).click()
+    assert.equal(await page.locator(`.react-flow__node[data-id="${binding.workerId}"]`).count(), 0, 'Graph and native conversation both omit work after the replay cursor')
+    await page.getByRole('radio', { name: 'Agents', exact: true }).click()
+    await page.getByRole('button', { name: 'Show full trace', exact: true }).click()
+    await prompt.waitFor()
+    await page.getByRole('radio', { name: 'Graph', exact: true }).click()
+    await page.locator(`.react-flow__node[data-id="${binding.workerId}"]`).waitFor()
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const motion = await page.evaluate(() => ({ reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, transforms: document.getAnimations().filter(animation => animation.effect?.getTiming().iterations === Infinity && animation.effect.getKeyframes().some(frame => frame.transform && frame.transform !== 'none')).length }))
+    assert.equal(motion.reduced, true)
+    assert.equal(motion.transforms, 0, 'Reduced motion has no decorative infinite transform')
+    measuredState.interaction = { sourceSubstitution: negative, decoderCalls, keyboard: 'PASS_GRAPH_ENTER_DRAWER_ESCAPE', replay: 'PASS_RESTART_FILTERS_NATIVE_PROMPT_FULL_TRACE_RESTORES', reducedMotion: motion, files: 'N/A_READ_ONLY_ORIGINAL' }
+    if (evidence) { await writeFile(join(evidence, 'retained-native-state.json'), JSON.stringify(measuredState, null, 2) + '\n'); await page.screenshot({ path: join(evidence, 'retained-native-desktop.png'), fullPage: true }) }
+    assert.deepEqual(errors, [])
+    await context.close()
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', ...(evidence ? { recordVideo: { dir: evidence, size: { width: 390, height: 844 } } } : {}) })
+    const mobile = await phone.newPage()
+    mobile.on('pageerror', error => errors.push(error.message))
+    await mobile.goto(web.url)
+    const phoneAgent = name => mobile.locator(`.ag-phone-select[data-agent-id="${name === 'root' ? binding.runId : binding.workerId}"]`)
+    await phoneAgent('fetch-pr').click()
+    await mobile.getByRole('complementary', { name: 'fetch-pr conversation', exact: true }).waitFor()
+    await mobile.getByText('Original graph is read-only; no workspace inventory was captured', { exact: false }).waitFor()
+    assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Phone has no horizontal page overflow')
+    await mobile.getByRole('button', { name: 'Close conversation', exact: true }).click()
+    await mobile.getByRole('complementary', { name: 'fetch-pr conversation', exact: true }).waitFor({ state: 'hidden' })
+    assert.equal(await phoneAgent('fetch-pr').getAttribute('aria-pressed'), 'true', 'Phone close retains selected agent context')
+    await phoneAgent('root').focus(); await mobile.keyboard.press('Enter')
+    await mobile.getByRole('complementary', { name: 'root conversation', exact: true }).waitFor()
+    await mobile.getByRole('button', { name: 'Close conversation', exact: true }).focus(); await mobile.keyboard.press('Escape')
+    await mobile.getByRole('complementary', { name: 'root conversation', exact: true }).waitFor({ state: 'hidden' })
+    await phoneAgent('fetch-pr').click()
+    await mobile.getByRole('complementary', { name: 'fetch-pr conversation', exact: true }).getByText('Use GitHub Hub to read drewstone/cli-bridge PR296 and return its actual merge evidence as JSON.', { exact: false }).waitFor()
+    measuredState.interaction.phone = 'PASS_CLOSE_RETAINS_SELECTION_SWITCH_ROOT_KEYBOARD_REOPEN_FETCH'
+    if (evidence) { await writeFile(join(evidence, 'retained-native-state.json'), JSON.stringify(measuredState, null, 2) + '\n'); await mobile.screenshot({ path: join(evidence, 'retained-native-phone.png'), fullPage: true }) }
+    assert.deepEqual(errors, [], 'Desktop and phone have no uncaught browser errors')
+    await phone.close()
+    console.log(JSON.stringify({ source: 'historical9e0718', nativeSha256: '1696971c00d3950e11e0877320e4cfaad817d0f85af6bff17cb0c819fb200d26', rows: projection.rows.length, sourceFiles: verified.files.length, realUserMessages: 2, nativeToolPairs: 2, viewport: ['1440x900', '390x844'], workspace: 'N/A', productionNative: 'NOT_RUN' }))
+  } finally { if (evidence && retainedPage && !retainedPage.isClosed()) { await retainedPage.screenshot({ path: join(evidence, 'retained-native-final.png'), fullPage: true }).catch(() => {}); if (!measuredState) await writeFile(join(evidence, 'retained-native-state.json'), JSON.stringify({ source: 'historical9e0718', selectionCameraMeasurement: 'NOT_REACHED', productionNative: 'NOT_RUN' }, null, 2) + '\n') } await browser?.close(); await web.close(); await rm(root, { recursive: true, force: true }) }
 })

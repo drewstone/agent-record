@@ -1,3 +1,4 @@
+import type { LiveRunTransport } from './LiveRun.js'
 import { createElement, lazy } from 'react'
 
 // Screens that pull in sandbox-ui (the run page's file, code and diff views) or are opened alone (Today): each is a
@@ -26,7 +27,7 @@ const PAGES = {
 }
 export type LazyMode = keyof typeof PAGES
 export const isLazyMode = (mode: string): mode is LazyMode => mode in PAGES
-export const LazyPage = ({ mode, api }: { mode: LazyMode; api: string }) => createElement(PAGES[mode], { api })
+export const LazyPage = ({ mode, api, transport }: { mode: LazyMode; api: string; transport?: LiveRunTransport }) => mode === 'live' ? createElement(PAGES.live, { api, transport }) : createElement(PAGES[mode], { api })
 // The run's outputs drawer and a version's output changes read files through sandbox-ui's previews and diffs.
 export const LazyOutputsView = lazy(() => import('./Outputs.js').catch(reloadOnce).then((module) => ({ default: module.OutputsView })))
 export const LazyOutputChanges = lazy(() => import('./Outputs.js').catch(reloadOnce).then((module) => ({ default: module.OutputChanges })))
