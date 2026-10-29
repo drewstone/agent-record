@@ -16,7 +16,6 @@ test('the Charts example reads every retained publication, selects source events
   const first = record.events[0], actor = canonical.get(first.node)
   const methods = [], failures = [], checks = []
   const server = createServer(async (req, res) => {
-    methods.push(req.method)
     const path = new URL(req.url, 'http://localhost').pathname
     if (!path.startsWith('/agent-record/')) return res.writeHead(404).end()
     const file = resolve(root, decodeURIComponent(path.slice('/agent-record/'.length)) || 'index.html')
@@ -33,7 +32,8 @@ test('the Charts example reads every retained publication, selects source events
       const context = await browser.newContext({ viewport: { width, height: 982 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 982 } } } : {}) })
       const page = await context.newPage(), began = Date.now()
       page.on('pageerror', error => failures.push(error.message))
-      await page.goto(`http://127.0.0.1:${server.address().port}/agent-record/`)
+      page.on('request', request => methods.push(request.method()))
+      await page.goto(process.env.EXAMPLE_URL ?? `http://127.0.0.1:${server.address().port}/agent-record/`)
       const records = page.getByRole('combobox', { name: 'Record', exact: true })
       await page.waitForFunction(() => document.querySelector('select[aria-label="Record"]')?.options.length === 5)
       assert.equal(await page.locator('.agent-record').count(), 0, 'the example uses shared owners rather than the private viewer')
