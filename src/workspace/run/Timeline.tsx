@@ -42,7 +42,7 @@ export function flowTrace(m: RunModel): FlowTrace {
       outcome: OUTCOME[a.state.tone](a.state.label),
       activityAt: a.lastActivityAt === undefined ? [] : [a.lastActivityAt - m.t0],
       medianEventGapMs: a.medianEventGapMs,
-      ...(a.listUsd !== null ? { costUsd: a.listUsd } : a.billedUsd !== null ? { costUsd: a.billedUsd } : {}),
+      ...(a.listUsd !== null ? { costUsd: a.listUsd, costBound: a.node.usage?.listComplete === false ? 'lower' as const : undefined } : a.billedUsd !== null ? { costUsd: a.billedUsd } : {}),
       ...(a.byClass ? { promptTokens: a.byClass.input + a.byClass.cacheRead, completionTokens: a.byClass.output, cachedTokens: a.byClass.cacheRead } : {}),
       marks: a.restarts.map((at) => ({ at, kind: 'restart', label: `Restarted ${clockOf(m.t0)(at)} UTC` })),
       facts: [

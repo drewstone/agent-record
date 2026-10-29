@@ -26,7 +26,7 @@ const tail = rows.slice(3).map(row => ({ ...row, seq: row.seq + 200 }))
 const nodes = Array.from({ length: 124 }, (_, i) => ({ id: i ? `${runId}:s${i}` : runId, label: i ? `Worker ${i}` : 'root', parent: i ? runId : null, kind: 'agent', status: 'running', start: iso(0), end: null, model: 'Recorded model', harness: 'codex', usage: { calls: 1, tokens: 12, tools: { read: { calls: 1, failures: 0, ms: 1 } }, steps: [{ kind: 'tool', startMs: start, endMs: start + 1, tool: 'read', failed: false }] } }))
 
 // Recorded totals deliberately differ from the bounded display steps.
-nodes[0].usage = { calls: 413, tokens: 100000, byClass: { input: 70000, output: 20000, cacheRead: 10000 }, latencyMs: { p50: 9000, p90: 20000 }, failures: { model: 3, tool: 2 }, retries: { model: 7, tool: 1 }, tools: { read: { calls: 321, failures: 2, ms: 321000 } }, steps: [...nodes[0].usage.steps, { kind: 'model', startMs: start + 1, endMs: start + 1001, failed: false, byClass: { input: 1, output: 1, cacheRead: 0 } }] }
+nodes[0].usage = { listUsd: 1.25, listComplete: false, billedUsd: null, calls: 413, tokens: 100000, byClass: { input: 70000, output: 20000, cacheRead: 10000 }, latencyMs: { p50: 9000, p90: 20000 }, failures: { model: 3, tool: 2 }, retries: { model: 7, tool: 1 }, tools: { read: { calls: 321, failures: 2, ms: 321000 } }, steps: [...nodes[0].usage.steps, { kind: 'model', startMs: start + 1, endMs: start + 1001, failed: false, byClass: { input: 1, output: 1, cacheRead: 0 } }] }
 
 test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures and navigates 124 agents', { timeout: 120_000 }, async () => {
   const evidence = process.env.DISCOVERY_UI_EVIDENCE_DIR
@@ -124,7 +124,8 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.equal(await metric('Tokens').innerText(), '70,000 in / 20,000 out / 10,000 cached')
       assert.equal(await metric('Failures').innerText(), '5 failed steps')
       assert.equal(await metric('Retries').innerText(), '8 retried steps · 0 restarts')
-      assert.equal(await metric('Cost').innerText(), 'Not recorded')
+      assert.equal(await metric('Cost').innerText(), '≥$1.25 catalog')
+      assert.equal(await metric('Billed cost').innerText(), 'Not recorded', 'an absent bill is never fabricated as zero')
       await page.mouse.move(1, 1)
       await page.getByRole('tab', { name: 'Analytics', exact: true }).click()
       const agentsTable = page.locator('section[aria-label="Agents"]')
