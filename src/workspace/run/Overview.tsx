@@ -1,6 +1,6 @@
 import { Gantt, Meter, type ChartMark, type TimelineLane } from '@tangle-network/charts/react'
 import { type TabProps, agentParam } from './RunPage.js'
-import { elapsed } from './model.js'
+import { elapsed, type RunRelease } from './model.js'
 import { plainSummary, sinceLabel } from '../plain-words.js'
 import { usePhone } from '../use-phone.js'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@tangle-network/sandbox-ui/primitives'
@@ -14,7 +14,7 @@ export function clause(text: string | null | undefined, words = Infinity): strin
   return cut.length > words ? `${cut.slice(0, words).join(' ').replace(/[.;,:]+$/, '')}…` : t.replace(/[.;,:]$/, '')
 }
 
-/** The approved 0.65.0 journey, composed from the shared live timeline and recorded check steps. */
+const passed = (r: RunRelease) => r.checked && r.total !== null && r.total > 0 && r.passed === r.total
 export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
   const phone = usePhone()
   const best = m.best
@@ -32,7 +32,7 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
   const picked = route.params.has('agent') && agent ? m.byId.get(agent) : null
   const changed = [...new Set(releases.flatMap(r => picked ? r.files?.[picked.id] ?? [] : []))].sort((a, b) => Number(/\.(log|jsonl?|txt|csv|bin|out)$/.test(a)) - Number(/\.(log|jsonl?|txt|csv|bin|out)$/.test(b)) || a.localeCompare(b))
   const lanes: TimelineLane[] = m.tree.filter(a => a.start !== null).map(a => ({ id: a.id, label: a.name, spans: [{ start: m.t0 + Math.max(0, a.start!), end: m.live && ['running', 'waiting', 'needs-you'].includes(a.status) ? null : m.t0 + Math.max(a.start!, a.end ?? a.last ?? a.start!), state: a.state.tone || 'none' }] }))
-  const marks: ChartMark[] = releases.map(r => ({ at: Date.parse(r.taggedAt!), kind: 'release', label: r.release, verdict: r.passed === r.total ? 'pass' : 'unknown' }))
+  const marks: ChartMark[] = releases.map(r => ({ at: Date.parse(r.taggedAt!), kind: 'release', label: r.release, verdict: passed(r) ? 'pass' : 'unknown' }))
   const clock = (t: number) => new Date(t).toISOString().slice(5, 16).replace('T', ' ')
   const drill = picked ? <section className="rp-card rj-drill" aria-label={`${picked.name}: what it did`}>
       <div className="rp-hd"><h2>{picked.name}</h2><a className="rp-btn end" href={route.href('conversations', { agent: agentParam(doc.run.id, picked.id) })}>Conversation →</a></div>
@@ -44,7 +44,7 @@ export function Overview({ m, doc, route, agent, selectAgent }: TabProps) {
       {best?.steps?.length ? <Meter total={best.total} used={best.passed} steps={best.steps} text="How close the best release is" /> : <p>No release was checked.</p>}
       {best && <p><b>{best.release}</b> · {open ? `stuck at ${open.label}${stuck ? ` for ${stuck}, since ${plateau?.release}` : ''}` : 'every step passes'}</p>}
       <p className="rj-next">{doc.view?.paused ? <><b>Next:</b> Decide whether to resume research. <a href="/today">Today →</a></> : blocker?.owner === 'Drew' ? <><b>Next:</b> {blocker.action}</> : <><b>Nothing for you.</b> {blocker?.owner ?? 'Discovery operator'} is on it{blocker?.since ? ` since ${sinceLabel(blocker.since)}` : ''}{blocker?.action ? `: ${blocker.action}` : '.'}</>}</p>
-      <p className="rj-releases">{groups.map(group => { const first = group[0]!, last = group.at(-1)!; return <a key={first.release} data-pass={last.passed === last.total || undefined} href={route.href('checks', { release: last.release })}>{first.release}{group.length > 1 ? `–${last.release}: all` : ''} {last.passed ?? '?'}/{last.total ?? '?'}</a> })}</p>
+      <p className="rj-releases">{groups.map(group => { const first = group[0]!, last = group.at(-1)!; return <a key={first.release} data-pass={passed(last) || undefined} href={route.href('checks', { release: last.release })}>{first.release}{group.length > 1 ? `–${last.release}: all` : ''} {last.passed ?? '?'}/{last.total ?? '?'}</a> })}</p>
     </section>
     <div className="rj-main" data-picked={picked && !phone || undefined}>
     <section className="rp-card rj-work" aria-label="What the agents did">

@@ -108,6 +108,8 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       const unchecked = page.locator('.rj-releases a').filter({ hasText: 'rc4' })
       await unchecked.waitFor()
       assert.equal(await unchecked.getAttribute('data-pass'), null, 'unknown check counts cannot appear as passed')
+      assert.equal(await page.locator('.ov-gantt [data-mark=release]').filter({ has: page.locator('title').filter({ hasText: 'rc4' }) }).first().getAttribute('data-verdict'), 'unknown', 'the same unknown verdict colors the timeline release diamond')
+      assert.equal(await page.locator('.rj-releases a').filter({ hasText: 'rc3' }).getAttribute('data-pass'), 'true', 'the recorded passing release retains its success color')
       if (evidence) await page.screenshot({ path: `${evidence}/overview-${width}-${theme}.png` })
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await open()
