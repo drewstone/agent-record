@@ -80,6 +80,7 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
         await capture(`retained-${location}`)
       }
       alive = true; location = 'dir'
+      const connected = page.waitForResponse(response => response.url().includes('/stream?') && !response.url().includes('workspace=1'))
       await page.goto(`${base}&case=alive-empty`)
       await page.locator('.live-transcript').waitFor()
       await page.waitForFunction(() => document.querySelector('.live-transcript')?.innerText.includes('No stream events have been retained'))
@@ -87,6 +88,7 @@ test('archive Conversations preserves the August 5 capture and hands an empty li
       assert.equal(await page.getByText(/Seven zip archives are in/).count(), 0, 'an alive empty tail does not substitute the old capture')
       await capture('alive-empty')
       await page.waitForFunction(() => performance.getEntriesByType('resource').filter(item => new URL(item.name).pathname.endsWith('/transcript')).length === 1)
+      await connected
       assert.equal(connections.filter(item => item.kind === 'agent').length, 1, 'native SSE owns subsequent arrivals')
       send('agent', 'rows', { generation: 'fixture', alive: true, events: [{ seq: 0, at: first.at, event: { kind: 'text_delta', text: lateText } }], firstSeq: 0, lastSeq: 0 })
       await page.getByText(lateText, { exact: true }).waitFor()
