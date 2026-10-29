@@ -8,7 +8,15 @@ export async function proveToolPreview(page, evidence, width, theme) {
     assert.ok(await list.getByRole('listitem').count() < 100)
     await page.keyboard.press('Home'); await list.getByText('root', { exact: true }).waitFor()
   }
+  const identity = page.locator('.rp-alist [role="listitem"]').filter({ has: page.getByText('root', { exact: true }) }).locator('.rp-agent-logos')
+  assert.equal(await identity.locator(':scope > *').count(), 1, 'one harness logo per agent')
+  const logo = identity.locator(':scope > *')
+  assert.match(await logo.getAttribute('title'), /Recorded model/)
+  assert.ok(await logo.evaluate(element => element.firstElementChild.getBoundingClientRect().width >= 16), 'the actual mark is at least sixteen pixels')
   const row = page.locator('.record-tool-row').filter({ has: page.getByRole('button', { name: /Read.*proof.txt/i }) }).first()
+  const summary = row.locator('[data-record-tool-summary]')
+  assert.match(await summary.innerText(), /1s.*Returned/s)
+  assert.ok(await summary.evaluate(element => getComputedStyle(element).opacity === '1' && element.getBoundingClientRect().width > 40))
   await row.hover()
   const preview = page.locator('.record-tool-preview')
   await preview.getByText('Exact retained evidence, with source provenance.', { exact: true }).waitFor()
@@ -42,4 +50,16 @@ export async function proveArrivalMotion(page) {
   assert.deepEqual(arrivals[0].frames.map(frame => frame.opacity), ['0', '1'])
   assert.ok(arrivals[0].duration > 0)
   assert.equal(arrivals[0].state, 'running')
+}
+
+export async function proveFailedToolSummary(page) {
+  await page.mouse.move(1, 1)
+  const row = page.locator('.record-tool-row[data-tool-status="error"]').last()
+  const result = row.locator('[data-record-tool-result]')
+  assert.equal(await result.innerText(), 'Failed')
+  const visible = await row.locator('[data-record-tool-summary]').evaluate(element => {
+    const box = element.getBoundingClientRect(), color = getComputedStyle(element).color.match(/[\d.]+/g).map(Number)
+    return box.width > 40 && box.right <= innerWidth && getComputedStyle(element).opacity === '1' && color[0] > color[1] * 1.2 && color[0] > color[2] * 1.2
+  })
+  assert.ok(visible, 'failed duration and result remain visible in the failed color without hover')
 }
