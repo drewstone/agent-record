@@ -68,7 +68,7 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
       const sourceActions=[]
       for(const action of ['click','Enter','Space']){
         await reset()
-        const point=page.locator('[data-tokens] .tgc-series-observation,[data-tokens] circle[data-id]').first()
+        const point=page.locator('[data-tokens] .tgc-series-observation:visible,[data-tokens] circle[data-id]:visible').first()
         await point.waitFor();assert.equal(await point.getAttribute('role'),'button','an activated point exposes its action to assistive technology')
         if(action==='click')await point.click();else{await point.focus();await page.keyboard.press(action)}
         await page.waitForFunction(()=>window.chosen?.view==='source')
