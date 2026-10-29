@@ -1,12 +1,12 @@
 import { type KeyboardEvent, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PageHeader } from '@tangle-network/ui/primitives'
+import { PageHeader } from '@tangle-network/sandbox-ui/primitives'
 import type { RunDocument } from '../../workspace-model.js'
 import type { Play } from '../answers.js'
 import { StatusPill, useDocument } from '../data.js'
 import { shortRun } from '../play-standing.js'
 import { viewChip } from '../view.js'
 import { reloadOnce } from '../lazy-pages.js'
-import { buildModel, abbr, count, type RunModel, elapsed, usd, type WorkspaceDoc } from './model.js'
+import { buildModel, count, type RunModel, elapsed, type WorkspaceDoc } from './model.js'
 import { CardLayer, Icon, Picker } from './ui.js'
 
 /**
@@ -16,7 +16,7 @@ import { CardLayer, Icon, Picker } from './ui.js'
  */
 export const RUN_PAGE_TABS = ['overview', 'timeline', 'files', 'topology', 'conversations', 'traces', 'analytics', 'checks'] as const
 export type RunTabId = (typeof RUN_PAGE_TABS)[number]
-const LABEL: Record<RunTabId, string> = { overview: 'Overview', timeline: 'Timeline', files: 'Files', topology: 'Topology', conversations: 'Conversations', traces: 'Traces', analytics: 'Analytics', checks: 'Checks' }
+const LABEL: Record<RunTabId, string> = { overview: 'Overview', timeline: 'Waterfall', files: 'Files', topology: 'Topology', conversations: 'Conversations', traces: 'Traces', analytics: 'Analytics', checks: 'Checks' }
 
 const Overview = lazy(() => import('./Overview.js').catch(reloadOnce).then((m) => ({ default: m.Overview })))
 const Timeline = lazy(() => import('./Timeline.js').catch(reloadOnce).then((m) => ({ default: m.TimelineTab })))
@@ -90,10 +90,28 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
   const route = useRunRoute(id)
   const runUrl = `${api}/runs/${encodeURIComponent(id)}`
   const run = useDocument<RunDocument>(runUrl, undefined, true)
-  const live = Boolean(run.data?.execution?.alive)
-  const ws = useDocument<WorkspaceDoc>(`${runUrl}/workspace`, live ? 15_000 : undefined, true)
-  const play = useDocument<Play>(run.data ? `${api}/plays/${encodeURIComponent(run.data.run.play)}` : null)
-  const m = useMemo(() => (ws.data && run.data ? buildModel(ws.data, run.data.run) : null), [ws.data, run.data])
+  const initial = useDocument<WorkspaceDoc>(`${runUrl}/workspace`, undefined, true)
+  const [frame, setFrame] = useState<{ url: string; workspace: WorkspaceDoc; run: RunDocument } | null>(null)
+  const [now, setNow] = useState(Date.now)
+  const current = frame?.url === runUrl ? frame : null
+  const doc = current?.run ?? run.data
+  const ws = { ...initial, data: current?.workspace ?? initial.data }
+  const live = Boolean(doc?.execution?.alive || ws.data?.live)
+  useEffect(() => {
+    if (!live) return
+    const source = new EventSource(`${runUrl}/agents/${encodeURIComponent(id)}/stream?workspace=1`)
+    source.addEventListener('workspace', event => {
+      try {
+        const next = JSON.parse((event as MessageEvent<string>).data)
+        if (next.workspace?.runId === id && next.run?.run?.id === id) setFrame({ ...next, url: runUrl })
+      } catch { /* EventSource reconnects; retain the last complete document. */ }
+    })
+    source.addEventListener('end', () => source.close())
+    const clock = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => { source.close(); window.clearInterval(clock) }
+  }, [live, runUrl, id])
+  const play = useDocument<Play>(doc ? `${api}/plays/${encodeURIComponent(doc.run.play)}` : null)
+  const m = useMemo(() => (ws.data && doc ? buildModel(ws.data, doc.run) : null), [ws.data, doc, now])
   const section = route.params.get('section')
   const mapped = section ? SECTION_TAB[section] : undefined
   // A link from before the tabs lands on the tab that holds its section, with its agent or file.
@@ -121,8 +139,7 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
     return () => { nav.removeEventListener('scroll', check); r.disconnect() }
   }, [tab, run.data])
   if (run.error && !run.data) return <p className="ws-status" role="alert">This run is unavailable: {run.error}</p>
-  if (!run.data) return <p className="ws-status" role="status">Loading…</p>
-  const doc = run.data
+  if (!doc) return <p className="ws-status" role="status">Loading…</p>
   const counts: Partial<Record<RunTabId, string>> = m ? {
     conversations: count(m.agents.length),
     traces: count(m.totals.steps),
@@ -146,7 +163,7 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
           className="rp-head"
           title={<><a href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a><span className="sep" aria-hidden="true">/</span><span>Run {shortRun(doc.run.play, doc.run.id)}</span></>}
           description={doc.view ? <StatusPill status={viewChip(doc.view.status)} title={doc.view.status.reason ?? undefined} /> : undefined}
-          actions={m ? <HeaderStats m={m} doc={doc} /> : undefined}
+          actions={m ? <time className="rp-elapsed" aria-label="Elapsed">{elapsed(m.duration)}</time> : undefined}
         />
         <div className="rp-tabs-wrap" data-more={more || undefined}>
         <nav ref={tabsRef} className="rp-tabs" role="tablist" aria-label="Run" onKeyDown={keys}>
@@ -183,22 +200,5 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
         </main>
       </div>
     </CardLayer>
-  )
-}
-
-/** The few numbers that matter, on the title's baseline: run time, agents, steps, tokens and what was billed. */
-function HeaderStats({ m, doc }: { m: RunModel; doc: RunDocument }) {
-  const billed = m.totals.billedUsd
-  const stats: [string, string, string?][] = [
-    [elapsed(m.duration), m.live ? 'running' : 'run'],
-    [count(m.agents.length), m.agents.length === 1 ? 'agent' : 'agents'],
-    [count(m.totals.steps), 'steps'],
-    [abbr(m.totals.tokens), 'tokens', m.totals.byClass ? `${abbr(m.totals.byClass.input)} in · ${abbr(m.totals.byClass.output)} out · ${abbr(m.totals.byClass.cacheRead)} cached` : undefined],
-    m.totals.listUsd !== null ? [usd(m.totals.listUsd), 'list'] : [usd(billed ?? doc.spend.paidUsd ?? null), 'billed'],
-  ]
-  return (
-    <ul className="rp-stats">
-      {stats.map(([value, unit, title]) => <li key={unit} title={title}><b>{value}</b> {unit}</li>)}
-    </ul>
   )
 }

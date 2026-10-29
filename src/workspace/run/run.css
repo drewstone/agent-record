@@ -31,19 +31,15 @@
 .agent-record .ws-status { padding: 24px; color: hsl(var(--hsl-muted-foreground)); }
 
 /* header (ui PageHeader) and the tab bar */
-.agent-record .rp-head { margin: 0; padding: 20px 0 16px; }
+.agent-record .rp-head { margin: 0; padding: 12px 0 8px; }
 .agent-record .rp-head > div { align-items: baseline; }
 .agent-record .rp-head > div > div:first-child { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.agent-record .rp-head h1 { margin: 0; font: 600 28px/34px var(--font-sans); letter-spacing: -0.015em; color: hsl(var(--hsl-foreground)); display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.agent-record .rp-head h1 { margin: 0; font: 600 16px/24px var(--font-sans); letter-spacing: -0.015em; color: hsl(var(--hsl-foreground)); display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
 .agent-record .rp-head h1 a { color: hsl(var(--hsl-muted-foreground)); font-weight: 500; }
 .agent-record .rp-head h1 a:hover { color: hsl(var(--hsl-foreground)); }
 .agent-record .rp-head h1 .sep { color: var(--border-strong); font-weight: 300; }
 .agent-record .rp-head > div > div:first-child > p { margin: 0; }
-.agent-record .rp-stats { display: flex; align-items: baseline; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
-.agent-record .rp-stats li { padding: 0 16px; white-space: nowrap; color: hsl(var(--hsl-muted-foreground)); }
-.agent-record .rp-stats li + li { box-shadow: -1px 0 0 var(--rp-line); }
-.agent-record .rp-stats li:last-child { padding-right: 0; }
-.agent-record .rp-stats b { color: hsl(var(--hsl-foreground)); font-weight: 600; font-variant-numeric: tabular-nums; }
+.agent-record .rp-elapsed { white-space: nowrap; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .rp .rp-tabs-wrap { position: relative; flex: none; }
 .rp .rp-tabs-wrap[data-more] .rp-tabs { mask-image: linear-gradient(90deg, #000 calc(100% - 72px), transparent calc(100% - 28px)); }
 .rp .rp-tabs-next { position: absolute; right: 4px; top: 6px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: hsl(var(--hsl-card)); box-shadow: inset 0 0 0 1px var(--rp-edge); color: hsl(var(--hsl-foreground)); cursor: pointer; }
@@ -188,29 +184,24 @@
 .rp-pop .ok { color: var(--surface-success-text); } .rp-pop .f { color: var(--surface-danger-text); }
 .rp-pop-goal { padding: 16px; font-size: 16px; line-height: 26px; max-height: 60vh; overflow: auto; white-space: pre-wrap; }
 
-/* Overview: verdict and next action, the summary, then time and agents side by side */
-.rp .rp-ov { display: grid; grid-template-rows: auto auto auto; align-content: start; gap: 16px; }
-/* One inset for every Overview card: 20 px, the card header's own. */
-.rp .rp-vd { padding: 20px; overflow: visible; }
-.rp .rp-vd-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; }
-.rp .rp-vd-meta { margin: 12px 0 0; font-size: 14px; line-height: 20px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.rp .rp-verdict { margin: 0; font: 600 24px/32px var(--font-sans); letter-spacing: -0.01em; color: hsl(var(--hsl-foreground)); }
-.rp .rp-lede { margin: 4px 0 0; font-size: 16px; line-height: 24px; color: hsl(var(--hsl-muted-foreground)); max-width: 84ch; }
-.rp .rp-vd-act { display: flex; gap: 8px; align-items: center; padding-top: 2px; }
-.rp .rp-sum { display: grid; grid-template-columns: minmax(0, 1.45fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.25fr); }
-.rp .rp-sum { column-gap: 8px; }
-.rp .rp-sum > div { padding: 20px; min-width: 0; }
-.rp .rp-sum h3 { margin: 0 0 6px; font: 500 14px/20px var(--font-sans); color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-sum .v { display: flex; align-items: center; gap: 8px; font: 600 18px/26px var(--font-sans); }
-.rp .rp-sum .goal { font-size: 16px; line-height: 24px; }
-.rp .rp-sum .sub { margin-top: 4px; color: hsl(var(--hsl-muted-foreground)); }
-.rp .rp-sum .sub a { color: var(--accent-text); font-weight: 500; }
-.rp .rp-sum .files { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
-.rp .rp-sum .files a { display: flex; align-items: center; gap: 6px; font-weight: 500; overflow: hidden; white-space: nowrap; color: hsl(var(--hsl-foreground)); }
-.rp .rp-sum .files a .rp-i { color: var(--text-dim); }
-.rp .rp-sum .files a span { overflow: hidden; text-overflow: ellipsis; }
-.rp .rp-sum .files a:hover span { color: var(--accent-text); }
-.rp .rp-ov-b { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: stretch; }
+/* Approved run journey; the plot and motion belong to Charts. */
+.rp .rp-journey { display: flex; flex-direction: column; gap: 16px; }
+.rp .rj-hero p { margin: 12px 0 0; }
+.rp .rj-ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; padding: 0; margin: 0; list-style: none; }
+.rp .rj-ladder li { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-height: 104px; padding: 16px; border-radius: var(--radius-lg); background: var(--rp-raised); }
+.rp .rj-ladder strong { font-size: 26px; line-height: 30px; }
+.rp .rj-ladder [data-state='pass'] { background: var(--surface-success-bg); }
+.rp .rj-ladder [aria-current='step'] { background: var(--surface-warning-bg); color: var(--surface-warning-text); }
+.rp .rj-next { color: var(--text-muted); }
+.rp .rj-next b { color: var(--text-primary); }
+.rp .rj-releases { display: flex; gap: 12px; flex-wrap: wrap; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rp .rj-releases [data-pass] { color: var(--surface-success-text); }
+.rp .rj-work .ov-gantt { padding: 12px; }
+.rp .rj-drill dl { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 16px; margin: 0; }
+.rp .rj-drill dd { margin: 0; overflow-wrap: anywhere; }
+.rp .rj-drill dt { color: var(--text-muted); }
+.rp .rj-drill ul { margin: 0; padding: 0 16px 16px 32px; overflow-wrap: anywhere; }
+.rp .rj-drill a:hover { color: var(--accent-text); }
 .rp .rp-twrap { padding: 16px 20px 16px; }
 .rp .rp-tg { display: grid; grid-template-columns: 150px minmax(0, 1fr) 64px; column-gap: 12px; align-items: center; }
 .rp .rp-tg .nm { color: hsl(var(--hsl-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -492,14 +483,14 @@
 /* a phone: the tabs stick and scroll; panels stack at their natural height */
 @media (max-width: 720px) {
   .rp-run { height: auto; }
-  .agent-record .rp-head { padding: 16px 0 12px; }
-  .agent-record .rp-head h1 { font-size: 24px; line-height: 30px; flex-wrap: wrap; white-space: normal; min-width: 0; }
-  .agent-record .rp-head h1 a { min-width: 0; overflow-wrap: anywhere; }
-  .agent-record .rp-stats { width: 100%; gap: 2px 16px; flex-wrap: nowrap; overflow: hidden; }
-  .agent-record .rp-stats li { padding: 0; }
-  /* A phone's header is one line of facts: time, agents and steps; tokens and cost are on Overview and Analytics. */
-  .agent-record .rp-run .rp-stats li:nth-child(n + 4) { display: none; }
-  .agent-record .rp-stats li + li { box-shadow: none; }
+  .agent-record .rp-run .rp-head { padding: 10px 0 8px; }
+  .agent-record .rp-run .rp-head > div { flex-wrap: nowrap; gap: 8px; }
+  .agent-record .rp-run .rp-head > div > div:first-child { flex-wrap: nowrap; min-width: 0; gap: 6px; }
+  .agent-record .rp-run .rp-head h1 { font-size: 13px; line-height: 22px; gap: 5px; min-width: 0; }
+  .agent-record .rp-run .rp-head h1 a { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+  .agent-record .rp-run .rp-elapsed { font-size: 13px; }
+  .rp .rj-ladder { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rp .rj-ladder li { padding: 12px; min-height: 94px; }
   .rp .rp-tabs-wrap { position: sticky; top: 44px; z-index: 5; margin: 0 -16px; background: hsl(var(--hsl-background)); }
   .rp .rp-tabs { margin: 0; padding: 0 4px; }
   .rp .rp-work { overflow: visible; padding-top: 12px; }
