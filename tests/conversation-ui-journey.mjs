@@ -8,11 +8,17 @@ export async function proveToolPreview(page, evidence, width, theme) {
     assert.ok(await list.getByRole('listitem').count() < 100)
     await page.keyboard.press('Home'); await list.getByText('root', { exact: true }).waitFor()
   }
+  if (width === 390) await page.getByRole('button', { name: 'All agents', exact: true }).click()
   const identity = page.locator('.rp-alist [role="listitem"]').filter({ has: page.getByText('root', { exact: true }) }).locator('.rp-agent-logos')
   assert.equal(await identity.locator(':scope > *').count(), 1, 'one harness logo per agent')
   const logo = identity.locator(':scope > *')
   assert.match(await logo.getAttribute('title'), /Recorded model/)
   assert.ok(await logo.evaluate(element => element.firstElementChild.getBoundingClientRect().width >= 16), 'the actual mark is at least sixteen pixels')
+  if (width === 390) {
+    await page.locator('.rp-alist [role="listitem"]').filter({ has: page.getByText('root', { exact: true }) }).click()
+    await page.getByRole('button', { name: 'Beginning', exact: true }).click()
+    await page.getByRole('button', { name: 'Full prompt', exact: true }).waitFor()
+  }
   const row = page.locator('.record-tool-row').filter({ has: page.getByRole('button', { name: /Read.*proof.txt/i }) }).first()
   const summary = row.locator('[data-record-tool-summary]')
   assert.match(await summary.innerText(), /1s.*Returned/s)
