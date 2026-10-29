@@ -152,7 +152,7 @@ export function RunPage({ api, id, legacy }: { api: string; id: string; legacy?:
       <Tabs value={tab} onValueChange={value => route.go(value as RunTabId)} className="rp rp-run" data-run={id} data-tab={legacyBody ? undefined : tab}>
         <PageHeader
           className="rp-head"
-          title={<><a href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a><span className="sep" aria-hidden="true">/</span><span>Run {shortRun(doc.run.play, doc.run.id)}</span></>}
+          title={<><a href={`/play/${encodeURIComponent(doc.run.play)}`}>{doc.run.play}</a><span className="sep" aria-hidden="true">/</span><span className="clip" title={doc.run.id}>Run {shortRun(doc.run.play, doc.run.id)}</span></>}
           description={<StatusPill status={doc.view ? viewChip(doc.view.status) : statusOf({ axis: 'run', state: doc.run.state })} title={doc.view?.status.reason ?? undefined} />}
           actions={m ? <time className="rp-elapsed" aria-label="Elapsed">{elapsed(m.duration)}</time> : undefined}
         />
