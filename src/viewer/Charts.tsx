@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { FocusEvent, KeyboardEvent, MouseEvent } from 'react'
 import type { RecordEvent } from '../record.js'
+import { timeSeries, type TimeSeriesRow } from '@tangle-network/charts'
+import { FigureView } from '@tangle-network/charts/react'
 import { fmt, hoverLines, interval, ms, toolKey, tooltipSections, utcTime } from './model.js'
 import type { RecordIndex } from './model.js'
 
@@ -325,7 +327,6 @@ export function UsageChart({
   index,
   cutoff,
   inspect,
-  showTooltip,
   hideTooltip,
   navigate,
   actor,
@@ -335,7 +336,7 @@ export function UsageChart({
   // Channels the reader toggled off; the scale follows the visible channels so one
   // dominant channel (a huge cache-read total) cannot flatten every other curve.
   const [hidden, setHidden] = useState<ReadonlySet<Channel>>(() => new Set())
-  const visible = channels.filter((channel) => !hidden.has(channel))
+  const visible = useMemo(() => channels.filter((channel) => !hidden.has(channel)), [hidden])
   const measured = useMemo(() => {
     const points: Point[] = []
     const totals: Record<Channel, number> = {
@@ -409,183 +410,52 @@ export function UsageChart({
     return { points, totals, counts, incomplete, ambiguous, invalidTiming }
   }, [index, cutoff, actor, metric, axis])
   const { points, totals, counts } = measured
-  const width = 580,
-    left = 62,
-    right = 22,
-    top = 28,
-    bottom = 218
-  const max = Math.max(
-    1,
-    ...points.flatMap((point) =>
-      metric === 'tool-time'
-        ? [point.elapsed ?? 0]
-        : visible.map((channel) => point.values[channel] ?? 0),
-    ),
-  )
-  const x = (point: Point, i: number) =>
-    left +
-    (axis === 'time'
-      ? (point.at - index.start) / Math.max(1, cutoff - index.start)
-      : i / Math.max(1, points.length - 1)) *
-      (width - left - right)
-  const y = (value: number) => bottom - (value / max) * (bottom - top)
-  const path = (channel: Channel, scoped: boolean) => {
-    let connected = false
-    return points
-      .filter((point) => !!point.scoped === scoped)
-      .map((point) => {
-        const value = point.values[channel]
-        if (value === undefined) {
-          connected = false
-          return ''
-        }
-        const segment = `${connected ? 'L' : 'M'}${x(point, points.indexOf(point))},${y(value)}`
-        connected = true
-        return segment
-      })
-      .join(' ')
+  const plotted = useMemo(() => {
+    const sourceEvents: RecordEvent[] = []
+    const series = (id: string, label: string, colorIndex: number, scoped: boolean, channel?: Channel): TimeSeriesRow => ({
+      id, label, colorIndex, secondary: scoped,
+      points: points.filter(point => !!point.scoped === scoped).map(point => {
+        const y = metric === 'tool-time' ? point.elapsed! : point.values[channel!] ?? null
+        if (y !== null) sourceEvents.push(point.event)
+        return { x: axis === 'time' ? point.at : points.indexOf(point) + 1, y, label: point.event.label,
+          ...(point.event.detail.isError ? { marker: 'triangle' as const } : {}),
+          annotation: [point.event.detail.isError ? 'The tool reported an error.' : '', scoped ? 'Metered window or execution-to-date; not a per-response measurement.' : ''].filter(Boolean).join(' ') || undefined }
+      }),
+    })
+    const rows = metric === 'tool-time' ? [series('tool-return', 'Observed call → result interval', 0, false)]
+      : visible.flatMap(channel => [series(channel, channelLabels[channel], channels.indexOf(channel), false, channel),
+        ...(points.some(point => point.scoped) ? [series(`scoped:${channel}`, `${channelLabels[channel]} · metered windows`, channels.indexOf(channel), true, channel)] : [])])
+    return { rows, sourceEvents }
+  }, [points, visible, metric, axis])
+  const figure = useMemo(() => (width: number) => timeSeries(plotted.rows, {
+    id: 'record-usage', width, selectable: true,
+    x: { label: axis === 'time' ? 'Recorded elapsed time' : 'Recorded event order', domain: axis === 'time' ? [index.start, Math.max(index.start + 1, cutoff)] : [1, Math.max(2, points.length)] },
+    y: { label: metric === 'tool-time' ? 'Observed call → result interval' : metric === 'cumulative' ? 'Cumulative measured tokens' : 'Measured tokens per response', unit: metric === 'tool-time' ? 'seconds' : 'tokens', domain: [0, Math.max(1, ...plotted.rows.flatMap(row => row.points.map(point => point.y ?? 0)))] },
+    formatX: axis === 'time' ? value => interval(value - index.start) : String,
+    formatY: metric === 'tool-time' ? value => `${value.toFixed(3)}s` : fmt,
+  }), [plotted, axis, metric, index.start, cutoff, points.length])
+  const activatePoint = (target: EventTarget) => {
+    const key = target instanceof Element ? target.closest('[data-point]')?.getAttribute('data-point') : null
+    const event = key === null ? undefined : plotted.sourceEvents[Number(key)]
+    if (!event) return false
+    hideTooltip(); inspect(event, true)
+    return true
   }
   return (
     <>
-      <svg
-        data-tokens
-        viewBox="0 0 580 265"
-        role="group"
-        tabIndex={0}
-        aria-label="Recorded usage or tool return time. Points open source events."
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-            event.preventDefault()
-            navigate(event.key === 'ArrowLeft' ? -1 : 1)
-          }
-        }}
-      >
-        {Array.from({ length: 5 }, (_, i) => {
-          const value = (i * max) / 4,
-            yy = y(value),
-            xx = left + (i / 4) * (width - left - right)
-          return (
-            <g key={i}>
-              <line
-                x1={left}
-                x2={width - right}
-                y1={yy}
-                y2={yy}
-                className="grid-line"
-              />
-              <text
-                x={left - 7}
-                y={yy + 4}
-                textAnchor="end"
-                className="axis-label"
-              >
-                {metric === 'tool-time'
-                  ? `${value.toFixed(max > 10 ? 0 : 1)}s`
-                  : fmt(value)}
-              </text>
-              <text x={xx} y={240} textAnchor="middle" className="axis-label">
-                {axis === 'time'
-                  ? interval(((cutoff - index.start) * i) / 4)
-                  : points.length
-                    ? String(Math.round(((points.length - 1) * i) / 4) + 1)
-                    : '—'}
-              </text>
-            </g>
-          )
-        })}
-        <text x={left} y={14} className="axis-label">
-          {metric === 'tool-time'
-            ? 'Observed call → result interval (seconds)'
-            : metric === 'cumulative'
-              ? 'Cumulative measured tokens'
-              : 'Measured tokens per response'}
-        </text>
-        {metric !== 'tool-time' &&
-          visible.map((channel) => (
-            <path
-              key={channel}
-              d={path(channel, false)}
-              className={`usage-line ${channel}-line`}
-            />
-          ))}
-        {metric === 'cumulative' &&
-          points.some((point) => point.scoped) &&
-          visible.map((channel) => (
-            <path
-              key={`scoped-${channel}`}
-              d={path(channel, true)}
-              className={`usage-line ${channel}-line scoped-line`}
-            />
-          ))}
-        {points.map((point, i) => {
-          const value =
-            metric === 'tool-time'
-              ? point.elapsed!
-              : Math.max(0, ...visible.map((channel) => point.values[channel] ?? 0))
-          if (metric !== 'tool-time' && value === 0 && !visible.some((channel) => point.values[channel] !== undefined)) return null
-          const tooltipData = tooltipSections(point.event, index, cutoff)
-          const lines = tooltipData.sections
-          if (metric === 'tool-time')
-            lines.push({ kind: 'status', value: `${point.elapsed!.toFixed(3)} seconds between the recorded call and this result. Includes queue and tool time.`, tone: 'muted' })
-          else if (metric === 'cumulative')
-            lines.push({ kind: 'usage', value: channels
-                .map(
-                  (channel) =>
-                    `${channelLabels[channel]} ${point.values[channel] === undefined ? 'unmeasured' : fmt(point.values[channel]!)}`,
-                )
-                .join('  ') })
-          const choose = () => {
-            hideTooltip()
-            inspect(point.event, true)
-          }
-          return (
-            <circle
-              key={point.event.id}
-              cx={x(point, i)}
-              cy={y(value)}
-              r={4}
-              className={
-                metric === 'tool-time'
-                  ? point.event.detail.isError
-                    ? 'time-error'
-                    : 'time-point'
-                  : point.scoped
-                    ? 'usage-point scoped-point'
-                    : 'usage-point'
-              }
-              data-id={point.event.id}
-              tabIndex={0}
-              role="button"
-              aria-label={`${point.event.label}, ${metric === 'tool-time' ? `${point.elapsed?.toFixed(3)} seconds` : 'measured token usage'}`}
-              onMouseEnter={(e) => showTooltip(e, point.event.label, lines)}
-              onMouseLeave={hideTooltip}
-              onFocus={(e) => showTooltip(e, point.event.label, lines)}
-              onBlur={hideTooltip}
-              onClick={choose}
-              onKeyDown={(e) => activate(e, choose)}
-            />
-          )
-        })}
-        {!points.length && (
-          <text
-            x={width / 2}
-            y={120}
-            textAnchor="middle"
-            className="axis-label"
-          >
-            {metric === 'tool-time'
-              ? 'No matched tool timing at this time'
-              : 'No measured usage at this time'}
-          </text>
-        )}
-      </svg>
+      <div data-tokens onClick={event => activatePoint(event.target)} onKeyDown={event => {
+        if ((event.key === 'Enter' || event.key === ' ') && activatePoint(event.target)) event.preventDefault()
+        if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && event.target instanceof Element && event.target.closest('svg')) { event.preventDefault(); navigate(event.key === 'ArrowLeft' ? -1 : 1) }
+      }}>
+        {points.length ? <FigureView figure={figure} /> : <p className="chat-empty">{metric === 'tool-time' ? 'No matched tool timing at this time' : 'No measured usage at this time'}</p>}
+      </div>
       {metric !== 'tool-time' && (
         <div className="usage-legend">
           {channels.map((channel) => (
             <button
               key={channel}
               type="button"
-              className={`${channel}-key legend-toggle`}
+              className="legend-toggle"
               aria-pressed={!hidden.has(channel)}
               title={hidden.has(channel) ? `Show ${channelLabels[channel]}` : `Hide ${channelLabels[channel]}`}
               onClick={() =>
