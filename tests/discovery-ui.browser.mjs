@@ -107,7 +107,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.locator('.conversation-scroll').waitFor()
       await page.locator('[data-timeline-step="user"]').getByText('Retain the failing witness and investigate it.', { exact: true }).waitFor()
       assert.ok(requests.some(query => query.includes('s123')), 'selection fetches the selected agent')
-      await page.getByRole('tab', { name: 'Timeline', exact: true }).click()
+      await page.goto(`http://127.0.0.1:${server.address().port}/run/${runId}/timeline`)
       const bar = page.locator('.fw-bar').first()
       await bar.waitFor()
       const bounds = await bar.boundingBox()
