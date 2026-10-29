@@ -518,7 +518,7 @@
   .rp-run:is([data-tab='overview'], [data-tab='analytics'], [data-tab='checks']) .rp-work { margin: 0; padding: 12px 0 24px; overflow: visible; }
   .agent-record .rp-scroll, .rp .rp-alist, .rp .rp-tbl, .rp .rp-at-wrap { max-height: 420px; }
   .rp .rp-conv .rp-alist, .rp .rp-conv .rp-scroll { max-height: 72dvh; }
-  .rp .rp-tl-chart { min-height: 520px; }
+  .rp .rp-tl-chart { height: calc(100dvh - 160px); min-height: 360px; }
   .rp .rp-ig { grid-template-columns: minmax(0, 1fr); }
   .rp .rp-ig > div + div { box-shadow: none; border-top: 1px solid var(--rp-line); }
   .rp .rp-files { height: 80dvh; }

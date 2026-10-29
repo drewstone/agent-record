@@ -172,6 +172,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       assert.ok(Number(await tree.getAttribute('aria-rowcount')) >= 124)
       assert.ok(await tree.getByRole('row').count() < 60, '124 agents retain a bounded Waterfall window')
       assert.equal(await page.locator('.fw-kind-rule').count(), 0)
+      if (width === 390) assert.ok((await page.locator('.fw-root').boundingBox()).height >= 600, 'phone Waterfall uses the available viewport instead of a fixed 520px card')
       await page.getByRole('button', { name: 'Expand root', exact: true }).click()
       nodes[0].usage = { ...fullRootUsage, steps: [...fullRootUsage.steps, { kind: 'tool', tool: 'waterfall_live_append', startMs: start + 2000, endMs: start + 6000, failed: false }] }
       const navigationCount = await page.evaluate(() => performance.getEntriesByType('navigation').length)
