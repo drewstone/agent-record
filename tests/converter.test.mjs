@@ -311,14 +311,15 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
   }]))
   const original = new Map(readdirSync(dirname(store)).map(name => [name, readFileSync(join(dirname(store), name))]))
   const files = createFileCache(), options = { runId: 'run-n', native, files }
-  const before = process.resourceUsage().fsWrite
+  const written = () => process.platform === 'linux' ? Number(/^wchar:\s*(\d+)/m.exec(readFileSync('/proc/self/io', 'utf8'))[1]) : process.resourceUsage().fsWrite * 512
+  const before = written()
   const first = ingestRun(run, options), second = ingestRun(run, options)
-  const writtenBlocks = process.resourceUsage().fsWrite - before
+  const writtenBytes = written() - before
   assert.equal(second.json, first.json)
   assert.deepEqual(childEvents(first.record).map(e => e.detail.publicText), wal ? ['Checkpointed evidence.', 'WAL-only evidence.'] : ['Checkpointed evidence.'])
   assert.ok(childEvents(first.record).every(e => e.source.path.startsWith(`native:${hex}/`) && e.source.pointer.startsWith('/part/')))
   assert.deepEqual(readdirSync(dirname(store)).sort(), [...original.keys()].sort())
   for (const [name, bytes] of original) assert.deepEqual(readFileSync(join(dirname(store), name)), bytes, `cached input ${name} is unchanged`)
-  t.diagnostic(JSON.stringify({ wal, writtenBlocks, recordDigest: first.summary.recordDigest }))
-  if (!wal) assert.ok(writtenBlocks < 4096, `checkpointed captures must not copy two16MiB databases; wrote ${writtenBlocks} filesystem blocks`)
+  t.diagnostic(JSON.stringify({ wal, writtenBytes, recordDigest: first.summary.recordDigest }))
+  if (!wal) assert.ok(writtenBytes < 2 * 1024 * 1024, `checkpointed captures must not copy two16MiB databases; wrote ${writtenBytes} bytes`)
 })
