@@ -249,6 +249,7 @@ test('HTTP Discovery chat preserves prompts, folds idle turns, retains failures 
       await page.waitForTimeout(250)
       assert.equal(await page.getByText('New tail while reading history.', { exact: true }).count(), 0, 'a reader scrolled above the tail is not pulled to a new arrival')
       const afterAnchor = await conversation.locator(`[data-entry=${JSON.stringify(anchor.id)}]`).boundingBox()
+      console.log('Reader position across native append', JSON.stringify({ theme, width, anchor, afterAnchor, scroll: await conversation.evaluate(element => ({ top: element.scrollTop, height: element.clientHeight, anchor: getComputedStyle(element).overflowAnchor, ancestors: [...(function* () { let node=element; while(node) { yield { name: node.className, anchor: getComputedStyle(node).overflowAnchor }; node=node.parentElement } })()] })) }))
       assert.ok(afterAnchor && Math.abs(afterAnchor.y - anchor.top) < 2, 'an SSE append preserves the visible reader row within two pixels')
       await conversation.focus(); await page.keyboard.press('End')
       await page.getByText('New tail while reading history.', { exact: true }).waitFor()
