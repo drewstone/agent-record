@@ -76,7 +76,7 @@ test('a join moves events to another node without changing a single id', (t) => 
   assert.equal(joined.nodes.find((node) => node.id === 'run-x:s0').joinBasis, 'task-digest')
 })
 
-test('a directory that differs from its snapshot manifest, or a repeated anchor, is refused', (t) => {
+test('a directory that differs from its snapshot manifest is refused', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'converter-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   const run = writeRun(root, { joinable: true })
@@ -91,19 +91,6 @@ test('a directory that differs from its snapshot manifest, or a repeated anchor,
   const changed = spawnSync(process.execPath, [INGEST, run, '--manifest', join(root, 'snapshot.json'), '--out', join(root, 'out2.json')], { encoding: 'utf8' })
   assert.equal(changed.status, 4)
   assert.match(changed.stderr, /finding\.md does not match/)
-
-  // A bundle that lists one session twice for one node would emit every line twice: an error, never a suffix.
-  const bundle = join(root, 'bundle')
-  mkdirSync(join(bundle, 'pi'), { recursive: true })
-  writeFileSync(join(bundle, 'pi/a.jsonl'), readFileSync(join(run, 'trace/pi-sessions/w/a.jsonl')))
-  writeFileSync(join(bundle, 'bundle.json'), JSON.stringify({
-    schema: 'agent-record.bundle.v1', recordId: 'b', sessions: [{ path: 'pi/a.jsonl', harness: 'pi', sessionId: 's' }, { path: 'pi/a.jsonl', harness: 'pi', sessionId: 's' }],
-  }))
-  assert.throws(() => ingestBundle(bundle), /duplicate anchor/)
-  // --run-id may repeat a bundle's recordId but never contradict it.
-  writeFileSync(join(bundle, 'bundle.json'), JSON.stringify({ schema: 'agent-record.bundle.v1', recordId: 'b', sessions: [{ path: 'pi/a.jsonl', harness: 'pi' }] }))
-  assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'b', '--out', join(root, 'b.json')]).status, 0)
-  assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'other', '--out', join(root, 'c.json')]).status, 64)
 })
 
 // A cli-bridge Pi session lives under sha256("cli-bridge/pi-session\0" + bridge session id); that id is the execution id
@@ -320,7 +307,7 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
 })
 
 // One framing for every harness reader: a session file belongs to one node, keeps to its line window, and each event's
-// id is the file's own sha256 prefix and line or JSON Pointer, recomputed here from the bytes alone.
+// id is the file's own sha256 prefix and line or JSON Pointer, recomputed here from the bytes alone. A repeated anchor is refused.
 test('every harness file in a bundle is framed alike: one owner, its line window, ids from its own bytes', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'converter-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
@@ -331,9 +318,10 @@ test('every harness file in a bundle is framed alike: one owner, its line window
     'codex/retained.jsonl': retained('codex.jsonl'),
     // Line 6 is torn, line 7 has no time, line 8 is outside the window.
     'codex/windowed.jsonl': retained('codex.jsonl') + '{"torn\n' + jsonl([{ type: 'event_msg', payload: { type: 'note' } }, { type: 'event_msg', timestamp: at(9), payload: { type: 'note' } }]),
+    // Pi line 1 (the header, which still names the session) and bridge line 3 are outside their windows; the bridge sessions row has no time.
     'pi/a.jsonl': jsonl([{ type: 'session', id: 'pi-a', timestamp: at(1) }, { type: 'message', id: 'u', timestamp: at(2), message: { role: 'user', content: 'Go.' } }]),
-    // The sessions row has no time.
-    'bridge/s.jsonl': jsonl([{ table: 'sessions', row: { external_id: 'b-1' } }, { table: 'retained_events', row: { event_id: 'e', occurred_at: at(2), event_json: JSON.stringify({ event: bridgeCalls }) } }]),
+    'bridge/s.jsonl': jsonl([{ table: 'sessions', row: { external_id: 'b-1' } }, { table: 'retained_events', row: { event_id: 'e', occurred_at: at(2), event_json: JSON.stringify({ event: bridgeCalls }) } },
+      { table: 'retained_events', row: { event_id: 'f', occurred_at: at(3), event_json: JSON.stringify({ event: { content: 'Outside the window.' } }) } }]),
     'oc/s/native-trajectory.json': JSON.stringify({ messages: [{ id: 'm', data: { role: 'assistant' } }], parts: [{ id: 'p', message_id: 'm', time_created: ms(3), data: { type: 'text', text: 'Done.' } }] }),
   }
   const bundle = join(root, 'bundle')
@@ -347,8 +335,8 @@ test('every harness file in a bundle is framed alike: one owner, its line window
     { path: 'claude/retained.jsonl', harness: 'claude-code', sessionId: 'again' },
     { path: 'codex/retained.jsonl', harness: 'codex' },
     { path: 'codex/windowed.jsonl', harness: 'codex', lines: [[1, 3], [6, 7]] },
-    { path: 'pi/a.jsonl', harness: 'pi' },
-    { path: 'bridge/s.jsonl', harness: 'opencode-bridge' },
+    { path: 'pi/a.jsonl', harness: 'pi', lines: [[2, 2]] },
+    { path: 'bridge/s.jsonl', harness: 'opencode-bridge', lines: [[1, 2]] },
     { path: 'oc/s/native-trajectory.json', harness: 'opencode' },
   ])
   const { record } = ingestBundle(bundle)
@@ -359,16 +347,22 @@ test('every harness file in a bundle is framed alike: one owner, its line window
   assert.deepEqual(Object.fromEntries(record.nodes.map((node) => [node.id, node.capture.channel])), {
     'claude-code:retained-claude-activity': 'native', 'claude-code:again': 'none', 'codex:retained': 'codex', 'codex:windowed': 'codex', 'pi:pi-a': 'pi', 'bridge:b-1': 'bridge', 'opencode:s': 'oc',
   })
-  const of = (node) => record.events.filter((event) => event.node === node)
-  assert.equal(of('claude-code:again').length, 0)
-  assert.deepEqual(of('codex:windowed').map((event) => event.source.line), [1, 2, 3])
-  assert.deepEqual(of('bridge:b-1').filter((event) => event.kind === 'message').map((event) => event.source.item), [0, 1])
+  // Each node's anchors (line, then item) after its object prefix.
+  const kept = (node) => record.events.filter((event) => event.node === node).map((event) => event.id.slice(13))
+  assert.deepEqual(['claude-code:again', 'codex:windowed', 'pi:pi-a', 'bridge:b-1'].map(kept), [[], ['1', '2', '3'], ['2'], ['2.0', '2.1']])
   assert.deepEqual(record.coverage.gaps.map(({ nodeId, code, detail }) => [nodeId, code, detail]), [
     ['claude-code:again', 'source-shared', 'claude/retained.jsonl is already the conversation of claude-code:retained-claude-activity'],
     ['codex:windowed', 'untimed-lines', '1 lines of codex/windowed.jsonl carry no time'],
     ['codex:windowed', 'unparsable-lines', '1 lines of codex/windowed.jsonl are not JSON'],
     ['bridge:b-1', 'untimed-lines', '1 rows of bridge/s.jsonl carry no time'],
   ])
+  // One session listed twice for one node would emit every line twice: an error, never a suffix.
+  writeBundle([{ path: 'pi/a.jsonl', harness: 'pi', sessionId: 's' }, { path: 'pi/a.jsonl', harness: 'pi', sessionId: 's' }])
+  assert.throws(() => ingestBundle(bundle), /duplicate anchor/)
   writeBundle([{ path: 'pi/a.jsonl', harness: 'toString' }])
   assert.throws(() => ingestBundle(bundle), /pi\/a\.jsonl has an unknown harness/)
+  // --run-id may repeat a bundle's recordId but never contradict it.
+  writeBundle([{ path: 'pi/a.jsonl', harness: 'pi' }])
+  assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'harnesses', '--out', join(root, 'b.json')]).status, 0)
+  assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'other', '--out', join(root, 'c.json')]).status, 64)
 })

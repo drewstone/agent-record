@@ -1,11 +1,10 @@
 /** Retained cli-bridge exports (`trace/bridge-sessions/*.jsonl` in a run): rows of `{table, row}` from the bridge store. */
 import { basename } from 'node:path'
 import type { Ingest, NodeDraft } from './agent-runtime.js'
-import { categoryOf, filesUnder, isoAt, readLines, splitLines, str, type Json, type Line, type SessionReader } from './harness-reader.js'
+import { categoryOf, filesUnder, isoAt, readLines, splitLines, str, type Json, type Line, type SessionFile, type SessionReader } from './harness-reader.js'
 
 /** A bridge export: its rows, and the bridge session id its `sessions` row names. */
-export interface BridgeStream {
-  rel: string
+export interface BridgeStream extends SessionFile {
   rows: Line[]
   sessionId: string | null
   sessionLine: number | null
@@ -26,7 +25,7 @@ export const readBridgeBundle: SessionReader = (main, session) => {
   const stream = bridgeStream(main, session.path)
   const id = `bridge:${session.sessionId ?? stream.sessionId ?? basename(session.path, '.jsonl')}`
   const node = main.ensureNode(id, { label: session.label ?? id })
-  readBridgeStream(main, node, stream)
+  readBridgeStream(main, node, { ...stream, window: session.lines })
   return node
 }
 
