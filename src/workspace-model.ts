@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
 import { checkDisputeSchema, runCheckSchema } from './run-check-model.js'
-export { calibrationSchema, runCheckSchema, type Calibration, type RunCheck } from './run-check-model.js'
+export { calibrationSchema, runCheckSchema, type Calibration } from './run-check-model.js'
 import { playBlockerSchema, playFindingFields, playPageFields } from './workspace/play-standing.js'
 import { viewBriefSchema, viewSchema } from './workspace/view.js'
 import { runExecutionSchema } from './workspace/run-execution.js'
