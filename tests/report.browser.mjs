@@ -74,12 +74,12 @@ test('the public report CLI preserves sources and enforces its browser and files
         for (const rule of served.rules) {
           const row = page.locator('#anomalies [data-rule=' + JSON.stringify(rule.id) + ']')
           assert.equal(await row.getAttribute('data-state'), rule.state)
-          for (const anomaly of served.anomalies.filter(item => item.rule === rule.id)) assert.ok((await row.innerText()).includes(api.hostWords(anomaly.sentence)))
+          for (const anomaly of served.anomalies.filter(item => item.rule === rule.id)) assert.ok((await row.innerText()).includes(anomaly.sentence))
         }
         for (const item of served.unknowns) {
           const row = page.locator('#unknowns [data-unknown-field=' + JSON.stringify(item.field) + ']')
           assert.ok((await row.innerText()).includes(api.hostWords(item.why)))
-          assert.ok((await row.innerText()).includes(api.hostWords(item.record)))
+          assert.ok((await row.innerText()).includes(item.record))
         }
         await page.getByRole('navigation', { name: 'Play sections', exact: true }).getByRole('button', { name: /^Sources/ }).click()
         const search = page.getByRole('searchbox', { name: 'Search this play’s sources', exact: true })
