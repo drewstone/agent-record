@@ -82,8 +82,7 @@ export interface Line {
  * string V8 can hold (about 512 MiB) still converts. Lines `keep` rejects (outside a bundle's line window) are
  * neither decoded nor parsed.
  */
-export function splitLines(bytes: Buffer, keep?: (line: number) => boolean): Line[] {
-  const rows: Line[] = []
+export function* splitLines(bytes: Buffer, keep?: (line: number) => boolean): Generator<Line> {
   let start = 0
   let line = 1
   while (start <= bytes.length) {
@@ -99,13 +98,12 @@ export function splitLines(bytes: Buffer, keep?: (line: number) => boolean): Lin
         } catch {
           value = undefined
         }
-        rows.push({ line, raw, value })
+        yield { line, raw, value }
       }
     }
     start = end + 1
     line++
   }
-  return rows
 }
 const listDir = (path: string) => {
   try {

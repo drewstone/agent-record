@@ -45,7 +45,7 @@ import { nativeFiles, readClaudeBundle, readNative } from './claude.js'
 import { readCodexBundle } from './codex.js'
 import { categoryOf, filesUnder, hexOf, isoAt, num, pointerOf, sha, splitLines, str, walk, type Category, type EventSource, type Json, type Line, type SessionReader, type Source, type WorkflowAgents } from './harness-reader.js'
 import { nativeStore, readOpenCode, readOpenCodeBundle, readOpenCodeStore } from './opencode.js'
-import { projectPartEvents } from './part-events.js'
+import { projectPartEvents, projectPartFrames } from './part-events.js'
 import { piSessions, readPi, readPiBundle, type PiSession } from './pi.js'
 
 export const ADAPTER_VERSION = '2.7.1'
@@ -103,15 +103,12 @@ export function createFileCache({ maxBytes = 1024 * 1024 * 1024 }: { maxBytes?: 
       const stats = statSync(abs)
       const key = `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}:${stats.ctimeMs}`
       const hit = entries.get(abs)
-      if (hit) {
-        entries.delete(abs)
-        held -= hit.bytes.length
-        if (hit.key === key) {
-          entries.set(abs, hit)
-          held += hit.bytes.length
-          return hit
-        }
+      entries.delete(abs)
+      if (hit?.key === key) {
+        entries.set(abs, hit)
+        return hit
       }
+      if (hit) held -= hit.bytes.length
       const bytes = readFileSync(abs)
       const entry = { key, bytes, sha256: sha(bytes) }
       if (bytes.length <= maxBytes / 4) {
@@ -468,7 +465,7 @@ export class Ingest {
     if (!existsSync(abs)) return
     const entry = this.file(rel)
     this.fileSource(rel)
-    const rows = splitLines(entry.bytes)
+    const rows = [...splitLines(entry.bytes)]
     const runtimeOf = new Map<string, string>()
     for (const row of rows) {
       const event = row.value?.event
@@ -646,11 +643,13 @@ export class Ingest {
       const entry = this.file(rel)
       if (!this.claim(entry.sha256, node.id, rel)) continue
       this.fileSource(rel)
-      const rows = splitLines(entry.bytes).filter((row) => row.value && typeof row.value === 'object')
-      produced += projectPartEvents(this, node, rel, entry, rows.map((row) => row.value), {
-        where: (index) => ({ line: rows[index].line }),
-        full: (index) => this.lineSource(rel, rows[index].line, rows[index].raw),
-      }, categoryOf)
+      const ingest = this
+      function* frames() {
+        for (const row of splitLines(entry.bytes)) if (row.value && typeof row.value === 'object') yield {
+          event: row.value, where: () => ({ line: row.line }), full: () => ingest.lineSource(rel, row.line, row.raw),
+        }
+      }
+      produced += projectPartFrames(this, node, rel, entry, frames(), categoryOf)
     }
     if (!produced) return false
     node.capture = { channel: 'live', status: 'lossy', reason: 'live-stream-until-settled' }
@@ -681,7 +680,7 @@ export class Ingest {
     const abs = join(this.runDir, rel)
     if (!existsSync(abs)) return false
     const entry = this.file(rel)
-    const rows = splitLines(entry.bytes).filter((row) => row.value?.event)
+    const rows = [...splitLines(entry.bytes)].filter((row) => row.value?.event)
     if (!rows.length) return false
     if (!this.claim(entry.sha256, node.id, rel)) return false
     this.fileSource(rel)

@@ -12,7 +12,7 @@ export interface BridgeStream extends SessionFile {
 
 /** One bridge export. A line that is not a table row is skipped without a gap. */
 function bridgeStream(ingest: Ingest, rel: string): BridgeStream {
-  const rows = splitLines(ingest.file(rel).bytes).filter((row) => typeof row.value?.table === 'string')
+  const rows = [...splitLines(ingest.file(rel).bytes)].filter((row) => typeof row.value?.table === 'string')
   const session = rows.find((row) => row.value.table === 'sessions')
   return { rel, rows, sessionId: str(session?.value?.row?.external_id) || null, sessionLine: session?.line ?? null }
 }
