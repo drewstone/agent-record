@@ -16,11 +16,14 @@ importers:
         version: 0.1.0
       '@tangle-network/sandbox-ui':
         specifier: ^2.0.22
-        version: 2.0.22(05bc26d01ff6bc5398e239dfbce42723)
+        version: 2.0.22(cd35e762d8d4761e0739395269757418)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@drewstone/agent-record':
+        specifier: link:.
+        version: 'link:'
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.1
@@ -2703,7 +2706,7 @@ snapshots:
     dependencies:
       '@tangle-network/agent-trace-contract': 2.0.0
 
-  '@tangle-network/sandbox-ui@2.0.22(05bc26d01ff6bc5398e239dfbce42723)':
+  '@tangle-network/sandbox-ui@2.0.22(cd35e762d8d4761e0739395269757418)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2727,6 +2730,7 @@ snapshots:
       tailwindcss-animate: 1.0.7
       yaml: 2.9.1
     optionalDependencies:
+      '@drewstone/agent-record': 'link:'
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.0)
       '@tangle-network/charts': 3.0.3(@tangle-network/brand@1.31.1(react@19.3.0))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(elkjs@0.12.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@xterm/addon-fit': 0.11.0
