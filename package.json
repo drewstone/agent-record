@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Validated agent records, research reports, harness adapters, ingest and standalone report exports.",
   "type": "module",
   "license": "MIT",
