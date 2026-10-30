@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AsOf } from './answers.js'
+export interface AsOf { at: string; meaning: string; source: string }
 import type { Status, StatusAxis } from './data.js'
 
 /**

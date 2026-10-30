@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "1.0.13",
+  "version": "2.0.0",
   "description": "React viewer for agent conversations, tool execution, topology, and recorded usage.",
   "type": "module",
   "license": "MIT",
@@ -36,7 +36,6 @@
       "default": "./dist/research-publication.js"
     },
     "./styles.css": "./dist/styles.css",
-    "./workspace-viewer.js": "./dist/workspace-viewer.js",
     "./report": {
       "types": "./dist/report.d.ts",
       "import": "./dist/report.js"
@@ -69,11 +68,7 @@
       "types": "./dist/assessment.d.ts",
       "import": "./dist/assessment.js"
     },
-    "./schemas/*": "./dist/schemas/*",
-    "./receipt": {
-      "types": "./dist/receipt.d.ts",
-      "import": "./dist/receipt.js"
-    }
+    "./schemas/*": "./dist/schemas/*"
   },
   "scripts": {
     "dev": "vite --config examples/react/vite.config.ts",
@@ -82,7 +77,6 @@
     "build:example": "vite build --config examples/react/vite.config.ts",
     "prepack": "pnpm build",
     "test": "pnpm build && node --test tests/*.test.mjs",
-    "test:run-ui": "node --test tests/run-ui-adoption.browser.mjs tests/discovery-ui.browser.mjs",
     "report": "node tools/render-report.mjs",
     "ingest": "node tools/ingest.mjs"
   },
@@ -91,21 +85,10 @@
     "react-dom": ">=18.3.0 <20"
   },
   "dependencies": {
-    "@nanostores/react": "^1.0.0",
-    "@tangle-network/agent-interface": "^5.7.1",
-    "@tangle-network/brand": "^1.31.1",
     "@tangle-network/charts": "^2.0.20",
     "@tangle-network/harness-sessions": "^0.1.0",
     "@tangle-network/sandbox-ui": "^2.0.20",
-    "@tangle-network/ui": "^11.51.1",
-    "@xterm/addon-fit": "~0.11.0",
-    "@xterm/addon-web-links": "~0.12.0",
-    "@xterm/addon-webgl": "~0.19.0",
-    "@xterm/xterm": "^6.0.0",
-    "@xyflow/react": "^12.12.0",
-    "elkjs": "~0.12.0",
     "katex": "^0.19.0",
-    "nanostores": "^1.5.5",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",

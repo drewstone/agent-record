@@ -171,8 +171,9 @@ are `metrics` with a `section` and whose listings are `tables`, then `runs`, `ru
 inline. `rules[].state` is `fired`, `quiet` or `could-not-evaluate`; any other state
 renders as unrecognised. The `figures` prop places host figures in a section; the
 workspace's `data-mode="report"` puts the play page's bar panels in `how-good`.
-The browser check is `node --test tests/play-report.browser.mjs` after a build, with
-`PLAYWRIGHT_MODULE`, an optional `PLAY_DOCUMENT` and `PLAY_REPORT_EVIDENCE_DIR`.
+The report CLI and retained-source contracts are checked by `tests/report.test.mjs`
+and `tests/play-report.test.mjs`. Discovery's embedding and page browser proof live
+with the [Tools application](https://github.com/drewstone/tangle-tools/tree/main/fleet/discovery_workspace_parts/viewer).
 
 Single-dollar text is preserved literally so financial figures are not misread as
 formulas. Use double-dollar math for mathematical rendering. Optional retained

@@ -12,7 +12,7 @@ import { readPublication } from '../examples/react/publications.ts'
 // A retained Discovery projection with real per-response counters, metered windows and tool returns.
 test('record usage keeps original source actions and measured semantics through the shared figure', { timeout: 150_000 }, async () => {
   const require = createRequire(process.env.AGENT_RECORD_PACKAGE ?? resolve('package.json'))
-  const assets = dirname(require.resolve('@drewstone/agent-record/workspace-viewer.js'))
+  const assets = dirname(require.resolve('@drewstone/agent-record/styles.css'))
   const bytes = await readFile(new URL('./fixtures/waterfall-discovery-record.json', import.meta.url))
   const digest = createHash('sha256').update(bytes).digest('hex'), record = JSON.parse(bytes)
   assert.equal(record.events.length, 281)
@@ -25,9 +25,9 @@ test('record usage keeps original source actions and measured semantics through 
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
   const scratch = await mkdtemp(resolve('.usage-host-')), entry = resolve(scratch, 'host.js')
-  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,parseRecord}from${JSON.stringify(resolve(assets,'index.js'))};
+  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,RecordWorkGraph,parseRecord}from${JSON.stringify(resolve(assets,'index.js'))};
 import{fromResearchPublication}from${JSON.stringify(resolve(assets,'research-publication.js'))};const raw=await fetch('/retained-record'+location.search).then(response=>response.json());const record=raw.schema==='research-publication.events.v1'?fromResearchPublication(raw):parseRecord(raw);const initial={runId:record.runId,nodeId:'root',view:'usage'};
-function Host(){const[selection,set]=useState(initial);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
+function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=useState(false);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement('button',{onClick:()=>showGraph(true)},'Read retained relationships'),graph?React.createElement(RecordWorkGraph,{record}):React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
   const built = await build({ configFile:false, logLevel:'silent', resolve:{dedupe:['react','react-dom']}, define:{'process.env.NODE_ENV':JSON.stringify('production')}, build:{write:false,lib:{entry,formats:['es'],fileName:()=> 'host.js'},rollupOptions:{output:{chunkFileNames:'usage/[name]-[hash].js'}}} })
   const chunks = new Map((Array.isArray(built)?built:[built]).flatMap(result=>result.output).map(item=>[item.fileName,item.type==='chunk'?item.code:item.source]))
   let theme='light'
@@ -113,6 +113,18 @@ function Host(){const[selection,set]=useState(initial);return React.createElemen
         assert.equal(await page.locator('[data-agent]').inputValue(),node.id,'stopped actor selection preserves original identity')
       }
       if(evidence)await page.screenshot({path:evidence+'/stopped-'+theme+'-'+width+'.png',fullPage:true})
+      await page.getByRole('button',{name:'Read retained relationships',exact:true}).click()
+      const graph=page.locator('[data-work-graph]')
+      await graph.waitFor()
+      for(const node of stoppedRecord.nodes) assert.equal(await graph.locator('[data-graph-node-id='+JSON.stringify('node:'+node.id)+']').count(),1,'Blog retained graph preserves each original identity once')
+      const firstNode=graph.locator('[data-graph-node-id]').first()
+      await firstNode.focus();await page.keyboard.press('Enter')
+      assert.equal(await firstNode.getAttribute('aria-pressed'),'true')
+      await page.keyboard.press('ArrowRight')
+      assert.notEqual(await page.locator(':focus').getAttribute('data-graph-node-id'),await firstNode.getAttribute('data-graph-node-id'),'native arrows reach a related record entity')
+      await graph.getByRole('button',{name:'Zoom in',exact:true}).click()
+      await graph.getByRole('button',{name:'Fit',exact:true}).click()
+      if(evidence)await page.screenshot({path:evidence+'/retained-graph-'+theme+'-'+width+'.png',fullPage:true})
       assert.deepEqual(errors,[])
       checks.push({theme,width,retainedEvents:record.events.length,recordSha256:digest,captions,sourceActions})
       await page.waitForTimeout(Math.max(0,10_100-(Date.now()-began)))

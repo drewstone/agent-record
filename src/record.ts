@@ -378,3 +378,6 @@ export interface RecordSelection {
 export function parseRecord(value: unknown): RunRecord {
   return recordSchema.parse(value)
 }
+
+export { recordWorkGraphModel, NODE_W, NODE_H, LANE_H, PER_LANE } from './workspace/work-graph-model.js'
+export type { GraphNode, GraphEdge, WorkGraphModel } from './workspace/work-graph-model.js'

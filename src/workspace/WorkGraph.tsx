@@ -1,38 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { RunRecord } from '../record.js'
-import type { RunDocument } from '../workspace-model.js'
-import { PageReader } from './Findings.js'
-import { CanvasControls } from './ProfileCanvas.js'
 import { useCanvasView } from './useCanvasView.js'
 import type { ArrowKey } from './useCanvasView.js'
-import { LANE_H, NODE_H, NODE_W, PER_LANE, runWorkGraphModel, recordWorkGraphModel } from './work-graph-model.js'
+import { LANE_H, NODE_H, NODE_W, PER_LANE, recordWorkGraphModel } from './work-graph-model.js'
 import type { GraphNode, WorkGraphModel } from './work-graph-model.js'
-
-/**
- * The run's work graph: each agent's results, claims and checks on its own lane in the order it wrote them, the papers
- * they cite on a lane above, and an edge wherever one page names another (findings.links) or a page cites a paper
- * (citations[].citedBy). Selecting a page lights its neighbours and opens it beside the graph.
- */
-export function WorkGraph({ doc, runUrl, onOpen }: { doc: RunDocument; runUrl: string; onOpen: (sha: string) => void }) {
-  const graph = useMemo(() => doc.findings ? runWorkGraphModel(doc.findings) : null, [doc.findings])
-  if (!graph || !graph.nodes.length)
-    return <p className="ws-status run-panel">No results, claims or checks were written, so there is no graph to draw.</p>
-  // A handful of pages reads better as a list than as a canvas to pan.
-  if (graph.nodes.length < 5)
-    return (
-      <section className="run-panel work-graph-list" aria-label={graph.title} data-work-graph="list">
-        <ul>
-          {graph.nodes.map((node) => (
-            <li key={node.id} data-kind={node.kind}>
-              {node.item?.sha256 ? <button type="button" className="link-button" onClick={() => onOpen(node.item!.sha256)}>{node.title}</button> : <b>{node.title}</b>}
-              {node.sub && <span className="faint"> · {node.sub}</span>}
-            </li>
-          ))}
-        </ul>
-      </section>
-    )
-  return <WorkGraphCanvas graph={graph} runUrl={runUrl} onOpen={onOpen} />
-}
 
 /** Draw a combined multi-harness record with the same interaction engine as the live run graph. */
 export function RecordWorkGraph({ record }: { record: RunRecord }) {
@@ -40,7 +11,7 @@ export function RecordWorkGraph({ record }: { record: RunRecord }) {
   return <div className="agent-record ar-ws"><WorkGraphCanvas graph={graph} /></div>
 }
 
-function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; runUrl?: string; onOpen?: (sha: string) => void }) {
+function WorkGraphCanvas({ graph }: { graph: WorkGraphModel }) {
   const [selected, setSelected] = useState<string | null>(null)
   const selectedId = selected && graph.byId.has(selected) ? selected : null
   const box = useCallback((id: string) => {
@@ -98,14 +69,20 @@ function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; run
     return `M ${x1} ${y1} C ${x1} ${y1 + bend}, ${x2} ${y2 - bend}, ${x2} ${y2}`
   }
   return (
-    <section className="work-graph" aria-label={graph.title} data-work-graph={graph.nodes.length} data-graph-kind={runUrl ? 'run' : 'record'}>
+    <section className="work-graph" aria-label={graph.title} data-work-graph={graph.nodes.length} data-graph-kind="record">
       <div className="graph-main">
         <div className="graph-head">
           <h2 className="kicker tone-finding">{graph.title}</h2>
           <span className="faint">
             {graph.summary}
           </span>
-          <CanvasControls canvas={canvas} selectedId={selectedId} />
+          <div className="pc-controls" role="group" aria-label="Canvas view">
+            <button type="button" className="ui-button" onClick={canvas.zoomOut} aria-label="Zoom out">−</button>
+            <span className="pc-zoom mono">{Math.round(canvas.k * 100)}%</span>
+            <button type="button" className="ui-button" onClick={canvas.zoomIn} aria-label="Zoom in">+</button>
+            <button type="button" className="ui-button" onClick={canvas.fit}>Fit</button>
+            {selectedId && <button type="button" className="ui-button" onClick={() => canvas.centre(selectedId)}>Selected</button>}
+          </div>
         </div>
         <div {...canvas.viewportProps} className="graph-viewport pc-viewport" data-zoom={canvas.k.toFixed(2)}>
           <div className="graph-canvas pc-world" style={canvas.worldStyle}>
@@ -167,22 +144,6 @@ function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; run
       </div>
       <aside className="graph-side finding-card" aria-label="Selected card">
         {chosen ? (
-          chosen.item ? (
-            <>
-              <h3 className="kicker tone-finding">{chosen.kind}</h3>
-              <div className="graph-side-title">{chosen.title}</div>
-              <div className="faint">{chosen.sub}</div>
-              <p className="finding-summary">{chosen.item.answer ?? chosen.item.summary}</p>
-              <div className="graph-side-links faint">
-                {graph.edges.filter((edge) => edge.from === chosen.id).length} names out ·{' '}
-                {graph.edges.filter((edge) => edge.to === chosen.id).length} named by
-              </div>
-              <div className="finding-actions">
-                {onOpen && <button type="button" className="ui-button" onClick={() => onOpen(chosen.id)}>Open in findings</button>}
-              </div>
-              {runUrl && <PageReader href={`${runUrl}/page/${chosen.id}`} />}
-            </>
-          ) : (
             <>
               <h3 className="kicker tone-info">{chosen.kind}</h3>
               <div className="graph-side-title">{chosen.title}</div>
@@ -193,7 +154,6 @@ function WorkGraphCanvas({ graph, runUrl, onOpen }: { graph: WorkGraphModel; run
                 <a href={chosen.href} target="_blank" rel="noopener noreferrer">Open source ↗</a>
               )}
             </>
-          )
         ) : (
           <p className="faint">Select a card to see its recorded relationships and details.</p>
         )}

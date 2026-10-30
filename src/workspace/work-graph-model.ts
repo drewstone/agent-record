@@ -1,14 +1,11 @@
 import type { RunRecord } from '../record.js'
-import type { FindingItem, Findings } from '../workspace-model.js'
 
-const SHOWN_KINDS = new Set(['result', 'claim', 'check'])
 const PER_LANE = 14
 const LABEL_W = 156
 const COL_W = 236
 const NODE_W = 204
 const NODE_H = 62
 const LANE_H = 104
-const SOURCES_SHOWN = 10
 
 export { NODE_W, NODE_H, LANE_H, PER_LANE }
 
@@ -19,7 +16,7 @@ export interface GraphNode {
   sub: string
   x: number
   y: number
-  item: FindingItem | null
+  item: null
   summary?: string
   href?: string | null
 }
@@ -43,61 +40,6 @@ export interface WorkGraphModel {
   title: string
   summary: string
   legend: { kind: string; label: string }[]
-}
-
-const clock = (value: string | null | undefined) => (value ? `${value.slice(11, 16)} UTC` : 'time unknown')
-const short = (label: string | null | undefined) => (label ? label.split(' · ')[0]! : 'agent')
-
-/** Page and paper topology for a live run. Every edge uses a recorded digest or citation ID. */
-export function runWorkGraphModel(findings: Findings): WorkGraphModel {
-  const lanes = [...new Set(findings.items.filter((item) => SHOWN_KINDS.has(item.kind)).map((item) => item.agent ?? 'unknown'))]
-    .sort((a, b) => a.length - b.length || a.localeCompare(b))
-  const citations = (findings.sources.citations ?? []).slice(0, SOURCES_SHOWN)
-  const nodes: GraphNode[] = []
-  const top = citations.length ? 1 : 0
-  citations.forEach((citation, col) =>
-    nodes.push({
-      id: `cite:${citation.kind}:${citation.id}`,
-      kind: 'source',
-      title: citation.kind === 'arxiv' ? `arXiv ${citation.id}` : citation.id,
-      sub: `${citation.mentions} mention${citation.mentions === 1 ? '' : 's'}`,
-      x: LABEL_W + col * COL_W,
-      y: 21,
-      item: null,
-      href: citation.kind === 'arxiv' ? `https://arxiv.org/abs/${citation.id}` : citation.kind === 'iacr' ? `https://eprint.iacr.org/${citation.id}` : citation.kind === 'doi' ? `https://doi.org/${citation.id}` : null,
-    }),
-  )
-  const hidden: Record<string, number> = {}
-  const laneLabels: { label: string; y: number }[] = []
-  lanes.forEach((agent, lane) => {
-    const items = findings.items
-      .filter((item) => (item.agent ?? 'unknown') === agent && SHOWN_KINDS.has(item.kind))
-      .sort((a, b) => (a.at ?? '9').localeCompare(b.at ?? '9'))
-    const y = (lane + top) * LANE_H + 21
-    laneLabels.push({ label: short(items[0]?.agentLabel ?? agent), y })
-    if (items.length > PER_LANE) hidden[agent] = items.length - PER_LANE
-    items.slice(0, PER_LANE).forEach((item, col) =>
-      nodes.push({ id: item.sha256, kind: item.kind, title: item.title, sub: `${short(item.agentLabel)} · ${clock(item.at)}`, x: LABEL_W + col * COL_W, y, item }),
-    )
-  })
-  const byId = new Map(nodes.map((node) => [node.id, node]))
-  const edges: GraphEdge[] = []
-  for (const link of findings.links ?? []) if (byId.has(link.from) && byId.has(link.to)) edges.push({ from: link.from, to: link.to, kind: byId.get(link.to)!.kind })
-  for (const citation of citations)
-    for (const sha of citation.citedBy ?? [])
-      if (byId.has(sha)) edges.push({ from: `cite:${citation.kind}:${citation.id}`, to: sha, kind: 'source' })
-  const cols = Math.max(1, ...nodes.map((node) => Math.round((node.x - LABEL_W) / COL_W) + 1))
-  return {
-    nodes, edges, byId, laneLabels, columnLabels: [], sourcesLane: !!top, hidden,
-    width: LABEL_W + cols * COL_W + 24, height: (lanes.length + top) * LANE_H + 8,
-    title: 'Work graph',
-    summary: `${nodes.filter((node) => node.item).length} pages · ${edges.length} links · edges are pages naming pages and pages citing papers`,
-    legend: [
-      { kind: 'claim', label: 'names a result or claim' },
-      { kind: 'check', label: 'names a check' },
-      { kind: 'source', label: 'cites a paper' },
-    ],
-  }
 }
 
 /** A bundle's entity and evidence topology. It never connects by title, text, time, or a guessed session. */
