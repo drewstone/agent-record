@@ -5,7 +5,7 @@ import { resolve, dirname, basename, extname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createElement, StrictMode } from 'react'
 import { renderToString } from 'react-dom/server'
-import { ResearchReport } from '@tangle-network/sandbox-ui/record'
+import { ResearchReport } from '@tangle-network/sandbox-ui/record/ResearchReport'
 import { parseResearchReport, reportToLatex, parseReportOptions } from '../dist/report.js'
 
 const htmlText = (value) =>
