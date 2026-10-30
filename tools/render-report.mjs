@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto'
 import { readFile, realpath, writeFile } from 'node:fs/promises'
-import { resolve, dirname, basename, extname, join } from 'node:path'
+import { resolve, dirname, basename, extname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createElement, StrictMode } from 'react'
 import { renderToString } from 'react-dom/server'
-import { ResearchReport, parseReportOptions } from '../dist/index.js'
-import { parseResearchReport, reportToLatex } from '../dist/report.js'
+import { ResearchReport } from '@tangle-network/sandbox-ui/record/ResearchReport'
+import { parseResearchReport, reportToLatex, parseReportOptions } from '../dist/report.js'
 
-const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const htmlText = (value) =>
   value.replace(
     /[&<>"']/g,
@@ -45,7 +44,7 @@ export function renderReportHtml(report, { css, script, sourceSearchEndpoint }) 
     "'; style-src 'unsafe-inline'; img-src data:; connect-src " + (options.sourceSearchEndpoint ? "'self'" : "'none'") + "; base-uri 'none'; form-action 'none'\">" +
     '<title>' +
     htmlText(report.title) +
-    '</title><style>html{background:#fffefa;color:#252522}body{margin:0 auto;max-width:1800px;padding:0} @media(max-width:600px){body{padding:0}} @media(prefers-color-scheme:dark){html{background:#12101f;color:#e8e5ef}}' +
+    '</title><style>html{background:var(--bg-page);color:var(--text-primary)}body{margin:0 auto;max-width:1800px;padding:0}' +
     css +
     '</style></head><body><main id="research-report">' +
     body +
@@ -62,8 +61,8 @@ export async function renderReportFile(input, output, options = {}) {
     JSON.parse(await readFile(input, 'utf8')),
   )
   const [css, script] = await Promise.all([
-    readFile(join(packageRoot, 'dist/styles.css'), 'utf8'),
-    readFile(join(packageRoot, 'dist/report-viewer.js'), 'utf8'),
+    readFile(fileURLToPath(import.meta.resolve('@tangle-network/sandbox-ui/styles')), 'utf8'),
+    readFile(fileURLToPath(import.meta.resolve('@tangle-network/sandbox-ui/report-viewer.js')), 'utf8'),
   ])
   const tex = resolve(
     dirname(output),
