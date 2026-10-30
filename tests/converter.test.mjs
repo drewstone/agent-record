@@ -64,6 +64,20 @@ test('the same inputs give the same record bytes, and every id is the anchor of 
   assert.ok(first.record.events.some((event) => event.kind === 'finding-record' && event.id === sha(readFileSync(join(run, 'kb/pages/q/finding.md'))).slice(0, 12)))
 })
 
+test('retained native Runtime failures keep their recorded failure state', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-failure-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const run = writeRun(root, { joinable: true }), journal = join(run, 'spawn-journal.jsonl')
+  const events = readFileSync(journal, 'utf8').split('\n').filter(Boolean).map(row => JSON.parse(row))
+  events.at(-1).event.status = 'down'
+  events.at(-1).event.reason = 'Native checkout failed'
+  writeFileSync(journal, jsonl(events))
+  const record = ingestRun(run, { runId: 'run-x' }).record
+  assert.equal(record.schema, 'agent-record.v1')
+  assert.equal(record.nodes.find(node => node.id === 'run-x:s0').status, 'down')
+  assert.ok(record.events.some(event => event.detail.isError === true))
+})
+
 test('a join moves events to another node without changing a single id', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'converter-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))

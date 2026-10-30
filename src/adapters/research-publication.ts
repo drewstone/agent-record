@@ -27,12 +27,8 @@ export function fromResearchPublication(value: unknown): RunRecord {
     schema: 'agent-record.v1',
     nodes: input.nodes.map((node) => ({
       ...node,
-      kind:
-        node.kind === 'runtime'
-          ? 'agent'
-          : node.kind === 'native'
-            ? 'session'
-            : 'finding',
+      kind: { runtime: 'agent', native: 'session', finding: 'finding' }[node.kind],
+      ...(node.status === 'down' ? { status: 'stopped' } : {}),
       agentId: node.runtimeNodeId,
       joinBasis: node.runtimeJoin,
       ...(node.kind === 'runtime'
