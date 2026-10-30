@@ -44,7 +44,7 @@ export function renderReportHtml(report, { css, script, sourceSearchEndpoint }) 
     "'; style-src 'unsafe-inline'; img-src data:; connect-src " + (options.sourceSearchEndpoint ? "'self'" : "'none'") + "; base-uri 'none'; form-action 'none'\">" +
     '<title>' +
     htmlText(report.title) +
-    '</title><style>html{background:#fffefa;color:#252522}body{margin:0 auto;max-width:1800px;padding:0} @media(max-width:600px){body{padding:0}} @media(prefers-color-scheme:dark){html{background:#12101f;color:#e8e5ef}}' +
+    '</title><style>html{background:var(--bg-page);color:var(--text-primary)}body{margin:0 auto;max-width:1800px;padding:0}' +
     css +
     '</style></head><body><main id="research-report">' +
     body +

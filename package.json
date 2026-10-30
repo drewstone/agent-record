@@ -81,7 +81,7 @@
     "react-dom": ">=18.3.0 <20"
   },
   "dependencies": {
-    "@tangle-network/charts": "^2.0.24",
+    "@tangle-network/charts": "^3.0.2",
     "@tangle-network/harness-sessions": "^0.1.0",
     "@tangle-network/sandbox-ui": "^2.0.22",
     "zod": "^4.6.5"
