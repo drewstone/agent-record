@@ -13,8 +13,9 @@ import { chromium } from 'playwright'
 // Run from the package or its fresh installed consumer. Never alias the view to source.
 test('the public report CLI preserves sources and enforces its browser and filesystem boundaries', { timeout: 180_000 }, async () => {
   const require = createRequire(resolve('package.json'))
-  const api = await import(pathToFileURL(require.resolve('@drewstone/agent-record')))
-  const root = dirname(dirname(require.resolve('@drewstone/agent-record/record')))
+  const root = dirname(dirname(require.resolve('@drewstone/agent-record/adapters/research-publication')))
+  const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+  const api = await import(pathToFileURL(resolve(root, manifest.exports['.'].import)))
   const scratch = await mkdtemp(join(tmpdir(), 'report-public-cli-'))
   const evidence = process.env.EXAMPLE_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
