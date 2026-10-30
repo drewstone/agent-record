@@ -1,9 +1,9 @@
-/** Browser-safe projection shared by retained ingest and the live Conversations view.
- * The host supplies source anchors, clipping, classification and the event sink. */
-type Json = any // eslint-disable-line @typescript-eslint/no-explicit-any
-const str = (value: unknown) => typeof value === 'string' ? value : value == null ? '' : JSON.stringify(value)
-const num = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : undefined
-const isoAt = (value: unknown): string | null => {
+/** Browser-safe projection shared by retained ingest and the live Conversations view, and the value helpers every harness reader uses.
+ * The host supplies source anchors, clipping, classification and the event sink. A placeholder time (the Unix epoch, before 2001) is no time. */
+export type Json = any // eslint-disable-line @typescript-eslint/no-explicit-any
+export const str = (value: unknown) => typeof value === 'string' ? value : value == null ? '' : JSON.stringify(value)
+export const num = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : undefined
+export const isoAt = (value: unknown): string | null => {
   if (typeof value !== 'string' && typeof value !== 'number') return null
   const date = new Date(typeof value === 'number' && value < 1e11 ? value * 1000 : value)
   return Number.isFinite(date.valueOf()) && date.valueOf() >= Date.UTC(2001, 0, 1) && date.valueOf() < Date.UTC(2100, 0, 1) ? date.toISOString() : null
