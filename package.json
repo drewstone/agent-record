@@ -87,6 +87,9 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@drewstone/agent-record": "link:.",
+    "@tangle-network/brand": "^1.31.3",
+    "@tangle-network/ui": "^11.51.4",
     "@types/node": "^24.0.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -95,8 +98,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "typescript": "7.0.2",
-    "vite": "8.3.2",
-    "@drewstone/agent-record": "link:."
+    "vite": "8.3.2"
   },
   "packageManager": "pnpm@10.23.0",
   "bin": {
