@@ -8,25 +8,15 @@ import { createHash } from 'node:crypto'
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { BundleSession, Ingest, NodeDraft } from './agent-runtime.js'
+import type { Json } from './part-events.js'
 
-export type Json = any // eslint-disable-line @typescript-eslint/no-explicit-any
+export { isoAt, num, str, type Json } from './part-events.js'
 export type Source = { path: string; sha256: string; bytes: number; line?: number; pointer?: string; label?: string }
 export type EventSource = { path: string; sha256: string; line?: number; pointer?: string; item?: number }
 
 export const sha = (data: string | Buffer) => createHash('sha256').update(data).digest('hex')
 export const hexOf = (digest: unknown) =>
   typeof digest === 'string' && /^(sha256[:-])?[0-9a-f]{64}$/.test(digest) ? digest.slice(-64) : null
-// Placeholder times such as the Unix epoch are not observations.
-const EARLIEST = Date.UTC(2001, 0, 1)
-const LATEST = Date.UTC(2100, 0, 1)
-export const isoAt = (value: unknown): string | null => {
-  if (typeof value !== 'string' && typeof value !== 'number') return null
-  const date = new Date(typeof value === 'number' && value < 1e11 ? value * 1000 : value)
-  const time = date.valueOf()
-  return Number.isFinite(time) && time >= EARLIEST && time < LATEST ? date.toISOString() : null
-}
-export const str = (value: unknown) => (typeof value === 'string' ? value : value === undefined || value === null ? '' : JSON.stringify(value))
-export const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined)
 export const pointerOf = (...parts: (string | number)[]) =>
   '/' + parts.map((part) => String(part).replaceAll('~', '~0').replaceAll('/', '~1')).join('/')
 
@@ -144,7 +134,7 @@ export const filesUnder = (root: string, dir: string, suffix: string) =>
 
 /**
  * A session file: its path as recorded, where it is when not inside the run directory, a bundle's inclusive line
- * windows, and its lines when the reader already split them to find which node it belongs to.
+ * windows, and its lines when the reader already split them to find which node it belongs to (the windows still apply).
  */
 export interface SessionFile {
   rel: string
@@ -177,8 +167,9 @@ export function readLines(ingest: Ingest, node: NodeDraft, { rel, abs, window, r
   if (!ingest.claim(entry.sha256, node.id, rel)) return null
   ingest.fileSource(rel, abs)
   const counts = { unparsable: 0, untimed: 0 }
+  const keep = (line: number) => !window || window.some(([from, to]) => line >= from && line <= to)
   let last: string | null = null
-  for (const row of rows ?? splitLines(entry.bytes, window && ((line) => window.some(([from, to]) => line >= from && line <= to)))) {
+  for (const row of rows?.filter((row) => keep(row.line)) ?? splitLines(entry.bytes, window && keep)) {
     const at: string | null = row.value ? reader.at(row.value, last) : null
     if (!row.value) counts.unparsable++
     else if (!at) counts.untimed++

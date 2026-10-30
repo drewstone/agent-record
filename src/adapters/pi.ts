@@ -1,11 +1,10 @@
 /** Pi session files (`trace/pi-sessions/**\/*.jsonl` in a run): a header line, then one line per entry. */
 import { basename } from 'node:path'
 import type { Ingest, NodeDraft } from './agent-runtime.js'
-import { categoryOf, filesUnder, isoAt, num, readLines, sha, splitLines, str, type Frame, type Json, type Line, type SessionReader } from './harness-reader.js'
+import { categoryOf, filesUnder, isoAt, num, readLines, sha, splitLines, str, type Frame, type Json, type Line, type SessionFile, type SessionReader } from './harness-reader.js'
 
 /** A Pi session file: its id, and the digest of its first user text that joins it to a spawned task. */
-export interface PiSession {
-  rel: string
+export interface PiSession extends SessionFile {
   sessionId: string
   digest: string | null
   rows: Line[]
@@ -86,7 +85,7 @@ export const readPiBundle: SessionReader = (main, session) => {
   const sessionId = session.sessionId ?? read.sessionId
   const id = `pi:${sessionId}`
   const node = main.ensureNode(id, { label: session.label ?? `pi ${sessionId.slice(0, 8)}` })
-  readPi(main, node, [{ ...read, sessionId }])
+  readPi(main, node, [{ ...read, sessionId, window: session.lines }])
   return node
 }
 
