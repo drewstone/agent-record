@@ -61,7 +61,7 @@ test('the public report CLI preserves sources and enforces its browser and files
     browser = await chromium.launch({ headless: true })
     for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 982 }, colorScheme: theme, ...(evidence ? { recordVideo: { dir: evidence, size: { width, height: 982 } } } : {}) })
-      const page = await context.newPage(), errors = []
+      const page = await context.newPage(), errors = [], began = Date.now()
       page.on('pageerror', error => errors.push(error.message))
       try {
         await page.goto(origin + '/report.html')
@@ -99,6 +99,7 @@ test('the public report CLI preserves sources and enforces its browser and files
         assert.deepEqual(errors, [])
         if (evidence) await page.screenshot({ path: `${evidence}/report-cli-${theme}-${width}.png`, fullPage: true })
         checks.push({ theme, width, installedCli: true, privateExports: true, exactSource: true, citationReload: true, refusedScopeRevisionBytes: true, cspScriptAndConnect: true })
+        await page.waitForTimeout(Math.max(0,10_100-(Date.now()-began)))
       } finally { await context.close() }
     }
     assert.equal(requests.includes('/must-not-connect'), false)
