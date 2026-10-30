@@ -116,6 +116,8 @@ test('the public report CLI preserves sources and enforces its browser and files
         assert.equal(new URL(page.url()).searchParams.get('view'), 'activity')
         await page.reload(); await page.locator('[data-user-message-time]').first().waitFor({ state: 'attached' })
         assert.deepEqual(await page.locator('[data-user-message-time]').allTextContents(), userTimes)
+        await page.locator('[data-user-message-time]').first().locator('..').hover()
+        await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('[data-user-message-time]')).opacity) > 0.9)
         if (evidence) await page.screenshot({ path: `${evidence}/report-activity-${theme}-${width}.png`, fullPage: true })
         await page.goto(origin + '/offline.html')
         const blocked = await page.evaluate(async () => {
