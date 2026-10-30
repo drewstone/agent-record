@@ -103,7 +103,7 @@ export function readNative(ingest: Ingest, node: NodeDraft, files: SessionFile[]
  * agent its workflow journal started (workflow-agent-id); any other session is its own node.
  */
 export const readClaudeBundle: SessionReader = (main, session, agents) => {
-  const rows = splitLines(main.file(session.path).bytes)
+  const rows = [...splitLines(main.file(session.path).bytes)]
   const carried = rows.find((row) => typeof row.value?.agentId === 'string')
   const agentId = session.agentId ?? (carried ? str(carried.value.agentId) : '')
   const sessionId = session.sessionId ?? str(rows.find((row) => typeof row.value?.sessionId === 'string')?.value?.sessionId)

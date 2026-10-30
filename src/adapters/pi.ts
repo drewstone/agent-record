@@ -63,7 +63,7 @@ function contentDigest(content: Json[]) {
 
 /** One Pi session file. A line that is not JSON (a torn last line) is skipped without a gap. */
 function piSession(ingest: Ingest, rel: string): PiSession {
-  const rows = splitLines(ingest.file(rel).bytes).filter((row) => row.value)
+  const rows = [...splitLines(ingest.file(rel).bytes)].filter((row) => row.value)
   const session = rows.find((row) => row.value.type === 'session')?.value
   const firstUser = rows.find((row) => row.value.type === 'message' && row.value.message?.role === 'user')?.value?.message
   const text = !firstUser
