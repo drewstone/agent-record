@@ -1,5 +1,5 @@
 import { z } from 'zod'
-export { projectPartEvents } from './adapters/part-events.js'
+export { projectPartEvents, type PartEventRow } from './adapters/part-events.js'
 
 const time = z.iso.datetime({ offset: true })
 const metadata = z.record(z.string(), z.unknown())
