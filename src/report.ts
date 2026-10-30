@@ -529,3 +529,5 @@ export function reportToLatex(
     '',
   ].join('\n')
 }
+
+export { parseReportOptions, type ReportOptions } from './report-options.js'
