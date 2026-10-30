@@ -3,6 +3,7 @@ import { z } from 'zod'
 // What the host serves about a run's check (tangle-tools discovery_workspace_parts): its rows, the calibration its verdicts
 // name, a held pass, and each check dispute with who ruled it.
 const time = z.iso.datetime({ offset: true })
+const explicitReference = z.string().regex(/\S/)
 
 /** One check or tag-gate row as the host reads it: when, on which tag and commit, under which checker, its verdict and line. */
 const checkRowSchema = z.looseObject({
@@ -15,8 +16,7 @@ const checkRowSchema = z.looseObject({
     score: z
       .object({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullable().optional() })
       .catchall(z.unknown())
-      .nullable()
-      .optional(),
+      .nullish(),
   })
 /** A check stage's calibration (discovery-lab runner/calibration.mjs): a known-good fixture passed it, none did, it gave two answers, or no record says. */
 export const calibrationState = z.enum(['calibrated', 'uncalibrated', 'nondeterministic', 'unknown'])
@@ -58,7 +58,7 @@ export const runCheckSchema = z.looseObject({
     provenance: z.object({
       source: z.object({ repository: z.string().min(1), commit: z.string().min(1), path: z.string().min(1) }).catchall(z.unknown()).nullish(),
       checkSource: z.string().nullish(),
-      definedBy: z.object({ id: z.string().min(1), evidence: z.string().min(1) }).catchall(z.unknown()).nullish(),
+      definedBy: z.object({ id: explicitReference, evidence: explicitReference }).catchall(z.unknown()).nullish(),
       anchors: z.object({
         digest: z.string().nullish(),
         anchors: z.array(z.object({ id: z.string(), kind: z.string(), stages: z.array(z.string()).nullish() }).catchall(z.unknown())).nullish(),
