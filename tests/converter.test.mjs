@@ -318,3 +318,57 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
   for (const [name, bytes] of original) assert.deepEqual(readFileSync(join(dirname(store), name)), bytes, `cached input ${name} is unchanged`)
   t.diagnostic(JSON.stringify({ wal, recordDigest: first.summary.recordDigest }))
 })
+
+// One framing for every harness reader: a session file belongs to one node, keeps to its line window, and each event's
+// id is the file's own sha256 prefix and line or JSON Pointer, recomputed here from the bytes alone.
+test('every harness file in a bundle is framed alike: one owner, its line window, ids from its own bytes', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const retained = (name) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures/native-activity', name), 'utf8')
+  const bridgeCalls = { tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }, { id: 'c2', name: 'read', arguments: '{}' }] }
+  const files = {
+    'claude/retained.jsonl': retained('claude.jsonl'),
+    'codex/retained.jsonl': retained('codex.jsonl'),
+    // Line 6 is torn, line 7 has no time, line 8 is outside the window.
+    'codex/windowed.jsonl': retained('codex.jsonl') + '{"torn\n' + jsonl([{ type: 'event_msg', payload: { type: 'note' } }, { type: 'event_msg', timestamp: at(9), payload: { type: 'note' } }]),
+    'pi/a.jsonl': jsonl([{ type: 'session', id: 'pi-a', timestamp: at(1) }, { type: 'message', id: 'u', timestamp: at(2), message: { role: 'user', content: 'Go.' } }]),
+    // The sessions row has no time.
+    'bridge/s.jsonl': jsonl([{ table: 'sessions', row: { external_id: 'b-1' } }, { table: 'retained_events', row: { event_id: 'e', occurred_at: at(2), event_json: JSON.stringify({ event: bridgeCalls }) } }]),
+    'oc/s/native-trajectory.json': JSON.stringify({ messages: [{ id: 'm', data: { role: 'assistant' } }], parts: [{ id: 'p', message_id: 'm', time_created: ms(3), data: { type: 'text', text: 'Done.' } }] }),
+  }
+  const bundle = join(root, 'bundle')
+  for (const [path, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(bundle, path)), { recursive: true })
+    writeFileSync(join(bundle, path), text)
+  }
+  const writeBundle = (sessions) => writeFileSync(join(bundle, 'bundle.json'), JSON.stringify({ schema: 'agent-record.bundle.v1', recordId: 'harnesses', sessions }))
+  writeBundle([
+    { path: 'claude/retained.jsonl', harness: 'claude-code' },
+    { path: 'claude/retained.jsonl', harness: 'claude-code', sessionId: 'again' },
+    { path: 'codex/retained.jsonl', harness: 'codex' },
+    { path: 'codex/windowed.jsonl', harness: 'codex', lines: [[1, 3], [6, 7]] },
+    { path: 'pi/a.jsonl', harness: 'pi' },
+    { path: 'bridge/s.jsonl', harness: 'opencode-bridge' },
+    { path: 'oc/s/native-trajectory.json', harness: 'opencode' },
+  ])
+  const { record } = ingestBundle(bundle)
+  for (const { id, source } of record.events) {
+    const object = sha(readFileSync(join(bundle, source.path))).slice(0, 12)
+    assert.equal(id, `${object}:${source.line ?? source.pointer}${source.item === undefined ? '' : `.${source.item}`}`)
+  }
+  assert.deepEqual(Object.fromEntries(record.nodes.map((node) => [node.id, node.capture.channel])), {
+    'claude-code:retained-claude-activity': 'native', 'claude-code:again': 'none', 'codex:retained': 'codex', 'codex:windowed': 'codex', 'pi:pi-a': 'pi', 'bridge:b-1': 'bridge', 'opencode:s': 'oc',
+  })
+  const of = (node) => record.events.filter((event) => event.node === node)
+  assert.equal(of('claude-code:again').length, 0)
+  assert.deepEqual(of('codex:windowed').map((event) => event.source.line), [1, 2, 3])
+  assert.deepEqual(of('bridge:b-1').filter((event) => event.kind === 'message').map((event) => event.source.item), [0, 1])
+  assert.deepEqual(record.coverage.gaps.map(({ nodeId, code, detail }) => [nodeId, code, detail]), [
+    ['claude-code:again', 'source-shared', 'claude/retained.jsonl is already the conversation of claude-code:retained-claude-activity'],
+    ['codex:windowed', 'untimed-lines', '1 lines of codex/windowed.jsonl carry no time'],
+    ['codex:windowed', 'unparsable-lines', '1 lines of codex/windowed.jsonl are not JSON'],
+    ['bridge:b-1', 'untimed-lines', '1 rows of bridge/s.jsonl carry no time'],
+  ])
+  writeBundle([{ path: 'pi/a.jsonl', harness: 'toString' }])
+  assert.throws(() => ingestBundle(bundle), /pi\/a\.jsonl has an unknown harness/)
+})
