@@ -1,6 +1,6 @@
 import { parseResearchReport } from './report.js'
 import type { EvidenceReference, ResearchReportData } from './report.js'
-import { utcTime } from './viewer/model.js'
+import { formatUtcTime as utcTime } from '@tangle-network/charts'
 import { endingStatus } from './workspace/data.js'
 import { hostWords, RELEASE_STATE, verdictWord } from './workspace/play-standing.js'
 

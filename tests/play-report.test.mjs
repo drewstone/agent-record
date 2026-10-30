@@ -1,3 +1,4 @@
+import { ResearchReport } from '@tangle-network/sandbox-ui/record'
 // The play report renders from the document the Lab host serves at /api/discovery/plays/<id>/report. The fixture is
 // the magnetar-rust document served on 2026-10-19 (tangle-tools compose_play_report, 68,640 B), copied unchanged.
 import assert from 'node:assert/strict'
@@ -5,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { hostWords, parseResearchReport, playReportToResearchReport, ResearchReport } from '../dist/index.js'
+import { hostWords, parseResearchReport, playReportToResearchReport } from '../dist/index.js'
 
 const served = () => JSON.parse(readFileSync(new URL('./fixtures/play-report-magnetar-rust.json', import.meta.url), 'utf8'))
 const render = (doc) => renderToStaticMarkup(createElement(ResearchReport, { report: playReportToResearchReport(doc) }))

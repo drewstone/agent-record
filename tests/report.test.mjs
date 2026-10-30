@@ -9,12 +9,9 @@ import test from 'node:test'
 import { publicationIds, readPublication } from '../examples/react/publications.ts'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { ResearchReport } from '../dist/index.js'
-import { readSourceSearch } from '../src/viewer/source-search.ts'
+import { ResearchReport, readReportLocation, reportLocationSearch } from '@tangle-network/sandbox-ui/record'
 import { parseResearchReport, reportToLatex } from '../dist/report.js'
 import { fromResearchPublication } from '../dist/research-publication.js'
-import { readReportLocation, reportLocationSearch } from '../src/report-selection.ts'
-import { advancePlayback } from '../src/viewer/playback.ts'
 import { renderReportHtml } from '../tools/render-report.mjs'
 
 const raw = () => ({
@@ -228,27 +225,6 @@ test('the renderer can be imported by a stdin module without an entry file', () 
   assert.equal(result, 'function')
 })
 
-test('playback uses recorded timestamps, explicit speed, and clamps at the endpoint', () => {
-  const base = {
-    cutoff: 1000,
-    start: 1000,
-    end: 301000,
-    elapsedMs: 1000,
-    speed: 1,
-    mode: 'time',
-    eventTimes: [1000, 1500, 1500, 80000, 301000],
-  }
-  assert.equal(advancePlayback(base), 11000)
-  assert.equal(advancePlayback({ ...base, speed: 4 }), 41000)
-  assert.equal(advancePlayback({ ...base, mode: 'events' }), 1500)
-  assert.equal(
-    advancePlayback({ ...base, mode: 'events', cutoff: 1500 }),
-    80000,
-  )
-  assert.equal(advancePlayback({ ...base, elapsedMs: 900000 }), 301000)
-  assert.equal(advancePlayback({ ...base, elapsedMs: -100 }), 1000)
-})
-
 test('retained documents and unknown measurements survive JSON and summary export', () => {
   const input = raw()
   input.plays[0].documents = [{ id:'doc', path:'notes/a.md', title:'Original notes', content:'# Finding\nBody', sha256:'a'.repeat(64), originalPath:'/private/a.md' }]
@@ -296,25 +272,6 @@ test('standalone source citations remain in their named play and exact document'
   assert.equal(readReportLocation(report, query).document.line, 2)
 })
 
-
-test('source search is opt-in, same-origin and bound to exact retained bytes', () => {
-  const data = parseResearchReport(raw())
-  const endpoint = '/research/revisions/20261004T054028.227587Z/knowledge.json'
-  const html = renderReportHtml(data, { css: '', script: '', sourceSearchEndpoint: endpoint })
-  assert.match(html, /connect-src 'self'/)
-  assert.ok(html.includes('id="research-report-options"'))
-  assert.throws(() => renderToStaticMarkup(createElement(ResearchReport, { report: data, sourceSearchEndpoint: 'https://example.com/search' })), /same-origin/)
-  for (const bad of ['https://example.com/search', '//example.com/search', '/a/../search', '/search?q=1', '/search#q', '/a/%2e%2e/search']) {
-    assert.throws(() => renderReportHtml(data, { css: '', script: '', sourceSearchEndpoint: bad }), /same-origin/)
-  }
-  const doc = { id:'a',path:'a.md',title:'A',content:'retained source',sha256:'a'.repeat(64),kind:'knowledge' }
-  const reply = { scopeId:'play',revision:'revision',indexedAt:'now',hits:[{source:{id:doc.id,contentHash:doc.sha256,text:doc.content}}] }
-  assert.deepEqual(readSourceSearch(reply, 'play', [doc]).documents, [doc])
-  assert.throws(() => readSourceSearch(reply, 'other', [doc]), /match this play/)
-  assert.throws(() => readSourceSearch(reply, 'play', [doc], 'other-revision'), /match this play/)
-  assert.throws(() => readSourceSearch({...reply,hits:[{source:{...reply.hits[0].source,text:'changed'}}]}, 'play', [doc]), /Source bytes/)
-  assert.throws(() => readSourceSearch(reply, 'play', []), /Source bytes/)
-})
 
 test('workspace view links preserve scoped source selection and reject unknown modes', () => {
   const report = parseResearchReport(raw())

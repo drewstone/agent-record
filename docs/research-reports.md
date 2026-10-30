@@ -6,8 +6,9 @@ The host collects data, chooses the observation window, authors assessments, and
 By default the component makes no requests. It starts no agent work, stores no data, and changes no URLs. An optional commissioned source-search endpoint provides scoped retrieval; the standalone reader owns browser navigation.
 
 ```tsx
-import { ResearchReport, parseResearchReport } from '@drewstone/agent-record'
-import '@drewstone/agent-record/styles.css'
+import { parseResearchReport } from '@drewstone/agent-record/report'
+import { ResearchReport } from '@tangle-network/sandbox-ui/record'
+import '@tangle-network/sandbox-ui/styles'
 
 const report = parseResearchReport(input)
 <ResearchReport report={report} theme="light" onPlayChange={setPlayId} />
