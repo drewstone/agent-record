@@ -86,3 +86,5 @@ Run these through the repository’s native gate. Preserve generated JSON schema
 This repository is public. Keep captures in private evidence storage; never commit private logs, tailnet addresses, or recordings. Example checks fetch the original publication bytes at their immutable source revision and verify their recorded digests.
 
 Code is MIT licensed. Original research papers and excerpts retain their source references and rights.
+
+Recorded checker versions in `RunCheck.checkerNames` can carry their own optional provenance and calibration through the same canonical schemas as the current checker. Omitted or null metadata stays unknown; consumers bind metadata to its checker digest and never borrow another version's source or authorship.

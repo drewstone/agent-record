@@ -13,10 +13,7 @@ const checkRowSchema = z.looseObject({
     checker: z.string().nullable().optional(),
     verdict: z.string().nullable().optional(),
     line: z.string().nullable().optional(),
-    score: z
-      .object({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullable().optional() })
-      .catchall(z.unknown())
-      .nullish(),
+    score: z.looseObject({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullish() }).nullish(),
   })
 /** A check stage's calibration (discovery-lab runner/calibration.mjs): a known-good fixture passed it, none did, it gave two answers, or no record says. */
 export const calibrationState = z.enum(['calibrated', 'uncalibrated', 'nondeterministic', 'unknown'])
@@ -36,26 +33,8 @@ export const calibrationSchema = z.looseObject({
     authorFamily: z.string().nullish(),
   })
 export type Calibration = z.infer<typeof calibrationSchema>
-export const runCheckSchema = z.looseObject({
-    latest: checkRowSchema.nullable(),
-    best: checkRowSchema.nullable(),
-    passes: z.array(z.object({ tag: z.string().nullable(), checker: z.string().nullable(), count: z.number(), firstAt: time, lastAt: time }).catchall(z.unknown())).optional(),
-    gate: checkRowSchema.nullable().optional(),
-    /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
-    gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
-    headline: z.string().nullable().optional(),
-    counts: z.object({ checks: z.number(), known: z.number(), solved: z.number() }).partial().catchall(z.unknown()).nullable().optional(),
-    /** The play's checkers as its page labels them (v1..vN with the ruling that made each), by digest prefix. */
-    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional() }).catchall(z.unknown())).optional(),
-    /**
-     * The run's pass held for stages no known-good fixture passed (tangle-tools play_checks.check_summary `held`): the check
-     * passed, but the pass is not the run's. Null while a pass stands or none was held.
-     */
-    held: checkRowSchema.extend({ stages: z.array(z.string()) }).nullable().optional(),
-    /** The calibration every verdict of the run names, as its check registered it at press. */
-    calibration: calibrationSchema.nullable().optional(),
-    /** Native definition/amendment references; absence stays unknown. Writers bind identity and allowlist metadata. */
-    provenance: z.object({
+/** Native definition/amendment references; writers bind identity and allowlist metadata. */
+const checkProvenanceSchema = z.looseObject({
       source: z.object({ repository: z.string().min(1), commit: z.string().min(1), path: z.string().min(1) }).catchall(z.unknown()).nullish(),
       checkSource: z.string().nullish(),
       definedBy: z.object({ id: explicitReference, evidence: explicitReference }).catchall(z.unknown()).nullish(),
@@ -66,7 +45,26 @@ export const runCheckSchema = z.looseObject({
       }).catchall(z.unknown()).nullish(),
       tagGate: z.string().nullish(),
       evidence: z.string().nullish(),
-    }).catchall(z.unknown()).nullish(),
+    })
+export const runCheckSchema = z.looseObject({
+    latest: checkRowSchema.nullable(),
+    best: checkRowSchema.nullable(),
+    passes: z.array(z.object({ tag: z.string().nullable(), checker: z.string().nullable(), count: z.number(), firstAt: time, lastAt: time }).catchall(z.unknown())).optional(),
+    gate: checkRowSchema.nullable().optional(),
+    /** The newest unbroken run of tag-gate verdicts that could not decide (a prover past its time limit). */
+    gateUnknown: z.object({ count: z.number(), from: time, to: time, line: z.string().nullable(), tags: z.array(z.string()).optional() }).catchall(z.unknown()).nullable().optional(),
+    headline: z.string().nullable().optional(),
+    counts: z.object({ checks: z.number(), known: z.number(), solved: z.number() }).partial().catchall(z.unknown()).nullable().optional(),
+    /** The play's checkers as its page labels them (v1..vN with the ruling that made each), by digest prefix. */
+    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional(), provenance: checkProvenanceSchema.nullish(), calibration: calibrationSchema.nullish() }).catchall(z.unknown())).optional(),
+    /**
+     * The run's pass held for stages no known-good fixture passed (tangle-tools play_checks.check_summary `held`): the check
+     * passed, but the pass is not the run's. Null while a pass stands or none was held.
+     */
+    held: checkRowSchema.extend({ stages: z.array(z.string()) }).nullable().optional(),
+    /** The calibration every verdict of the run names, as its check registered it at press. */
+    calibration: calibrationSchema.nullable().optional(),
+    provenance: checkProvenanceSchema.nullish(),
   })
 export type RunCheck = z.infer<typeof runCheckSchema>
 
