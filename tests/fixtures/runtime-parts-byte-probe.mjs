@@ -36,7 +36,7 @@ async function fixture() {
   const files = new Map(), input = { runId, task: { objective: 'Byte and anchor parity over synthetic public events.' } }
   files.set('run-input.json', Buffer.from(JSON.stringify(input)))
   const blob = Buffer.from(JSON.stringify({ events: events(true) })), hex = sha(blob)
-  files.set(`blobs/${hex}.json`, blob)
+  files.set(`blobs/sha256-${hex}.json`, blob)
   const spawned = id => ({ kind: 'event', root: runId, event: { kind: 'spawned', id, at, runtime: 'tangle-sandbox' } })
   const journal = [spawned(runId), spawned(liveNode), spawned(blobNode), { kind: 'event', root: runId, event: { kind: 'settled', id: blobNode, at, status: 'done', outRef: `sha256:${hex}` } }]
   files.set('spawn-journal.jsonl', Buffer.from(journal.map(JSON.stringify).join('\n') + '\n'))
@@ -87,7 +87,14 @@ try {
   verifySources(newRecord, data.files)
   assert.ok(newRecord.events.some(event => event.node === data.blobNode && event.source.pointer?.startsWith('/events/')))
   assert.ok(newRecord.events.some(event => event.node === data.liveNode && event.source.line > 2))
-  assert.ok(newRecord.events.some(event => event.detail.clip?.sha256), 'the retained final text has a full-source receipt')
+  const clipped = newRecord.events.filter(event => event.detail.clip?.bytes > 0)
+  assert.ok(clipped.length > 0, 'retained final text was clipped')
+  for (const event of clipped) {
+    const full = newRecord.sources.find(source => source.sha256 === event.detail.clip.sha256)
+    assert.ok(full, 'each clip resolves to an actual verified source receipt')
+    assert.equal(full.path, event.source.path)
+    if (event.source.line !== undefined) assert.equal(full.line, event.source.line)
+  }
   assert.ok(newRecord.events.filter(event => event.node === data.liveNode).every(event => event.detail.usage === undefined), 'unmetered zero remains unknown')
   console.log(JSON.stringify({ sameBytes: true, digest: sha(after), bytes: after.length, events: newRecord.events.length, sources: newRecord.sources.length, producer: newRecord.producer, cases: ['CRLF', 'blank/invalid/torn rows', 'UTF8 clipping', 'superseded parts', 'tool result', 'codex replacement', 'orphan tool', 'rate-limit zero', 'error', 'known and unknown metering', 'line and JSON-pointer anchors'] }))
 } finally { await rm(root, { recursive: true, force: true }) }
