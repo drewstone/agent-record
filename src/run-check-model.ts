@@ -56,7 +56,7 @@ export const runCheckSchema = z.looseObject({
     headline: z.string().nullable().optional(),
     counts: z.object({ checks: z.number(), known: z.number(), solved: z.number() }).partial().catchall(z.unknown()).nullable().optional(),
     /** The play's checkers as its page labels them (v1..vN with the ruling that made each), by digest prefix. */
-    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional(), provenance: checkProvenanceSchema.nullish(), calibration: calibrationSchema.nullish() }).catchall(z.unknown())).optional(),
+    checkerNames: z.array(z.object({ sha256: z.string(), label: z.string().nullable().optional(), ruling: z.string().nullable().optional(), current: z.boolean().optional(), provenance: checkProvenanceSchema.nullish(), calibration: calibrationSchema.partial().nullish() }).catchall(z.unknown())).optional(),
     /**
      * The run's pass held for stages no known-good fixture passed (tangle-tools play_checks.check_summary `held`): the check
      * passed, but the pass is not the run's. Null while a pass stands or none was held.

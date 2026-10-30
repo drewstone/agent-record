@@ -87,4 +87,4 @@ This repository is public. Keep captures in private evidence storage; never comm
 
 Code is MIT licensed. Original research papers and excerpts retain their source references and rights.
 
-Recorded checker versions in `RunCheck.checkerNames` can carry their own optional provenance and calibration through the same canonical schemas as the current checker. Omitted or null metadata stays unknown; consumers bind metadata to its checker digest and never borrow another version's source or authorship.
+Recorded checker versions in `RunCheck.checkerNames` can carry their own optional provenance and calibration through the same canonical schemas as the current checker. Per-checker calibration accepts partial recorded metadata; the root verdict calibration still requires its existing state and stages. Omitted or null metadata stays unknown; consumers bind metadata to its checker digest and never borrow another version's source or authorship.
