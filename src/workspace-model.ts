@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { runReceiptSchema } from './workspace/run-receipt.js'
 import { checkDisputeSchema, runCheckSchema } from './run-check-model.js'
+export { calibrationSchema, runCheckSchema, type Calibration, type RunCheck } from './run-check-model.js'
 import { playBlockerSchema, playFindingFields, playPageFields } from './workspace/play-standing.js'
 import { viewBriefSchema, viewSchema } from './workspace/view.js'
 import { runExecutionSchema } from './workspace/run-execution.js'
@@ -13,8 +14,7 @@ const time = z.iso.datetime({ offset: true })
 const usd = z.number().nullable()
 const sha256 = z.string().regex(/^[0-9a-f]{64}$/)
 
-export const gapSchema = z
-  .object({
+export const gapSchema = z.looseObject({
     runId: z.string().optional(),
     nodeId: z.string().nullable().optional(),
     /** no-record, no-transcript:<reason>, spend-unknown, predecessor-missing, archived-not-ingested,
@@ -22,7 +22,6 @@ export const gapSchema = z
     code: z.string(),
     detail: z.string(),
   })
-  .catchall(z.unknown())
 
 /** `ms` is null when no duration was measured (a reasoning turn has tokens but no recorded time). */
 const measureRow = z.object({
@@ -44,8 +43,7 @@ const seatSegment = z.object({
   seatWeeksKnown: z.boolean(),
 }).catchall(z.unknown())
 
-export const spendSchema = z
-  .object({
+export const spendSchema = z.looseObject({
     paidUsd: usd,
     /** Subscription model use priced at API rates; never billed as a model API charge. */
     subscriptionUsd: usd,
@@ -103,10 +101,8 @@ export const spendSchema = z
     /** How a host-placed run was paid: on a subscription seat with no run key or sandbox nothing is billed per call. */
     billing: z.object({ placement: z.string(), seat: z.string().nullable(), billedUsd: usd, basis: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
   })
-  .catchall(z.unknown())
 
-export const recordStatusSchema = z
-  .object({
+export const recordStatusSchema = z.looseObject({
     status: z.enum(['ready', 'building', 'missing', 'failed', 'archived']),
     digest: sha256.nullable(),
     builtAt: time.nullable(),
@@ -119,7 +115,6 @@ export const recordStatusSchema = z
       })
       .nullable(),
   })
-  .catchall(z.unknown())
 
 // `abandoned`: the run never settled and Runtime reports its coordinator gone (discovery-lab run catalog); a run whose
 // cancellation Runtime acknowledged reads `failed` with the cancellation as its reason.
@@ -134,20 +129,17 @@ export const hiddenReasons = ['failed', 'smoke', 'archived'] as const
 const hiddenReason = z.enum(hiddenReasons)
 
 /** A play check that passed (see RunSummary.playCheck). */
-export const playCheckSchema = z
-  .object({
+export const playCheckSchema = z.looseObject({
     at: z.string().nullable(),
     source: z.string(),
     lines: z.array(z.string()),
     solved: z.string().nullable(),
     settle: z.object({ kind: z.string().nullable(), reason: z.string().nullable() }).catchall(z.unknown()).nullable().optional(),
   })
-  .catchall(z.unknown())
 
 export type { RunCheck } from './run-check-model.js'
 
-export const runSummarySchema = z
-  .object({
+export const runSummarySchema = z.looseObject({
     id: z.string(),
     group: z.string(),
     kind: z.enum(['run', 'version', 'search']),
@@ -208,10 +200,8 @@ export const runSummarySchema = z
     /** The best run of a play only: its best checkpoint's receipt. */
     receipt: z.object({ tag: z.string(), status: z.string().nullable(), href: z.string() }).catchall(z.unknown()).nullable().optional(),
   })
-  .catchall(z.unknown())
 
-export const playInputSchema = z
-  .object({
+export const playInputSchema = z.looseObject({
     runId: z.string(),
     schema: z.string().nullable(),
     digest: z.string().nullable(),
@@ -246,12 +236,10 @@ export const playInputSchema = z
     /** File content is served by the source route under this sha256. */
     files: z.array(z.object({ path: z.string(), bytes: z.number().int().nonnegative(), sha256 }).catchall(z.unknown())),
   })
-  .catchall(z.unknown())
 
 const headlineLabel = z.object({ label: z.string(), polarity: z.enum(['good', 'bad', 'neutral', 'unknown']) })
 
-export const playsDocumentSchema = z
-  .object({
+export const playsDocumentSchema = z.looseObject({
     schema: z.literal('agent-workspace.plays.v1'),
     builtAt: time,
     plays: z.array(
@@ -305,7 +293,6 @@ export const playsDocumentSchema = z
       startedAt: time.nullable(), activeAt: time.nullable(), reason: z.string().nullable(), stopCause: z.string().nullable(),
       hidden: hiddenReason.nullable(), apiEquivalentUsd: usd.optional(), apiEquivalentProvenance: z.string().nullable().optional() })).optional(),
   })
-  .catchall(z.unknown())
 
 /** `fork`: the run was forked from the other (its fork.json, discovery-lab runner/fork.mjs). */
 export const lineageEdgeKinds = ['supersedes', 'continues', 'retry', 'version', 'fork'] as const
@@ -342,8 +329,7 @@ export const scientificReviewSchema = z.object({
 
 /** What cites a run's claims outside the run: a proof packet, a site entry, a public repository. A citation names a
  * page by SHA-256, and optionally a precise claim on it and the reviewer whose verdict it relies on. */
-export const publicationSchema = z
-  .object({
+export const publicationSchema = z.looseObject({
     id: z.string(),
     kind: z.string(),
     title: z.string(),
@@ -355,10 +341,8 @@ export const publicationSchema = z
     session: z.object({ harness: z.string().nullable().optional(), model: z.string().nullable().optional(), label: z.string().nullable().optional() }).catchall(z.unknown()).nullable().optional(),
     cites: z.array(z.object({ pageSha256: z.string(), claimId: z.string().nullable().optional(), reviewer: z.string().nullable().optional() }).catchall(z.unknown())),
   })
-  .catchall(z.unknown())
 
-const fileChanges = z
-  .object({
+const fileChanges = z.looseObject({
     changed: z.number().int().nullable(),
     added: z.number().int().nullable(),
     deleted: z.number().int().nullable(),
@@ -366,12 +350,10 @@ const fileChanges = z
     deletions: z.number().int().nullable(),
     paths: z.array(z.object({ status: z.string().nullable(), path: z.string().nullable() }).catchall(z.unknown())),
   })
-  .catchall(z.unknown())
 const rootProfile = z
   .object({ model: z.string().nullable(), provider: z.string().nullable(), reasoningEffort: z.string().nullable(), harness: z.string().nullable(), profile: z.string().nullable(), version: z.string().nullable() })
   .catchall(z.unknown())
-export const forkSchema = z
-  .object({
+export const forkSchema = z.looseObject({
     from: z.string(),
     to: z.string(),
     at: time.nullable(),
@@ -389,9 +371,7 @@ export const forkSchema = z
         .catchall(z.unknown()),
     ),
   })
-  .catchall(z.unknown())
-export const releaseSchema = z
-  .object({
+export const releaseSchema = z.looseObject({
     id: z.string(),
     tag: z.string(),
     at: time,
@@ -410,11 +390,9 @@ export const releaseSchema = z
       .catchall(z.unknown())
       .nullable(),
   })
-  .catchall(z.unknown())
 
 /** One result or claim an agent wrote, as the findings feed and a play's results list it. */
-export const feedItemSchema = z
-  .object({
+export const feedItemSchema = z.looseObject({
     runId: z.string(),
     play: z.string(),
     program: z.string().nullable(),
@@ -432,10 +410,8 @@ export const feedItemSchema = z
     reviews: z.array(scientificReviewSchema).optional(), review: z.enum(['wrong', 'new', 'reproduction', 'known', 'unverifiable', 'pending']).optional(),
     ...playFindingFields,
   })
-  .catchall(z.unknown())
 
-export const playDocumentSchema = z
-  .object({
+export const playDocumentSchema = z.looseObject({
     schema: z.literal('agent-workspace.play.v1'),
     id: z.string(),
     title: z.string(),
@@ -493,7 +469,6 @@ export const playDocumentSchema = z
     findings: z.array(feedItemSchema).optional(),
     ...playPageFields,
   })
-  .catchall(z.unknown())
 
 const nodeSpend = spendSchema.extend({
   segments: z.array(seatSegment).optional(),
@@ -517,8 +492,7 @@ const nodeSpend = spendSchema.extend({
     .catchall(z.unknown()),
 })
 
-const outputFile = z
-  .object({
+const outputFile = z.looseObject({
     path: z.string(),
     bytes: z.number().int().nonnegative().nullable(),
     sha256: sha256.nullable(),
@@ -527,14 +501,12 @@ const outputFile = z
     /** Same-origin link to the file's bytes; null when the host cannot serve it. */
     href: z.string().nullable(),
   })
-  .catchall(z.unknown())
 
 /**
  * The latest observer brief of the run (discovery-lab `runner/readout-brief.mjs`): written every 90 minutes while it runs
  * and once when it ends, in plain English, with what each agent is doing and the risks the observer sees.
  */
-export const progressBriefSchema = z
-  .object({
+export const progressBriefSchema = z.looseObject({
     sequence: z.number().int(),
     phase: z.string(),
     final: z.boolean(),
@@ -559,21 +531,17 @@ export const progressBriefSchema = z
       .catchall(z.unknown())
       .optional(),
   })
-  .catchall(z.unknown())
 
 /** A check's dense score: the stage it reached of how many, its public workloads, and the Lab's 0–1 value. */
-const checkScoreSchema = z
-  .object({
+const checkScoreSchema = z.looseObject({
     stage: z.string().nullable().optional(),
     reached: z.number().nullable().optional(),
     of: z.number().nullable().optional(),
     workloads: z.object({ passed: z.number(), total: z.number() }).nullable().optional(),
     value: z.number().nullable().optional(),
   })
-  .catchall(z.unknown())
 /** One check or tag-gate line: when, on which tag, its first failing line, its verdict and score. */
-const checkLineSchema = z
-  .object({
+const checkLineSchema = z.looseObject({
     at: z.string().nullable().optional(),
     tag: z.string().nullable().optional(),
     line: z.string().nullable().optional(),
@@ -584,7 +552,6 @@ const checkLineSchema = z
     /** The check passed through stages no known-good fixture passed (discovery-lab runner/run-progress.mjs): a held pass. */
     uncalibratedPass: z.boolean().optional(),
   })
-  .catchall(z.unknown())
 
 /**
  * The run's progress as data (discovery-lab `runner/run-progress.mjs`, `discovery.run-progress`): who worked when, each
@@ -592,8 +559,7 @@ const checkLineSchema = z
  * from this same document, and the records watcher rewrites it every few minutes while the run runs, so the page and the
  * brief at a checkpoint show the same numbers. Unmeasured values are null, never 0.
  */
-export const runProgressSchema = z
-  .object({
+export const runProgressSchema = z.looseObject({
     schema: z.literal('discovery.run-progress'),
     runId: z.string(),
     generatedAt: time,
@@ -669,15 +635,13 @@ export const runProgressSchema = z
       .nullable()
       .optional(),
   })
-  .catchall(z.unknown())
 
 /**
  * The run's readout, written after it settles (discovery-lab `runner/readout.mjs`, `discovery.run-readout`): a summary,
  * the declared deliverables, hypothesis verdicts, judge scores, cost and the published report links. `pending` until a
  * readout finishes; a failed one keeps its error. Unmeasured numbers are null, never 0.
  */
-export const readoutSchema = z
-  .object({
+export const readoutSchema = z.looseObject({
     status: z.enum(['pending', 'complete', 'partial', 'failed']),
     generatedAt: time.nullable(),
     settle: z.object({ kind: z.string(), reason: z.string().nullable() }).catchall(z.unknown()).nullable(),
@@ -739,11 +703,9 @@ export const readoutSchema = z
       )
       .optional(),
   })
-  .catchall(z.unknown())
 
 /** A person's grade of a run or one of its outputs (`discovery.human-grade.v1`), on the readout's absolute scale. */
-export const humanGradeSchema = z
-  .object({
+export const humanGradeSchema = z.looseObject({
     at: time,
     by: z.string(),
     target: z.object({ kind: z.enum(['run', 'deliverable', 'file']), id: z.string() }),
@@ -753,11 +715,9 @@ export const humanGradeSchema = z
     comment: z.string(),
     scale: z.string(),
   })
-  .catchall(z.unknown())
 
 /** One AI persona's review of the run (discovery-lab `runner/readout-panel.mjs`): absolute 0–100 per category; advisory. */
-export const panelReviewSchema = z
-  .object({
+export const panelReviewSchema = z.looseObject({
     panel: z.string(),
     persona: z.string(),
     overall: z.number().nullable(),
@@ -768,11 +728,9 @@ export const panelReviewSchema = z
       z.object({ score: z.number().nullable(), band: z.string().nullable(), competence: z.string().nullable(), why: z.string().nullable() }).catchall(z.unknown()),
     ),
   })
-  .catchall(z.unknown())
 
 /** One question of a trace review: a 0–100 score (higher is better for every question), a verdict, quotes and suggestions. */
-export const traceReviewQuestionSchema = z
-  .object({
+export const traceReviewQuestionSchema = z.looseObject({
     id: z.string(),
     question: z.string().nullable(),
     status: z.enum(['answered', 'failed']),
@@ -783,12 +741,10 @@ export const traceReviewQuestionSchema = z
     citations: z.object({ total: z.number().int().nullable(), resolved: z.number().int().nullable() }).catchall(z.unknown()),
     failure: z.string().nullable(),
   })
-  .catchall(z.unknown())
 
 /** The run's latest trace review (discovery-lab `runner/trace-review.mjs`): a model read the run's agent sessions and
  * answered a bank of questions about them, while the run runs and once after it settles. Advisory. */
-export const traceReviewSchema = z
-  .object({
+export const traceReviewSchema = z.looseObject({
     phase: z.enum(['running', 'settled']),
     final: z.boolean(),
     generatedAt: time.nullable(),
@@ -806,11 +762,9 @@ export const traceReviewSchema = z
     questions: z.array(traceReviewQuestionSchema),
     cost: z.object({ usd: z.number().nullable(), kind: z.string().nullable() }).catchall(z.unknown()),
   })
-  .catchall(z.unknown())
 
 /** What the run was asked to deliver and whether it did. Absent on documents built before the field existed. */
-export const finalOutputSchema = z
-  .object({
+export const finalOutputSchema = z.looseObject({
     declared: z
       .object({
         source: z.enum(['deliverable-check', 'run-input']),
@@ -842,11 +796,9 @@ export const finalOutputSchema = z
     /** The run's latest trace review; null when it has none, absent on documents built before the field existed. */
     traceReview: traceReviewSchema.nullable().optional(),
   })
-  .catchall(z.unknown())
 
 /** One knowledge page an agent wrote, as the run's findings list it: its last version, classified by file name. */
-export const findingItemSchema = z
-  .object({
+export const findingItemSchema = z.looseObject({
     path: z.string(),
     agent: z.string().nullable(),
     agentLabel: z.string().nullable(),
@@ -871,12 +823,10 @@ export const findingItemSchema = z
     /** Independent reviews of precise claims on this page; empty or absent means no outside verdict yet. */
     reviews: z.array(scientificReviewSchema).optional(),
   })
-  .catchall(z.unknown())
 
 /** What a run found, from the knowledge pages its agents wrote (`agent-workspace.findings.v1`), with the sources
  * they read or cited and how the run stopped. Absent on documents built before the field existed. */
-export const findingsSchema = z
-  .object({
+export const findingsSchema = z.looseObject({
     schema: z.literal('agent-workspace.findings.v1'),
     items: z.array(findingItemSchema),
     total: z.number().int(),
@@ -920,21 +870,17 @@ export const findingsSchema = z
       })
       .catchall(z.unknown()),
   })
-  .catchall(z.unknown())
 
 /** What Discovery found across runs, newest first (`agent-workspace.findings-feed.v1`, served at `findings`). */
-export const findingsFeedSchema = z
-  .object({
+export const findingsFeedSchema = z.looseObject({
     schema: z.literal('agent-workspace.findings-feed.v1'),
     builtAt: z.string(),
     since: z.string(),
     runs: z.object({ considered: z.number().int(), withFindings: z.number().int(), results: z.number().int(), claims: z.number().int(), pending: z.number().int().optional() }).catchall(z.unknown()),
     items: z.array(feedItemSchema), shown: z.object({ items: z.number().int(), byReview: z.record(z.string(), z.number().int()) }).optional(),
   })
-  .catchall(z.unknown())
 
-export const runDocumentSchema = z
-  .object({
+export const runDocumentSchema = z.looseObject({
     schema: z.literal('agent-workspace.run.v1'),
     receipt: runReceiptSchema.nullable().optional(),
     run: runSummarySchema,
@@ -950,7 +896,6 @@ export const runDocumentSchema = z
     /** The host's one view of the run (views.run_view): status, sentence, blocker, progress, needs-you, as-of. */
     view: viewSchema.optional(),
   })
-  .catchall(z.unknown())
 
 // ---------------------------------------------------------------------------------------------------------
 // Profile versions of a play: `plays/<id>/profiles`, written by discovery-lab `disco profiles index`.
@@ -998,8 +943,7 @@ export const profileScoreSchema = z.union([
 const splitScore = z.object({ mean: z.number(), units: z.number().int() }).catchall(z.unknown()).nullable().optional()
 
 /** One search's view of one version (discovery-lab `disco profiles index`, from the search ledger). */
-const nodeSearchSchema = z
-  .object({
+const nodeSearchSchema = z.looseObject({
     searchId: z.string(),
     kind: z.string().nullable().optional(),
     runId: z.string().nullable().optional(),
@@ -1025,11 +969,9 @@ const nodeSearchSchema = z
       )
       .optional(),
   })
-  .catchall(z.unknown())
 
 /** One role's scorecard in one run, as a profile version carries it (discovery-lab runner/profiles.mjs `scorecardSummary`). */
-export const roleScorecardSummarySchema = z
-  .object({
+export const roleScorecardSummarySchema = z.looseObject({
     runId: z.string(),
     role: z.string(),
     builtAt: z.string().nullable().optional(),
@@ -1047,10 +989,8 @@ export const roleScorecardSummarySchema = z
       })
       .catchall(z.unknown()),
   })
-  .catchall(z.unknown())
 
-const blockerItemSchema = z
-  .object({
+const blockerItemSchema = z.looseObject({
     id: z.string(),
     severity: z.string(),
     class: z.string(),
@@ -1063,11 +1003,9 @@ const blockerItemSchema = z
     summary: z.string(),
     resolves: z.string().optional(),
   })
-  .catchall(z.unknown())
 
 /** One role of one run in full (discovery-lab runner/role-scorecard.mjs). */
-export const roleCardSchema = z
-  .object({
+export const roleCardSchema = z.looseObject({
     role: z.string(),
     digests: z.array(z.string()),
     harness: z.string().nullable().optional(),
@@ -1104,11 +1042,9 @@ export const roleCardSchema = z
       .catchall(z.unknown()),
     burden: z.object({ total: z.number(), blockers: z.number(), regressions: z.number(), expectations: z.number(), rework: z.number() }).catchall(z.unknown()),
   })
-  .catchall(z.unknown())
 
 /** A run's role scorecard: every role, the blocker classes, regressions between tags, and the role versions delivered to it. */
-export const runRoleCardSchema = z
-  .object({
+export const runRoleCardSchema = z.looseObject({
     available: z.boolean(),
     reason: z.string().optional(),
     runId: z.string().optional(),
@@ -1145,11 +1081,9 @@ export const runRoleCardSchema = z
       .optional(),
     roles: z.array(roleCardSchema).optional(),
   })
-  .catchall(z.unknown())
 
 /** A role version's edit: each rule with the referee blockers it cites, the size budget, and its replay decision. */
-export const roleEditSchema = z
-  .object({
+export const roleEditSchema = z.looseObject({
     role: z.string(),
     target: z.string().nullable().optional(),
     rules: z.array(
@@ -1184,11 +1118,9 @@ export const roleEditSchema = z
       .optional(),
     source: z.string().optional(),
   })
-  .catchall(z.unknown())
 
 /** One record behind a parent edge (discovery-lab docs/profiles.md `Event`). */
-const profileEdgeEventSchema = z
-  .object({
+const profileEdgeEventSchema = z.looseObject({
     kind: z.string(),
     at: z.string().nullable().optional(),
     runId: z.string().nullable().optional(),
@@ -1201,7 +1133,6 @@ const profileEdgeEventSchema = z
       .nullable()
       .optional(),
   })
-  .catchall(z.unknown())
 
 const researchContractSchema = z.object({
   version: z.literal('research-contract-v2'),
@@ -1209,8 +1140,7 @@ const researchContractSchema = z.object({
   components: z.array(z.object({ id: z.string(), commit: z.string(), message: z.string() })),
 }).catchall(z.unknown())
 
-export const profileNodeSchema = z
-  .object({
+export const profileNodeSchema = z.looseObject({
     digest: profileDigest,
     short: z.string(),
     name: z.string().nullable(),
@@ -1276,11 +1206,9 @@ export const profileNodeSchema = z
     /** A role version's rules, the evidence each cites, and its replay decision. */
     edit: roleEditSchema.nullable().optional(),
   })
-  .catchall(z.unknown())
 
 /** One optimizer search over a play's profile (`searches` in the profile index): its policy, its claim and its curve. */
-export const profileSearchSchema = z
-  .object({
+export const profileSearchSchema = z.looseObject({
     searchId: z.string(),
     kind: z.string().nullable().optional(),
     runId: z.string().nullable().optional(),
@@ -1324,17 +1252,14 @@ export const profileSearchSchema = z
       )
       .optional(),
   })
-  .catchall(z.unknown())
 
 /** For one version, each line of its prompt and the version that introduced it. */
-export const profileBlameSchema = z
-  .object({
+export const profileBlameSchema = z.looseObject({
     digest: z.string(),
     complete: z.boolean().optional(),
     versions: z.array(z.string()).optional(),
     rows: z.array(z.object({ field: z.string(), text: z.string(), introducedBy: z.string().nullable() }).catchall(z.unknown())),
   })
-  .catchall(z.unknown())
 
 const diffLine = z.object({ op: z.enum([' ', '+', '-', '@']), text: z.string() })
 const fileRef = z.object({ path: z.string(), bytes: z.number().int().nonnegative(), sha256: z.string() }).catchall(z.unknown())
@@ -1361,8 +1286,7 @@ export const profileDiffFieldSchema = z.discriminatedUnion('kind', [
   }),
 ])
 
-export const profileDiffSchema = z
-  .object({
+export const profileDiffSchema = z.looseObject({
     from: profileDigest,
     to: profileDigest,
     relation: z.enum(profileRelations),
@@ -1389,11 +1313,9 @@ export const profileDiffSchema = z
         .catchall(z.unknown()),
     ]),
   })
-  .catchall(z.unknown())
 
 /** Every profile version used or registered in a play, with its parents, runs, scores and diffs. */
-export const profileGraphDocumentSchema = z
-  .object({
+export const profileGraphDocumentSchema = z.looseObject({
     schema: z.literal('discovery-lab.profile-graph'),
     play: z.string(),
     builtAt: z.string(),
@@ -1407,11 +1329,9 @@ export const profileGraphDocumentSchema = z
     /** Keyed by run id: the whole role scorecard of each run whose roles ran a version of this play. */
     scorecards: z.record(z.string(), runRoleCardSchema).optional(),
   })
-  .catchall(z.unknown())
 
 /** One check a release evaluator ran on a tagged candidate. */
-const releaseResultSchema = z
-  .object({
+const releaseResultSchema = z.looseObject({
     id: z.string(),
     tier: z.string(),
     pass: z.boolean(),
@@ -1419,13 +1339,11 @@ const releaseResultSchema = z
     evidence: z.string().optional(),
     error: z.string().optional(),
   })
-  .catchall(z.unknown())
 
 /** A run's versioned artifacts (`runs/<id>/versions`, discovery-lab `runner/version-graph.mjs`): every commit of its
  * `deliverables.git` with the lane (branch) that made it and the worker and trace that wrote it, deliverable writes and
  * spawned profiles in one graph, and every release tag with its latest score, rank and flags. */
-export const versionGraphDocumentSchema = z
-  .object({
+export const versionGraphDocumentSchema = z.looseObject({
     kind: z.literal('agent-workspace.version-graph'),
     runId: z.string(),
     available: z.boolean(),
@@ -1505,7 +1423,6 @@ export const versionGraphDocumentSchema = z
     best: z.string().nullable().optional(),
     flags: z.array(z.object({ kind: z.string(), tag: z.string(), from: z.string(), checks: z.array(z.string()) }).catchall(z.unknown())).default([]),
   })
-  .catchall(z.unknown())
 
 export type Gap = z.infer<typeof gapSchema>
 export type Spend = z.infer<typeof spendSchema>

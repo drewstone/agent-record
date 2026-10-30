@@ -35,6 +35,9 @@ The graph model remains available from this package’s `/record` entry. It link
 
 Version3 retires this package’s React view exports and stylesheet; import their maintained owners above. Version2 retires Discovery workspace/page exports, its browser bundle, and standalone receipt renderer. Discovery composition lives in the [Tools viewer](https://github.com/drewstone/tangle-tools/tree/main/fleet/discovery_workspace_parts/viewer). Immutable earlier releases and records remain readable.
 
+`runCheckSchema`, `calibrationSchema`, `RunCheck` and `Calibration` expose the existing canonical check model through the root and workspace entries. Optional native provenance and calibration references preserve missing/null metadata as unknown; the writer owns explicit identity evidence and per-amendment binding.
+
+
 ## Adapters and ingest
 
 ```ts

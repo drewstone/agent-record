@@ -5,8 +5,7 @@ import { z } from 'zod'
 const time = z.iso.datetime({ offset: true })
 
 /** One check or tag-gate row as the host reads it: when, on which tag and commit, under which checker, its verdict and line. */
-const checkRowSchema = z
-  .object({
+const checkRowSchema = z.looseObject({
     at: time.nullable().optional(),
     tag: z.string().nullable().optional(),
     commit: z.string().nullable().optional(),
@@ -19,7 +18,6 @@ const checkRowSchema = z
       .nullable()
       .optional(),
   })
-  .catchall(z.unknown())
 /** A check stage's calibration (discovery-lab runner/calibration.mjs): a known-good fixture passed it, none did, it gave two answers, or no record says. */
 export const calibrationState = z.enum(['calibrated', 'uncalibrated', 'nondeterministic', 'unknown'])
 /**
@@ -27,17 +25,18 @@ export const calibrationState = z.enum(['calibrated', 'uncalibrated', 'nondeterm
  * play_checks.check_calibration). `unknown` says which record would state it. The run page and the play page's run groups
  * serve the same shape.
  */
-export const calibrationSchema = z
-  .object({
+export const calibrationSchema = z.looseObject({
     state: calibrationState,
     stages: z.array(z.object({ name: z.string().nullable(), state: calibrationState }).catchall(z.unknown())),
     source: z.string().nullable().optional(),
     unknown: z.string().nullable().optional(),
+    at: z.string().nullish(),
+    check: z.string().nullish(),
+    fixtures: z.string().nullish(),
+    authorFamily: z.string().nullish(),
   })
-  .catchall(z.unknown())
 export type Calibration = z.infer<typeof calibrationSchema>
-export const runCheckSchema = z
-  .object({
+export const runCheckSchema = z.looseObject({
     latest: checkRowSchema.nullable(),
     best: checkRowSchema.nullable(),
     passes: z.array(z.object({ tag: z.string().nullable(), checker: z.string().nullable(), count: z.number(), firstAt: time, lastAt: time }).catchall(z.unknown())).optional(),
@@ -55,13 +54,24 @@ export const runCheckSchema = z
     held: checkRowSchema.extend({ stages: z.array(z.string()) }).nullable().optional(),
     /** The calibration every verdict of the run names, as its check registered it at press. */
     calibration: calibrationSchema.nullable().optional(),
+    /** Native definition/amendment references; absence stays unknown. Writers bind identity and allowlist metadata. */
+    provenance: z.object({
+      source: z.object({ repository: z.string().min(1), commit: z.string().min(1), path: z.string().min(1) }).catchall(z.unknown()).nullish(),
+      checkSource: z.string().nullish(),
+      definedBy: z.object({ id: z.string().min(1), evidence: z.string().min(1) }).catchall(z.unknown()).nullish(),
+      anchors: z.object({
+        digest: z.string().nullish(),
+        anchors: z.array(z.object({ id: z.string(), kind: z.string(), stages: z.array(z.string()).nullish() }).catchall(z.unknown())).nullish(),
+        hidden: z.array(z.string()).nullish(),
+      }).catchall(z.unknown()).nullish(),
+      tagGate: z.string().nullish(),
+      evidence: z.string().nullish(),
+    }).catchall(z.unknown()).nullish(),
   })
-  .catchall(z.unknown())
 export type RunCheck = z.infer<typeof runCheckSchema>
 
 /** One check dispute the run committed and its ruling (discovery-lab `runner/check-dispute.mjs`, tangle-tools progress.outcome_disputes). */
-export const checkDisputeSchema = z
-  .object({
+export const checkDisputeSchema = z.looseObject({
     id: z.string().nullable(),
     at: time.nullable(),
     line: z.string().nullable(),
@@ -75,4 +85,3 @@ export const checkDisputeSchema = z
       .array(z.object({ seat: z.string().nullable(), family: z.string().nullable(), verdict: z.enum(['upheld', 'rejected', 'undecided']).nullable() }).catchall(z.unknown()))
       .optional(),
   })
-  .catchall(z.unknown())
