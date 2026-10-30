@@ -20,7 +20,7 @@ test('the public report CLI preserves sources and enforces its browser and files
   const evidence = process.env.EXAMPLE_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
   const original = await readFile(new URL('./fixtures/play-report-magnetar-rust.json', import.meta.url), 'utf8')
-  const report = api.playReportToResearchReport(JSON.parse(original)), play = report.plays[0]
+  const served = JSON.parse(original), report = api.playReportToResearchReport(served), play = report.plays[0]
   const source = { id: 'retained-report', path: 'retained/play-report.json', title: 'Original retained report', kind: 'data', content: original, sha256: createHash('sha256').update(original).digest('hex') }
   play.documents.push(source)
   report.title = '</script><img src=x onerror="window.reportInjected=true"> Retained report'
@@ -69,6 +69,18 @@ test('the public report CLI preserves sources and enforces its browser and files
         assert.equal(await page.locator('article.research-report').first().evaluate(node => getComputedStyle(node).colorScheme), theme)
         assert.equal(await page.locator('img[src=x]').count(), 0)
         assert.equal(await page.evaluate(() => window.reportInjected), undefined)
+        assert.ok((await page.locator('#verdict').innerText()).includes(api.hostWords(served.verdict.sentence)))
+        for (const question of served.questions) assert.ok((await page.locator('.rr-questions').innerText()).includes(question.question))
+        for (const rule of served.rules) {
+          const row = page.locator('[data-rule=' + JSON.stringify(rule.id) + ']')
+          assert.equal(await row.getAttribute('data-rule-state'), rule.state)
+          for (const anomaly of served.anomalies.filter(item => item.rule === rule.id)) assert.ok((await row.innerText()).includes(api.hostWords(anomaly.sentence)))
+        }
+        for (const item of served.unknowns) {
+          const row = page.locator('[data-unknown-field=' + JSON.stringify(item.field) + ']')
+          assert.ok((await row.innerText()).includes(api.hostWords(item.why)))
+          assert.ok((await row.innerText()).includes(api.hostWords(item.record)))
+        }
         await page.getByRole('navigation', { name: 'Play sections', exact: true }).getByRole('button', { name: /^Sources/ }).click()
         const search = page.getByRole('searchbox', { name: 'Search this play’s sources', exact: true })
         await search.fill('magnetar'); await search.press('Enter')
