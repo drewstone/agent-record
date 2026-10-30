@@ -109,6 +109,8 @@ test('the public report CLI preserves sources and enforces its browser and files
         await page.locator('.record-conversation').waitFor()
         await page.locator('[data-user-message-time]').first().waitFor({ state: 'attached' })
         const userTimes = await page.locator('[data-user-message-time]').allTextContents()
+        await page.locator('[data-user-message-time]').first().locator('..').hover()
+        await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('[data-user-message-time]')).opacity) > 0.9)
         assert.ok(userTimes.length > 0 && userTimes.every(value => /^\d{2}:\d{2} UTC$/.test(value)), 'the actual standalone IIFE renders original retained messages in UTC across zones')
         assert.equal(new URL(page.url()).searchParams.get('play'), retained.runId)
         assert.equal(new URL(page.url()).searchParams.get('view'), 'activity')
