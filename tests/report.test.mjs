@@ -11,7 +11,10 @@ test('all published events and source references survive attached report validat
   const served = JSON.parse(await readFile(new URL('./fixtures/play-report-magnetar-rust.json', import.meta.url), 'utf8'))
   let count = 0
   for (const id of publicationIds) {
-    const record = fromResearchPublication(JSON.parse(await readPublication(id)))
+    const raw = JSON.parse(await readPublication(id)), original = JSON.stringify(raw)
+    const record = fromResearchPublication(raw)
+    assert.equal(JSON.stringify(raw), original, 'legacy conversion preserves raw publication bytes')
+    assert.deepEqual(record.nodes.map(node => node.status), raw.nodes.map(node => node.status === 'down' ? 'stopped' : node.status))
     const data = playReportToResearchReport(served)
     data.plays[0].record = record
     const parsed = parseResearchReport(data)
