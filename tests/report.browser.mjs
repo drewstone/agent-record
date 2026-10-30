@@ -70,14 +70,14 @@ test('the public report CLI preserves sources and enforces its browser and files
         assert.equal(await page.locator('img[src=x]').count(), 0)
         assert.equal(await page.evaluate(() => window.reportInjected), undefined)
         assert.ok((await page.locator('#verdict').innerText()).includes(api.hostWords(served.verdict.sentence)))
-        for (const question of served.questions) assert.ok((await page.locator('.rr-questions').innerText()).includes(question.question))
+        for (const question of served.questions) assert.ok((await page.locator('#questions').innerText()).includes(question.question))
         for (const rule of served.rules) {
-          const row = page.locator('[data-rule=' + JSON.stringify(rule.id) + ']')
-          assert.equal(await row.getAttribute('data-rule-state'), rule.state)
+          const row = page.locator('#anomalies [data-rule=' + JSON.stringify(rule.id) + ']')
+          assert.equal(await row.getAttribute('data-state'), rule.state)
           for (const anomaly of served.anomalies.filter(item => item.rule === rule.id)) assert.ok((await row.innerText()).includes(api.hostWords(anomaly.sentence)))
         }
         for (const item of served.unknowns) {
-          const row = page.locator('[data-unknown-field=' + JSON.stringify(item.field) + ']')
+          const row = page.locator('#unknowns [data-unknown-field=' + JSON.stringify(item.field) + ']')
           assert.ok((await row.innerText()).includes(api.hostWords(item.why)))
           assert.ok((await row.innerText()).includes(api.hostWords(item.record)))
         }
