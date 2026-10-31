@@ -47,7 +47,7 @@ import { nativeStore, readOpenCode, readOpenCodeBundle, readOpenCodeStore } from
 import { projectPartEvents, projectPartFrames } from './part-events.js'
 import { piSessions, readPi, readPiBundle, type PiSession } from './pi.js'
 
-export const ADAPTER_VERSION = '2.7.3'
+export const ADAPTER_VERSION = '2.7.4'
 export { ID_SCHEME }
 export { categoryOf, type Category } from './harness-reader.js'
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024

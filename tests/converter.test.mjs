@@ -438,5 +438,6 @@ test('a root its journal never spawns owns its events and root stream; a settled
   assert.deepEqual(worker.capture, { channel: 'live', status: 'lossy', reason: 'live-stream-after-settle' })
   const recorded = record.events.filter((event) => event.node === 'run-r:s0' && event.source.path.startsWith('evidence/live-stream/'))
   assert.equal(recorded.filter((event) => event.kind === 'tool-result').length, 1)
-  assert.ok(recorded.some((event) => event.detail.usage?.input === 16501830 && event.detail.usageScope === 'execution-total'), "the session's own usage")
+  assert.ok(recorded.some((event) => event.detail.usageScope === 'execution-total' && event.detail.usage?.input === 16501830 - 16240896 && event.detail.usage?.cacheRead === 16240896),
+    "the session's own usage, input fresh of its cache reads as every record counts it")
 })

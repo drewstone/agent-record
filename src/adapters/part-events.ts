@@ -118,9 +118,9 @@ function project(node: Json, frames: Iterable<NativeFrame>, categoryOf?: (name: 
 
 function applyUsage(target: Json, done: Json) {
   const usage = done?.usage ?? done?.data?.tokenUsage, cost = num(usage?.cost) ?? num(done?.data?.totalCostUsd)
-  const unmetered = done?.data?.tokensKnown === false && !num(usage?.inputTokens) && !num(usage?.outputTokens) && !num(usage?.cacheReadInputTokens) && !num(usage?.cacheCreationInputTokens) && !cost
-  if (target && usage && !unmetered) Object.assign(target.detail, {
-    usage: { input: num(usage.inputTokens), output: num(usage.outputTokens), cacheRead: num(usage.cacheReadInputTokens), cacheWrite: num(usage.cacheCreationInputTokens) },
+  const [input, output, cacheRead, cacheWrite] = ['inputTokens', 'outputTokens', 'cacheReadInputTokens', 'cacheCreationInputTokens'].map((key) => num(usage?.[key])) // input includes both caches
+  if (target && usage && !(done?.data?.tokensKnown === false && !input && !output && !cacheRead && !cacheWrite && !cost)) Object.assign(target.detail, {
+    usage: { input: input === undefined ? undefined : Math.max(0, input - (cacheRead ?? 0) - (cacheWrite ?? 0)), output, cacheRead, cacheWrite },
     usageScope: 'execution-total', ...(cost === undefined ? {} : { costListUsd: cost, usdKnown: false }),
   })
 }
