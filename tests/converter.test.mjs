@@ -409,7 +409,7 @@ test('a root its journal never spawns owns its events and root stream; a settled
     { seq: 3, at: '2026-10-31T02:06:22.224Z', attempt: 1, event: { kind: 'tool_result', toolName: 'bash', toolCallId: 'item_1', result: { output: '/home/agent/workspace' } } },
     { seq: 4, at: '2026-10-31T02:06:25.000Z', attempt: 1, event: { kind: 'tool_call', toolName: 'mcp__agent-runtime-coordination__spawn_worker', toolCallId: 'item_2', args: { key: 'rate' } } },
   ]))
-  const frame = (id, at, type, data) => ({ id, type, data: { type, ...data, sandboxId: 'sandbox-4665ccbac012' }, at })
+  const frame = (id, at, type, data) => ({ id, type, data: { type, ...data, sandboxId: 'sandbox-0123456789ab' }, at })
   const usage = { inputTokens: 16501830, outputTokens: 68742, reasoningTokens: 30302, cacheReadInputTokens: 16240896 }
   file(`evidence/live-stream/${encodeURIComponent('run-r:s0')}/retained-execution-a.jsonl`, jsonl([
     { id: '1', type: 'execution.started', data: { executionId: 'exec-1', effectiveBackend: { model: 'gpt-6.1-sol', source: 'profile' } }, at: '2026-10-31T02:13:36.155Z' },
