@@ -8,3 +8,5 @@
 - **Publication**: a site entry or other release that cites recorded claims and, when known, verdicts. The research-publication bundle remains the container for all harness evidence behind it. _Avoid_: bundle for a single site entry.
 - **Profile version**: a content-addressed agent profile, with recorded parent digests and optional run or author references. _Avoid_: run version, which is a different axis.
 - **Status**: an agent execution state uses `@tangle-network/ui/run`: running, waiting, needs-you, succeeded, failed, stopped, idle or unknown. A recorded failure retains its cause even after a commit ships; waiting is neutral and needs-you asks for a response. Other axes (result, alert, release, cause, measure) retain `statusOf` and their recorded meanings. _Avoid_: treating provider identity, elapsed time or a shipped commit as an execution status.
+
+- **Native frame**: a producer event scoped to its actual stream and attempt. Its sequence orders the bounded stream; it is not a source line. Projection makes canonical record events, with source anchors only when the producer supplied them.
