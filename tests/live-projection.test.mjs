@@ -1,15 +1,9 @@
 /** The public projection consumes the real paged native-row contract without a fabricated retained record. */
 import assert from 'node:assert/strict'
-import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { test } from 'node:test'
 
-const publicModule = process.env.CORE_CONSUMER
-  ? pathToFileURL(createRequire(resolve(process.env.CORE_CONSUMER, 'package.json')).resolve('@drewstone/agent-record/record')).href
-  : '@drewstone/agent-record/record'
-const { projectPartEvents } = await import(publicModule)
+import { projectPartEvents } from '@drewstone/agent-record/record'
 const { node, rows } = JSON.parse(await readFile(new URL('./fixtures/runtime-live-frames.json', import.meta.url)))
 
 test('public native projection keeps scoped final state, user input and honest source absence', () => {
