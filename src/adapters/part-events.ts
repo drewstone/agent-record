@@ -21,8 +21,8 @@ export interface PartEventRow {
 interface NativeFrame { event: Json; at?: string; row?: PartEventRow }
 interface PartFrame extends NativeFrame { where(): Json; full(path: (string | number)[], value: Json): Json }
 type Content = { path: (string | number)[]; value: Json }
-type Draft = { frame: NativeFrame; at: string; kind: string; category: string; label: string; detail: Json; item?: number; body?: Content; input?: Content }
-type Seen = { part: Json; frame: NativeFrame; firstMs: number | null }
+type Draft = { firstSeq?: number; frame: NativeFrame; at: string; kind: string; category: string; label: string; detail: Json; item?: number; body?: Content; input?: Content }
+type Seen = { part: Json; frame: NativeFrame; firstMs: number | null; firstSeq?: number }
 const content = (path: (string | number)[], value: Json): Content => ({ path, value })
 
 /** Collapse updates by native identity, keeping the final frame and its first recorded clock. */
@@ -37,12 +37,12 @@ function collect(node: Json, frames: Iterable<NativeFrame>) {
     else if (event?.type === 'message.part.updated' && data.part?.id) {
       const part = data.part, time = num(part.state?.time?.start) ?? num(part.time?.start)
       if (time !== undefined) clock = Math.max(clock ?? 0, time)
-      parts.set(part.id, { part, frame, firstMs: parts.get(part.id)?.firstMs ?? clock })
+      parts.set(part.id, { part, frame, firstMs: parts.get(part.id)?.firstMs ?? clock, firstSeq: parts.get(part.id)?.firstSeq ?? frame.row?.seq })
       const end = num(part.state?.time?.end) ?? num(part.time?.end)
       if (end !== undefined) clock = Math.max(clock ?? 0, end)
     } else if (event?.type === 'raw' && data.event?.type === 'item.completed' && data.event.item?.id) {
       const part = data.event.item
-      codex.set(part.id, { part, frame, firstMs: clock })
+      codex.set(part.id, { part, frame, firstMs: clock, firstSeq: codex.get(part.id)?.firstSeq ?? frame.row?.seq })
     } else if (event?.type === 'raw' && data.event?.role === 'tool' && typeof data.event.tool_call_id === 'string') extras.push({ frame, at: clock, kind: 'tool-result', data: data.event })
     else if (event?.type === 'raw' && data.event?.type === 'rate_limit_event') extras.push({ frame, at: clock, kind: 'rate-limit', data: data.event.rate_limit_info ?? {} })
     else if (event?.type === 'done') done = { data, usage: event.usage }
@@ -110,11 +110,11 @@ function project(node: Json, frames: Iterable<NativeFrame>, categoryOf?: (name: 
   let produced = 0
   for (const seen of state.parts.values()) {
     const part = partDrafts(node, seen, state.roles, categoryOf)
-    drafts.push(...part); produced += part.filter(draft => draft.kind === 'message').length
+    drafts.push(...part.map(draft => ({ ...draft, firstSeq: draft.kind === 'tool-result' ? draft.frame.row?.seq : seen.firstSeq }))); produced += part.filter(draft => draft.kind === 'message').length
   }
   for (const seen of state.codex.values()) {
     const part = codexDrafts(node, seen, categoryOf)
-    drafts.push(...part); produced += part.length
+    drafts.push(...part.map(draft => ({ ...draft, firstSeq: draft.kind === 'tool-result' ? draft.frame.row?.seq : seen.firstSeq }))); produced += part.length
   }
   for (const extra of state.extras) {
     const draft = extraDraft(node, extra)
@@ -188,7 +188,7 @@ export function projectPartEvents(first: Json, second: Json, rel?: string, entry
     const { drafts, done } = project(node, frames)
     const projected = drafts.map(draft => {
       const row = draft.frame.row!, native = draft.detail.nativeRecordId ?? row.seq
-      const detail = { ...draft.detail, streamSeq: row.seq, ...(row.stream !== undefined ? { stream: row.stream } : {}), ...(row.attempt !== undefined ? { attempt: row.attempt } : {}) }
+      const detail = { ...draft.detail, streamSeq: draft.firstSeq ?? row.seq, ...(row.stream !== undefined ? { stream: row.stream } : {}), ...(row.attempt !== undefined ? { attempt: row.attempt } : {}) }
       return { id: JSON.stringify([node.id, row.stream ?? null, row.attempt ?? null, native, draft.kind, draft.item ?? (draft.kind === 'tool-result' ? 1 : 0)]), node: node.id, at: draft.at, kind: draft.kind, category: draft.category, label: draft.label, ...(row.source ? { source: row.source } : {}), detail } as RecordEvent
     })
     applyUsage([...projected].reverse().find(event => event.kind === 'message' && event.detail.role === 'assistant' && (event.detail.publicText || event.detail.reasoning)) ?? projected.at(-1), done)

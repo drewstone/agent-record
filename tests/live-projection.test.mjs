@@ -20,6 +20,7 @@ test('public native projection keeps scoped final state, user input and honest s
   const before = projectPartEvents(node, rows.filter(row => row.seq <= 2))
   const pending = before.find(event => event.detail.publicToolCalls?.length)
   assert.ok(pending)
+  assert.equal(events.find(event => event.id === pending.id)?.detail.streamSeq, pending.detail.streamSeq, 'terminal updates retain the first actual producer sequence for ordering')
   assert.ok(events.some(event => event.id === pending.id), 'a terminal native-part update keeps its call identity')
   assert.ok(results.some(event => event.detail.publicText?.includes('failed')))
   const anchoredRows = rows.map(row => ({ ...row, source: { path: 'capture/actual.jsonl', line: 17, sha256: 'a'.repeat(64) } }))
