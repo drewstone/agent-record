@@ -1,15 +1,14 @@
 /**
  * The one converter from an agent-runtime run directory (or a bundle of sessions, see ingestBundle) to `agent-record.v1`.
- * Node only. Each harness's session format has one reader (claude.ts, codex.ts, opencode.ts, pi.ts, bridge.ts) over
- * the shared line framing in harness-reader.ts; this file reads the run's own channels and dispatches to them.
+ * Node only. Each harness's session format has one reader (claude.ts, codex.ts, opencode.ts, pi.ts, bridge.ts) over the
+ * shared line framing in harness-reader.ts; this file reads the run's own channels and dispatches to them. It reads the run
+ * directory and an optional native-transcript cache, never writes either, never touches the network; the same inputs and
+ * ADAPTER_VERSION produce identical bytes. With a snapshot manifest (evidence.snapshot.v1) every file is verified against
+ * it and every source digest comes from it; the run id comes from the caller or the manifest.
  *
- * It reads the run directory and an optional native-transcript cache, never writes into either, and never
- * touches the network. The same inputs and ADAPTER_VERSION produce identical bytes. With a snapshot manifest
- * (evidence.snapshot.v1, the evidence store's file list) every file is verified against it before conversion and
- * every source digest comes from it; the run id comes from the caller or the manifest.
- *
- * Nodes are the `spawned` ids in spawn-journal.jsonl. Each node's conversation comes from the first channel
- * that holds it, in this order; the others are listed as sources and never duplicated as events:
+ * Nodes are the `spawned` ids in spawn-journal.jsonl, and the run's root when spawned ids name it as parent without a
+ * `spawned` line of its own. Each node's conversation comes from the first channel that holds it, in this order; the
+ * others are listed as sources and never duplicated as events:
  *   0. live     while a node has not settled: its Sandbox session events recorded so far (evidence/live-stream/)
  *   1. native   Claude Code session .jsonl files, each from its longest stored copy: a turn's retained-harness-transcript
  *               archive or the run's latest native-index capture (both under --native/<hex>/); else the OpenCode store
@@ -19,20 +18,20 @@
  *   3. pi       trace/pi-sessions/**, joined when sha256(JSON.stringify(first user text)) == spawned taskDigest
  *   4. part     output blob parts at the node's outRefs, collapsed to the final state of each part id
  *   5. root     root-stream.jsonl (root only; deltas collapse to one block per turn; resumed replays dropped)
- *   6. journal  lifecycle events only
+ *   6. live     a settled node's recorded live stream, when no channel above holds it
+ *   7. journal  lifecycle events only
  * Knowledge pages (kb/pages/**\/*.md) become finding events on node `finding:<runId>`; a run with only pages is
  * format `finding-only`.
  *
- * Event ids are anchor.v1 (anchor.ts): `<first 12 hex of the object's sha256>:<line or JSON Pointer>[.<item>]`, or
- * the object alone for a whole page. Each event's `source` carries the same sha256, line or pointer and item. Every
- * timestamped line of a session, journal or stream becomes exactly one event (or one per content item); a line the
- * converter does not interpret is a `record` event carrying its type. A duplicate anchor is an error, never suffixed.
+ * Event ids are anchor.v1 (anchor.ts): `<first 12 hex of the object's sha256>:<line or JSON Pointer>[.<item>]`, or the
+ * object alone for a whole page; each event's `source` carries the same sha256, line or pointer and item. Every timestamped
+ * line becomes exactly one event (or one per content item); an uninterpreted line is a `record` event carrying its type.
+ * A duplicate anchor is an error, never suffixed.
  *
- * Sources: every input file, native file and clipped body has a `sources[]` entry. Its sha256 covers exactly
- * the bytes a source route serves: the whole file, one physical line (`line`), or the resolved JSON value
- * (`pointer`; a string's UTF-8 bytes, otherwise its JSON text). In an OpenCode store (SQLite) the pointer
- * `/part/<id>/data` names the data column of the part row with that id. Paths under the native cache start with
- * `native:<hex>/`. A clipped body keeps the first three quarters and the last quarter of `maxText` bytes;
+ * Sources: every input file, native file and clipped body has a `sources[]` entry whose sha256 covers exactly the bytes a
+ * source route serves: the whole file, one physical line (`line`), or the resolved JSON value (`pointer`; a string's UTF-8
+ * bytes, otherwise its JSON text; in an OpenCode store `/part/<id>/data` names that part row's data column). Native cache
+ * paths start with `native:<hex>/`. A clipped body keeps the first three quarters and the last quarter of `maxText` bytes;
  * `detail.clip.sha256` names the source entry holding the full text.
  */
 import { createHash } from 'node:crypto'
@@ -48,7 +47,7 @@ import { nativeStore, readOpenCode, readOpenCodeBundle, readOpenCodeStore } from
 import { projectPartEvents, projectPartFrames } from './part-events.js'
 import { piSessions, readPi, readPiBundle, type PiSession } from './pi.js'
 
-export const ADAPTER_VERSION = '2.7.1'
+export const ADAPTER_VERSION = '2.7.2'
 export { ID_SCHEME }
 export { categoryOf, type Category } from './harness-reader.js'
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
@@ -490,6 +489,8 @@ export class Ingest {
       if (typeof event.runtime === 'string') runtimeOf.set(id, event.runtime)
     }
     if (!this.nodes.size) return
+    if (!this.nodes.has(this.rootId) && [...this.nodes.values()].some((node) => node.parent === this.rootId))
+      this.nodes.set(this.rootId, blankNode(this.rootId, { label: 'root', kind: 'agent', role: 'root', start: rows.map((row) => isoAt(row.value?.event?.at)).find(Boolean) ?? undefined, capture: { channel: 'journal', status: 'absent', reason: null } }))
     for (const node of this.nodes.values()) if (node.parent && !this.nodes.has(node.parent)) node.parent = null
     if ([...runtimeOf.values()].includes('tangle-sandbox')) this.format = 'cloud'
     else this.format = 'runtime'
@@ -630,13 +631,10 @@ export class Ingest {
     })
   }
 
-  // ----- channel 0: the live Sandbox event stream of a node that has not settled -----
-  /**
-   * While a node runs, its conversation is its Sandbox session's event stream as recorded so far: the final state of each
-   * part id (text, reasoning, tool call with input and output). It is the live view only: once the node settles, its
-   * native session is read instead, so one turn is never shown from both.
-   */
-  readLiveStream(node: NodeDraft) {
+  // ----- channels 0 and 6: the live Sandbox event stream of a node -----
+  /** A node's Sandbox session event stream as recorded (the final state of each part id): its live view while it runs, and
+   *  after it settles only when no other channel holds its conversation, so one turn is never shown from two. */
+  readLiveStream(node: NodeDraft, reason = 'live-stream-until-settled') {
     const dir = `${LIVE_STREAM}/${encodeURIComponent(node.id)}`
     let produced = 0
     for (const rel of filesUnder(this.runDir, dir, '.jsonl')) {
@@ -652,7 +650,7 @@ export class Ingest {
       produced += projectPartFrames(this, node, rel, entry, frames(), categoryOf)
     }
     if (!produced) return false
-    node.capture = { channel: 'live', status: 'lossy', reason: 'live-stream-until-settled' }
+    node.capture = { channel: 'live', status: 'lossy', reason }
     return true
   }
 
@@ -709,7 +707,7 @@ export class Ingest {
     }
     let block: { kind: string; rows: Line[] } | null = null
     let untimed = 0
-    const callIds = new Set<string>()
+    const callIds = new Map<string, number>()
     const resultIds = new Set<string>()
     const flush = () => {
       if (!block) return
@@ -755,7 +753,7 @@ export class Ingest {
       const full = () => this.lineSource(rel, row.line, row.raw)
       if (kind === 'tool_call') {
         // A stream row without args says nothing about them: the call omits `input` rather than claiming `{}`.
-        callIds.add(str(event.toolCallId))
+        callIds.set(str(event.toolCallId), Date.parse(at))
         this.emit({
           node: node.id,
           at,
@@ -780,6 +778,7 @@ export class Ingest {
             role: 'toolResult',
             ...native,
             toolCallId: str(event.toolCallId),
+            ...(callIds.has(str(event.toolCallId)) ? { durationMs: Math.max(0, Date.parse(at) - callIds.get(str(event.toolCallId))!) } : {}),
             isError: Boolean(result && typeof result === 'object' && ('error' in result || result.isError === true)),
             ...this.shown('publicText', body, full),
           },
@@ -792,7 +791,7 @@ export class Ingest {
     flush()
     if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} rows of ${this.sourcePath(rel)} carry no time` })
     if (replayed) this.gaps.push({ nodeId: node.id, code: 'root-replay-dropped', detail: `${replayed} rows of a resumed attempt repeat its predecessor and are not events` })
-    const unanswered = [...callIds].filter((id) => !resultIds.has(id)).length
+    const unanswered = [...callIds.keys()].filter((id) => !resultIds.has(id)).length
     node.capture = {
       channel: 'root',
       status: unanswered || replayed ? 'lossy' : 'complete',
@@ -987,6 +986,7 @@ export class Ingest {
       }
       if (this.readParts(node)) continue
       if (node.id === this.rootId && this.readRootStream(node)) continue
+      if (settled && this.readLiveStream(node, 'live-stream-after-settle')) continue // channel 6: 31b s1:s0's 28 min and `done` usage
       const reason = native === 'not-cached' ? 'native-archive-not-cached' : node.transcriptReason ?? (node.outRefs.length ? 'no-conversation-in-output' : 'no-conversation-channel')
       node.capture = { channel: 'journal', status: 'absent', reason }
       this.gaps.push({ nodeId: node.id, code: `no-transcript:${reason}`, detail: 'Only lifecycle events are recorded for this agent' })

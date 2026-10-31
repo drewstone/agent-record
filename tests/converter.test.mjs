@@ -380,3 +380,57 @@ test('every harness file in a bundle is framed alike: one owner, its line window
   assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'harnesses', '--out', join(root, 'b.json')]).status, 0)
   assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'other', '--out', join(root, 'c.json')]).status, 64)
 })
+
+// Discovery magnetar-rust-sandbox-20261031b (Runtime 3, Codex on a Tangle Sandbox): no `spawned` line names the run's root,
+// `<run>:s0` is spawned with no parent, the root's own attempts and meters carry the run id, and root-stream.jsonl holds its
+// tool calls (302 on 31b; the run page read "— tool calls"). A worker aborted when its caller completed settles with no
+// transcript while its recorded stream ran on to a `done` carrying the session's usage (s1:s0: 16.5M input tokens).
+test('a root its journal never spawns owns its events and root stream; a settled worker keeps its recorded stream', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'converter-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const run = join(root, 'run-r')
+  const file = (path, text) => {
+    mkdirSync(dirname(join(run, path)), { recursive: true })
+    writeFileSync(join(run, path), text)
+  }
+  file('run-input.json', JSON.stringify({ task: { objective: 'fixture' }, profile: { harness: 'codex', model: { provider: 'openai', default: 'gpt-6.1-sol' } } }))
+  file('result.json', JSON.stringify({ kind: 'stopped' }))
+  const error = 'retained provider execution lost its transport; status in doubt: caused by ServerError: HTTP 500: materializeProfileFileMounts'
+  file('spawn-journal.jsonl', jsonl([
+    { kind: 'event', root: 'run-r/run-r:s0', event: { kind: 'spawned', id: 'run-r:s0', parent: null, label: 'prover-rate', at: '2026-10-31T02:09:00.000Z' } },
+    { kind: 'event', root: 'run-r', event: { kind: 'root-reentered', id: 'run-r', live: ['run-r:s0'], replaced: ['run-r:s0'], at: '2026-10-31T02:41:35.204Z' } },
+    { kind: 'event', root: 'run-r', event: { kind: 'driver-attempt', id: 'run-r', record: { attempt: 2, durationMs: 11571, error, classification: 'transient' }, at: '2026-10-31T02:58:31.492Z' } },
+    { kind: 'event', root: 'run-r', event: { kind: 'metered', id: 'run-r', spend: { iterations: 0, tokens: { input: 0, output: 0 }, tokensKnown: false }, at: '2026-10-31T02:58:30.964Z' } },
+    { kind: 'event', root: 'run-r/run-r:s0', event: { kind: 'settled', id: 'run-r:s0', status: 'down', reason: 'driver completed', failure: { code: 'aborted', owner: 'caller', cause: 'driver completed' }, spent: { iterations: 0, tokens: { input: 0, output: 0 }, tokensKnown: false }, at: '2026-10-31T02:19:36.468Z' } },
+  ]))
+  file('root-stream.jsonl', jsonl([
+    { seq: 1, at: '2026-10-31T02:06:20.609Z', attempt: 1, event: { kind: 'text_delta', text: 'Reading the commission first.' } },
+    { seq: 2, at: '2026-10-31T02:06:22.161Z', attempt: 1, event: { kind: 'tool_call', toolName: 'bash', toolCallId: 'item_1', args: { command: '/bin/bash -lc pwd' } } },
+    { seq: 3, at: '2026-10-31T02:06:22.224Z', attempt: 1, event: { kind: 'tool_result', toolName: 'bash', toolCallId: 'item_1', result: { output: '/home/agent/workspace' } } },
+    { seq: 4, at: '2026-10-31T02:06:25.000Z', attempt: 1, event: { kind: 'tool_call', toolName: 'mcp__agent-runtime-coordination__spawn_worker', toolCallId: 'item_2', args: { key: 'rate' } } },
+  ]))
+  const frame = (id, at, type, data) => ({ id, type, data: { type, ...data, sandboxId: 'sandbox-4665ccbac012' }, at })
+  const usage = { inputTokens: 16501830, outputTokens: 68742, reasoningTokens: 30302, cacheReadInputTokens: 16240896 }
+  file(`evidence/live-stream/${encodeURIComponent('run-r:s0')}/retained-execution-a.jsonl`, jsonl([
+    { id: '1', type: 'execution.started', data: { executionId: 'exec-1', effectiveBackend: { model: 'gpt-6.1-sol', source: 'profile' } }, at: '2026-10-31T02:13:36.155Z' },
+    frame('2', '2026-10-31T02:13:40.000Z', 'message.updated', { properties: { info: { id: 'retained-execution-a', role: 'assistant', sessionID: 'retained-session-a' } } }),
+    frame('3', '2026-10-31T02:13:41.050Z', 'message.part.updated', { part: { id: 'item_1', sessionID: 'retained-session-a', messageID: 'retained-execution-a', type: 'tool', callID: 'item_1', tool: 'bash',
+      state: { status: 'completed', input: { command: '/bin/bash -lc pwd' }, output: '/home/agent/workspace\n', time: { start: Date.parse('2026-10-31T02:13:40.922Z'), end: Date.parse('2026-10-31T02:13:41.024Z') } } } }),
+    { id: '4', type: 'done', data: { outcome: { type: 'completed' }, tokenUsage: usage }, at: '2026-10-31T02:41:40.069Z' },
+  ]))
+  const record = ingestRun(run, { runId: 'run-r' }).record
+  const head = record.nodes.find((node) => node.id === 'run-r')
+  assert.equal(head?.role, 'root')
+  assert.equal(record.nodes.find((node) => node.id === 'run-r:s0').parent, 'run-r')
+  assert.equal(head.capture.channel, 'root')
+  const own = record.events.filter((event) => event.node === 'run-r')
+  assert.equal(own.filter((event) => event.kind === 'message' && event.detail.publicToolCalls).length, 2, "the root stream's tool calls")
+  const results = own.filter((event) => event.kind === 'tool-result')
+  assert.deepEqual(results.map((event) => event.detail.durationMs), [63], 'a result is timed from its own call row')
+  assert.ok(own.some((event) => event.source.path === 'spawn-journal.jsonl'), "the root's own journal events are its own")
+  const worker = record.nodes.find((node) => node.id === 'run-r:s0')
+  assert.deepEqual(worker.capture, { channel: 'live', status: 'lossy', reason: 'live-stream-after-settle' })
+  const recorded = record.events.filter((event) => event.node === 'run-r:s0' && event.source.path.startsWith('evidence/live-stream/'))
+  assert.equal(recorded.filter((event) => event.kind === 'tool-result').length, 1)
+  assert.ok(recorded.some((event) => event.detail.usage?.input === 16501830 && event.detail.usageScope === 'execution-total'), "the session's own usage")
+})
