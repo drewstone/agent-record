@@ -20,10 +20,10 @@ export interface PartEventRow {
 }
 interface NativeFrame { event: Json; at?: string; row?: PartEventRow }
 interface PartFrame extends NativeFrame { where(): Json; full(path: (string | number)[], value: Json): Json }
-type Content = { path: (string | number)[]; value: Json }
-type Draft = { firstSeq?: number; frame: NativeFrame; at: string; kind: string; category: string; label: string; detail: Json; item?: number; body?: Content; input?: Content }
+type Content = { path: (string | number)[]; value: Json; text?: string }
+type Draft = { firstSeq?: number; frame: NativeFrame; at?: string; kind: string; category: string; label: string; detail: Json; item?: number; body?: Content; input?: Content }
 type Seen = { part: Json; frame: NativeFrame; firstMs: number | null; firstSeq?: number }
-const content = (path: (string | number)[], value: Json): Content => ({ path, value })
+const content = (path: (string | number)[], value: Json, text?: string): Content => ({ path, value, text })
 
 /** Collapse updates by native identity, keeping the final frame and its first recorded clock. */
 function collect(node: Json, frames: Iterable<NativeFrame>) {
@@ -52,19 +52,18 @@ function collect(node: Json, frames: Iterable<NativeFrame>) {
 }
 
 /** Calls from different harnesses share emission and clipping semantics, not a second parser. */
-function toolDrafts(frame: NativeFrame, at: string, name: string, id: string, native: string, input: Content, result: Content | undefined, options: { category: string; error: boolean; end?: string; duration?: number; carried?: boolean; marked?: boolean }): Draft[] {
+function toolDrafts(frame: NativeFrame, at: string | undefined, name: string, id: string, native: string, input: Content, result: Content | undefined, options: { category: string; error: boolean; end?: string; duration?: number; carried?: boolean; marked?: boolean }): Draft[] {
   const base = { frame, at, category: options.category }, nativeRecordId = native
   const call: Draft = { ...base, kind: 'message', label: `assistant · ${name}`, ...(options.marked ? { item: 0 } : {}), input,
-    detail: { role: 'assistant', nativeRecordId, publicToolCalls: [{ id, name, input: JSON.stringify(input.value) }] } }
+    detail: { role: 'assistant', nativeRecordId, publicToolCalls: [{ id, name, input: input.text ?? JSON.stringify(input.value) }] } }
   if (!result) return [call]
   return [call, { ...base, at: options.end ?? at, kind: 'tool-result', item: 1, label: `tool result · ${name}`, body: result,
-    detail: { role: 'toolResult', nativeRecordId, toolCallId: id, isError: options.error, publicText: str(result.value), ...(options.duration !== undefined ? { durationMs: options.duration } : {}), ...(options.carried ? { atBasis: 'carried' } : {}) } }]
+    detail: { role: 'toolResult', nativeRecordId, toolCallId: id, isError: options.error, publicText: result.text ?? str(result.value), ...(options.duration !== undefined ? { durationMs: options.duration } : {}), ...(options.carried ? { atBasis: 'carried' } : {}) } }]
 }
 
 function partDrafts(node: Json, seen: Seen, roles: Map<string, string>, categoryOf?: (name: string, input: unknown) => string): Draft[] {
   const { part, frame, firstMs } = seen, id = part.id, role = roles.get(part.messageID) === 'user' ? 'user' : 'assistant'
   const at = isoAt((part.type === 'tool' ? num(part.state?.time?.start) : num(part.time?.start)) ?? firstMs ?? undefined) ?? node.start
-  if (!at) return []
   if (part.type === 'text' || part.type === 'reasoning') {
     const text = str(part.text)
     return text ? [{ frame, at, kind: 'message', category: 'reasoning', label: role, body: content(['data', 'part', 'text'], text),
@@ -73,7 +72,7 @@ function partDrafts(node: Json, seen: Seen, roles: Map<string, string>, category
   if (part.type !== 'tool') return []
   const state = part.state ?? {}, name = str(part.tool), settled = state.status === 'completed' || state.status === 'error'
   const start = num(state.time?.start) ?? firstMs, end = num(state.time?.end), field = state.status === 'error' ? 'error' : 'output'
-  return toolDrafts(frame, at, name, str(part.callID || id), id, content(['data', 'part', 'state', 'input'], state.input ?? {}), settled ? content(['data', 'part', 'state', field], state[field]) : undefined,
+  return toolDrafts(frame, at, name, str(part.callID || id), id, content(['data', 'part', 'state', 'input'], state.input ?? {}), settled && at ? content(['data', 'part', 'state', field], state[field]) : undefined,
     { category: categoryOf?.(name, state.input) ?? 'other', error: state.status === 'error', marked: settled, end: isoAt(end ?? start ?? undefined) ?? node.start,
       ...(end !== undefined && start !== null && start !== undefined ? { duration: Math.max(0, end - start) } : {}) })
 }
@@ -83,13 +82,9 @@ function codexDrafts(node: Json, seen: Seen, categoryOf?: (name: string, input: 
   if (!at || !['command_execution', 'mcp_tool_call', 'web_search', 'file_change'].includes(item.type)) return []
   const name = item.type === 'mcp_tool_call' ? str(item.tool ?? item.name) : item.type
   const input = item.type === 'command_execution' ? { command: item.command } : item.type === 'web_search' ? { query: item.query } : item.type === 'file_change' ? { changes: item.changes } : item.arguments ?? {}
-  const path = ['data', 'event', 'item'], drafts = toolDrafts(frame, at, name, str(item.id), str(item.id), content(path, input), content(path, item.aggregated_output ?? item.result ?? item.output ?? item.status),
+  const path = ['data', 'event', 'item']
+  return toolDrafts(frame, at, name, str(item.id), str(item.id), content(path, item, JSON.stringify(input)), content(path, item, str(item.aggregated_output ?? item.result ?? item.output ?? item.status)),
     { category: categoryOf?.(name, input) ?? 'other', error: typeof item.exit_code === 'number' && item.exit_code !== 0 || item.status === 'failed', marked: true, carried: true })
-  // Retained full-source references resolve the original native item, including its input and output.
-  for (const draft of drafts) { if (draft.input) draft.input.value = item; if (draft.body) draft.body.value = item }
-  drafts[0]!.detail.publicToolCalls[0].input = JSON.stringify(input)
-  drafts[1]!.detail.publicText = str(item.aggregated_output ?? item.result ?? item.output ?? item.status)
-  return drafts
 }
 
 function extraDraft(node: Json, extra: ReturnType<typeof collect>['extras'][number]): Draft | undefined {
@@ -108,14 +103,12 @@ function extraDraft(node: Json, extra: ReturnType<typeof collect>['extras'][numb
 function project(node: Json, frames: Iterable<NativeFrame>, categoryOf?: (name: string, input: unknown) => string) {
   const state = collect(node, frames), drafts: Draft[] = []
   let produced = 0
-  for (const seen of state.parts.values()) {
-    const part = partDrafts(node, seen, state.roles, categoryOf)
-    drafts.push(...part.map(draft => ({ ...draft, firstSeq: draft.kind === 'tool-result' ? draft.frame.row?.seq : seen.firstSeq }))); produced += part.filter(draft => draft.kind === 'message').length
+  const append = (seen: Seen, part: Draft[], countResults = false) => {
+    for (const draft of part) draft.firstSeq = draft.kind === 'tool-result' ? draft.frame.row?.seq : seen.firstSeq
+    drafts.push(...part); produced += countResults ? part.length : part.filter(draft => draft.at && draft.kind === 'message').length
   }
-  for (const seen of state.codex.values()) {
-    const part = codexDrafts(node, seen, categoryOf)
-    drafts.push(...part.map(draft => ({ ...draft, firstSeq: draft.kind === 'tool-result' ? draft.frame.row?.seq : seen.firstSeq }))); produced += part.length
-  }
+  for (const seen of state.parts.values()) append(seen, partDrafts(node, seen, state.roles, categoryOf))
+  for (const seen of state.codex.values()) append(seen, codexDrafts(node, seen, categoryOf), true)
   for (const extra of state.extras) {
     const draft = extraDraft(node, extra)
     if (draft) { drafts.push(draft); if (draft.kind === 'tool-result') produced++ }
@@ -134,7 +127,8 @@ function applyUsage(target: Json, done: Json) {
 
 /** Materialize only real retained policy: every clip still resolves its original value through the original frame. */
 function retainedEvent(draft: Draft, node: Json, rel: string, entry: { sha256: string }, context: Json) {
-  const { body, input } = draft, frame = draft.frame as PartFrame, detail = { ...draft.detail }
+  const { body, input } = draft, frame = draft.frame as PartFrame
+  const { atBasis, durationMs, ...detail } = draft.detail
   const clipped = (text: string, value: Content) => context.clip(text, () => frame.full(value.path, value.value))
   if (input) {
     const call = detail.publicToolCalls[0], shown = clipped(call.input, input)
@@ -145,6 +139,9 @@ function retainedEvent(draft: Draft, node: Json, rel: string, entry: { sha256: s
     detail[field] = shown.text
     if (shown.clip) detail.clip = shown.clip
   }
+  if (durationMs !== undefined) detail.durationMs = durationMs
+  if (atBasis !== undefined) detail.atBasis = atBasis
+  if (!draft.at) return undefined
   if (draft.kind === 'rate-limit') detail.data = context.compactValue(detail.data)
   if (draft.kind === 'execution-error') detail.publicText = context.clip(detail.publicText, null).text
   return { node: node.id, at: draft.at, kind: draft.kind, category: draft.category, label: draft.label,
@@ -156,7 +153,9 @@ export function projectPartFrames(context: Json, node: Json, rel: string, entry:
   const { drafts, done, produced } = project(node, frames, categoryOf)
   let lastText: Json
   for (const draft of drafts) {
-    context.emit(retainedEvent(draft, node, rel, entry, context))
+    const event = retainedEvent(draft, node, rel, entry, context)
+    if (!event) continue
+    context.emit(event)
     if (draft.kind === 'message' && draft.detail.role === 'assistant' && draft.body) lastText = context.events.at(-1)
   }
   if (!done) return produced
@@ -186,7 +185,7 @@ export function projectPartEvents(first: Json, second: Json, rel?: string, entry
   for (const rows of groups.values()) {
     const frames = rows.map(row => ({ event: row, at: row.at, row }))
     const { drafts, done } = project(node, frames)
-    const projected = drafts.map(draft => {
+    const projected = drafts.filter(draft => draft.at).map(draft => {
       const row = draft.frame.row!, native = draft.detail.nativeRecordId ?? row.seq
       const detail = { ...draft.detail, streamSeq: draft.firstSeq ?? row.seq, ...(row.stream !== undefined ? { stream: row.stream } : {}), ...(row.attempt !== undefined ? { attempt: row.attempt } : {}) }
       return { id: JSON.stringify([node.id, row.stream ?? null, row.attempt ?? null, native, draft.kind, draft.item ?? (draft.kind === 'tool-result' ? 1 : 0)]), node: node.id, at: draft.at, kind: draft.kind, category: draft.category, label: draft.label, ...(row.source ? { source: row.source } : {}), detail } as RecordEvent
