@@ -16,8 +16,8 @@
  *               as the rows a trajectory holds
  *   2. oc       OpenCode native-trajectory.json (bridge-native roots)
  *   3. pi       trace/pi-sessions/**, joined when sha256(JSON.stringify(first user text)) == spawned taskDigest
- *   4. part     output blob parts at the node's outRefs, collapsed to the final state of each part id
- *   5. root     root-stream.jsonl (root only; deltas collapse to one block per turn; resumed replays dropped)
+ *   4. root     root-stream.jsonl (root only; deltas collapse to one block per turn; resumed replays dropped)
+ *   5. part     output blob parts at the node's outRefs, collapsed to the final state of each part id
  *   6. live     a settled node's recorded live stream, when no channel above holds it
  *   7. journal  lifecycle events only
  * Knowledge pages (kb/pages/**\/*.md) become finding events on node `finding:<runId>`; a run with only pages is
@@ -47,7 +47,7 @@ import { nativeStore, readOpenCode, readOpenCodeBundle, readOpenCodeStore } from
 import { projectPartEvents, projectPartFrames } from './part-events.js'
 import { piSessions, readPi, readPiBundle, type PiSession } from './pi.js'
 
-export const ADAPTER_VERSION = '2.7.2'
+export const ADAPTER_VERSION = '2.7.3'
 export { ID_SCHEME }
 export { categoryOf, type Category } from './harness-reader.js'
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
@@ -984,8 +984,8 @@ export class Ingest {
         }
         continue
       }
-      if (this.readParts(node)) continue
-      if (node.id === this.rootId && this.readRootStream(node)) continue
+      // The root's whole stream before its output parts: on 31b the parts held 150 of the turn's 302 tool calls.
+      if ((node.id === this.rootId && this.readRootStream(node)) || this.readParts(node)) continue
       if (settled && this.readLiveStream(node, 'live-stream-after-settle')) continue // channel 6: 31b s1:s0's 28 min and `done` usage
       const reason = native === 'not-cached' ? 'native-archive-not-cached' : node.transcriptReason ?? (node.outRefs.length ? 'no-conversation-in-output' : 'no-conversation-channel')
       node.capture = { channel: 'journal', status: 'absent', reason }
