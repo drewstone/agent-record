@@ -418,6 +418,12 @@ test('a root its journal never spawns owns its events and root stream; a settled
       state: { status: 'completed', input: { command: '/bin/bash -lc pwd' }, output: '/home/agent/workspace\n', time: { start: Date.parse('2026-10-31T02:13:40.922Z'), end: Date.parse('2026-10-31T02:13:41.024Z') } } } }),
     { id: '4', type: 'done', data: { outcome: { type: 'completed' }, tokenUsage: usage }, at: '2026-10-31T02:41:40.069Z' },
   ]))
+  // The root's output parts hold a lossy final state of the same turn (31b: 150 of its 302 tool calls); the stream wins.
+  const parts = JSON.stringify({ events: [{ id: '1', type: 'message.part.updated', data: { part: { id: 'item_1', type: 'tool', tool: 'bash', callID: 'item_1',
+    state: { status: 'completed', input: { command: '/bin/bash -lc pwd' }, output: '/home/agent/workspace', time: { start: Date.parse('2026-10-31T02:06:22.161Z'), end: Date.parse('2026-10-31T02:06:22.224Z') } } } } }] })
+  file(`blobs/sha256-${sha(parts)}.json`, parts)
+  file('spawn-journal.jsonl', readFileSync(join(run, 'spawn-journal.jsonl'), 'utf8') + jsonl([
+    { kind: 'event', root: 'run-r', event: { kind: 'execution-result', id: 'run-r', outRef: `sha256:${sha(parts)}`, at: '2026-10-31T02:43:19.240Z' } }]))
   const record = ingestRun(run, { runId: 'run-r' }).record
   const head = record.nodes.find((node) => node.id === 'run-r')
   assert.equal(head?.role, 'root')
