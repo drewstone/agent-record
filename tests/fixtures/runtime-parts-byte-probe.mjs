@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const beforeCli = resolve(process.argv[2] ?? '')
 const afterCli = resolve(process.argv[3] ?? fileURLToPath(new URL('../../tools/ingest.mjs', import.meta.url)))
-assert.ok(process.argv[2], 'pass the baseline08a public tools/ingest.mjs path')
+assert.ok(process.argv[2], 'pass the actual baseline public tools/ingest.mjs path')
 const root = await mkdtemp(join(tmpdir(), 'runtime-parts-bytes-'))
 const at = '2026-10-01T00:00:00.000Z', time = Date.parse(at), runId = 'parts-byte-probe'
 const sha = bytes => createHash('sha256').update(bytes).digest('hex')
@@ -21,6 +21,7 @@ function events(known) {
     part('text', 'text', { text: 'superseded', time: { start: time } }),
     part('tool', 'tool', { tool: 'fixture_command', callID: 'c', state: { status: 'running', input: { command: 'inert fixture text' }, time: { start: time } } }),
     part('text', 'text', { text: '終é\n'.repeat(20_000), time: { start: time + 1000 } }),
+    part('carried', 'text', { text: 'carried-é\n'.repeat(20_000) }),
     part('tool', 'tool', { tool: 'fixture_command', callID: 'c', state: { status: 'completed', input: { command: 'inert fixture text' }, output: 'output-é\n'.repeat(10_000), time: { start: time, end: time + 2000 } } }),
     { type: 'raw', data: { event: { type: 'item.completed', item: { id: 'item', type: 'command_execution', command: 'inert fixture', aggregated_output: 'old' } } } },
     { type: 'raw', data: { event: { type: 'item.completed', item: { id: 'item', type: 'command_execution', command: 'inert fixture', aggregated_output: 'new-é\n'.repeat(10_000), exit_code: 1 } } } },
@@ -32,13 +33,15 @@ function events(known) {
 }
 
 async function fixture() {
-  const run = join(root, 'run'), liveNode = `${runId}:s0`, blobNode = `${runId}:s1`
+  const run = join(root, 'run'), liveNode = `${runId}:s0`, blobNode = `${runId}:s1`, untimedNode = `${runId}:s2`
   const files = new Map(), input = { runId, task: { objective: 'Byte and anchor parity over synthetic public events.' } }
   files.set('run-input.json', Buffer.from(JSON.stringify(input)))
   const blob = Buffer.from(JSON.stringify({ events: events(true) })), hex = sha(blob)
   files.set(`blobs/sha256-${hex}.json`, blob)
+  const untimed = Buffer.from(JSON.stringify({ events: [{ type: 'message.part.updated', data: { part: { id: 'untimed-text', type: 'text', text: 'no-clock-é\n'.repeat(20_000) } } }, { type: 'message.part.updated', data: { part: { id: 'untimed-tool', type: 'tool', tool: 'read', state: { status: 'completed', input: { path: 'long-path-é'.repeat(10_000) }, output: 'unclocked-output'.repeat(10_000) } } } }] })), untimedHex = sha(untimed)
+  files.set(`blobs/sha256-${untimedHex}.json`, untimed)
   const spawned = id => ({ kind: 'event', root: runId, event: { kind: 'spawned', id, at, runtime: 'tangle-sandbox' } })
-  const journal = [spawned(runId), spawned(liveNode), spawned(blobNode), { kind: 'event', root: runId, event: { kind: 'settled', id: blobNode, at, status: 'done', outRef: `sha256:${hex}` } }]
+  const journal = [spawned(runId), spawned(liveNode), spawned(blobNode), { kind: 'event', root: runId, event: { kind: 'spawned', id: untimedNode } }, { kind: 'event', root: runId, event: { kind: 'settled', id: untimedNode, status: 'done', outRef: `sha256:${untimedHex}` } }, { kind: 'event', root: runId, event: { kind: 'settled', id: blobNode, at, status: 'done', outRef: `sha256:${hex}` } }]
   files.set('spawn-journal.jsonl', Buffer.from(journal.map(JSON.stringify).join('\n') + '\n'))
   files.set('result.json', Buffer.from(JSON.stringify({ kind: 'no-winner', reason: 'fixture only' })))
   const path = `evidence/live-stream/${encodeURIComponent(liveNode)}/session.jsonl`
@@ -47,7 +50,7 @@ async function fixture() {
   for (const [path, bytes] of files) await put(join(run, path), bytes)
   const manifest = join(root, 'manifest.json')
   await put(manifest, JSON.stringify({ schema: 'evidence.snapshot.v1', runId, files: [...files].map(([path, bytes]) => ({ path, sha256: `sha256:${sha(bytes)}`, bytes: bytes.length, mtime: at })) }))
-  return { run, files, manifest, liveNode, blobNode }
+  return { run, files, manifest, liveNode, blobNode, untimedNode, untimedPath: `blobs/sha256-${untimedHex}.json` }
 }
 
 function convert(cli, fixture, name) {
@@ -82,11 +85,15 @@ function verifySources(record, files) {
 try {
   const data = await fixture(), before = await readFile(convert(beforeCli, data, 'before')), after = await readFile(convert(afterCli, data, 'after'))
   const oldRecord = JSON.parse(before), newRecord = JSON.parse(after)
-  assert.equal(oldRecord.producer.version, newRecord.producer.version, 'compare held-constant08a converter version; do not normalize producer drift')
+  assert.equal(oldRecord.producer.version, newRecord.producer.version, 'compare the held-constant converter version; do not normalize producer drift')
   assert.deepEqual(after, before, 'full uncompressed record bytes, including digests, order, anchors and unknowns')
   verifySources(newRecord, data.files)
   assert.ok(newRecord.events.some(event => event.node === data.blobNode && event.source.pointer?.startsWith('/events/')))
   assert.ok(newRecord.events.some(event => event.node === data.liveNode && event.source.line > 2))
+  assert.ok(newRecord.events.some(event => event.detail.nativeRecordId === 'carried' && event.detail.clip && event.detail.atBasis === 'carried'), 'actual clipped carried-clock text is retained')
+  assert.equal(newRecord.events.filter(event => event.node === data.untimedNode && event.source.path === data.untimedPath).length, 0, 'untimed native parts invent no event clock')
+  const fragments = newRecord.sources.filter(source => source.path === data.untimedPath && source.pointer)
+  assert.deepEqual(fragments.map(source => source.pointer).sort(), ['/events/0/data/part/text','/events/1/data/part/state/input'], 'real oversized unclocked input/text fragments remain in source inventory')
   const clipped = newRecord.events.filter(event => event.detail.clip?.bytes > 0)
   assert.ok(clipped.length > 0, 'retained final text was clipped')
   for (const event of clipped) {

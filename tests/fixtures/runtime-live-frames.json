@@ -1,0 +1,154 @@
+{
+  "node": {
+    "id": "public-stream-contract:s123",
+    "start": "2026-10-30T00:00:10.000Z"
+  },
+  "generation": "public-protocol-generation",
+  "rows": [
+    {
+      "seq": 0,
+      "sourceSeq": 0,
+      "at": "2026-10-30T00:00:10.000Z",
+      "stream": "native-a.jsonl",
+      "attempt": 1,
+      "type": "message.updated",
+      "data": {
+        "info": {
+          "id": "steer-1",
+          "role": "user"
+        }
+      }
+    },
+    {
+      "seq": 1,
+      "sourceSeq": 1,
+      "at": "2026-10-30T00:00:10.000Z",
+      "stream": "native-a.jsonl",
+      "attempt": 1,
+      "type": "message.part.updated",
+      "data": {
+        "part": {
+          "id": "steer-text",
+          "messageID": "steer-1",
+          "type": "text",
+          "text": "Retain the failing witness and investigate it.",
+          "time": {
+            "start": 1793318410000
+          }
+        }
+      }
+    },
+    {
+      "seq": 2,
+      "sourceSeq": 2,
+      "at": "2026-10-30T00:00:11.000Z",
+      "stream": "native-a.jsonl",
+      "attempt": 1,
+      "type": "message.part.updated",
+      "data": {
+        "part": {
+          "id": "tool-a",
+          "messageID": "assistant-1",
+          "type": "tool",
+          "tool": "bash",
+          "callID": "reused",
+          "state": {
+            "status": "running",
+            "input": {
+              "command": "check proof"
+            },
+            "time": {
+              "start": 1793318411000
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 3,
+      "sourceSeq": 3,
+      "at": "2026-10-30T00:00:12.000Z",
+      "stream": "native-a.jsonl",
+      "attempt": 1,
+      "type": "message.part.updated",
+      "data": {
+        "part": {
+          "id": "tool-a",
+          "messageID": "assistant-1",
+          "type": "tool",
+          "tool": "bash",
+          "callID": "reused",
+          "state": {
+            "status": "error",
+            "input": {
+              "command": "check proof"
+            },
+            "error": "Proof verification failed: witness mismatch",
+            "time": {
+              "start": 1793318411000,
+              "end": 1793318412000
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 4,
+      "sourceSeq": 0,
+      "at": "2026-10-30T00:00:13.000Z",
+      "stream": "native-a.jsonl",
+      "attempt": 2,
+      "type": "message.part.updated",
+      "data": {
+        "part": {
+          "id": "tool-a",
+          "messageID": "assistant-1",
+          "type": "tool",
+          "tool": "read_file",
+          "callID": "reused",
+          "state": {
+            "status": "completed",
+            "input": {
+              "path": "proof.txt"
+            },
+            "output": "Exact retained evidence, with source provenance.",
+            "time": {
+              "start": 1793318413000,
+              "end": 1793318414000
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 5,
+      "sourceSeq": 0,
+      "at": "2026-10-30T00:00:15.000Z",
+      "stream": "native-b.jsonl",
+      "attempt": 1,
+      "type": "raw",
+      "data": {
+        "event": {
+          "type": "item.completed",
+          "item": {
+            "id": "reused",
+            "type": "command_execution",
+            "command": "test witness",
+            "aggregated_output": "native failed command",
+            "exit_code": 1
+          }
+        }
+      }
+    },
+    {
+      "seq": 6,
+      "at": "2026-10-30T00:00:16.000Z",
+      "stream": "root-stream.jsonl",
+      "attempt": 3,
+      "event": {
+        "kind": "text_delta",
+        "text": "Already normalized root text; remains on the existing normalized SDK fold path."
+      }
+    }
+  ]
+}
