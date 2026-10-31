@@ -70,6 +70,8 @@ The CLI uses Sandbox UI’s maintained report assets to write a self-contained i
 
 `/workspace`, `/assessment`, `/publication`, trace projections, and `/schemas/*` remain data contracts. Historical formats keep readers; retiring a view does not rewrite stored records. The immutable source revision/digests in [sources.json](docs/evidence/sources.json) describe archived evidence, including paths that existed in that revision.
 
+The public `projectPartEvents(node, rows)` overload projects bounded native provider rows directly into canonical record events for live viewers. It keeps stream and attempt identity, uses the first actual producer sequence for a growing part, and leaves unavailable source anchors absent. A row sequence is not a physical source line. Retained ingestion continues to supply its real source and clipping policy through the existing seven-argument overload.
+
 ## Verification
 
 ```sh
