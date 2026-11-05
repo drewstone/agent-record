@@ -1,0 +1,80 @@
+{
+  "source": {
+    "repository": "tangle-network/tangle-tools",
+    "commit": "62ee0feee3f782b7bc5a89dcd94f8bc4d3d8e8fb",
+    "unknownView": "Actual GET /api/discovery/runs/live-check-retention-unknown-verdict over a trusted local Lab checker returning UNKNOWN; no GPU execution.",
+    "documentSha256": "367b557c6e8126c418a5e5e16136261df66f1927fb596f9c1dfc799d27fcc421",
+    "disputeChoice": "views.need_choice called with a check-dispute blocker; same decision producer used by run_view."
+  },
+  "unknownView": {
+    "schema": "agent-workspace.view.v1",
+    "asOf": "2026-11-05T22:40:01Z",
+    "status": {
+      "key": "died",
+      "label": "Crashed",
+      "tone": "neutral",
+      "icon": "\u2715",
+      "at": null,
+      "reason": "driver-failed"
+    },
+    "phase": null,
+    "runtimeState": null,
+    "sentence": "Crashed. No release scored yet (1 checks ran, none on a release). Blocked: fixture-release: UNKNOWN fixture prerequisite unavailable.",
+    "blocker": {
+      "kind": "infra",
+      "sentence": "fixture-release: UNKNOWN fixture prerequisite unavailable",
+      "text": "fixture-release: UNKNOWN fixture prerequisite unavailable",
+      "actor": {
+        "role": "operator",
+        "label": "The operator"
+      },
+      "owner": "The operator",
+      "since": "2026-11-05T21:45:57.112Z",
+      "cause": "infra",
+      "release": "fixture-release",
+      "detail": "UNKNOWN fixture prerequisite unavailable",
+      "action": "Fix the check runner, then re-run the check"
+    },
+    "progress": null,
+    "needsYou": [
+      {
+        "runId": "live-check-retention-unknown-verdict",
+        "urgent": false,
+        "dispute": null,
+        "action": "Fix the check runner, then re-run the check",
+        "kind": "infra",
+        "options": [],
+        "consequence": null,
+        "text": "fixture-release: UNKNOWN fixture prerequisite unavailable",
+        "actor": {
+          "role": "operator",
+          "label": "The operator"
+        },
+        "owner": "The operator",
+        "since": "2026-11-05T21:45:57.112Z",
+        "href": "/run/live-check-retention-unknown-verdict"
+      }
+    ],
+    "paused": null,
+    "lifecycle": null
+  },
+  "disputeChoice": {
+    "action": "Rule on the check dispute: is the check right?",
+    "kind": "check-dispute",
+    "options": [
+      {
+        "label": "Uphold the agents",
+        "verdict": "upheld",
+        "command": "disco steer codeplay-20261020b \"<reason>\" --ruling c309bb08b9af --verdict upheld",
+        "consequence": "The check is amended and re-run on the disputed release."
+      },
+      {
+        "label": "The check stands",
+        "verdict": "rejected",
+        "command": "disco steer codeplay-20261020b \"<reason>\" --ruling c309bb08b9af --verdict rejected",
+        "consequence": "The agents keep working against the current check."
+      }
+    ],
+    "consequence": "The disputed step stays undecided and the run cannot be called solved."
+  }
+}
