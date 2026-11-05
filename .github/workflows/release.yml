@@ -1,0 +1,71 @@
+name: Publish package
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: agent-record-release
+  cancel-in-progress: false
+jobs:
+  qualify:
+    if: github.repository == 'drewstone/agent-record' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, beelink]
+    timeout-minutes: 20
+    outputs:
+      artifact: ${{ steps.pack.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Pack qualified source
+        id: pack
+        run: |
+          release_dir="$(mktemp -d "${RUNNER_TEMP}/agent-record-release.XXXXXX")"
+          pnpm pack --pack-destination "$release_dir"
+          node tools/release.mjs stage "$release_dir"
+          printf 'directory=%s\n' "$release_dir" >> "$GITHUB_OUTPUT"
+          printf 'artifact=agent-record-%s-%s-%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.artifact }}
+          path: ${{ steps.pack.outputs.directory }}
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: qualify
+    runs-on: [self-hosted, Linux, X64, beelink]
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.qualify.outputs.artifact }}
+          path: ${{ runner.temp }}/agent-record-release-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Publish verified immutable assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_DIR: ${{ runner.temp }}/agent-record-release-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          gh --version
+          node tools/release.mjs publish "$RELEASE_DIR"

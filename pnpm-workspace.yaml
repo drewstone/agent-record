@@ -1,0 +1,6 @@
+# First-party releases qualify through their source and consumer tests; they do not wait for the registry age window.
+# Keep external dependencies behind the age check and every dependency behind frozen-lockfile integrity verification.
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - '@tangle-network/*'
+  - '@drewstone/agent-record'
