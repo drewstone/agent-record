@@ -1,0 +1,178 @@
+{
+  "source": {
+    "kind": "synthetic",
+    "description": "Invented contract examples; no private run, repository, host path, or recorded measurement is represented.",
+    "identities": "All timestamps, tags, commit IDs, digests, counts, and execution IDs are synthetic placeholders.",
+    "coverage": "Failed checks with absent output receipts and an unknown check with incomplete retention; no execution or performance claim."
+  },
+  "withoutOutputs": {
+    "latest": {
+      "at": "2000-01-01T00:01:00Z",
+      "tag": "synthetic-v2",
+      "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "checker": "cccccccccccc",
+      "known": true,
+      "solved": false,
+      "line": "NOT SOLVED: synthetic correctness mismatch",
+      "score": null,
+      "source": "play-check.json",
+      "cause": null,
+      "evidence": {
+        "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "checkerSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "inputs": {
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "count": null
+        },
+        "execution": null,
+        "outputs": null
+      },
+      "verdict": "not-solved"
+    },
+    "best": {
+      "at": "2000-01-01T00:00:00Z",
+      "tag": "synthetic-v1",
+      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checker": "cccccccccccc",
+      "known": true,
+      "solved": false,
+      "line": "NOT SOLVED: synthetic correctness mismatch",
+      "score": null,
+      "source": "play-checks.jsonl",
+      "cause": null,
+      "evidence": {
+        "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "checkerSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "inputs": {
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "count": null
+        },
+        "execution": null,
+        "outputs": null
+      },
+      "verdict": "not-solved"
+    },
+    "passes": [],
+    "checkers": [
+      {
+        "checker": "cccccccccccc",
+        "from": "2000-01-01T00:00:00Z",
+        "to": "2000-01-01T00:01:00Z",
+        "checks": 2,
+        "solved": 0
+      }
+    ],
+    "gate": null,
+    "gateUnknown": null,
+    "held": null,
+    "counts": {
+      "checks": 2,
+      "known": 2,
+      "solved": 0,
+      "gates": 0,
+      "gateUnknown": 0
+    },
+    "headline": "synthetic-v2 NOT SOLVED: synthetic correctness mismatch (01-01 00:01 UTC)"
+  },
+  "withOutputs": {
+    "latest": {
+      "at": "2000-01-01T00:02:00Z",
+      "tag": null,
+      "commit": "dddddddddddddddddddddddddddddddddddddddd",
+      "checker": "eeeeeeeeeeee",
+      "known": false,
+      "solved": false,
+      "line": "UNKNOWN: synthetic output retention incomplete",
+      "score": null,
+      "source": "play-checks.jsonl",
+      "cause": null,
+      "evidence": {
+        "contentHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "checkerSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "inputs": {
+          "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "count": null
+        },
+        "execution": {
+          "backend": "sandbox",
+          "repositoryCommit": "dddddddddddddddddddddddddddddddddddddddd",
+          "inputDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "outputs": {
+          "executionId": "synthetic-check-3",
+          "inputDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "status": "incomplete",
+          "files": [
+            {
+              "path": "evaluation.json",
+              "artifact": {
+                "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "byteLength": 16
+              },
+              "href": null
+            }
+          ],
+          "missing": [
+            {
+              "path": "timings.json",
+              "reason": "store-failed"
+            }
+          ],
+          "omitted": 0
+        }
+      },
+      "verdict": "unknown"
+    },
+    "best": {
+      "at": "2000-01-01T00:00:00Z",
+      "tag": "synthetic-v1",
+      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checker": "cccccccccccc",
+      "known": true,
+      "solved": false,
+      "line": "NOT SOLVED: synthetic correctness mismatch",
+      "score": null,
+      "source": "play-checks.jsonl",
+      "cause": null,
+      "evidence": {
+        "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "checkerSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "inputs": {
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "count": null
+        },
+        "execution": null,
+        "outputs": null
+      },
+      "verdict": "not-solved"
+    },
+    "passes": [],
+    "checkers": [
+      {
+        "checker": "cccccccccccc",
+        "from": "2000-01-01T00:00:00Z",
+        "to": "2000-01-01T00:01:00Z",
+        "checks": 2,
+        "solved": 0
+      },
+      {
+        "checker": "eeeeeeeeeeee",
+        "from": "2000-01-01T00:02:00Z",
+        "to": "2000-01-01T00:02:00Z",
+        "checks": 1,
+        "solved": 0
+      }
+    ],
+    "gate": null,
+    "gateUnknown": null,
+    "held": null,
+    "counts": {
+      "checks": 3,
+      "known": 2,
+      "solved": 0,
+      "gates": 0,
+      "gateUnknown": 0
+    },
+    "headline": "UNKNOWN: synthetic output retention incomplete (01-01 00:02 UTC)"
+  }
+}

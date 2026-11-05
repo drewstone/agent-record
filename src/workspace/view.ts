@@ -68,7 +68,13 @@ export const viewNeedSchema = z.object({
   text: z.string(),
   owner: z.string().nullable().optional(),
   actor: viewActorSchema.optional(),
-  options: z.array(z.object({ label: z.string(), command: z.string(), consequence: z.string().optional() })).optional(),
+  /** Decision details supplied by the host, including urgency and what waiting costs. */
+  urgent: z.boolean().optional(),
+  dispute: z.string().nullable().optional(),
+  action: z.string().nullable().optional(),
+  kind: z.string().nullable().optional(),
+  consequence: z.string().nullable().optional(),
+  options: z.array(z.object({ label: z.string(), command: z.string(), verdict: z.string().optional(), consequence: z.string().optional() })).optional(),
   since: z.string().nullable().optional(),
   href: z.string().nullable().optional(),
 })
