@@ -4,6 +4,49 @@ import { z } from 'zod'
 // name, a held pass, and each check dispute with who ruled it.
 const time = z.iso.datetime({ offset: true })
 const explicitReference = z.string().regex(/\S/)
+const sha256 = z.string().regex(/^[0-9a-f]{64}$/)
+const contentDigest = z.string().regex(/^sha256:[0-9a-f]{64}$/)
+const exactCommit = z.string().regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/)
+const evidencePath = z.string().max(512).regex(/^(?!.*(?:^|\/)(?:\.{1,2}|\.git|\.sidecar)(?:\/|$))[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/)
+const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+
+/**
+ * Public projection of a native check's bindings (discovery-lab `checkRunFields`). These references attribute an
+ * evaluation; they do not establish correctness, timing quality, or a successful result. Missing fields stay null.
+ * Only digests, bounded identities and declared output metadata are public. Input manifests, replay seeds, output
+ * contents, artifact locators and custody locations never belong in this block.
+ */
+export const checkEvidenceSchema = z.strictObject({
+    contentHash: contentDigest.nullable(),
+    checkerSha256: sha256.nullable(),
+    /** The Lab's recorded input snapshot (which may be the candidate tree), not an inferred dataset identity. */
+    inputs: z.strictObject({ sha256: sha256.nullable(), count: count.nullable() }).nullable(),
+    execution: z.strictObject({
+      backend: z.literal('sandbox').nullable(),
+      repositoryCommit: exactCommit.nullable(),
+      inputDigest: contentDigest.nullable(),
+    }).nullable(),
+    outputs: z.strictObject({
+      executionId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/).nullable(),
+      inputDigest: contentDigest.nullable(),
+      /** Runtime's retention status, independent of the check verdict. */
+      status: z.enum(['retained', 'incomplete']).nullable(),
+      files: z.array(z.strictObject({
+        path: evidencePath.nullable(),
+        /** The existing AgentCandidateArtifactRef's content identity; private locators are omitted. */
+        artifact: z.strictObject({ sha256: contentDigest.nullable(), byteLength: count.nullable() }).nullable(),
+        /** Only an already-listed same-run source has a link; private CAS references have none. */
+        href: z.string().regex(/^\/api\/discovery\/runs\/[A-Za-z0-9][A-Za-z0-9._-]{0,200}\/source\/[0-9a-f]{64}$/).nullable(),
+      })).max(16).nullable(),
+      missing: z.array(z.strictObject({
+        path: evidencePath.nullable(),
+        reason: z.enum(['missing', 'unsafe-path', 'size-limit', 'capture-failed', 'store-failed', 'timeout']).nullable(),
+      })).max(16).nullable(),
+      /** Entries omitted by the bounded projection; null if either native list is absent or malformed. */
+      omitted: count.nullable(),
+    }).nullable(),
+  })
+export type CheckEvidence = z.infer<typeof checkEvidenceSchema>
 
 /** One check or tag-gate row as the host reads it: when, on which tag and commit, under which checker, its verdict and line. */
 const checkRowSchema = z.looseObject({
@@ -13,6 +56,7 @@ const checkRowSchema = z.looseObject({
     checker: z.string().nullable().optional(),
     verdict: z.string().nullable().optional(),
     line: z.string().nullable().optional(),
+    evidence: checkEvidenceSchema.nullable().optional(),
     score: z.looseObject({ stage: z.string().nullable().optional(), reached: z.number().nullable().optional(), of: z.number().nullable().optional(), workloads: z.object({ passed: z.number().nullable(), total: z.number().nullable() }).nullish() }).nullish(),
   })
 /** A check stage's calibration (discovery-lab runner/calibration.mjs): a known-good fixture passed it, none did, it gave two answers, or no record says. */
