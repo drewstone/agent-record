@@ -10,6 +10,14 @@ pnpm add "$(gh release view --repo drewstone/agent-record --json assets --jq '.a
 
 The ESM package and TypeScript declarations are distributed through GitHub Releases. This package is not published to npm. Use an immutable release asset when pinning a consumer.
 
+### Release a package
+
+Merge a stable `major.minor.patch` version bump in `package.json` to `main`. The **Publish package** workflow qualifies that exact commit on the existing Beelink runners with a frozen install, native build, typecheck, tests and pack. Its separate publishing job creates the matching `v<version>` tag and a draft release, uploads the package and its SHA256 file, verifies both assets, then publishes. Only that job receives repository write permission. Retry an interrupted release by rerunning its original workflow run so its source commit stays fixed. Manual dispatch also works while `main` still names that commit.
+
+A retry accepts an existing published version only when its tag and both asset digests match. It can finish a matching draft, but never replaces a tag or asset; a collision requires a new version. Consumers pin the versioned `.tgz` URL and verify its SHA256 before updating their lockfile and qualifying the installed package. Version 3.0.8 retains execution phase/finality and unknown holder liveness; consumers must handle `execution.alive` as `boolean | null`.
+
+The repository's dependency policy keeps the one-day release-age check for external dependencies. Only `@tangle-network/*` and `@drewstone/agent-record` are exempt, so qualified first-party releases can be consumed immediately. Frozen lockfile integrity checks still apply to every dependency.
+
 ```ts
 import { parseRecord } from '@drewstone/agent-record/record'
 
