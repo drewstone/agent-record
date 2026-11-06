@@ -307,6 +307,8 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
   part.run('child-part', 'm1', 'native-child', ms(6), JSON.stringify({ type: 'text', text: 'Child conversation stays separate.', time: { start: ms(6) } }))
   part.run('root-tool', 'm1', 'native-root', ms(7), JSON.stringify({ type: 'tool', tool: 'bash', state: { status: 'completed', input: { command: 'TOKEN=synthetic-secret timeout 5s /usr/bin/curl -H "Authorization: Bearer synthetic-secret" https://user:pass@example.test/private' }, time: { start: ms(2), end: ms(3) } } }))
   part.run('child-tool', 'm1', 'native-child', ms(8), JSON.stringify({ type: 'tool', tool: 'read', state: { status: 'error', input: { filePath: '/private/project/notes.md' }, time: { start: ms(6), end: ms(7) } } }))
+  part.run('unicode-tool', 'm1', 'native-child', ms(9), JSON.stringify({ type: 'tool', tool: 'search', state: { input: { query: '界'.repeat(24) + '\u2028synthetic-secret' } } }))
+  part.run('line-tool', 'm1', 'native-child', ms(10), JSON.stringify({ type: 'tool', tool: 'read', state: { input: { filePath: '/notes/visible.md\rsynthetic-secret' } } }))
   if (wal) {
     writer.exec('PRAGMA wal_checkpoint(TRUNCATE)')
     part.run('p2', 'm1', 'native-root', ms(3), JSON.stringify({ type: 'text', text: 'WAL-only evidence.', time: { start: ms(3) } }))
@@ -339,6 +341,8 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
   assert.deepEqual(usage.tools.map(({ id, sessionId, tool, start, end, failed, name }) => ({ id, sessionId, tool, start, end, failed, name })), [
     { id: 'root-tool', sessionId: 'native-root', tool: 'bash', start: ms(2), end: ms(3), failed: false, name: 'bash · curl' },
     { id: 'child-tool', sessionId: 'native-child', tool: 'read', start: ms(6), end: ms(7), failed: true, name: 'read · notes.md' },
+    { id: 'unicode-tool', sessionId: 'native-child', tool: 'search', start: null, end: null, failed: false, name: 'search · …' },
+    { id: 'line-tool', sessionId: 'native-child', tool: 'read', start: null, end: null, failed: false, name: 'read · visible.md' },
   ])
   assert.ok(usage.tools.every(tool => /^[0-9a-f]{16}$/.test(tool.inputDigest)))
   assert.ok(!JSON.stringify(usage).includes('synthetic-secret'))

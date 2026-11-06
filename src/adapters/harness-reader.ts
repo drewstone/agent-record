@@ -283,11 +283,11 @@ function stepName(tool: string | null, input: Json) {
   let args = input
   if (typeof args === 'string') { try { args = JSON.parse(args) } catch { args = null } }
   const key = ['filePath', 'path', 'pattern', 'command', 'url', 'query'].find(key => typeof args?.[key] === 'string' && args[key].trim())
-  let target: string = key ? args[key].trim().split(/\r?\n/)[0] : ''
+  let target: string = key ? args[key].trim().split(/[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/u)[0] : ''
   if (key === 'filePath' || key === 'path') target = target.replace(/\/+$/, '').split('/').at(-1) ?? ''
   else if (key === 'command') target = commandVerb(target)
   else if (key === 'url') target = target.replace(/^[a-z]+:\/\//i, '').split(/[/?#]/)[0]!.split('@').at(-1) ?? ''
-  else target = target.replace(/[\w+/=.\-]{20,}/g, '…').slice(0, 40)
+  else target = [...target.replace(/[\p{L}\p{N}_+/=.\-]{20,}/gu, '…')].slice(0, 40).join('')
   return tool && target ? `${tool} · ${target}` : tool
 }
 function canonicalInput(value: Json): string {
