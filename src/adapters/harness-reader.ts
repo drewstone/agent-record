@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto'
 import { closeSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { BundleSession, Ingest, NodeDraft } from './agent-runtime.js'
-import type { Json } from './part-events.js'
+import { num, type Json } from './part-events.js'
 
 export { isoAt, num, str, type Json } from './part-events.js'
 export type Source = { path: string; sha256: string; bytes: number; line?: number; pointer?: string; label?: string }
