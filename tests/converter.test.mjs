@@ -297,7 +297,7 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
   const message = writer.prepare('INSERT INTO message VALUES (?, ?, ?, ?)')
   message.run('m1', 'native-root', ms(1), JSON.stringify({ role: 'assistant', modelID: 'recorded-model', providerID: 'recorded-provider',
     tokens: { input: 11, output: 13, reasoning: 3, cache: { read: 2, write: 4 } }, cost: 0.25, time: { created: ms(1), completed: ms(4) } }))
-  message.run('m2', 'native-root', ms(4), JSON.stringify({ role: 'assistant', modelID: 'switched-model', providerID: 'other-provider', tokens: { input: 0, output: 0 }, cost: 0 }))
+  message.run('m2', 'native-root', ms(4), JSON.stringify({ role: 'assistant', modelID: 'switched-model', providerID: 'other-provider', tokens: { input: 0, output: 0 }, cost: 0, error: {} }))
   message.run('m3', 'native-root', ms(5), JSON.stringify({ role: 'assistant', error: { name: 'generic-failure' } }))
   for (const id of ['native-child', 'unrelated']) writer.prepare('INSERT INTO session VALUES (?, ?)').run(id, ms(1))
   message.run('m1', 'native-child', ms(6), JSON.stringify({ role: 'assistant', modelID: 'child-model', providerID: 'recorded-provider', tokens: { input: 5 } }))

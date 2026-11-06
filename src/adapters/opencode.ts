@@ -152,7 +152,7 @@ function observeUsage(doc: Json, source: NonNullable<NodeDraft['nativeUsage']>['
         cacheRead: count(tokens.cache?.read), cacheWrite: count(tokens.cache?.write),
       } : null,
       cost: num(message.cost) ?? null, start: num(message.time?.created) ?? null, end: num(message.time?.completed) ?? null, at: num(message.time?.completed || message.time?.created) ?? null,
-      failed: Boolean(message.error), source,
+      failed: Boolean(message.error && (typeof message.error !== 'object' || Object.keys(message.error).length)), source,
     }
     if (response.sessionId === null) complete = false
     const key = JSON.stringify([response.sessionId, response.id]), held = responses.get(key)
