@@ -46,6 +46,11 @@ The converter sets `servedModel` only on a node with at least one successful ass
 `start`, `end`, and `status` describe observed lifecycle state.
 Unknown lifecycle values remain unknown.
 
+Optional `nativeUsage` retains assistant responses and tool observations with logical source hashes, session IDs, timing, and safe tool names.
+Its `complete` flag describes capture; missing models, token counts and costs stay null, and pricing completeness is determined by the consumer.
+`readOpenCodeUsage(path, { sourcePath, sessionIds })` from the Runtime adapter reads the same observations from a local OpenCode store, including its WAL, without changing source files.
+Omit `sessionIds` to observe all sessions in that store; supply recorded IDs to restrict ownership. `sourcePath` is a logical label; private custody paths are never returned in this projection.
+
 ## Events and tool pairs
 
 Every event has a unique ID within its run and references an existing node.

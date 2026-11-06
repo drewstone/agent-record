@@ -116,6 +116,19 @@ export const recordSchema = z
           joinProof: metadata.optional(),
           modelSource: z.string().optional(),
           servedModel: z.string().nullable().optional(),
+          nativeUsage: z.object({
+            complete: z.boolean(), calls: z.number().int().nonnegative().nullable(),
+            sources: z.array(sourceSchema), opened: z.number().nullable(), sessionIds: z.array(z.string()),
+            responses: z.array(z.object({
+              id: z.string(), sessionId: z.string().nullable(), model: z.string().nullable(), provider: z.string().nullable(),
+              tokens: z.object({ input: z.number(), output: z.number(), cacheRead: z.number(), cacheWrite: z.number() }).nullable(),
+              cost: z.number().nullable(), at: z.number().nullable(), start: z.number().nullable(), end: z.number().nullable(), failed: z.boolean(), source: sourceSchema,
+            })),
+            tools: z.array(z.object({
+              id: z.string(), sessionId: z.string().nullable(), tool: z.string().nullable(), start: z.number().nullable(), end: z.number().nullable(),
+              failed: z.boolean(), inputDigest: z.string(), name: z.string().nullable(), source: sourceSchema,
+            })),
+          }).optional(),
           harness: z.string().nullable().optional(),
           /** Execution environments, in first-seen order. */
           sandboxes: z.array(z.string()).optional(),

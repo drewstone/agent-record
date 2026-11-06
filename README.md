@@ -86,7 +86,7 @@ The public `projectPartEvents(node, rows)` overload projects bounded native prov
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm test
-pnpm build:example
+PUBLIC_BASE=/agent-record/ pnpm build:example
 node --test tests/example.browser.mjs
 pnpm pack
 ```

@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
-import { createFileCache, ingestBundle, ingestRun } from '../dist/agent-runtime.js'
+import { createFileCache, ingestBundle, ingestRun, readOpenCodeUsage } from '../dist/agent-runtime.js'
 
 const INGEST = join(dirname(fileURLToPath(import.meta.url)), '../tools/ingest.mjs')
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex')
@@ -294,29 +294,103 @@ for (const wal of [false, true]) test(`captured OpenCode ${wal ? 'WAL' : 'checkp
     CREATE TABLE part(id TEXT, message_id TEXT, session_id TEXT, time_created INTEGER, data TEXT);
   `)
   writer.prepare('INSERT INTO session VALUES (?, ?)').run('native-root', ms(0))
-  writer.prepare('INSERT INTO message VALUES (?, ?, ?, ?)').run('m1', 'native-root', ms(1), JSON.stringify({ role: 'assistant', modelID: 'recorded-model', providerID: 'recorded-provider' }))
+  const message = writer.prepare('INSERT INTO message VALUES (?, ?, ?, ?)')
+  message.run('m1', 'native-root', ms(1), JSON.stringify({ role: 'assistant', modelID: 'recorded-model', providerID: 'recorded-provider',
+    tokens: { input: 11, output: 13, reasoning: 3, cache: { read: 2, write: 4 } }, cost: 0.25, time: { created: ms(1), completed: ms(4) } }))
+  message.run('m2', 'native-root', ms(4), JSON.stringify({ role: 'assistant', modelID: 'switched-model', providerID: 'other-provider', tokens: { input: 0, output: 0 }, cost: 0, error: {} }))
+  message.run('m3', 'native-root', ms(5), JSON.stringify({ role: 'assistant', error: { name: 'generic-failure' } }))
+  for (const id of ['native-child', 'unrelated']) writer.prepare('INSERT INTO session VALUES (?, ?)').run(id, ms(1))
+  message.run('m1', 'native-child', ms(6), JSON.stringify({ role: 'assistant', modelID: 'child-model', providerID: 'recorded-provider', tokens: { input: 5 } }))
+  message.run('outside', 'unrelated', ms(7), JSON.stringify({ role: 'assistant', tokens: { input: 1000000 } }))
   const part = writer.prepare('INSERT INTO part VALUES (?, ?, ?, ?, ?)')
   part.run('p1', 'm1', 'native-root', ms(2), JSON.stringify({ type: 'text', text: 'Checkpointed evidence.', time: { start: ms(2) } }))
+  part.run('child-part', 'm1', 'native-child', ms(6), JSON.stringify({ type: 'text', text: 'Child conversation stays separate.', time: { start: ms(6) } }))
+  part.run('root-tool', 'm1', 'native-root', ms(7), JSON.stringify({ type: 'tool', tool: 'bash', state: { status: 'completed', input: { command: 'TOKEN=synthetic-secret timeout 5s /usr/bin/curl -H "Authorization: Bearer synthetic-secret" https://user:pass@example.test/private' }, time: { start: ms(2), end: ms(3) } } }))
+  part.run('child-tool', 'm1', 'native-child', ms(8), JSON.stringify({ type: 'tool', tool: 'read', state: { status: 'error', input: { filePath: '/private/project/notes.md' }, time: { start: ms(6), end: ms(7) } } }))
+  part.run('unicode-tool', 'm1', 'native-child', ms(9), JSON.stringify({ type: 'tool', tool: 'search', state: { input: { query: '界'.repeat(24) + '\u2028synthetic-secret' } } }))
+  part.run('line-tool', 'm1', 'native-child', ms(10), JSON.stringify({ type: 'tool', tool: 'read', state: { input: { filePath: '/notes/visible.md\rsynthetic-secret' } } }))
   if (wal) {
     writer.exec('PRAGMA wal_checkpoint(TRUNCATE)')
     part.run('p2', 'm1', 'native-root', ms(3), JSON.stringify({ type: 'text', text: 'WAL-only evidence.', time: { start: ms(3) } }))
   }
+  writer.exec('ALTER TABLE message ADD COLUMN time_updated INTEGER; UPDATE message SET time_updated = time_created; ALTER TABLE part ADD COLUMN time_updated INTEGER; UPDATE part SET time_updated = time_created;')
+  writer.prepare('UPDATE message SET time_updated = ? WHERE id = ? AND session_id = ?').run(ms(0), 'm3', 'native-root')
   if (!wal) writer.close() // Real completed captures retain the WAL header after checkpoint/removal.
   for (const suffix of ['', '-wal', '-shm']) if (existsSync(join(root, 'writer.db') + suffix)) copyFileSync(join(root, 'writer.db') + suffix, store + suffix)
   if (wal) writer.close()
-  writeFileSync(join(run, 'evidence/native-index.jsonl'), jsonl([{
+  const overlapStore = store.replace('/exec/', '/overlap/')
+  mkdirSync(dirname(overlapStore), { recursive: true })
+  for (const suffix of ['', '-wal', '-shm']) if (existsSync(store + suffix)) copyFileSync(store + suffix, overlapStore + suffix)
+  const nativeSession = { sandboxSessionId: 'sess', sourceId: 'exec', rootScope: 'session-home', path: session, nativeSessionId: 'native-root' }
+  const index = {
     schema: 'disco.native-capture.v1', runId: 'run-n', at: at(5), nodeId: 'run-n:s0', harness: 'opencode',
     snapshot: { archive: `sha256:${hex}` },
-    native: { harness: 'opencode', sessions: [{ sandboxSessionId: 'sess', sourceId: 'exec', rootScope: 'session-home', path: session, nativeSessionId: 'native-root' }] },
-  }]))
-  const original = new Map(readdirSync(dirname(store)).map(name => [name, readFileSync(join(dirname(store), name))]))
+    native: { harness: 'opencode', sessions: [nativeSession, { ...nativeSession, nativeSessionId: 'native-child', parentNativeSessionId: 'native-root' }, nativeSession, { ...nativeSession, sourceId: 'overlap' }] },
+  }
+  writeFileSync(join(run, 'evidence/native-index.jsonl'), jsonl([{ ...index, native: { sessions: [{ ...nativeSession, nativeSessionId: 'unrelated' }] } }, index]))
+  const original = new Map([store, overlapStore].flatMap(path => readdirSync(dirname(path)).map(name => [join(dirname(path), name), readFileSync(join(dirname(path), name))])))
   const files = createFileCache(), options = { runId: 'run-n', native, files }
   const first = ingestRun(run, options), second = ingestRun(run, options)
   assert.equal(second.json, first.json)
-  assert.deepEqual(childEvents(first.record).map(e => e.detail.publicText), wal ? ['Checkpointed evidence.', 'WAL-only evidence.'] : ['Checkpointed evidence.'])
+  assert.deepEqual(childEvents(first.record).filter(e => e.detail.publicText).map(e => e.detail.publicText), wal ? ['Checkpointed evidence.', 'WAL-only evidence.'] : ['Checkpointed evidence.'])
   assert.ok(childEvents(first.record).every(e => e.source.path.startsWith(`native:${hex}/`) && e.source.pointer.startsWith('/part/')))
-  assert.deepEqual(readdirSync(dirname(store)).sort(), [...original.keys()].sort())
-  for (const [name, bytes] of original) assert.deepEqual(readFileSync(join(dirname(store), name)), bytes, `cached input ${name} is unchanged`)
+  const usage = first.record.nodes.find(node => node.id === 'run-n:s0').nativeUsage
+  assert.equal(usage.complete, true)
+  assert.equal(usage.calls, 4)
+  assert.deepEqual([usage.responses[0].start, usage.responses[0].end], [ms(1), ms(4)])
+  assert.deepEqual(usage.tools.map(({ id, sessionId, tool, start, end, failed, name }) => ({ id, sessionId, tool, start, end, failed, name })), [
+    { id: 'root-tool', sessionId: 'native-root', tool: 'bash', start: ms(2), end: ms(3), failed: false, name: 'bash · curl' },
+    { id: 'child-tool', sessionId: 'native-child', tool: 'read', start: ms(6), end: ms(7), failed: true, name: 'read · notes.md' },
+    { id: 'unicode-tool', sessionId: 'native-child', tool: 'search', start: null, end: null, failed: false, name: 'search · …' },
+    { id: 'line-tool', sessionId: 'native-child', tool: 'read', start: null, end: null, failed: false, name: 'read · visible.md' },
+  ])
+  assert.ok(usage.tools.every(tool => /^[0-9a-f]{16}$/.test(tool.inputDigest)))
+  assert.ok(!JSON.stringify(usage).includes('synthetic-secret'))
+  const direct = readOpenCodeUsage(store, { sourcePath: 'live/store.db' })
+  assert.equal(direct.calls, 5)
+  assert.equal(direct.responses[0].id, 'm3')
+  assert.equal(direct.opened, ms(0))
+  assert.deepEqual(direct.sessionIds, ['native-root', 'native-child', 'unrelated'])
+  assert.equal(readOpenCodeUsage(store, { sessionIds: ['native-root', 'native-child'] }).calls, 4)
+  assert.ok(!JSON.stringify(direct).includes(root))
+  assert.deepEqual(usage.responses.map(({ id, sessionId, model, provider, tokens, cost, at, failed }) => ({ id, sessionId, model, provider, tokens, cost, at, failed })), [
+    { id: 'm1', sessionId: 'native-root', model: 'recorded-model', provider: 'recorded-provider', tokens: { input: 11, output: 16, cacheRead: 2, cacheWrite: 4 }, cost: 0.25, at: ms(4), failed: false },
+    { id: 'm2', sessionId: 'native-root', model: 'switched-model', provider: 'other-provider', tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, cost: 0, at: null, failed: false },
+    { id: 'm3', sessionId: 'native-root', model: null, provider: null, tokens: null, cost: null, at: null, failed: true },
+    { id: 'm1', sessionId: 'native-child', model: 'child-model', provider: 'recorded-provider', tokens: { input: 5, output: 0, cacheRead: 0, cacheWrite: 0 }, cost: null, at: null, failed: false },
+  ])
+  assert.equal(usage.sources.length, 2)
+  assert.ok(usage.responses.every(response => usage.sources.some(source => JSON.stringify(response.source) === JSON.stringify(source))))
+  assert.ok(usage.sources.every(source => source.path.startsWith(`native:${hex}/`)))
+  assert.match(usage.sources[0].sha256, /^[0-9a-f]{64}$/)
+  for (const path of [store, overlapStore]) assert.deepEqual(readdirSync(dirname(path)).map(name => join(dirname(path), name)).sort(), [...original.keys()].filter(name => dirname(name) === dirname(path)).sort())
+  for (const [path, bytes] of original) assert.deepEqual(readFileSync(path), bytes, `cached input ${path} is unchanged`)
+  const live = join(run, `evidence/live-stream/${encodeURIComponent('run-n:s0')}/exec.jsonl`)
+  mkdirSync(dirname(live), { recursive: true }); writeFileSync(live, jsonl(LIVE_EVENTS))
+  const journal = readFileSync(join(run, 'spawn-journal.jsonl'), 'utf8')
+  writeFileSync(join(run, 'spawn-journal.jsonl'), jsonl(journal.trim().split('\n').map(JSON.parse).filter(row => row.event.kind !== 'settled')))
+  const running = ingestRun(run, options).record
+  assert.equal(running.nodes.find(node => node.id === 'run-n:s0').capture.channel, 'live')
+  assert.deepEqual(running.nodes.find(node => node.id === 'run-n:s0').nativeUsage, usage)
+  assert.ok(childEvents(running).every(event => event.source.path.includes('evidence/live-stream/')))
+  writeFileSync(join(run, 'spawn-journal.jsonl'), journal)
+  index.native.sessions.push({ ...nativeSession, nativeSessionId: 'missing', parentNativeSessionId: 'native-root' })
+  writeFileSync(join(run, 'evidence/native-index.jsonl'), jsonl([index]))
+  const partial = ingestRun(run, options).record.nodes.find(node => node.id === 'run-n:s0').nativeUsage
+  assert.equal(partial.complete, false)
+  assert.equal(partial.calls, null)
+  assert.deepEqual(partial.responses, usage.responses)
+  rmSync(store)
+  const missingFirst = ingestRun(run, options).record.nodes.find(node => node.id === 'run-n:s0').nativeUsage
+  assert.equal(missingFirst.complete, false)
+  assert.equal(missingFirst.calls, null)
+  assert.equal(missingFirst.responses.length, 3)
+  writeFileSync(store, 'not a SQLite database')
+  writeFileSync(overlapStore, 'not a SQLite database')
+  const unreadable = ingestRun(run, options).record
+  assert.equal(Object.hasOwn(unreadable.nodes.find(node => node.id === 'run-n:s0'), 'nativeUsage'), false)
+  assert.ok(unreadable.coverage.gaps.some(gap => gap.code === 'no-transcript:opencode-store-unreadable'))
+  assert.equal(readOpenCodeUsage(store), null)
   t.diagnostic(JSON.stringify({ wal, recordDigest: first.summary.recordDigest }))
 })
 
@@ -379,6 +453,22 @@ test('every harness file in a bundle is framed alike: one owner, its line window
   writeBundle([{ path: 'pi/a.jsonl', harness: 'pi' }])
   assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'harnesses', '--out', join(root, 'b.json')]).status, 0)
   assert.equal(spawnSync(process.execPath, [INGEST, bundle, '--run-id', 'other', '--out', join(root, 'c.json')]).status, 64)
+  const trajectory = { session: { id: 'owned' }, messages: [{ id: 'same-response', session_id: 'owned', data: { role: 'assistant', tokens: { input: 0 } } }], parts: [] }
+  for (const [path, suffix] of [['oc/first.json', ''], ['oc/second.json', '\n']]) writeFileSync(join(bundle, path), JSON.stringify(trajectory) + suffix)
+  writeBundle(['oc/first.json', 'oc/second.json'].map(path => ({ path, harness: 'opencode', sessionId: 'overlap' })))
+  const overlap = ingestBundle(bundle).record.nodes.find(node => node.id === 'opencode:overlap').nativeUsage
+  assert.equal(overlap.calls, 1)
+  assert.equal(overlap.sources.length, 2)
+  assert.equal(overlap.responses.length, 1)
+  assert.equal(ingestBundle(bundle).json, ingestBundle(bundle).json)
+  trajectory.messages[0].data.tokens.input = 1
+  writeFileSync(join(bundle, 'oc/second.json'), JSON.stringify(trajectory))
+  const conflict = ingestBundle(bundle).record.nodes.find(node => node.id === 'opencode:overlap').nativeUsage
+  assert.equal(conflict.complete, false)
+  assert.equal(conflict.calls, null)
+  writeFileSync(join(bundle, 'oc/first.json'), JSON.stringify({ session: { id: 'owned' }, messages: [], parts: [] }))
+  writeBundle([{ path: 'oc/first.json', harness: 'opencode' }])
+  assert.equal(ingestBundle(bundle).record.nodes[0].nativeUsage.calls, 0)
 })
 
 // Discovery magnetar-rust-sandbox-20261031b (Runtime 3, Codex on a Tangle Sandbox): no `spawned` line names the run's root,

@@ -1,7 +1,8 @@
 /** Retained cli-bridge exports (`trace/bridge-sessions/*.jsonl` in a run): rows of `{table, row}` from the bridge store. */
-import { basename } from 'node:path'
+import { existsSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import type { Ingest, NodeDraft } from './agent-runtime.js'
-import { categoryOf, filesUnder, isoAt, readLines, splitLines, str, type Json, type Line, type SessionFile, type SessionReader } from './harness-reader.js'
+import { categoryOf, filesUnder, isoAt, readLines, sha, splitLines, str, type Json, type Line, type SessionFile, type SessionReader } from './harness-reader.js'
 
 /** A bridge export: its rows, and the bridge session id its `sessions` row names. */
 export interface BridgeStream extends SessionFile {
@@ -70,5 +71,132 @@ export function readBridgeStream(ingest: Ingest, node: NodeDraft, stream: Bridge
   if (!read) return false
   node.harness ??= 'opencode'
   node.capture = { channel: 'bridge', status: 'lossy', reason: 'bridge-stream-without-prompts-or-results' }
+  return true
+}
+
+export function readRootStream(ingest: Ingest, node: NodeDraft) {
+  const rel = 'root-stream.jsonl'
+  const abs = join(ingest.runDir, rel)
+  if (!existsSync(abs)) return false
+  const entry = ingest.file(rel)
+  const rows = [...splitLines(entry.bytes)].filter((row) => row.value?.event)
+  if (!rows.length) return false
+  if (!ingest.claim(entry.sha256, node.id, rel)) return false
+  ingest.fileSource(rel)
+  // A resumed attempt can replay its predecessor from the start; drop the replayed prefix.
+  const fingerprint = (row: Line) => {
+    const event = row.value.event
+    return `${event.kind}\0${event.toolCallId ?? ''}\0${sha(JSON.stringify(event.text ?? event.args ?? event.result ?? ''))}`
+  }
+  const byAttempt = new Map<number, Line[]>()
+  for (const row of rows) {
+    const attempt = Number(row.value.attempt ?? 1)
+    const list = byAttempt.get(attempt) ?? []
+    list.push(row)
+    byAttempt.set(attempt, list)
+  }
+  const kept: Line[] = []
+  let previous: Line[] = []
+  let replayed = 0
+  for (const attempt of [...byAttempt.keys()].sort((a, b) => a - b)) {
+    const list = byAttempt.get(attempt)!
+    let skip = 0
+    while (skip < list.length && skip < previous.length && fingerprint(list[skip]!) === fingerprint(previous[skip]!)) skip++
+    replayed += skip
+    kept.push(...list.slice(skip))
+    previous = list
+  }
+  let block: { kind: string; rows: Line[] } | null = null
+  let untimed = 0
+  const callIds = new Map<string, number>()
+  const resultIds = new Set<string>()
+  const flush = () => {
+    if (!block) return
+    const first = block.rows[0]!
+    const text = block.rows.map((row) => str(row.value.event.text)).join('')
+    const at = isoAt(first.value.at)
+    const lastRow = block.rows.at(-1)!
+    if (at && text.trim()) {
+      ingest.emit({
+        node: node.id,
+        at,
+        kind: 'message',
+        category: 'reasoning',
+        label: 'assistant',
+        source: { path: rel, sha256: entry.sha256, line: first.line },
+        detail: {
+          role: 'assistant',
+          ...(first.value.seq !== undefined ? { nativeRecordId: String(first.value.seq) } : {}),
+          ...ingest.shown(block.kind === 'text_delta' ? 'publicText' : 'reasoning', text, block.rows.length === 1 ? () => ingest.lineSource(rel, first.line, first.raw) : null),
+          ...(block.rows.length > 1 ? { anchorRange: [first.line, lastRow.line] } : {}),
+        },
+      })
+    }
+    block = null
+  }
+  for (const row of kept) {
+    const event = row.value.event
+    const kind = str(event.kind)
+    if (kind === 'text_delta' || kind === 'reasoning_delta') {
+      if (block && block.kind !== kind) flush()
+      block ??= { kind, rows: [] }
+      block.rows.push(row)
+      continue
+    }
+    flush()
+    const at = isoAt(row.value.at)
+    if (!at) {
+      untimed++
+      continue
+    }
+    const source = { path: rel, sha256: entry.sha256, line: row.line }
+    const native = row.value.seq !== undefined ? { nativeRecordId: String(row.value.seq) } : {}
+    const full = () => ingest.lineSource(rel, row.line, row.raw)
+    if (kind === 'tool_call') {
+      // A stream row without args says nothing about them: the call omits `input` rather than claiming `{}`.
+      callIds.set(str(event.toolCallId), Date.parse(at))
+      ingest.emit({
+        node: node.id,
+        at,
+        kind: 'message',
+        category: categoryOf(str(event.toolName), event.args),
+        label: `assistant · ${str(event.toolName)}`,
+        source,
+        detail: { role: 'assistant', ...native, publicToolCalls: [{ id: str(event.toolCallId), name: str(event.toolName), ...(event.args === undefined || event.args === null ? {} : ingest.shown('input', JSON.stringify(event.args), full)) }] },
+      })
+    } else if (kind === 'tool_result') {
+      const result = event.result
+      const body = typeof result === 'string' ? result : result && typeof result === 'object' && typeof result.error === 'string' && Object.keys(result).length === 1 ? result.error : JSON.stringify(result ?? null)
+      resultIds.add(str(event.toolCallId))
+      ingest.emit({
+        node: node.id,
+        at,
+        kind: 'tool-result',
+        category: categoryOf(str(event.toolName), null),
+        label: `tool result · ${str(event.toolName)}`,
+        source,
+        detail: {
+          role: 'toolResult',
+          ...native,
+          toolCallId: str(event.toolCallId),
+          ...(callIds.has(str(event.toolCallId)) ? { durationMs: Math.max(0, Date.parse(at) - callIds.get(str(event.toolCallId))!) } : {}),
+          isError: Boolean(result && typeof result === 'object' && ('error' in result || result.isError === true)),
+          ...ingest.shown('publicText', body, full),
+        },
+      })
+    } else {
+      // Turn boundaries, usage and status rows are events of their own kind.
+      ingest.emitRecord(node, at, source, { ...event, type: kind || 'event' }, native)
+    }
+  }
+  flush()
+  if (untimed) ingest.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} rows of ${ingest.sourcePath(rel)} carry no time` })
+  if (replayed) ingest.gaps.push({ nodeId: node.id, code: 'root-replay-dropped', detail: `${replayed} rows of a resumed attempt repeat its predecessor and are not events` })
+  const unanswered = [...callIds.keys()].filter((id) => !resultIds.has(id)).length
+  node.capture = {
+    channel: 'root',
+    status: unanswered || replayed ? 'lossy' : 'complete',
+    reason: unanswered ? 'tool-results-not-streamed' : replayed ? 'resumed-attempt-replay-dropped' : null,
+  }
   return true
 }
