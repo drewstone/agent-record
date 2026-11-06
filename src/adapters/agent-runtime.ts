@@ -34,20 +34,20 @@
  * paths start with `native:<hex>/`. A clipped body keeps the first three quarters and the last quarter of `maxText` bytes;
  * `detail.clip.sha256` names the source entry holding the full text.
  */
-import { createHash } from 'node:crypto'
-import { closeSync, existsSync, openSync, readFileSync, readSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { recordSchema } from '../record.js'
+import { recordSchema, type RecordNode } from '../record.js'
 import { anchorId, ID_SCHEME } from '../anchor.js'
-import { bridgeStreams, readBridgeBundle, readBridgeStream, type BridgeStream } from './bridge.js'
-import { nativeFiles, readClaudeBundle, readNative } from './claude.js'
-import { readCodexBundle } from './codex.js'
-import { categoryOf, filesUnder, hexOf, isoAt, num, pointerOf, sha, splitLines, str, walk, type Category, type EventSource, type Json, type Line, type SessionReader, type Source, type WorkflowAgents } from './harness-reader.js'
-import { nativeStore, readOpenCode, readOpenCodeBundle, readOpenCodeStore } from './opencode.js'
+import { bridgeStreams, readBridgeStream, readRootStream, type BridgeStream } from './bridge.js'
+import { nativeFiles, readNative } from './claude.js'
+import { categoryOf, hashFile, utf8Slice, filesUnder, hexOf, isoAt, num, pointerOf, sha, splitLines, str, walk, type Category, type EventSource, type Json, type Line, type Source, type FileCache } from './harness-reader.js'
+import { nativeStore, readOpenCode, readOpenCodeStore } from './opencode.js'
 import { projectPartEvents, projectPartFrames } from './part-events.js'
-import { piSessions, readPi, readPiBundle, type PiSession } from './pi.js'
+import { assembleRecord, type AssemblyOptions } from './harness-sessions.js'
+import { piSessions, readPi, type PiSession } from './pi.js'
 
-export const ADAPTER_VERSION = '2.7.4'
+export const ADAPTER_VERSION = '2.8.0'
+export { readOpenCodeUsage } from './opencode.js'
 export { ID_SCHEME }
 export { categoryOf, type Category } from './harness-reader.js'
 export const MAX_RECORD_BYTES = 128 * 1024 * 1024
@@ -85,45 +85,7 @@ export interface IngestOptions {
   files?: FileCache
 }
 
-/** Reads a file's bytes and sha256. */
-export interface FileCache {
-  read(abs: string): { bytes: Buffer; sha256: string }
-}
-
-/**
- * A FileCache that keeps each file's bytes while its device, inode, size and change times are unchanged, least
- * recently used first out past `maxBytes`. The output never depends on it: a changed file is read again.
- */
-export function createFileCache({ maxBytes = 1024 * 1024 * 1024 }: { maxBytes?: number } = {}): FileCache & { heldBytes(): number } {
-  const entries = new Map<string, { key: string; bytes: Buffer; sha256: string }>()
-  let held = 0
-  return {
-    read(abs) {
-      const stats = statSync(abs)
-      const key = `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}:${stats.ctimeMs}`
-      const hit = entries.get(abs)
-      entries.delete(abs)
-      if (hit?.key === key) {
-        entries.set(abs, hit)
-        return hit
-      }
-      if (hit) held -= hit.bytes.length
-      const bytes = readFileSync(abs)
-      const entry = { key, bytes, sha256: sha(bytes) }
-      if (bytes.length <= maxBytes / 4) {
-        entries.set(abs, entry)
-        held += bytes.length
-      }
-      for (const [path, old] of entries) {
-        if (held <= maxBytes) break
-        entries.delete(path)
-        held -= old.bytes.length
-      }
-      return entry
-    },
-    heldBytes: () => held,
-  }
-}
+export { createFileCache, type FileCache } from './harness-reader.js'
 
 export interface IngestSummary {
   runId: string
@@ -172,6 +134,7 @@ export interface NodeDraft {
   model: string | null
   modelSource?: string
   servedModel: string | null
+  nativeUsage?: RecordNode['nativeUsage']
   harness: string | null
   start?: string
   end?: string
@@ -190,7 +153,7 @@ export interface NodeDraft {
   key?: string
 }
 /** A node no evidence has filled yet; `fields` hold what is known. */
-const blankNode = (id: string, fields: Partial<NodeDraft>): NodeDraft => ({
+export const blankNode = (id: string, fields: Partial<NodeDraft>): NodeDraft => ({
   id,
   label: id,
   parent: null,
@@ -209,43 +172,6 @@ const blankNode = (id: string, fields: Partial<NodeDraft>): NodeDraft => ({
 const NATIVE_INDEX = 'evidence/native-index.jsonl'
 // Each running node's Sandbox session events, one JSON line per event as delivered (discovery-lab runner/live-stream.mjs).
 const LIVE_STREAM = 'evidence/live-stream'
-/** A file's sha256 and length, streamed so a large file is never held. */
-function hashFile(abs: string) {
-  const fd = openSync(abs, 'r')
-  try {
-    const hash = createHash('sha256')
-    const buffer = Buffer.allocUnsafe(1 << 20)
-    let bytes = 0
-    for (let n = readSync(fd, buffer); n > 0; n = readSync(fd, buffer)) {
-      hash.update(buffer.subarray(0, n))
-      bytes += n
-    }
-    return { sha256: hash.digest('hex'), bytes }
-  } finally {
-    closeSync(fd)
-  }
-}
-function utf8Slice(buffer: Buffer, start: number, end: number) {
-  // Move boundaries off UTF-8 continuation bytes so no character is split.
-  while (start > 0 && start < buffer.length && (buffer[start]! & 0xc0) === 0x80) start++
-  while (end < buffer.length && end > 0 && (buffer[end]! & 0xc0) === 0x80) end--
-  return buffer.subarray(start, end).toString('utf8')
-}
-
-/** Each node's first and last event times. */
-function spans(events: Draft[]) {
-  const span = new Map<string, [string, string]>()
-  for (const event of events) {
-    const current = span.get(event.node)
-    if (!current) span.set(event.node, [event.at, event.at])
-    else {
-      if (event.at < current[0]) current[0] = event.at
-      if (event.at > current[1]) current[1] = event.at
-    }
-  }
-  return span
-}
-
 interface FileEntry {
   bytes: Buffer
   sha256: string
@@ -673,132 +599,7 @@ export class Ingest {
   }
 
   // ----- channel 5: root stream -----
-  readRootStream(node: NodeDraft) {
-    const rel = 'root-stream.jsonl'
-    const abs = join(this.runDir, rel)
-    if (!existsSync(abs)) return false
-    const entry = this.file(rel)
-    const rows = [...splitLines(entry.bytes)].filter((row) => row.value?.event)
-    if (!rows.length) return false
-    if (!this.claim(entry.sha256, node.id, rel)) return false
-    this.fileSource(rel)
-    // A resumed attempt can replay its predecessor from the start; drop the replayed prefix.
-    const fingerprint = (row: Line) => {
-      const event = row.value.event
-      return `${event.kind}\0${event.toolCallId ?? ''}\0${sha(JSON.stringify(event.text ?? event.args ?? event.result ?? ''))}`
-    }
-    const byAttempt = new Map<number, Line[]>()
-    for (const row of rows) {
-      const attempt = Number(row.value.attempt ?? 1)
-      const list = byAttempt.get(attempt) ?? []
-      list.push(row)
-      byAttempt.set(attempt, list)
-    }
-    const kept: Line[] = []
-    let previous: Line[] = []
-    let replayed = 0
-    for (const attempt of [...byAttempt.keys()].sort((a, b) => a - b)) {
-      const list = byAttempt.get(attempt)!
-      let skip = 0
-      while (skip < list.length && skip < previous.length && fingerprint(list[skip]!) === fingerprint(previous[skip]!)) skip++
-      replayed += skip
-      kept.push(...list.slice(skip))
-      previous = list
-    }
-    let block: { kind: string; rows: Line[] } | null = null
-    let untimed = 0
-    const callIds = new Map<string, number>()
-    const resultIds = new Set<string>()
-    const flush = () => {
-      if (!block) return
-      const first = block.rows[0]!
-      const text = block.rows.map((row) => str(row.value.event.text)).join('')
-      const at = isoAt(first.value.at)
-      const lastRow = block.rows.at(-1)!
-      if (at && text.trim()) {
-        this.emit({
-          node: node.id,
-          at,
-          kind: 'message',
-          category: 'reasoning',
-          label: 'assistant',
-          source: { path: rel, sha256: entry.sha256, line: first.line },
-          detail: {
-            role: 'assistant',
-            ...(first.value.seq !== undefined ? { nativeRecordId: String(first.value.seq) } : {}),
-            ...this.shown(block.kind === 'text_delta' ? 'publicText' : 'reasoning', text, block.rows.length === 1 ? () => this.lineSource(rel, first.line, first.raw) : null),
-            ...(block.rows.length > 1 ? { anchorRange: [first.line, lastRow.line] } : {}),
-          },
-        })
-      }
-      block = null
-    }
-    for (const row of kept) {
-      const event = row.value.event
-      const kind = str(event.kind)
-      if (kind === 'text_delta' || kind === 'reasoning_delta') {
-        if (block && block.kind !== kind) flush()
-        block ??= { kind, rows: [] }
-        block.rows.push(row)
-        continue
-      }
-      flush()
-      const at = isoAt(row.value.at)
-      if (!at) {
-        untimed++
-        continue
-      }
-      const source = { path: rel, sha256: entry.sha256, line: row.line }
-      const native = row.value.seq !== undefined ? { nativeRecordId: String(row.value.seq) } : {}
-      const full = () => this.lineSource(rel, row.line, row.raw)
-      if (kind === 'tool_call') {
-        // A stream row without args says nothing about them: the call omits `input` rather than claiming `{}`.
-        callIds.set(str(event.toolCallId), Date.parse(at))
-        this.emit({
-          node: node.id,
-          at,
-          kind: 'message',
-          category: categoryOf(str(event.toolName), event.args),
-          label: `assistant · ${str(event.toolName)}`,
-          source,
-          detail: { role: 'assistant', ...native, publicToolCalls: [{ id: str(event.toolCallId), name: str(event.toolName), ...(event.args === undefined || event.args === null ? {} : this.shown('input', JSON.stringify(event.args), full)) }] },
-        })
-      } else if (kind === 'tool_result') {
-        const result = event.result
-        const body = typeof result === 'string' ? result : result && typeof result === 'object' && typeof result.error === 'string' && Object.keys(result).length === 1 ? result.error : JSON.stringify(result ?? null)
-        resultIds.add(str(event.toolCallId))
-        this.emit({
-          node: node.id,
-          at,
-          kind: 'tool-result',
-          category: categoryOf(str(event.toolName), null),
-          label: `tool result · ${str(event.toolName)}`,
-          source,
-          detail: {
-            role: 'toolResult',
-            ...native,
-            toolCallId: str(event.toolCallId),
-            ...(callIds.has(str(event.toolCallId)) ? { durationMs: Math.max(0, Date.parse(at) - callIds.get(str(event.toolCallId))!) } : {}),
-            isError: Boolean(result && typeof result === 'object' && ('error' in result || result.isError === true)),
-            ...this.shown('publicText', body, full),
-          },
-        })
-      } else {
-        // Turn boundaries, usage and status rows are events of their own kind.
-        this.emitRecord(node, at, source, { ...event, type: kind || 'event' }, native)
-      }
-    }
-    flush()
-    if (untimed) this.gaps.push({ nodeId: node.id, code: 'untimed-lines', detail: `${untimed} rows of ${this.sourcePath(rel)} carry no time` })
-    if (replayed) this.gaps.push({ nodeId: node.id, code: 'root-replay-dropped', detail: `${replayed} rows of a resumed attempt repeat its predecessor and are not events` })
-    const unanswered = [...callIds.keys()].filter((id) => !resultIds.has(id)).length
-    node.capture = {
-      channel: 'root',
-      status: unanswered || replayed ? 'lossy' : 'complete',
-      reason: unanswered ? 'tool-results-not-streamed' : replayed ? 'resumed-attempt-replay-dropped' : null,
-    }
-    return true
-  }
+  readRootStream(node: NodeDraft) { return readRootStream(this, node) }
 
   // ----- knowledge pages -----
   /** Every kb/pages/**\/*.md under `dir` (relative to the run) becomes one whole-object finding event. */
@@ -956,13 +757,17 @@ export class Ingest {
     }
     for (const node of [...this.nodes.values()]) {
       const settled = node.status !== undefined || (node.id === this.rootId && Boolean(result))
-      if (!settled && this.readLiveStream(node)) continue
+      const store = nativeStore(this, node)
+      if (!settled && this.readLiveStream(node)) {
+        if (store) readOpenCodeStore(this, node, store, true)
+        continue
+      }
       const native = nativeFiles(this, node)
       if (Array.isArray(native)) {
         readNative(this, node, native)
+        if (store) readOpenCodeStore(this, node, store, true)
         continue
       }
-      const store = nativeStore(this, node)
       if (store && readOpenCodeStore(this, node, store)) continue
       if (native === 'not-cached')
         this.gaps.push({ nodeId: node.id, code: 'archived-not-ingested', detail: 'A native transcript archive exists but is not in the native cache' })
@@ -1079,139 +884,7 @@ export class Ingest {
     }
   }
 
-  /** Assemble the record from what convert() (or a bundle) read. */
-  assemble(extra: { title?: string; assignment?: Json; terminal?: Json; format?: string; input?: Record<string, unknown> } = {}) {
-    const root = this.nodes.get(this.rootId)
-    const result = this.result
-    const task = this.runInput?.task
-    // Results inherit their call's category; durations come from the pair when the source lacks them.
-    const calls = new Map<string, Draft>()
-    for (const event of this.events)
-      for (const call of (event.detail.publicToolCalls as { id: string }[] | undefined) ?? []) calls.set(`${event.node}\0${call.id}`, event)
-    for (const event of this.events) {
-      const callId = event.detail.toolCallId
-      if (typeof callId !== 'string') continue
-      const call = calls.get(`${event.node}\0${callId}`)
-      if (!call) continue
-      if (event.category === 'other') event.category = call.category
-      if (event.detail.durationMs === undefined) {
-        const duration = Date.parse(event.at) - Date.parse(call.at)
-        if (duration >= 0 && event.detail.atBasis !== 'carried') event.detail.durationMs = duration
-      }
-    }
-
-    // Node start and end fall back to their first and last recorded events.
-    const nodeOrder = new Map([...this.nodes.keys()].map((id, i) => [id, i]))
-    const span = spans(this.events)
-    for (const node of this.nodes.values()) {
-      const bounds = span.get(node.id)
-      if (!node.start && bounds) node.start = bounds[0]
-      if (!node.end && bounds && node.kind === 'session') node.end = bounds[1]
-    }
-    // A root never settles in its own journal; the run's result is its terminal state.
-    if (root && result && !root.status && typeof result.kind === 'string') {
-      root.status = result.kind
-      root.end ??= span.get(root.id)?.[1]
-    }
-
-    this.events.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : (nodeOrder.get(a.node)! - nodeOrder.get(b.node)!) || a.order - b.order))
-    // anchor.v1 ids are unique by construction; a repeat means two events claim the same bytes.
-    const ids = new Set<string>()
-    for (const event of this.events) {
-      if (ids.has(event.id)) throw new SnapshotMismatchError(`duplicate anchor ${event.id} (${event.source.path}${event.source.line ? `:${event.source.line}` : event.source.pointer ?? ''})`)
-      ids.add(event.id)
-    }
-    // A 12-hex object prefix names exactly one object among the record's sources.
-    const objects = new Map<string, string>()
-    for (const source of this.sources.values()) {
-      if (!source.sha256 || source.line !== undefined || source.pointer !== undefined) continue
-      const prefix = source.sha256.slice(0, 12)
-      const known = objects.get(prefix)
-      if (known && known !== source.sha256) throw new SnapshotMismatchError(`object prefix ${prefix} names two objects`)
-      objects.set(prefix, source.sha256)
-    }
-
-    const captures = [...this.nodes.values()].map((node) => ({ nodeId: node.id, ...node.capture }))
-    const counts = { complete: 0, lossy: 0, absent: 0 }
-    for (const capture of captures) counts[capture.status]++
-    // The original capture is complete only when there are agents and every one of them is fully captured: finding
-    // pages alone (a finding-only run) are what an agent wrote, not the agent's record.
-    const agents = captures.filter((capture) => this.nodes.get(capture.nodeId)?.kind !== 'finding')
-    // "Served" needs an observed response: a node with no successful assistant message keeps its declared model only.
-    const answered = new Set(
-      this.events.filter((event) => event.kind === 'message' && event.detail.role === 'assistant' && event.detail.responseStatus !== 'error').map((event) => event.node),
-    )
-    const priced = this.events.some((event) => num(event.detail.costListUsd) !== undefined)
-    const asText = (value: Json) => (typeof value === 'string' ? value : value ? JSON.stringify(value, null, 2) : '')
-    const knowledge = asText(task?.knowledge)
-    const completion = asText(task?.completion)
-    const record = {
-      schema: 'agent-record.v1',
-      runId: this.runId,
-      title: extra.title ?? this.runId,
-      producer: { name: '@drewstone/agent-record/adapters/agent-runtime', version: ADAPTER_VERSION },
-      idScheme: ID_SCHEME,
-      input: {
-        ...(this.options.manifestSha256 ? { snapshot: `sha256:${this.options.manifestSha256}` } : {}),
-        runIdBasis: this.runIdBasis,
-        ...extra.input,
-      },
-      format: extra.format ?? this.format,
-      nodes: [...this.nodes.values()].map((node) => ({
-        id: node.id,
-        label: node.label,
-        parent: node.parent,
-        kind: node.kind,
-        role: node.role,
-        ...(node.assignment ? { assignment: node.assignment } : {}),
-        model: node.model,
-        ...(node.modelSource ? { modelSource: node.modelSource } : {}),
-        servedModel: answered.has(node.id) ? node.servedModel : null,
-        harness: node.harness,
-        ...(node.start ? { start: node.start } : {}),
-        ...(node.end ? { end: node.end } : {}),
-        ...(node.status ? { status: node.status } : {}),
-        ...(node.nativeSessionId ? { nativeSessionId: node.nativeSessionId } : {}),
-        ...(node.agentId ? { agentId: node.agentId } : {}),
-        ...(node.joinBasis ? { joinBasis: node.joinBasis } : {}),
-        ...(node.joinProof ? { joinProof: node.joinProof } : {}),
-        sandboxes: node.sandboxes,
-        capture: node.capture,
-      })),
-      events: this.events.map(({ order: _order, ...event }) => event),
-      sources: [...this.sources.values()].map(({ sha256, ...source }) => (sha256 ? { ...source, sha256 } : source)).sort((a, b) =>
-        a.path < b.path ? -1 : a.path > b.path ? 1 : (a.line ?? 0) - (b.line ?? 0) || (a.pointer ?? '').localeCompare(b.pointer ?? ''),
-      ),
-      assignment: extra.assignment ?? {
-        objective: str(task?.objective),
-        instruction: str(task?.instruction ?? (typeof task === 'string' ? task : '')),
-        knowledge,
-        completion,
-        suppliedKnowledge: knowledge,
-        deliverables: completion,
-        constraints: '',
-        source: this.runInputRel ? { path: this.sourcePath(this.runInputRel), sha256: this.file(this.runInputRel, this.runInputRel.startsWith('../') ? join(dirname(this.runDir), this.runInputRel.slice(3)) : undefined).sha256, pointer: '/task' } : null,
-      },
-      terminal: extra.terminal !== undefined
-        ? extra.terminal
-        : result
-          ? {
-              kind: typeof result.kind === 'string' ? result.kind : null,
-              reason: typeof result.reason === 'string' ? result.reason : null,
-              ...(typeof result.error?.message === 'string' ? { error: this.clip(result.error.message, null).text } : {}),
-            }
-          : null,
-      coverage: {
-        completeOriginalCapture: agents.length > 0 && agents.every((capture) => capture.status === 'complete'),
-        publicContent: '',
-        categoryMethod: 'Activity types are keyword matches on tool names and commands. They do not measure research value or show independent verification.',
-        cost: priced ? 'List price from recorded usage; not billed.' : 'Not recorded',
-        nodes: captures,
-        gaps: this.gaps.map((gap) => ({ runId: this.runId, ...gap })),
-      },
-    }
-    return { record, counts }
-  }
+  assemble(extra: AssemblyOptions = {}) { return assembleRecord(this, extra) }
 }
 
 /**
@@ -1268,189 +941,4 @@ export function ingestRun(runDir: string, options: IngestOptions = {}) {
   return finishRecord(record, counts)
 }
 
-// ---------------------------------------------------------------------------------------------------------
-// Bundles: one record from several native sessions, workflow journals, agent-runtime runs and finding pages.
-// bundle.json (agent-record.bundle.v1) sits at the bundle root; every path is relative to it.
-// ---------------------------------------------------------------------------------------------------------
-export const BUNDLE_SCHEMA = 'agent-record.bundle.v1'
-export type BundleHarness = 'claude-code' | 'codex' | 'opencode' | 'opencode-bridge' | 'pi'
-export interface BundleSession {
-  path: string
-  harness: BundleHarness
-  sessionId?: string
-  /** The session that launched this one; the converter records it only when the file layout proves it. */
-  parentPath?: string
-  agentId?: string
-  label?: string
-  /** Physical line windows, inclusive; lines outside them are out of the record's scope. */
-  lines?: [number, number][]
-}
-export interface Bundle {
-  schema: typeof BUNDLE_SCHEMA
-  recordId: string
-  title?: string
-  sessions: BundleSession[]
-  journals?: { path: string; kind: 'claude-workflow'; workflow?: string; parentPath?: string; label?: string }[]
-  runs?: { path: string; kind: 'agent-runtime'; runId?: string }[]
-  findings?: { path: string }[]
-}
-
-/** The reader of each harness a bundle session may name. */
-const SESSION_READERS: Record<BundleHarness, SessionReader> = {
-  'claude-code': readClaudeBundle,
-  codex: readCodexBundle,
-  opencode: readOpenCodeBundle,
-  'opencode-bridge': readBridgeBundle,
-  pi: readPiBundle,
-}
-
-function parseBundle(value: Json): Bundle {
-  if (value?.schema !== BUNDLE_SCHEMA) throw new RunUnreadableError(`bundle.json is not ${BUNDLE_SCHEMA}`)
-  if (typeof value.recordId !== 'string' || !value.recordId) throw new RunUnreadableError('bundle.json names no recordId')
-  if (!Array.isArray(value.sessions)) throw new RunUnreadableError('bundle.json lists no sessions')
-  const safe = (path: unknown) => typeof path === 'string' && path !== '' && !path.startsWith('/') && !path.split('/').includes('..')
-  for (const item of [...value.sessions, ...(value.journals ?? []), ...(value.runs ?? []), ...(value.findings ?? [])])
-    if (!safe(item?.path)) throw new RunUnreadableError(`bundle.json path ${JSON.stringify(item?.path)} leaves the bundle`)
-  return value as Bundle
-}
-
-/**
- * Convert a bundle directory. Joins come from evidence only and each records its basis and proof:
- *   workflow-agent-id    a Claude workflow journal's `started` agentId is the agentId carried by a session file
- *                        `agent-<id>.jsonl` beside `agent-<id>.meta.json`
- *   session-directory    a session under `<parent session id>/subagents/` belongs to that parent session
- * A session whose join does not verify stays its own node.
- */
-export function ingestBundle(dir: string, options: Omit<IngestOptions, 'runId'> = {}) {
-  if (options.manifest) verifySnapshot(dir, options.manifest)
-  const bundleText = readFileSync(join(dir, 'bundle.json'), 'utf8')
-  const bundle = parseBundle(JSON.parse(bundleText))
-  const maxText = Math.max(1024, options.maxText ?? 16384)
-  const main = new Ingest(dir, options.native, maxText, { runId: bundle.recordId, manifest: options.manifest, manifestSha256: options.manifestSha256 })
-  main.fileSource('bundle.json')
-
-  // Agent-runtime runs first: their nodes and sources keep the run's own ids, under the run's path.
-  for (const run of bundle.runs ?? []) {
-    const sub = new Ingest(join(dir, run.path), options.native, maxText, {
-      runId: run.runId ?? basename(run.path),
-      manifest: options.manifest,
-      prefix: `${run.path.replace(/\/+$/, '')}/`,
-    })
-    sub.convert()
-    for (const [id, node] of sub.nodes) {
-      if (main.nodes.has(id)) throw new SnapshotMismatchError(`node ${id} appears twice in the bundle`)
-      main.nodes.set(id, node)
-    }
-    for (const event of sub.events) main.events.push({ ...event, order: main.order++ })
-    for (const [key, source] of sub.sources) if (!main.sources.has(key)) main.sources.set(key, source)
-    for (const gap of sub.gaps) main.gaps.push(gap)
-    for (const [digest, node] of sub.claimed) main.claimed.set(digest, node)
-  }
-
-  // Workflow journals: one workflow node, one agent node per started agent.
-  const journalRows: { node: string; rel: string; sha256: string; row: Line; type: string; agentId: string }[] = []
-  const agentNodes: WorkflowAgents = new Map()
-  for (const journal of bundle.journals ?? []) {
-    const entry = main.file(journal.path)
-    main.fileSource(journal.path)
-    const wfId = basename(dirname(journal.path))
-    let workflowStart: string | undefined
-    if (journal.workflow) {
-      main.fileSource(journal.workflow)
-      try {
-        workflowStart = isoAt(JSON.parse(main.file(journal.workflow).text)?.timestamp) ?? undefined
-      } catch {
-        /* the workflow file is listed as a source either way */
-      }
-    }
-    if (!main.nodes.has(wfId))
-      main.nodes.set(wfId, blankNode(wfId, { label: journal.label ?? wfId, kind: 'agent', role: 'workflow', harness: 'claude-code-workflow', start: workflowStart, capture: { channel: 'journal', status: 'complete', reason: null } }))
-    for (const row of splitLines(entry.bytes)) {
-      const agentId = str(row.value?.agentId)
-      if (!agentId) continue
-      const id = `${wfId}:${agentId}`
-      if (!main.nodes.has(id)) {
-        main.nodes.set(id, blankNode(id, { label: `agent ${agentId.slice(0, 8)}`, parent: wfId, kind: 'agent', role: 'workflow agent', agentId: undefined }))
-        agentNodes.set(agentId, { node: id, rel: journal.path, line: row.line })
-      }
-      journalRows.push({ node: id, rel: journal.path, sha256: entry.sha256, row, type: str(row.value?.type) || 'row', agentId })
-    }
-  }
-
-  // Sessions: each harness's reader finds or creates the session's node and reads its file onto it.
-  const byPath = new Map<string, string>()
-  const pending: { session: BundleSession; node: NodeDraft }[] = []
-  for (const session of bundle.sessions) {
-    if (!Object.hasOwn(SESSION_READERS, session.harness)) throw new RunUnreadableError(`bundle.json session ${session.path} has an unknown harness`)
-    const node = SESSION_READERS[session.harness](main, session, agentNodes)
-    byPath.set(session.path, node.id)
-    pending.push({ session, node })
-  }
-  // Parents: a session stored under `<parent session id>/subagents/` belongs to that parent.
-  const sessionOwner = (path: string) => /(?:^|\/)([0-9a-f-]{36})\/subagents\//.exec(path)?.[1]
-  const proven = (child: string, parent: string) => {
-    const owner = sessionOwner(child)
-    return owner !== undefined && basename(parent, '.jsonl') === owner
-  }
-  for (const { session, node } of pending) {
-    if (!session.parentPath) continue
-    const parent = byPath.get(session.parentPath)
-    if (!parent || !proven(session.path, session.parentPath)) {
-      main.gaps.push({ nodeId: node.id, code: 'parent-unproven', detail: `${session.path} does not sit under ${session.parentPath}` })
-      continue
-    }
-    const target = node.parent && main.nodes.get(node.parent)?.role === 'workflow' ? main.nodes.get(node.parent)! : node
-    if (target.parent && target.parent !== parent) continue
-    target.parent = parent
-    target.joinBasis ??= 'session-directory'
-  }
-  for (const journal of bundle.journals ?? []) {
-    if (!journal.parentPath) continue
-    const parent = byPath.get(journal.parentPath)
-    const workflow = main.nodes.get(basename(dirname(journal.path)))
-    if (parent && workflow && proven(journal.path, journal.parentPath)) workflow.parent = parent
-    else if (workflow) main.gaps.push({ nodeId: workflow.id, code: 'parent-unproven', detail: `${journal.path} does not sit under ${journal.parentPath}` })
-  }
-
-  // Journal rows carry no time: a started row takes its session's first event, a result row its last.
-  const span = spans(main.events)
-  for (const item of journalRows) {
-    const bounds = span.get(item.node)
-    if (!bounds) {
-      main.gaps.push({ nodeId: item.node, code: 'journal-untimed-lines', detail: `${item.rel}:${item.row.line} has no time and no joined session` })
-      continue
-    }
-    const node = main.nodes.get(item.node)!
-    if (item.type === 'result') node.status ??= 'settled'
-    const { type: _t, agentId: _a, ...rest } = item.row.value
-    main.emit({
-      node: item.node,
-      at: item.type === 'started' ? bounds[0] : bounds[1],
-      kind: item.type,
-      category: 'lifecycle',
-      label: item.type,
-      source: { path: item.rel, sha256: item.sha256, line: item.row.line },
-      detail: { lifecycle: item.type, atBasis: item.type === 'started' ? 'session-first-event' : 'session-last-event', data: main.compactValue(rest) },
-    })
-  }
-  for (const node of main.nodes.values())
-    if (node.role === 'workflow agent' && node.capture.status === 'absent') {
-      node.capture = { channel: 'journal', status: 'absent', reason: 'no-session-joined' }
-      main.gaps.push({ nodeId: node.id, code: 'no-transcript:no-session-joined', detail: 'No session file carries this workflow agent id' })
-    }
-
-  for (const finding of bundle.findings ?? []) {
-    const paths = finding.path.endsWith('.md') ? [finding.path] : filesUnder(dir, finding.path.replace(/\/+$/, ''), '.md')
-    main.readFindings(`finding:${bundle.recordId}`, undefined, paths)
-  }
-
-  main.rootId = ''
-  const { record, counts } = main.assemble({
-    title: bundle.title ?? bundle.recordId,
-    format: 'bundle',
-    terminal: null,
-    assignment: { objective: '', instruction: '', knowledge: '', completion: '', suppliedKnowledge: '', deliverables: '', constraints: '', source: null },
-    input: { bundle: `sha256:${sha(bundleText)}` },
-  })
-  return finishRecord(record, counts)
-}
+export { BUNDLE_SCHEMA, ingestBundle, type BundleHarness, type BundleSession, type Bundle } from './harness-sessions.js'

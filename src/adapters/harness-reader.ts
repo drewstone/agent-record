@@ -5,7 +5,7 @@
  * opencode.ts anchors JSON Pointers into one document instead.
  */
 import { createHash } from 'node:crypto'
-import { readdirSync, statSync } from 'node:fs'
+import { closeSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { BundleSession, Ingest, NodeDraft } from './agent-runtime.js'
 import type { Json } from './part-events.js'
@@ -189,3 +189,115 @@ export function readLines(ingest: Ingest, node: NodeDraft, { rel, abs, window, r
 export type WorkflowAgents = Map<string, { node: string; rel: string; line: number }>
 /** One harness's sessions in a bundle: the node a session becomes (found or created), with its file read onto it. */
 export type SessionReader = (main: Ingest, session: BundleSession, agents: WorkflowAgents) => NodeDraft
+
+/** Reads a file's bytes and sha256. */
+export interface FileCache {
+  read(abs: string): { bytes: Buffer; sha256: string }
+}
+
+/**
+ * A FileCache that keeps each file's bytes while its device, inode, size and change times are unchanged, least
+ * recently used first out past `maxBytes`. The output never depends on it: a changed file is read again.
+ */
+export function createFileCache({ maxBytes = 1024 * 1024 * 1024 }: { maxBytes?: number } = {}): FileCache & { heldBytes(): number } {
+  const entries = new Map<string, { key: string; bytes: Buffer; sha256: string }>()
+  let held = 0
+  return {
+    read(abs) {
+      const stats = statSync(abs)
+      const key = `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}:${stats.ctimeMs}`
+      const hit = entries.get(abs)
+      entries.delete(abs)
+      if (hit?.key === key) {
+        entries.set(abs, hit)
+        return hit
+      }
+      if (hit) held -= hit.bytes.length
+      const bytes = readFileSync(abs)
+      const entry = { key, bytes, sha256: sha(bytes) }
+      if (bytes.length <= maxBytes / 4) {
+        entries.set(abs, entry)
+        held += bytes.length
+      }
+      for (const [path, old] of entries) {
+        if (held <= maxBytes) break
+        entries.delete(path)
+        held -= old.bytes.length
+      }
+      return entry
+    },
+    heldBytes: () => held,
+  }
+}
+
+/** A file's sha256 and length, streamed so a large file is never held. */
+export function hashFile(abs: string) {
+  const fd = openSync(abs, 'r')
+  try {
+    const hash = createHash('sha256')
+    const buffer = Buffer.allocUnsafe(1 << 20)
+    let bytes = 0
+    for (let n = readSync(fd, buffer); n > 0; n = readSync(fd, buffer)) {
+      hash.update(buffer.subarray(0, n))
+      bytes += n
+    }
+    return { sha256: hash.digest('hex'), bytes }
+  } finally {
+    closeSync(fd)
+  }
+}
+export function utf8Slice(buffer: Buffer, start: number, end: number) {
+  // Move boundaries off UTF-8 continuation bytes so no character is split.
+  while (start > 0 && start < buffer.length && (buffer[start]! & 0xc0) === 0x80) start++
+  while (end < buffer.length && end > 0 && (buffer[end]! & 0xc0) === 0x80) end--
+  return buffer.subarray(start, end).toString('utf8')
+}
+
+function shellWords(segment: string) {
+  const words: string[] = []
+  let word = '', quote = '', escaped = false, started = false
+  for (const char of segment) {
+    if (escaped) { word += char; escaped = false; continue }
+    if (char === '\\' && quote !== "'") { escaped = true; started = true; continue }
+    if (quote) { if (char === quote) quote = ''; else word += char; continue }
+    if (char === '"' || char === "'") { quote = char; started = true; continue }
+    if (/\s/.test(char)) { if (started) words.push(word); word = ''; started = false }
+    else { word += char; started = true }
+  }
+  if (quote || escaped) return segment.trim().split(/\s+/)
+  if (started) words.push(word)
+  return words
+}
+function commandVerb(command: string) {
+  for (const segment of command.split(/&&|\|\||;|\|/)) {
+    const words = shellWords(segment).filter(word => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(word))
+    while (words.length && (['sudo', 'env', 'time', 'exec', 'nohup', 'timeout'].includes(words[0]!) || /^\d+[smh]?$/.test(words[0]!))) words.shift()
+    if (!words.length || ['cd', 'export', 'set', 'source', '.'].includes(words[0]!)) continue
+    const program = words[0]!.split('/').at(-1)!
+    if (!/^[A-Za-z0-9_.+\-]+$/.test(program)) return ''
+    return [program, /^[a-z][a-z0-9\-]{1,24}$/.test(words[1] ?? '') ? words[1] : ''].filter(Boolean).join(' ')
+  }
+  return ''
+}
+function stepName(tool: string | null, input: Json) {
+  let args = input
+  if (typeof args === 'string') { try { args = JSON.parse(args) } catch { args = null } }
+  const key = ['filePath', 'path', 'pattern', 'command', 'url', 'query'].find(key => typeof args?.[key] === 'string' && args[key].trim())
+  let target: string = key ? args[key].trim().split(/\r?\n/)[0] : ''
+  if (key === 'filePath' || key === 'path') target = target.replace(/\/+$/, '').split('/').at(-1) ?? ''
+  else if (key === 'command') target = commandVerb(target)
+  else if (key === 'url') target = target.replace(/^[a-z]+:\/\//i, '').split(/[/?#]/)[0]!.split('@').at(-1) ?? ''
+  else target = target.replace(/[\w+/=.\-]{20,}/g, '…').slice(0, 40)
+  return tool && target ? `${tool} · ${target}` : tool
+}
+function canonicalInput(value: Json): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalInput).join(', ')}]`
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${canonicalInput(key)}: ${canonicalInput(value[key])}`).join(', ')}}`
+  return JSON.stringify(value ?? null).replace(/[\u007f-\uffff]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`)
+}
+/** Safe activity metadata: command arguments and URL credentials never become a display name. */
+export function toolObservation(tool: unknown, state: Json) {
+  const name = typeof tool === 'string' ? tool : null, args = state?.input ?? null
+  return { tool: name, start: num(state?.time?.start) ?? null, end: num(state?.time?.end) ?? null, failed: state?.status === 'error',
+    inputDigest: sha(canonicalInput([tool ?? null, args])).slice(0, 16), name: stepName(name, args) }
+}
