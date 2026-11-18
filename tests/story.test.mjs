@@ -30,7 +30,7 @@ test('the UCS header carries its metered cost once, its tokens and its recorded 
   assert.equal(summary.outputTokens, 134562 + 16845)
   assert.deepEqual([summary.steps, summary.errors, summary.noResult], [138, 0, 10])
   assert.deepEqual(summary.models, ['Claude Opus 5.5 on Claude Code'])
-  assert.deepEqual(summary.result, ['The run ended at 19:35 UTC; its recorded outcome is “winner”.'])
+  assert.deepEqual(summary.result, ['The run ended at 19:35 UTC: winner.'])
   assert.ok(summary.leavesOut.some((line) => line.endsWith('this record shows only UCS leaf.')))
 })
 
@@ -40,20 +40,23 @@ test('UCS episodes hold every step once and name the long computations and the u
   const gap = ucs.episodes.filter((episode) => episode.notCaptured)
   assert.deepEqual(gap.map((episode) => episode.title), ['No steps captured for 25 min'])
   assert.equal(gap[0].quote, undefined, "a computed sentence is not quoted as anyone's words")
-  assert.deepEqual(ucs.turningPoints.map((point) => point.title), ['The run ended: winner'])
+  assert.deepEqual(ucs.turningPoints.map((point) => point.title), ['The run started', 'The run ended: winner'])
 })
 
-test('the Claude Code workflow record groups its spawns and shows each failed call with its error text', () => {
+test('the Claude Code workflow record groups its spawns, keeps failed calls off the turning points and shows their error text', () => {
   const { summary, turningPoints } = workflow
   assert.equal(summary.agents.length, 6)
   assert.equal(summary.steps, 72)
   assert.equal(summary.errors, 3)
   assert.deepEqual(summary.models, ['Claude Fable 5 on Claude Code'])
-  assert.equal(turningPoints[0].title, 'Operator workflow started 5 agents')
-  const failed = turningPoints.filter((point) => point.kind === 'errors')
+  assert.deepEqual(turningPoints.map((point) => point.title), ['The run started', 'Operator workflow started 5 agents'])
+  const failed = workflow.steps.filter((step) => step.outcome === 'error')
   assert.equal(failed.length, 3)
-  assert.ok(failed.every((point) => point.excerpt && point.stepId))
-  assert.ok(failed.some((point) => point.excerpt === 'Command timed out after 2m 0s'))
+  assert.ok(failed.every((step) => step.output))
+  assert.ok(failed.some((step) => step.output.includes('Command timed out after 2m 0s')))
+  // Each verifier's episode is titled by the prompt it was given; none by a list of kinds of work.
+  assert.ok(workflow.episodes.every((episode) => !/, then /.test(episode.title)))
+  assert.ok(workflow.episodes.some((episode) => episode.title === 'Literature audit.'))
   // No terminal state and no end for the workflow: the record says so instead of claiming the run is still running.
   assert.deepEqual(summary.result, ['The record has no end for the run; its last event is at 04:19 UTC.'])
   assert.equal(summary.cost, undefined)

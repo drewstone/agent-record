@@ -18,8 +18,6 @@ export type TextFormat = 'json' | 'markdown' | 'text'
 export const IDLE_SPLIT_MS = 3 * 60_000
 /** A recorded call at least this long is a long call: it draws to scale and long calls form their own episodes. */
 export const LONG_STEP_MS = 4 * 60_000
-/** Failed steps of one agent and tool within this window are one turning point. */
-export const ERROR_BURST_MS = 5 * 60_000
 /** Narration opens a new episode only after this many steps and this long since the agent's last words. */
 const NARRATION_STEPS = 3
 const NARRATION_MS = 2 * 60_000
@@ -40,7 +38,8 @@ const INPUT_BURST_MS = 10 * 60_000
 /** A partly captured agent's silence at least this long, between its episodes, is shown as an uncaptured stretch;
  *  a shorter one is as likely a long model turn as missing capture. */
 const UNCAPTURED_MIN_MS = 10 * 60_000
-const MAX_TURNING = 10
+/** At most this many turning points; the start, the result and the end are always kept. */
+const MAX_TURNING = 16
 const EXCERPT_MAX = 160
 
 /**
@@ -114,7 +113,7 @@ export interface RecordEpisode {
   start: number
   end: number
   title: string
-  /** Words someone wrote: the input's or the agent's own first sentence. */
+  /** One line of someone's words under the title: what the agent said next, or the rest of the input. */
   quote?: string
   items: EpisodeItem[]
   steps: RecordStep[]
@@ -127,7 +126,9 @@ export interface RecordEpisode {
   turningPoints: number[]
 }
 
-export type TurningKind = 'spawn' | 'check' | 'input' | 'finding' | 'errors' | 'end'
+/** Real moments only: the start, spawns, an agent that never started, inputs and checks, findings, the result,
+ *  endings. Failed steps stay on their steps and episodes. */
+export type TurningKind = 'start' | 'spawn' | 'check' | 'input' | 'finding' | 'result' | 'end'
 export interface RecordTurningPoint {
   n: number
   at: number
@@ -192,7 +193,8 @@ export interface RecordSummary {
   cost?: { usd: number; billed: boolean; of: number; agents: number }
   /** Ordered record facts, each a sentence. */
   result: string[]
-  /** The run's last recorded claim (`claims`), else its last recorded finding, with where it came from. */
+  /** The run's last recorded claim (`claims`), else its last recorded finding, else its last check's words, else the
+   *  root agent's last words, with where it came from. */
   claim?: { text: string; at: number; node: string; by: string; episode?: string; eventId?: string }
   ending: { words: string; at?: number; tone: Tone }
   /** What the record leaves out, in plain sentences. */
@@ -516,7 +518,7 @@ function build(record: RunRecord): RecordStory {
 
   const summary = summarize(record, agents, items, steps, findings, labelOf)
   if (summary.claim?.eventId) { const episode = episodeOfItem.get(summary.claim.eventId); if (episode) summary.claim.episode = episode }
-  const turningPoints = turning(record, agents, items, steps, findings, episodes, labelOf, multi, episodeOfStep)
+  const turningPoints = turning(record, agents, items, steps, findings, episodes, labelOf, multi, episodeOfStep, summary.claim)
   const byEpisode = new Map(episodes.map((episode) => [episode.id, episode]))
   for (const point of turningPoints) if (point.episode) byEpisode.get(point.episode)?.turningPoints.push(point.n)
   return { summary, steps, episodes, turningPoints, gaps }
@@ -663,6 +665,46 @@ function segment(items: Item[]): Item[][] {
   return tidy.map((p) => p.items)
 }
 
+/** One line after a text's first sentence: the excerpt under a title taken from that sentence. */
+function afterFirst(text: string): string | undefined {
+  const head = firstSentence(text, Infinity).replace(/\.$/, '')
+  const body = plainText(text.replace(/\*\*/g, ''))
+  const at = body.indexOf(head)
+  const rest = at < 0 ? '' : body.slice(at + head.length).replace(/^[.!?:;,\s]+/, '')
+  return rest ? firstSentence(rest) : undefined
+}
+
+/** A step's object in a few words: a file's name, a command's program and first argument, an address's host. */
+function shortObject(step: RecordStep): string {
+  const text = step.object!.split('\n')[0]!.trim()
+  const base = (word: string) => (word.includes('/') ? word.replace(/\/+$/, '').split('/').pop() || word : word)
+  if (step.command) return text.replace(/^(?:cd \S+\s*(?:&&|;)\s*)+/, '').split(/\s+/).slice(0, 2).map(base).join(' ')
+  if (step.action === 'Fetched') return text.replace(/^[a-z]+:\/\//i, '').split(/[/?#]/)[0]!
+  if (step.objectMono) return base(text)
+  if (text.length <= 48) return text
+  const cut = text.lastIndexOf(' ', 46)
+  return `${text.slice(0, cut > 10 ? cut : 46)}”`
+}
+
+/** What an episode's steps acted on, from their published arguments: "Wrote README.md and claim.json", "Ran python3
+ *  search.py". Undefined when no step publishes one. Without objects, the one kind of work most steps did. */
+function aimOf(steps: RecordStep[]): string | undefined {
+  const shown = steps.filter((step) => step.object)
+  if (shown.length) {
+    const [action, list] = [...group(shown, (step) => step.action)].sort((a, b) => b[1].length - a[1].length)[0]!
+    const names = [...new Set(list.map(shortObject))]
+    return `${action} ${names.slice(0, 2).join(' and ')}${names.length > 2 ? ` and ${names.length - 2} more` : ''}`
+  }
+  if (!steps.length) return undefined
+  const longs = steps.filter((step) => step.long)
+  if (longs.length) {
+    const mean = longs.reduce((sum, step) => sum + step.durationMs!, 0) / longs.length
+    return `${countPhrase(longs[0]!.phrase, longs.length)}, about ${span(mean)}${longs.length > 1 ? ' each' : ''}`
+  }
+  const [phrase, list] = [...group(steps, (step) => step.phrase)].sort((a, b) => b[1].length - a[1].length)[0]!
+  return countPhrase(phrase, list.length)
+}
+
 function episodeOf(node: string, items: Item[]): RecordEpisode {
   const steps = items.flatMap((item) => (item.type === 'step' ? [item.step] : []))
   const errors = steps.filter((step) => step.outcome === 'error').length
@@ -672,20 +714,16 @@ function episodeOf(node: string, items: Item[]): RecordEpisode {
   const input = items.find((item) => item.type === 'input') as Extract<Item, { type: 'input' }> | undefined
   let start = Infinity, end = -Infinity
   for (const item of items) { start = Math.min(start, item.at); end = Math.max(end, item.type === 'step' ? item.step.end : item.at) }
-  const longs = steps.filter((step) => step.long)
-  const longMs = longs.reduce((sum, step) => sum + step.durationMs!, 0)
-  let title: string
-  if (input) title = input.check ? checkSentence(input.check, input.at) : 'Received a prompt'
-  else if (longs.length && longMs >= 0.5 * (end - start)) {
-    const mean = longMs / longs.length, about = mean >= 60_000 ? `${Math.round(mean / 60_000)} min` : `${Math.round(mean / 1000)} s`
-    title = `${countPhrase(longs[0]!.phrase, longs.length)}, about ${about}${longs.length > 1 ? ' each' : ''}`
-  } else if (steps.length) {
-    const byPhrase = new Map<string, number>()
-    for (const step of steps) byPhrase.set(step.phrase, (byPhrase.get(step.phrase) ?? 0) + 1)
-    const ranked = [...byPhrase].sort((a, b) => b[1] - a[1]).slice(0, 2).filter(([, n], i) => i === 0 || n >= 2)
-    title = ranked.map(([phrase, n], i) => (i ? lower(countPhrase(phrase, n)) : countPhrase(phrase, n))).join(', then ')
-  } else title = said ? 'Explained its next move' : 'Waited'
-  const quote = input ? firstSentence(input.text) : said ? firstSentence(said.text) : undefined
+  // The title is someone's own sentence: the input that opened the episode, else the agent's first words. Without
+  // words it names what the steps acted on, else the one kind of work most of them did.
+  let title: string, quote: string | undefined
+  if (input) {
+    title = input.check ? checkSentence(input.check, input.at) : firstSentence(input.text)
+    quote = said ? firstSentence(said.text) : afterFirst(input.text)
+  } else if (said) {
+    title = firstSentence(said.text)
+    quote = afterFirst(said.text) ?? items.filter((item): item is Extract<Item, { type: 'say' }> => item.type === 'say').slice(1).map((item) => firstSentence(item.text))[0]
+  } else title = aimOf(steps) ?? 'Waited'
   return {
     id: '', n: 0, node, start, end, title, ...(quote ? { quote } : {}),
     items: foldRepeats(items), steps, errors, mix, errorTextPublished: steps.some((step) => step.outcome === 'error' && !!step.output), turningPoints: [],
@@ -713,7 +751,7 @@ function foldRepeats(items: Item[]): EpisodeItem[] {
 // ---------------------------------------------------------------------------------------------------------------
 
 function turning(record: RunRecord, agents: RecordAgent[], items: Item[], steps: RecordStep[], findings: Finding[], episodes: RecordEpisode[],
-  labelOf: (id: string) => string, multi: boolean, episodeOfStep: Map<string, string>): RecordTurningPoint[] {
+  labelOf: (id: string) => string, multi: boolean, episodeOfStep: Map<string, string>, claim: RecordSummary['claim']): RecordTurningPoint[] {
   const who = (node: string) => (multi ? cap(labelOf(node)) : 'The agent')
   const own = group(episodes, (episode) => episode.node)
   const episodeAt = (node: string, at: number) => {
@@ -732,7 +770,9 @@ function turning(record: RunRecord, agents: RecordAgent[], items: Item[], steps:
   // Agents one parent started together are one turning point; a one-word role says nothing an excerpt needs to.
   const spawned = agents.filter((agent) => agent.parent && agent.start !== undefined).map((agent) => ({ at: agent.start!, agent })).sort((a, b) => a.at - b.at)
   for (const group of burst(spawned, ENDS_TOGETHER_MS, (item) => item.agent.parent!)) {
-    const list = group.map((item) => item.agent), first = list[0]!, brief = first.assignment ?? (first.role && /\s/.test(first.role) ? first.role : undefined)
+    const list = group.map((item) => item.agent), first = list[0]!
+    // An agent with no captured steps is explained by its own ending point.
+    const brief = !first.captured ? undefined : first.assignment ?? (first.role && /\s/.test(first.role) ? first.role : undefined)
     add({ at: first.start!, node: first.id, kind: 'spawn', tone: 'info', priority: 4,
       title: `${cap(labelOf(first.parent!))} started ${list.length === 1 ? first.label : `${list.length} agents`}`,
       ...(list.length > 1 ? { excerpt: list.map((agent) => agent.label).join(', ') } : brief ? { excerpt: firstSentence(brief) } : {}) })
@@ -760,15 +800,6 @@ function turning(record: RunRecord, agents: RecordAgent[], items: Item[], steps:
   const bursts = burst(findings, FINDING_BURST_MS, (finding) => finding.node)
   bursts.forEach((list, i) => add({ at: list[0]!.at, ...(list.length > 1 ? { end: list[list.length - 1]!.at } : {}), node: list[0]!.node, kind: 'finding', tone: 'ok',
     title: list.length === 1 ? 'Recorded a finding' : `Recorded ${list.length} findings`, excerpt: list[list.length - 1]!.title, priority: i === bursts.length - 1 ? 2 : 5 }))
-  for (const failedSteps of group(steps.filter((step) => step.outcome === 'error'), (step) => step.node).values()) {
-    for (const list of burst(failedSteps, ERROR_BURST_MS, (step) => step.tool)) {
-      const first = list[0]!, last = list[list.length - 1]!
-      const excerpt = list.map((step) => step.output && errorLine(step.output)).find(Boolean)
-      add({ at: first.at, ...(list.length > 1 ? { end: last.at } : {}), node: first.node, kind: 'errors', tone: 'error',
-        title: `${list.length === 1 ? `A ${first.tool} call failed` : `${list.length} ${first.tool} calls failed`}${list.length > 1 ? `, ${clock(first.at)}–${clock(last.at)}` : ''}`,
-        ...(excerpt ? { excerpt } : {}), stepId: first.id, priority: list.length >= 3 ? 3 : 6 })
-    }
-  }
   // Endings of captured agents other than the root, grouped when they end together the same way; then the run's end.
   const ends = agents.filter((agent) => agent.parent && agent.captured && agent.end !== undefined).sort((a, b) => a.end! - b.end!)
   const together: RecordAgent[][] = []
@@ -781,6 +812,12 @@ function turning(record: RunRecord, agents: RecordAgent[], items: Item[], steps:
     title: `${list.map((agent) => cap(agent.label)).join(' and ')} ${list[0]!.status === 'ended' ? 'ended' : `ended: ${list[0]!.status}`}`, priority: 3 })
   const root = agents.find((agent) => !agent.parent)
   const ending = runEnding(record, agents)
+  // The run started at the earliest recorded start of any agent or observed item.
+  let begun = items.find((item) => item.exact)?.at ?? Infinity
+  for (const agent of agents) if (agent.start !== undefined && agent.start < begun) begun = agent.start
+  if (root && Number.isFinite(begun)) add({ at: begun, node: root.id, kind: 'start', tone: 'muted', title: 'The run started', priority: 0 })
+  // The result is its own moment unless it is a check's words, which the check's point already shows.
+  if (claim && Number.isFinite(claim.at) && !items.some((item) => item.type === 'input' && item.check && item.id === claim.eventId)) add({ at: claim.at, node: claim.node, kind: 'result', tone: 'ok', title: 'The result', excerpt: firstSentence(claim.text), priority: 0 })
   if (root && ending.at !== undefined) add({ at: ending.at, node: root.id, kind: 'end', tone: ending.tone, title: ending.words === 'ended' ? 'The run ended' : `The run ended: ${ending.words}`, priority: 0 })
   const kept = out.sort((a, b) => a.priority - b.priority || a.at - b.at).slice(0, MAX_TURNING).sort((a, b) => a.at - b.at || a.priority - b.priority)
   return kept.map(({ priority: _priority, ...point }, i) => ({ ...point, n: i + 1 }))
@@ -796,14 +833,6 @@ function burst<T extends { at: number }>(list: T[], window: number, key: (item: 
   return out
 }
 
-/** The line of an error's text that says what went wrong: the last line naming an error, else the first line. */
-function errorLine(text: string): string | undefined {
-  const lines = text.split('\n').map((line) => line.replace(/<\/?[a-z_]+>/g, '').trim()).filter((line) => line && !/^exit code \d+$/i.test(line))
-  const named = lines.filter((line) => /error|exception|no such file|not found|denied|refused|timed out|cannot|failed|invalid/i.test(line)).pop()
-  const line = named ?? lines[0]
-  return line ? firstSentence(line) : undefined
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------------------------------------------
@@ -817,7 +846,8 @@ function runEnding(record: RunRecord, agents: RecordAgent[]): RecordSummary['end
   const kind = terminal?.kind ? words(terminal.kind) : root?.status && root.status !== NO_END && root.status !== 'ended' ? root.status : undefined
   const reason = terminal?.reason ? words(terminal.reason) : undefined
   const open = !terminal?.kind && (!root || root.status === NO_END)
-  const said = open ? NO_END : kind ? `${kind}${reason && reason !== kind ? `, ${reason}` : ''}` : reason ?? 'ended'
+  // The reason ("cancelled") is the more specific word; the kind stands when no reason is recorded.
+  const said = open ? NO_END : reason ?? kind ?? 'ended'
   return { words: said, ...(root?.end !== undefined ? { at: root.end } : {}), tone: root?.tone === 'error' ? 'error' : 'muted' }
 }
 
@@ -842,9 +872,10 @@ function summarize(record: RunRecord, agents: RecordAgent[], items: Item[], step
   const checked = items.filter((item): item is Extract<Item, { type: 'input' }> => item.type === 'input' && !!item.check).pop()
   if (checked) result.push(`${checkSentence(checked.check!, checked.at)}.`)
   if (ending.words === NO_END) result.push(timed ? `The record has no end for the run; its last event is at ${clock(end)} UTC.` : 'The record has no end for the run.')
-  else result.push(`The run ended${ending.at !== undefined ? ` at ${clock(ending.at)} UTC` : ''}${ending.words === 'ended' ? '' : `; its recorded outcome is “${ending.words}”`}.`)
+  else result.push(`The run ended${ending.at !== undefined ? ` at ${clock(ending.at)} UTC` : ''}${ending.words === 'ended' ? '' : `: ${ending.words}`}.`)
 
-  // The claim: the last recorded claim, else the last recorded finding.
+  // The claim: the last recorded claim, else the last recorded finding, else the last check's own words, else the root
+  // agent's last words.
   const claims = record.claims ?? []
   const lastClaim = claims[claims.length - 1], lastFinding = findings[findings.length - 1]
   const claimEvent = lastClaim?.eventId ? record.events.find((event) => event.id === lastClaim.eventId) : undefined
@@ -852,6 +883,14 @@ function summarize(record: RunRecord, agents: RecordAgent[], items: Item[], step
   let claim: RecordSummary['claim']
   if (lastClaim) claim = { text: firstSentence(lastClaim.statement, 240), at: claimAt, node: lastClaim.agentNodeId ?? '', by: `${lastClaim.agentNodeId ? `${cap(labelOf(lastClaim.agentNodeId))}'s` : 'The'} last recorded claim${Number.isFinite(claimAt) ? `, ${clock(claimAt)} UTC` : ''}`, ...(lastClaim.eventId ? { eventId: lastClaim.eventId } : {}) }
   else if (lastFinding) claim = { text: lastFinding.title, at: lastFinding.at, node: lastFinding.node, by: `The last recorded finding, ${clock(lastFinding.at)} UTC`, eventId: lastFinding.id }
+  else if (checked) claim = { text: checked.check!.reason ?? firstSentence(checked.text, 240), at: checked.at, node: checked.node, by: `${checkSentence(checked.check!, checked.at)}`, eventId: checked.id }
+  else {
+    // Without a claim, finding or check, the result is the run's own last words: the root agent's last message.
+    const root = agents.find((agent) => !agent.parent)
+    let words: Extract<Item, { type: 'say' }> | undefined
+    for (const item of items) if (item.type === 'say' && item.node === root?.id) words = item
+    if (words) claim = { text: firstSentence(words.text, 240), at: words.at, node: words.node, by: `${agents.length > 1 ? `${cap(root!.label)}'s` : 'The agent\'s'} last words, ${clock(words.at)} UTC`, eventId: words.id }
+  }
 
   const captured = agents.filter((agent) => agent.captured)
   const costs = agents.filter((agent) => agent.cost)
