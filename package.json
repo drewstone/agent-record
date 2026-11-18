@@ -1,6 +1,6 @@
 {
   "name": "@drewstone/agent-record",
-  "version": "3.0.9",
+  "version": "3.1.0",
   "description": "Validated agent records, research reports, harness adapters, ingest and standalone report exports.",
   "type": "module",
   "license": "MIT",
@@ -26,6 +26,10 @@
     "./record": {
       "types": "./dist/record.d.ts",
       "import": "./dist/record.js"
+    },
+    "./story": {
+      "types": "./dist/story.d.ts",
+      "import": "./dist/story.js"
     },
     "./adapters/research-publication": {
       "types": "./dist/adapters/research-publication.d.ts",

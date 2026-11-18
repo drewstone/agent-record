@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto'
 import { closeSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { BundleSession, Ingest, NodeDraft } from './agent-runtime.js'
-import { num, type Json } from './part-events.js'
+import { callSubject, num, type Json } from './part-events.js'
 
 export { isoAt, num, str, type Json } from './part-events.js'
 export type Source = { path: string; sha256: string; bytes: number; line?: number; pointer?: string; label?: string }
@@ -280,13 +280,11 @@ function commandVerb(command: string) {
   return ''
 }
 function stepName(tool: string | null, input: Json) {
-  let args = input
-  if (typeof args === 'string') { try { args = JSON.parse(args) } catch { args = null } }
-  const key = ['filePath', 'path', 'pattern', 'command', 'url', 'query'].find(key => typeof args?.[key] === 'string' && args[key].trim())
-  let target: string = key ? args[key].trim().split(/[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/u)[0] : ''
-  if (key === 'filePath' || key === 'path') target = target.replace(/\/+$/, '').split('/').at(-1) ?? ''
-  else if (key === 'command') target = commandVerb(target)
-  else if (key === 'url') target = target.replace(/^[a-z]+:\/\//i, '').split(/[/?#]/)[0]!.split('@').at(-1) ?? ''
+  const subject = callSubject(input)
+  let target: string = subject ? subject.text.split(/[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/u)[0]! : ''
+  if (subject?.kind === 'path') target = target.replace(/\/+$/, '').split('/').at(-1) ?? ''
+  else if (subject?.kind === 'command') target = commandVerb(target)
+  else if (subject?.kind === 'url') target = target.replace(/^[a-z]+:\/\//i, '').split(/[/?#]/)[0]!.split('@').at(-1) ?? ''
   else target = [...target.replace(/[\p{L}\p{N}_+/=.\-]{20,}/gu, '…')].slice(0, 40).join('')
   return tool && target ? `${tool} · ${target}` : tool
 }

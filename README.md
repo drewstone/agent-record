@@ -37,7 +37,17 @@ export function RunPage({ record }) {
 }
 ```
 
-Sandbox UI owns the retained hierarchy, transcript, source inspector, measured usage, authored report views, and evidence graph. Hosts supply validated records and control selection/URLs. Charts owns waterfall playback, speed, zoom, and the time cursor. Renderers preserve original event/call identities and never infer missing captures or relationships from names or timing.
+Sandbox UI owns the retained record view, authored report views, and evidence graph. Hosts supply validated records and control selection/URLs. Charts owns the run timeline. Renderers preserve original event/call identities and never infer missing captures or relationships from names or timing.
+
+### The record as a story
+
+```ts
+import { recordStory, summarizeRecord, recordEpisodes, recordTurningPoints, recordSteps, utc, span } from '@drewstone/agent-record/story'
+```
+
+Every value a record view prints comes from here, so every host shows the same numbers. The story reads only the record's own fields: node identity, `parent`, the `agentId` join and `capture`; each event's `category`, tool calls and their results (paired by node and call id), `durationMs` and `atBasis`; `usage` and `costListUsd` with their scope; inputs (`role: 'user'`) and their structured `check`; `claims` and recorded findings. It parses no producer's tool names or text conventions.
+
+`summarizeRecord` gives the title, what was asked, the result (an outside check's verdict, then how the run ended), the last recorded claim or finding, cost and output tokens per agent and in total, and what the record leaves out. An agent's spend is its most complete source, never a sum of sources (see `usageScope` in the [record format](docs/record-format.md)). `recordSteps` merges a model turn with each tool call it made and says what ran: the command, file, query or address from its arguments, with its input, output, outcome and recorded duration. `recordEpisodes` groups steps into aims (split by narration, inputs, idle gaps over 3 min and long-call chains) and folds runs of identical unpublished steps; a partly captured agent's silence of 10 min or more is its own row. `recordTurningPoints` keeps at most ten: spawns, agents that never started, new prompts and checks, findings, error bursts (one per agent and tool within 5 min), endings and the run's end. `utc` and `span` format every time and length. A missing value is omitted, never printed as 0, a dash or "Unknown".
 
 The graph model remains available from this package’s `/record` entry. It links only recorded parent IDs, source hashes, claim IDs, reviewer sessions, citations, and profile digests. Missing targets remain unlinked.
 

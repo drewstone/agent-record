@@ -490,6 +490,8 @@ export class Ingest {
         source: { path: rel, sha256: entry.sha256, line: row.line },
         detail: {
           lifecycle: kind,
+          // An execution's input is the text the agent was given, so it reads as a user turn.
+          ...(kind === 'execution-input' && reason ? { role: 'user' } : {}),
           ...(subjectId && subjectId !== node.id ? { subject: subjectId } : {}),
           ...(observed ? {} : { atBasis: 'carried' }),
           ...(reason ? this.shown('publicText', reason, () => this.lineSource(rel, row.line, row.raw)) : {}),

@@ -121,6 +121,7 @@ Omit a source when unavailable; never fabricate an archive location.
 The completeness flag is an assertion from the producer, not an attestation performed by the viewer.
 The converter asserts it only when the record has agent or session nodes and every one has a complete capture; finding pages alone never make a capture complete.
 Missing cost is unknown: the converter writes `Not recorded` unless an event carries `costListUsd`.
+Text given to an agent is an event with `role: 'user'`, whatever its kind; the agent-runtime converter writes it on an `execution-input` that carries text.
 Historical corrections should remain source-linked, not silently replace original records.
 
 ## Optional fields added in 0.4
@@ -135,8 +136,12 @@ Event `detail` can carry:
 | `reasoning` | Reasoning text the harness recorded. |
 | `reasoningOmitted` | Thinking blocks the provider returned without text (signature only). The model thought; no text exists to show. |
 | `reasoningRedacted` | Encrypted `redacted_thinking` blocks. |
-| `durationMs` | Tool call to result time from the source's own clock. |
+| `durationMs` | Tool call to result time from the source's own clock: a part's own start and end, never the clock of the frame that first showed it. |
 | `costListUsd`, `usdKnown` | List-price estimate from recorded usage. `usdKnown: false` means no bill confirms it. |
+| `usageScope`, `costScope` | What `usage` and `costListUsd` cover. Absent: one response, so values add up. `execution-total`: one execution, so values add up. `session-total`: a session's running cost state, so its largest value is its total. `metered`: one execution's spend to date at metering time (USD in `spent.usd` when no `costListUsd`); a node's meters add up, and a meter that repeats the node's running total, its previous meter or a child's last meter is a settlement total or roll-up already counted. Sources describe the same spend: an agent's total is its most complete source, never their sum. |
+| `spent` | A runtime meter's own reading, `{usd, usdKnown, ...}`, kept as recorded. |
+| `atBasis` | Present when `at` was not observed for this event, naming where it came from (`carried` from the previous timed line, `snapshot-mtime`, ...). Such a time places an event but measures nothing. |
+| `check` | An outside check's verdict delivered with an input, set by its producer: `{outcome: passed \| failed, by?, subject?, at?, reason?}`. Never parsed from text. |
 | `rateLimit` | `{window, utilization, status}` from a provider rate-limit event. |
 | `clip` | `{bytes, sha256}`: the body was shortened to the first three quarters and last quarter of the size limit. `sha256` names the `sources` entry with the full text, or is null when no single source holds it. |
 

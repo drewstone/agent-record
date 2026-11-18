@@ -8,6 +8,19 @@ export const isoAt = (value: unknown): string | null => {
   const date = new Date(typeof value === 'number' && value < 1e11 ? value * 1000 : value)
   return Number.isFinite(date.valueOf()) && date.valueOf() >= Date.UTC(2001, 0, 1) && date.valueOf() < Date.UTC(2100, 0, 1) ? date.toISOString() : null
 }
+/** The argument names harnesses use for what a call acts on, first match wins. */
+const SUBJECT_KEYS: [string, 'path' | 'query' | 'command' | 'url'][] = [
+  ['filePath', 'path'], ['file_path', 'path'], ['path', 'path'], ['notebook_path', 'path'], ['pattern', 'query'],
+  ['command', 'command'], ['cmd', 'command'], ['url', 'url'], ['query', 'query'], ['q', 'query'],
+]
+/** What a tool call acted on, read from its arguments (an object or its JSON text): a file, a query, a command or an address. */
+export function callSubject(args: unknown): { kind: 'path' | 'query' | 'command' | 'url'; key: string; text: string } | undefined {
+  let value = args as Json
+  if (typeof value === 'string') try { value = JSON.parse(value) } catch { return undefined }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  for (const [key, kind] of SUBJECT_KEYS) if (typeof value[key] === 'string' && value[key].trim()) return { kind, key, text: value[key].trim() }
+  return undefined
+}
 /** A producer sequence is not a physical source line. Only supplied source anchors become provenance. */
 export interface PartEventRow {
   seq: number
@@ -71,10 +84,11 @@ function partDrafts(node: Json, seen: Seen, roles: Map<string, string>, category
   }
   if (part.type !== 'tool') return []
   const state = part.state ?? {}, name = str(part.tool), settled = state.status === 'completed' || state.status === 'error'
-  const start = num(state.time?.start) ?? firstMs, end = num(state.time?.end), field = state.status === 'error' ? 'error' : 'output'
+  const started = num(state.time?.start), start = started ?? firstMs, end = num(state.time?.end), field = state.status === 'error' ? 'error' : 'output'
+  // A duration is the part's own start and end; the clock of the frame that first showed the part measures nothing.
   return toolDrafts(frame, at, name, str(part.callID || id), id, content(['data', 'part', 'state', 'input'], state.input ?? {}), settled && at ? content(['data', 'part', 'state', field], state[field]) : undefined,
     { category: categoryOf?.(name, state.input) ?? 'other', error: state.status === 'error', marked: settled, end: isoAt(end ?? start ?? undefined) ?? node.start,
-      ...(end !== undefined && start !== null && start !== undefined ? { duration: Math.max(0, end - start) } : {}) })
+      ...(end !== undefined && started !== undefined ? { duration: Math.max(0, end - started) } : {}) })
 }
 
 function codexDrafts(node: Json, seen: Seen, categoryOf?: (name: string, input: unknown) => string): Draft[] {

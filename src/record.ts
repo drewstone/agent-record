@@ -193,9 +193,30 @@ export const recordSchema = z
               /** Encrypted redacted_thinking blocks. */
               reasoningRedacted: z.number().int().nonnegative().optional(),
               durationMs: z.number().nonnegative().optional(),
+              /** An outside check's verdict carried by a wake input, set by the input's producer; a viewer never parses it from text. */
+              check: z
+                .object({
+                  outcome: z.enum(['passed', 'failed']),
+                  /** Who checked, in words: "the Lab". */
+                  by: z.string().optional(),
+                  /** What was checked, in words: "rc2". */
+                  subject: z.string().optional(),
+                  at: time.optional(),
+                  reason: z.string().optional(),
+                })
+                .catchall(z.unknown())
+                .optional(),
               /** List-price estimate from recorded usage. Not a bill. */
               costListUsd: z.number().nonnegative().optional(),
               usdKnown: z.boolean().optional(),
+              /** What `usage` and `costListUsd` cover: absent for one response; `execution-total` for one execution;
+               *  `metered` for a runtime meter's total to date. `costScope: session-total` is a session's running cost. */
+              usageScope: z.string().optional(),
+              costScope: z.string().optional(),
+              /** A runtime meter's spend to date (`usageScope: metered`); `usdKnown: false` means no bill confirms `usd`. */
+              spent: z.object({ usd: z.number().nullish(), usdKnown: z.boolean().nullish() }).catchall(z.unknown()).nullish(),
+              /** Present when `at` was not observed for this event (`carried` from an earlier line, or a snapshot's time). */
+              atBasis: z.string().optional(),
               rateLimit: z
                 .object({
                   window: z.string().nullable(),
