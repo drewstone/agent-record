@@ -292,8 +292,8 @@ export function countPhrase(phrase: string, n: number): string {
   return `${phrase} ${n} times`
 }
 
-const VENDOR: Record<string, string> = { claude: 'Claude', opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku', fable: 'Fable', gpt: 'GPT', glm: 'GLM', gemini: 'Gemini', pro: 'Pro', flash: 'Flash', mini: 'mini', codex: 'Codex', kimi: 'Kimi', qwen: 'Qwen', deepseek: 'DeepSeek', grok: 'Grok', o: 'o' }
-const HARNESS: Record<string, string> = { 'claude-code': 'Claude Code', opencode: 'opencode', codex: 'Codex', pi: 'Pi', gemini: 'Gemini CLI', 'gemini-cli': 'Gemini CLI' }
+const VENDOR: Record<string, string> = { claude: 'Claude', opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku', fable: 'Fable', gpt: 'GPT', glm: 'GLM', gemini: 'Gemini', pro: 'Pro', flash: 'Flash', codex: 'Codex', kimi: 'Kimi', qwen: 'Qwen', deepseek: 'DeepSeek', grok: 'Grok' }
+const HARNESS: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex', pi: 'Pi', gemini: 'Gemini CLI', 'gemini-cli': 'Gemini CLI' }
 /** "claude-opus-5-5" → "Claude Opus 5.5"; "glm-5.3" → "GLM-5.3". */
 export function modelName(id: string): string {
   const parts = id.split('/').pop()!.split('-')
@@ -308,12 +308,10 @@ export function modelName(id: string): string {
 }
 export const harnessName = (id: string) => HARNESS[id.toLowerCase()] ?? id
 
-/** `mcp__server__name` and `server-name_tool` split into the tool's own name and its server. */
+/** An MCP tool's recorded name, `mcp__server__name`, split into the tool's own name and its server. */
 export function splitTool(raw: string): { tool: string; server?: string } {
   const mcp = /^mcp__(.+?)__(.+)$/.exec(raw)
   if (mcp) return { tool: mcp[2]!, server: mcp[1]! }
-  const prefixed = /^([a-z0-9]+(?:-[a-z0-9]+)+)_(.+)$/.exec(raw)
-  if (prefixed) return { tool: prefixed[2]!, server: prefixed[1]! }
   return { tool: raw }
 }
 
