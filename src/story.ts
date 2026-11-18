@@ -530,7 +530,7 @@ function segment(order: string[], items: Item[], gaps: UncapturedSpan[], life: L
         const last = current.items[current.items.length - 1]!
         if (item.at - current.lastEnd > IDLE_SPLIT_MS) split = true
         else if (item.type === 'input') split = true
-        else if (item.type === 'say') split = current.mode === 'write' || (current.items.filter((x) => x.type === 'step').length >= 3 && item.at - current.wordsAt > 60_000)
+        else if (item.type === 'say') split = current.mode === 'write' || (current.items.filter((x) => x.type === 'step').length >= 3 && item.at - current.wordsAt > 120_000)
         else if (step?.page) split = !(current.mode === 'write' && last.type === 'step' && item.at - last.at < 120_000)
         else if (current.mode === 'write') split = true
         else if (step?.long) split = current.mode !== 'long' && current.items.filter((x) => x.type === 'step').length > 2
