@@ -35,6 +35,9 @@ test('episodes group the run into about a dozen aims, with the uncaptured attemp
   assert.ok(episodes.some((episode) => /^Ran \d+ long computations, about 10 min each$/.test(episode.title)))
   const gap = episodes.find((episode) => episode.notCaptured)
   assert.equal(gap?.title, 'Attempt 2, steps not captured')
+  assert.equal(gap?.quote, undefined, 'a computed sentence is not quoted as anyone\'s words')
+  assert.match(gap?.items[0]?.text ?? '', /kept none of its steps\. It met its finish condition\.$/)
+  assert.ok(summary.leavesOut.some((line) => line.endsWith('this record shows only UCS leaf.')))
   assert.equal(episodes.reduce((sum, episode) => sum + episode.steps.length, 0), 138)
 })
 

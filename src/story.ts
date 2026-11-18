@@ -595,8 +595,8 @@ function segment(order: string[], items: Item[], gaps: UncapturedSpan[], life: L
       const asked = before && !before.met && before.reprompted ? 'The agent was asked again after the previous attempt ended before finishing. ' : ''
       const met = attempt?.met ? ' It met its finish condition.' : ''
       out.push({
-        id: '', n: 0, node, start: gap.start, end: gap.end, title: gap.label, quote: `${asked}The runtime timed this attempt but kept none of its steps.${met}`,
-        items: [], steps: [], errors: 0, mix: {}, notCaptured: true, errorTextPublished: false, turningPoints: [],
+        id: '', n: 0, node, start: gap.start, end: gap.end, title: gap.label,
+        items: [{ type: 'note', id: `${node}:gap:${gap.start}`, at: gap.start, text: `${asked}The runtime timed this attempt but kept none of its steps.${met}`, tone: attempt?.met ? 'ok' : 'muted' }], steps: [], errors: 0, mix: {}, notCaptured: true, errorTextPublished: false, turningPoints: [],
       })
     }
   }
@@ -681,7 +681,8 @@ function episodeOf(node: string, seg: Segment): RecordEpisode {
     title = parts.length ? parts.map((part, i) => (i ? part[0]!.toLowerCase() + part.slice(1) : part)).join(', then ') : said ? 'Said what it would do next' : 'Waited'
   }
   if (!steps.length && said && !input) title = 'Explained its next move'
-  const quote = input ? inputExcerpt(input.text) : said ? firstSentence(said.text) : pages.length > 1 ? pages.map((step) => step.page!.name).join(', ') : undefined
+  // Only words someone wrote are quoted: the input's or the agent's own.
+  const quote = input ? inputExcerpt(input.text) : said ? firstSentence(said.text) : undefined
   const ends = steps.map((step) => step.end)
   return {
     id: '', n: 0, node, start: items[0]!.at, end: Math.max(items[items.length - 1]!.at, ...ends), title, ...(quote ? { quote } : {}),
@@ -902,7 +903,7 @@ function summarize(record: RunRecord, agents: RecordAgent[], items: Item[], step
   const leavesOut: string[] = []
   const shown = new Set(agents.map((agent) => agent.id))
   const withheld = (record.coverage.nodes ?? []).filter((item) => !shown.has(item.nodeId)).length
-  if (withheld) leavesOut.push(`${withheld === 1 ? 'One other agent' : `${withheld} other agents`} of the run ${withheld === 1 ? 'is' : 'are'} withheld whole; ${agents.length ? `this record shows only ${agents.length === 1 ? 'the agent' : `the ${agents.length} agents`} below` : 'this record keeps no agent sessions'}.`)
+  if (withheld) leavesOut.push(`${withheld === 1 ? 'One other agent' : `${withheld} other agents`} of the run ${withheld === 1 ? 'is' : 'are'} withheld whole; ${agents.length === 1 ? `this record shows only ${agents[0]!.label}` : agents.length ? `this record shows only these ${agents.length}` : 'this record keeps no agent sessions'}.`)
   for (const agent of agents) if (agent.neverStarted) leavesOut.push(`${cap(agent.label)} never started, so it has no steps.`)
   const bare = steps.length - steps.filter((step) => step.published).length
   if (bare) leavesOut.push(`${bare} of ${plural(steps.length, 'step')} keep their tool, time and outcome but not their input or output.`)
