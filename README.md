@@ -37,7 +37,15 @@ export function RunPage({ record }) {
 }
 ```
 
-Sandbox UI owns the retained hierarchy, transcript, source inspector, measured usage, authored report views, and evidence graph. Hosts supply validated records and control selection/URLs. Charts owns waterfall playback, speed, zoom, and the time cursor. Renderers preserve original event/call identities and never infer missing captures or relationships from names or timing.
+Sandbox UI owns the retained record view, authored report views, and evidence graph. Hosts supply validated records and control selection/URLs. Charts owns the run timeline. Renderers preserve original event/call identities and never infer missing captures or relationships from names or timing.
+
+### The record as a story
+
+```ts
+import { summarizeRecord, recordEpisodes, recordTurningPoints, recordSteps } from '@drewstone/agent-record/story'
+```
+
+Every value a record view prints comes from here, so every host shows the same numbers. `summarizeRecord` gives the title, what was asked, the result as ordered record facts (a check's verdict from an input's structured `detail.check`, then how the run ended), the claim of the last published page, the facts line and what the record leaves out. Cost is each agent's final running list-price total; output tokens appear only when each agent's metering is a running total. `recordSteps` merges a model turn with each tool call it made; a duration under 5 ms is an end-state stamp, not a measurement, and is left out. `recordEpisodes` groups steps into aims (split by narration, inputs, idle gaps over 3 min, long-call chains and published pages) and folds runs of identical unpublished steps. `recordTurningPoints` keeps about ten: never-started agents, inputs and checks, the final page, attempts, error bursts (one per agent and tool within 5 min) and endings. A missing value is omitted, never printed as 0, a dash or "Unknown".
 
 The graph model remains available from this package’s `/record` entry. It links only recorded parent IDs, source hashes, claim IDs, reviewer sessions, citations, and profile digests. Missing targets remain unlinked.
 

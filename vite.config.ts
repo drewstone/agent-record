@@ -8,6 +8,7 @@ export default defineConfig({
       entry: {
         index: 'src/index.ts',
         record: 'src/record.ts',
+        story: 'src/story.ts',
         report: 'src/report.ts',
         workspace: 'src/workspace-model.ts',
         assessment: 'src/assessment.ts',

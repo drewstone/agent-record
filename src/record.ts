@@ -193,6 +193,19 @@ export const recordSchema = z
               /** Encrypted redacted_thinking blocks. */
               reasoningRedacted: z.number().int().nonnegative().optional(),
               durationMs: z.number().nonnegative().optional(),
+              /** An outside check's verdict carried by a wake input, set by the input's producer; a viewer never parses it from text. */
+              check: z
+                .object({
+                  outcome: z.enum(['passed', 'failed']),
+                  /** Who checked, in words: "the Lab". */
+                  by: z.string().optional(),
+                  /** What was checked, in words: "rc2". */
+                  subject: z.string().optional(),
+                  at: time.optional(),
+                  reason: z.string().optional(),
+                })
+                .catchall(z.unknown())
+                .optional(),
               /** List-price estimate from recorded usage. Not a bill. */
               costListUsd: z.number().nonnegative().optional(),
               usdKnown: z.boolean().optional(),
