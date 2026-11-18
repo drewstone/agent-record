@@ -122,6 +122,7 @@ The completeness flag is an assertion from the producer, not an attestation perf
 The converter asserts it only when the record has agent or session nodes and every one has a complete capture; finding pages alone never make a capture complete.
 Missing cost is unknown: the converter writes `Not recorded` unless an event carries `costListUsd`.
 Text given to an agent is an event with `role: 'user'`, whatever its kind; the agent-runtime converter writes it on an `execution-input` that carries text.
+`terminal` says how the run ended: `kind` (`winner` when a result was accepted, `no-winner` when none was) and `reason` (`cancelled`, `aborted`, `all-children-down` or `driver-failed`). The story phrases these words for a reader; any other word is printed as recorded.
 Historical corrections should remain source-linked, not silently replace original records.
 
 ## Optional fields added in 0.4

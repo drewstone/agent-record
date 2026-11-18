@@ -222,6 +222,14 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 /** A producer's code word in plain spelling: `timed-out` → "timed out". */
 const words = (code: string) => code.replace(/[-_]+/g, ' ').trim()
 const NO_END = 'no end recorded'
+/** How a run ended in plain words, from the terminal kinds and reasons of the record format (docs/record-format.md): the
+ *  verb, then what follows the time. Any other word is printed as recorded. */
+const ENDED: Record<string, [string, string]> = {
+  winner: ['ended', ' with an accepted result'], 'no winner': ['ended', ' without an accepted result'], cancelled: ['was stopped', ''],
+  canceled: ['was stopped', ''], aborted: ['was aborted', ''], 'all children down': ['ended', ' after every agent it started had stopped'],
+  'driver failed': ['ended', ' when the service running it failed'],
+}
+const endedAs = (said: string): [string, string] => ENDED[said] ?? ['ended', said === 'ended' ? '' : `: ${said}`]
 
 /** A UTC time from an ISO string or epoch ms: `10-18 20:52Z`; `minute` gives `20:52`, `second` gives `20:52:07`. */
 export function utc(value: string | number | null | undefined, form: 'day' | 'minute' | 'second' = 'day'): string | null {
@@ -581,7 +589,7 @@ function readCheck(value: unknown): RecordCheck | undefined {
 }
 function checkSentence(check: RecordCheck, at: number): string {
   const by = check.by ? `${cap(check.by)}${check.by.endsWith('s') ? "'" : "'s"} check` : 'An outside check'
-  return `${by} ${check.outcome}${check.subject ? ` on ${check.subject}` : ''} at ${clock(check.at ?? at)} UTC`
+  return `${by}${check.subject ? ` of ${check.subject}` : ''} ${check.outcome} at ${clock(check.at ?? at)} UTC`
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -816,7 +824,7 @@ function turning(record: RunRecord, agents: RecordAgent[], items: Item[], steps:
   if (root && Number.isFinite(begun)) add({ at: begun, node: root.id, kind: 'start', tone: 'muted', title: 'The run started', priority: 0 })
   // The result is its own moment unless it is a check's words, which the check's point already shows.
   if (claim && Number.isFinite(claim.at) && !items.some((item) => item.type === 'input' && item.check && item.id === claim.eventId)) add({ at: claim.at, node: claim.node, kind: 'result', tone: 'ok', title: 'The result', excerpt: firstSentence(claim.text), priority: 0 })
-  if (root && ending.at !== undefined) add({ at: ending.at, node: root.id, kind: 'end', tone: ending.tone, title: ending.words === 'ended' ? 'The run ended' : `The run ended: ${ending.words}`, priority: 0 })
+  if (root && ending.at !== undefined) add({ at: ending.at, node: root.id, kind: 'end', tone: ending.tone, title: `The run ${endedAs(ending.words).join('')}`, priority: 0 })
   const kept = out.sort((a, b) => a.priority - b.priority || a.at - b.at).slice(0, MAX_TURNING).sort((a, b) => a.at - b.at || a.priority - b.priority)
   return kept.map(({ priority: _priority, ...point }, i) => ({ ...point, n: i + 1 }))
 }
@@ -889,7 +897,12 @@ function summarize(record: RunRecord, agents: RecordAgent[], items: Item[], step
   const result: string[] = []
   if (checked && claim?.eventId !== checked.id) result.push(`${checkSentence(checked.check!, checked.at)}.`)
   if (ending.words === NO_END) result.push(timed ? `The record has no end for the run; its last event is at ${clock(end)} UTC.` : 'The record has no end for the run.')
-  else result.push(`The run ended${ending.at !== undefined ? ` at ${clock(ending.at)} UTC` : ''}${ending.words === 'ended' ? '' : `: ${ending.words}`}.`)
+  else {
+    // A run stopped after its check passed says so, so the stop does not read as a failure of the answer above it.
+    const [verb, after] = endedAs(ending.words)
+    const passedFirst = checked?.check!.outcome === 'passed' && (ending.at === undefined || checked.at <= ending.at)
+    result.push(`The run ${verb}${ending.at !== undefined ? ` at ${clock(ending.at)} UTC` : ''}${after || (passedFirst ? ', after its check passed' : '')}.`)
+  }
 
   const captured = agents.filter((agent) => agent.captured)
   const costs = agents.filter((agent) => agent.cost)
