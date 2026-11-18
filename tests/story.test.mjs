@@ -1,53 +1,87 @@
-// The story a viewer prints, on a real published record (the UCS leaf of research-math-20261003system4, 138 steps over
-// 3 h 5 min): every header value, episode and turning point comes from these functions, so a regression here is what a
-// reader of the blog would see.
+// The story a viewer prints, on two real published records: the UCS leaf of research-math-20261003system4 (one
+// agent-runtime agent, 138 steps over 3 h 5 min, metered cost) and wf_3b2a5d92-078 (five Claude Code sessions read by
+// the Claude adapter under a workflow journal, with failed calls). Every header value, episode and turning point comes
+// from these functions, so a regression here is what a reader of the record would see.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gunzipSync } from 'node:zlib'
 import test from 'node:test'
 import { parseRecord } from '../dist/record.js'
-import { recordEpisodes, recordTurningPoints, summarizeRecord } from '../dist/story.js'
+import { recordStory } from '../dist/story.js'
 
-const record = parseRecord(JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/research-math-20261003system4.json.gz', import.meta.url))).toString('utf8')))
-const summary = summarizeRecord(record)
-const episodes = recordEpisodes(record)
-const points = recordTurningPoints(record)
-const shown = [
-  summary.title, summary.asked, ...summary.result, summary.claim?.text, summary.claim?.by, ...summary.leavesOut,
-  ...episodes.flatMap((episode) => [episode.title, episode.quote]),
-  ...points.flatMap((point) => [point.title, point.excerpt]),
+const fixture = (name) => parseRecord(JSON.parse(gunzipSync(readFileSync(new URL(`./fixtures/${name}.json.gz`, import.meta.url))).toString('utf8')))
+const ucs = recordStory(fixture('research-math-20261003system4'))
+const workflow = recordStory(fixture('wf_3b2a5d92-078'))
+const empty = recordStory(parseRecord({ schema: 'agent-record.v1', runId: 'empty', title: 'Empty', nodes: [], events: [] }))
+
+const shown = (story) => [
+  story.summary.title, story.summary.asked, ...story.summary.result, story.summary.claim?.text, story.summary.claim?.by, ...story.summary.leavesOut,
+  ...story.summary.agents.map((agent) => agent.status),
+  ...story.episodes.flatMap((episode) => [episode.title, episode.quote]),
+  ...story.turningPoints.flatMap((point) => [point.title, point.excerpt]),
+  ...story.steps.map((step) => step.action),
 ].filter(Boolean).join('\n')
 
-test('the header states the result, the claim and the final running cost', () => {
-  assert.deepEqual(summary.result, ['Result accepted on attempt 2; finished 19:35 UTC.'])
-  // The last metered event's running total (attempt 1 at $10.88 plus attempt 2), not the first attempt's spend.
-  assert.equal(Math.round(summary.costUsd * 100), 2589)
-  assert.equal(summary.steps, 138)
-  assert.equal(summary.errors, 0)
+test('the UCS header carries its metered cost once, its tokens and its recorded outcome', () => {
+  const { summary } = ucs
+  // Two metered executions ($10.88 and $15.01) and a settlement meter that repeats their sum: $25.89, not $51.78.
+  assert.equal(Math.round(summary.cost.usd * 100), 2589)
+  assert.deepEqual({ billed: summary.cost.billed, of: summary.cost.of, agents: summary.cost.agents }, { billed: false, of: 1, agents: 1 })
+  assert.equal(summary.outputTokens, 134562 + 16845)
+  assert.deepEqual([summary.steps, summary.errors, summary.noResult], [138, 0, 10])
   assert.deepEqual(summary.models, ['Claude Opus 5.5 on Claude Code'])
-  assert.match(summary.claim.text, /^The k=4 witness re-verified independently; with it, Pálvölgyi–Tardos Conjecture 10 is false/)
-  assert.equal(summary.claim.by, "UCS leaf's last published page, 18:50 UTC")
-  assert.ok(summary.claim.stepId && summary.claim.episode)
-})
-
-test('episodes group the run into about a dozen aims, with the uncaptured attempt as its own row', () => {
-  assert.ok(episodes.length >= 8 && episodes.length <= 16, `${episodes.length} episodes`)
-  assert.ok(episodes.some((episode) => /^Ran \d+ long computations, about 10 min each$/.test(episode.title)))
-  const gap = episodes.find((episode) => episode.notCaptured)
-  assert.equal(gap?.title, 'Attempt 2, steps not captured')
-  assert.equal(gap?.quote, undefined, 'a computed sentence is not quoted as anyone\'s words')
-  assert.match(gap?.items[0]?.text ?? '', /kept none of its steps\. It met its finish condition\.$/)
+  assert.deepEqual(summary.result, ['The run ended at 19:35 UTC; its recorded outcome is “winner”.'])
   assert.ok(summary.leavesOut.some((line) => line.endsWith('this record shows only UCS leaf.')))
-  assert.equal(episodes.reduce((sum, episode) => sum + episode.steps.length, 0), 138)
 })
 
-test('turning points are few, numbered and in plain words', () => {
-  assert.ok(points.length >= 3 && points.length <= 10)
-  assert.deepEqual(points.map((point) => point.n), points.map((_, i) => i + 1))
-  assert.ok(points.some((point) => point.title === 'Recorded the page FINAL.md'))
-  assert.ok(points.some((point) => point.title === 'Attempt 1 ended before finishing; the agent was asked again'))
+test('UCS episodes hold every step once and name the long computations and the uncaptured tail', () => {
+  assert.equal(ucs.episodes.reduce((sum, episode) => sum + episode.steps.length, 0), 138)
+  assert.ok(ucs.episodes.some((episode) => /^Ran \d+ computations, about 10 min each$/.test(episode.title)))
+  const gap = ucs.episodes.filter((episode) => episode.notCaptured)
+  assert.deepEqual(gap.map((episode) => episode.title), ['No steps captured for 25 min'])
+  assert.equal(gap[0].quote, undefined, "a computed sentence is not quoted as anyone's words")
+  assert.deepEqual(ucs.turningPoints.map((point) => point.title), ['The run ended: winner'])
 })
 
-test('nothing a reader sees uses internal words, dashes for missing values or cut text', () => {
-  for (const banned of [/\bcontract\b/i, /\bUnknown\b/, / — /, /\bReturned\b/, /\bs3\b/, /…|\.\.\.$/m, /\d{4}-\d{2}-\d{2}T\d{2}:/]) assert.doesNotMatch(shown, banned)
+test('the Claude Code workflow record groups its spawns and shows each failed call with its error text', () => {
+  const { summary, turningPoints } = workflow
+  assert.equal(summary.agents.length, 6)
+  assert.equal(summary.steps, 72)
+  assert.equal(summary.errors, 3)
+  assert.deepEqual(summary.models, ['Claude Fable 5 on Claude Code'])
+  assert.equal(turningPoints[0].title, 'Operator workflow started 5 agents')
+  const failed = turningPoints.filter((point) => point.kind === 'errors')
+  assert.equal(failed.length, 3)
+  assert.ok(failed.every((point) => point.excerpt && point.stepId))
+  assert.ok(failed.some((point) => point.excerpt === 'Command timed out after 2m 0s'))
+  // No terminal state and no end for the workflow: the record says so instead of claiming the run is still running.
+  assert.deepEqual(summary.result, ['The record has no end for the run; its last event is at 04:19 UTC.'])
+  assert.equal(summary.cost, undefined)
+  assert.ok(summary.leavesOut.includes('The record keeps no cost.'))
+  const step = workflow.steps.find((item) => item.outcome === 'error' && item.output)
+  assert.ok(step.durationMs > 0 && step.action && step.output)
+})
+
+test('an empty record has no times, counts of zero and no value that is not a number', () => {
+  const { summary } = empty
+  assert.equal(summary.start, undefined)
+  assert.equal(summary.durationMs, undefined)
+  assert.deepEqual([summary.steps, summary.agents.length, empty.episodes.length, empty.turningPoints.length], [0, 0, 0, 0])
+  const numbers = []
+  const walk = (value) => (typeof value === 'number' ? numbers.push(value) : value && typeof value === 'object' ? Object.values(value).forEach(walk) : undefined)
+  walk(empty)
+  assert.ok(numbers.every(Number.isFinite))
+})
+
+test('nothing a reader sees uses placeholders, raw stamps or cut text', () => {
+  for (const story of [ucs, workflow]) {
+    const text = shown(story)
+    for (const banned of [/\bUnknown\b/, /\bundefined\b/, /\bNaN\b/, /\bstill running\b/, /\d{4}-\d{2}-\d{2}T\d{2}:/, /…$/m, /:$/m]) assert.doesNotMatch(text, banned)
+  }
+})
+
+test('the story model names no producer, tool or text convention', () => {
+  const source = readFileSync(new URL('../src/story.ts', import.meta.url), 'utf8')
+  for (const word of ['knowledge_', 'spawn_worker', 'steer_agent', 'observe_agent', 'read_journal', 'submit_result', 'report_blocked', 'kb_', '---FILE', 'FINAL', 'winner', "'met'", 'verdict.valid', 'Wake input'])
+    assert.ok(!source.includes(word), word)
 })

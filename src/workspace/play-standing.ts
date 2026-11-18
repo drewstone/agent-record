@@ -1,6 +1,7 @@
 import { viewSchema, viewStatusSchema } from './view.js'
 import { z } from 'zod'
 import { calibrationSchema, calibrationState } from '../run-check-model.js'
+import { utc } from '../story.js'
 
 /**
  * The focused play page's document: what the play is trying to do, where it stands under its current check, the
@@ -442,24 +443,6 @@ export function inlinedPlayHead(id: string): PlayHead | null {
 }
 
 // ----- the shared vocabulary -----
-
-/** Short UTC time: `10-18 20:52Z`. */
-export const utc = (value: string | null | undefined) => {
-  if (!value) return null
-  const date = new Date(value)
-  if (!Number.isFinite(date.valueOf())) return null
-  const iso = date.toISOString()
-  return `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z`
-}
-
-/** A span of hours or minutes: `2 h 42 min`, `35 min`. */
-export const span = (ms: number | null | undefined) => {
-  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms < 0) return null
-  const minutes = Math.round(ms / 60_000)
-  if (minutes < 60) return `${minutes} min`
-  const hours = Math.floor(minutes / 60)
-  return minutes % 60 ? `${hours} h ${minutes % 60} min` : `${hours} h`
-}
 
 export const hours = (value: number | null | undefined, digits = 1) => (value === null || value === undefined || !Number.isFinite(value) ? null : `${value.toFixed(digits)} h`)
 
