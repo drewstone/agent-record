@@ -218,7 +218,6 @@ export interface RecordStory {
 
 /** Capitalised for the start of a sentence, unless its first word is an identifier such as `wf_4315e8f2` or `s2:s0`. */
 const cap = (text: string) => (/^[a-z]+(?:[\s,.;·(]|$)/.test(text) ? text[0]!.toUpperCase() + text.slice(1) : text)
-const lower = (text: string) => (text ? text[0]!.toLowerCase() + text.slice(1) : text)
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 /** A producer's code word in plain spelling: `timed-out` → "timed out". */
 const words = (code: string) => code.replace(/[-_]+/g, ' ').trim()
@@ -387,10 +386,6 @@ export function recordStory(record: RunRecord): RecordStory {
   cache.set(record, story)
   return story
 }
-export const summarizeRecord = (record: RunRecord) => recordStory(record).summary
-export const recordSteps = (record: RunRecord) => recordStory(record).steps
-export const recordEpisodes = (record: RunRecord) => recordStory(record).episodes
-export const recordTurningPoints = (record: RunRecord) => recordStory(record).turningPoints
 
 function build(record: RunRecord): RecordStory {
   const byId = new Map(record.nodes.map((node) => [node.id, node]))
