@@ -159,6 +159,8 @@ export interface RecordAgent {
   tone: Tone
   steps: number
   errors: number
+  /** One sentence of what it did: its assignment or a descriptive role, or for an agent with nothing captured, why. */
+  did?: string
   /** False when the record holds none of this agent's steps and its capture is absent. */
   captured: boolean
   captureNote?: string
@@ -191,7 +193,8 @@ export interface RecordSummary {
   /** The recorded list-price cost, summed over the agents that recorded one (`of` of `agents`); `billed` only when every
    *  value says a bill confirms it (`usdKnown`). Absent when no agent recorded a cost. */
   cost?: { usd: number; billed: boolean; of: number; agents: number }
-  /** Ordered record facts, each a sentence. */
+  /** Ordered record facts, each a sentence: the last check unless it gave the claim (its `by` names it), then how the
+   *  run ended. */
   result: string[]
   /** The run's last recorded claim (`claims`), else its last recorded finding, else its last check's words, else the
    *  root agent's last words, with where it came from. */
@@ -476,9 +479,11 @@ function build(record: RunRecord): RecordStory {
     const captured = own.length > 0 || (itemsBy.get(node.id) ?? []).some((item) => item.type !== 'note') || node.capture?.status !== 'absent'
     const status = node.status ? words(node.status) : Number.isFinite(nodeEnd) || record.terminal?.kind ? 'ended' : NO_END
     const cost = usd.total(node.id), tokens = output.total(node.id), billed = usd.known(node.id)
+    // What it did: its assignment or a role of more than one word; for an agent with nothing captured, why.
+    const did = !captured && node.captureNote ? node.captureNote : node.assignment ?? (node.role && /\s/.test(node.role.trim()) ? node.role : undefined)
     return {
       id: node.id, label: node.label, ...(parentOf(node) ? { parent: parentOf(node)! } : {}), depth,
-      ...(node.role ? { role: node.role } : {}), ...(node.assignment ? { assignment: node.assignment } : {}),
+      ...(node.role ? { role: node.role } : {}), ...(node.assignment ? { assignment: node.assignment } : {}), ...(did?.trim() ? { did: firstSentence(did) } : {}),
       ...(node.servedModel || node.model ? { model: (node.servedModel || node.model)! } : {}), ...(node.harness ? { harness: node.harness } : {}),
       ...(Number.isFinite(nodeStart) ? { start: nodeStart } : {}), ...(Number.isFinite(nodeEnd) ? { end: nodeEnd } : {}),
       status, tone: failed.has(node.id) ? 'error' : 'muted', steps: own.length, errors: own.filter((step) => step.outcome === 'error').length,
@@ -788,7 +793,7 @@ function turning(record: RunRecord, agents: RecordAgent[], items: Item[], steps:
   const prompts: Array<Extract<Item, { type: 'input' }>> = []
   for (const item of items) {
     if (item.type !== 'input') continue
-    if (item.check) add({ at: item.at, node: item.node, kind: 'check', tone: item.check.outcome === 'passed' ? 'ok' : 'error', title: checkSentence(item.check, item.at), excerpt: firstSentence(item.check.reason ?? item.text), priority: 1 })
+    if (item.check) add({ at: item.at, node: item.node, kind: 'check', tone: item.check.outcome === 'passed' ? 'ok' : 'error', title: checkSentence(item.check, item.at), ...(item.check.reason ? { excerpt: firstSentence(item.check.reason) } : {}), priority: 1 })
     else if (firstStep.has(item.node) && item.at > firstStep.get(item.node)!) prompts.push(item)
   }
   for (const list of burst(prompts.sort((a, b) => a.node.localeCompare(b.node) || a.at - b.at), INPUT_BURST_MS, (item) => item.node)) {
@@ -868,11 +873,7 @@ function summarize(record: RunRecord, agents: RecordAgent[], items: Item[], step
   })
 
   const ending = runEnding(record, agents)
-  const result: string[] = []
   const checked = items.filter((item): item is Extract<Item, { type: 'input' }> => item.type === 'input' && !!item.check).pop()
-  if (checked) result.push(`${checkSentence(checked.check!, checked.at)}.`)
-  if (ending.words === NO_END) result.push(timed ? `The record has no end for the run; its last event is at ${clock(end)} UTC.` : 'The record has no end for the run.')
-  else result.push(`The run ended${ending.at !== undefined ? ` at ${clock(ending.at)} UTC` : ''}${ending.words === 'ended' ? '' : `: ${ending.words}`}.`)
 
   // The claim: the last recorded claim, else the last recorded finding, else the last check's own words, else the root
   // agent's last words.
@@ -891,6 +892,11 @@ function summarize(record: RunRecord, agents: RecordAgent[], items: Item[], step
     for (const item of items) if (item.type === 'say' && item.node === root?.id) words = item
     if (words) claim = { text: firstSentence(words.text, 240), at: words.at, node: words.node, by: `${agents.length > 1 ? `${cap(root!.label)}'s` : 'The agent\'s'} last words, ${clock(words.at)} UTC`, eventId: words.id }
   }
+  // The check that gave the claim is named in its `by`; the result does not say it twice.
+  const result: string[] = []
+  if (checked && claim?.eventId !== checked.id) result.push(`${checkSentence(checked.check!, checked.at)}.`)
+  if (ending.words === NO_END) result.push(timed ? `The record has no end for the run; its last event is at ${clock(end)} UTC.` : 'The record has no end for the run.')
+  else result.push(`The run ended${ending.at !== undefined ? ` at ${clock(ending.at)} UTC` : ''}${ending.words === 'ended' ? '' : `: ${ending.words}`}.`)
 
   const captured = agents.filter((agent) => agent.captured)
   const costs = agents.filter((agent) => agent.cost)
