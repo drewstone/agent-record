@@ -30,7 +30,7 @@ test('the UCS header carries its metered cost once, its tokens and its recorded 
   assert.equal(summary.outputTokens, 134562 + 16845)
   assert.deepEqual([summary.steps, summary.errors, summary.noResult], [138, 0, 10])
   assert.deepEqual(summary.models, ['Claude Opus 5.5 on Claude Code'])
-  assert.deepEqual(summary.result, ['The run ended at 19:35 UTC: winner.'])
+  assert.deepEqual(summary.result, ['The run ended at 19:35 UTC with an accepted result.'])
   assert.ok(summary.leavesOut.some((line) => line.endsWith('this record shows only UCS leaf.')))
 })
 
@@ -40,7 +40,7 @@ test('UCS episodes hold every step once and name the long computations and the u
   const gap = ucs.episodes.filter((episode) => episode.notCaptured)
   assert.deepEqual(gap.map((episode) => episode.title), ['No steps captured for 25 min'])
   assert.equal(gap[0].quote, undefined, "a computed sentence is not quoted as anyone's words")
-  assert.deepEqual(ucs.turningPoints.map((point) => point.title), ['The run started', 'The run ended: winner'])
+  assert.deepEqual(ucs.turningPoints.map((point) => point.title), ['The run started', 'The run ended with an accepted result'])
 })
 
 test('the Claude Code workflow record groups its spawns, keeps failed calls off the turning points and shows their error text', () => {
@@ -83,8 +83,10 @@ test('nothing a reader sees uses placeholders, raw stamps or cut text', () => {
   }
 })
 
+// A run's terminal kinds and reasons (`winner`, `cancelled`) are record-format words (docs/record-format.md), which the
+// story phrases; tool names and text conventions stay out.
 test('the story model names no producer, tool or text convention', () => {
   const source = readFileSync(new URL('../src/story.ts', import.meta.url), 'utf8')
-  for (const word of ['knowledge_', 'spawn_worker', 'steer_agent', 'observe_agent', 'read_journal', 'submit_result', 'report_blocked', 'kb_', '---FILE', 'FINAL', 'winner', "'met'", 'verdict.valid', 'Wake input'])
+  for (const word of ['knowledge_', 'spawn_worker', 'steer_agent', 'observe_agent', 'read_journal', 'submit_result', 'report_blocked', 'kb_', '---FILE', 'FINAL', "'met'", 'verdict.valid', 'Wake input'])
     assert.ok(!source.includes(word), word)
 })

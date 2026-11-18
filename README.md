@@ -51,7 +51,7 @@ Every value a record view prints comes from here, so every host shows the same n
 
 The graph model remains available from this package’s `/record` entry. It links only recorded parent IDs, source hashes, claim IDs, reviewer sessions, citations, and profile digests. Missing targets remain unlinked.
 
-Version3 retires this package’s React view exports and stylesheet; import their maintained owners above. Version2 retires Discovery workspace/page exports, its browser bundle, and standalone receipt renderer. Discovery composition lives in the [Tools viewer](https://github.com/drewstone/tangle-tools/tree/main/fleet/discovery_workspace_parts/viewer). Immutable earlier releases and records remain readable.
+Version4 retires the story’s `summarizeRecord`, `recordSteps`, `recordEpisodes`, `recordTurningPoints` and `ERROR_BURST_MS`; read the same values from `recordStory(record)`. Version3 retires this package’s React view exports and stylesheet; import their maintained owners above. Version2 retires Discovery workspace/page exports, its browser bundle, and standalone receipt renderer. Discovery composition lives in the [Tools viewer](https://github.com/drewstone/tangle-tools/tree/main/fleet/discovery_workspace_parts/viewer). Immutable earlier releases and records remain readable.
 
 `runCheckSchema`, `calibrationSchema`, `RunCheck` and `Calibration` expose the existing canonical check model through the root and workspace entries. Optional native provenance and calibration references preserve missing/null metadata as unknown; the writer owns explicit identity evidence and per-amendment binding.
 
